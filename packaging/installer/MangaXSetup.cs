@@ -487,7 +487,7 @@ namespace MangaXSetup
         private static bool OthersCanReplace(string directory, bool isRoot)
         {
             DirectorySecurity security = Directory.GetAccessControl(directory, AccessControlSections.Access | AccessControlSections.Owner);
-            if (!isRoot && !IsTrusted(security.GetOwner(typeof(SecurityIdentifier))))
+            if (!IsTrusted(security.GetOwner(typeof(SecurityIdentifier))))
             {
                 return true;
             }
@@ -547,8 +547,9 @@ namespace MangaXSetup
             if (!Directory.Exists(directory))
             {
                 Directory.CreateDirectory(directory, PrivateAccess());
-                return;
             }
+            // Checked even for a folder created just above: CreateDirectory also
+            // succeeds when another account made the folder in the meantime.
             // A folder owned by another account could have been prepared in advance.
             IdentityReference owner = Directory.GetAccessControl(directory, AccessControlSections.Owner).GetOwner(typeof(SecurityIdentifier));
             if (!IsTrusted(owner))
