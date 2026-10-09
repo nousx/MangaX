@@ -1663,5 +1663,6 @@
   "Codex login opened": "로그인 창이 열렸습니다. 그 창에서 로그인을 마치면 이 상태가 자동으로 갱신됩니다.",
   "Codex sign in": "Codex 로그인",
   "Codex get CLI": "Codex CLI 받기",
-  "Codex check again": "다시 확인"
+  "Codex check again": "다시 확인",
+  "Codex status custom path": "Codex 경로가 직접 설정되어 있습니다. 다시 확인을 누르면 이 프로그램을 실행해 계정 상태를 확인합니다."
 }

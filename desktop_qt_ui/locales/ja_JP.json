@@ -1663,5 +1663,6 @@
   "Codex login opened": "サインイン用のウィンドウを開きました。そちらでサインインを完了すると、この状態は自動で更新されます。",
   "Codex sign in": "Codex にサインイン",
   "Codex get CLI": "Codex CLI を入手",
-  "Codex check again": "再確認"
+  "Codex check again": "再確認",
+  "Codex status custom path": "Codex のパスが手動で設定されています。「再確認」を押すと、このプログラムを実行してアカウントの状態を確認します。"
 }

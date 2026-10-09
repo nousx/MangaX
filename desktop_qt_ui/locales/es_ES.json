@@ -1663,5 +1663,6 @@
   "Codex login opened": "Se abrió una ventana de inicio de sesión. Termina allí; este estado se actualiza solo.",
   "Codex sign in": "Iniciar sesión en Codex",
   "Codex get CLI": "Obtener Codex CLI",
-  "Codex check again": "Comprobar de nuevo"
+  "Codex check again": "Comprobar de nuevo",
+  "Codex status custom path": "Hay una ruta de Codex personalizada. Pulsa Comprobar de nuevo para ejecutarla y leer el estado de la cuenta."
 }

@@ -1673,5 +1673,6 @@
   "Codex login opened": "A sign-in window has opened. Finish signing in there; this status updates by itself.",
   "Codex sign in": "Sign in to Codex",
   "Codex get CLI": "Get Codex CLI",
-  "Codex check again": "Check again"
+  "Codex check again": "Check again",
+  "Codex status custom path": "A custom Codex path is set. Press Check again to run it and read the account status."
 }

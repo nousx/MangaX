@@ -36,6 +36,33 @@ class CodexAccountTests(unittest.TestCase):
         with self.assertRaises(FileNotFoundError):
             find_codex_cli(str(Path(tempfile.gettempdir()) / "no-such-codex.exe"))
 
+    def test_should_reject_configured_path_that_is_not_named_codex(self):
+        with tempfile.TemporaryDirectory() as directory:
+            other = Path(directory) / "other-tool.exe"
+            other.write_bytes(b"")
+
+            with self.assertRaises(FileNotFoundError):
+                find_codex_cli(str(other))
+
+    def test_should_ignore_codex_in_the_current_directory(self):
+        name = "codex.exe" if os.name == "nt" else "codex"
+        with tempfile.TemporaryDirectory() as directory:
+            planted = Path(directory) / name
+            planted.write_bytes(b"")
+            planted.chmod(0o755)
+            with patch.dict(os.environ, {"PATH": os.pathsep.join([directory, ".", ""]), "LOCALAPPDATA": directory}), \
+                    patch.object(codex_account.Path, "cwd", return_value=Path(directory)):
+                self.assertIsNone(find_codex_cli())
+
+    def test_should_find_codex_in_an_absolute_path_folder(self):
+        name = "codex.exe" if os.name == "nt" else "codex"
+        with tempfile.TemporaryDirectory() as directory:
+            installed = Path(directory) / name
+            installed.write_bytes(b"")
+            installed.chmod(0o755)
+            with patch.dict(os.environ, {"PATH": directory}):
+                self.assertEqual(find_codex_cli(), str(installed))
+
     def test_should_report_signed_in_when_status_command_succeeds(self):
         with patch.object(codex_account, "find_codex_cli", return_value="codex"), \
                 patch.object(codex_account.subprocess, "run", return_value=completed(0, stderr="Logged in using ChatGPT\n")):

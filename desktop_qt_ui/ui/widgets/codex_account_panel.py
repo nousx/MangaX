@@ -71,7 +71,14 @@ class CodexAccountPanel(SimpleCardWidget):
 
         self.login_button.hide()
         self.install_button.hide()
-        self.refresh()
+        if self._cli_path():
+            # A custom path comes from the settings file, which may have been
+            # imported from someone else: run it only when the user asks.
+            self.status_label.setText(self._t("Codex status custom path"))
+            self.detail_label.setText(self._cli_path())
+            self.detail_label.show()
+        else:
+            self.refresh()
 
     def _cli_path(self) -> str:
         try:

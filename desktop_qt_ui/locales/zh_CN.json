@@ -1673,5 +1673,6 @@
   "Codex login opened": "已打开登录窗口。请在该窗口完成登录，此处状态会自动更新。",
   "Codex sign in": "登录 Codex",
   "Codex get CLI": "获取 Codex CLI",
-  "Codex check again": "重新检查"
+  "Codex check again": "重新检查",
+  "Codex status custom path": "已手动设置 Codex 路径。点击重新检查将运行该程序并读取账号状态。"
 }

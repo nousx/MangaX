@@ -1665,5 +1665,6 @@
   "Codex login opened": "已開啟登入視窗。請在該視窗完成登入，此處狀態會自動更新。",
   "Codex sign in": "登入 Codex",
   "Codex get CLI": "取得 Codex CLI",
-  "Codex check again": "重新檢查"
+  "Codex check again": "重新檢查",
+  "Codex status custom path": "已手動設定 Codex 路徑。點選重新檢查將執行該程式並讀取帳號狀態。"
 }

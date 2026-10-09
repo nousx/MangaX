@@ -5,7 +5,6 @@ translation backends.
 """
 
 import os
-import shutil
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
@@ -29,18 +28,50 @@ class CodexStatus:
     executable: str = ""
 
 
+_EXECUTABLE_NAMES = ("codex.exe",) if os.name == "nt" else ("codex",)
+
+
+def _search_path() -> str | None:
+    """Look for Codex in absolute PATH folders only.
+
+    shutil.which() on Windows also searches the current directory, which is
+    the app folder: a planted codex.exe there must never be picked up.
+    """
+    here = Path.cwd().resolve()
+    for entry in os.environ.get("PATH", "").split(os.pathsep):
+        folder = Path(entry.strip('"'))
+        if not entry or not folder.is_absolute():
+            continue
+        try:
+            if folder.resolve() == here:
+                continue
+        except OSError:
+            continue
+        for name in _EXECUTABLE_NAMES:
+            candidate = folder / name
+            if candidate.is_file() and os.access(candidate, os.X_OK):
+                return str(candidate)
+    return None
+
+
 def find_codex_cli(cli_path: str = "") -> str | None:
     """Return the Codex executable, or None when it is not installed.
 
     A configured path that does not exist raises, so a typo is not silently
-    replaced by another installation.
+    replaced by another installation. The configured file must be named like
+    the Codex executable, so a settings file cannot point this at an
+    arbitrary program.
     """
     if cli_path:
         executable = Path(cli_path).expanduser()
         if not executable.is_file():
             raise FileNotFoundError("Codex CLI path does not exist. Check Translation settings.")
+        if executable.name.lower() not in _EXECUTABLE_NAMES:
+            raise FileNotFoundError(
+                f"Codex CLI path must point to {_EXECUTABLE_NAMES[0]}. Check Translation settings."
+            )
         return str(executable.resolve())
-    executable = shutil.which("codex.exe" if os.name == "nt" else "codex")
+    executable = _search_path()
     if executable:
         return executable
     if os.name == "nt":

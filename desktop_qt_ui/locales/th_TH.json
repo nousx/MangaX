@@ -1673,5 +1673,6 @@
   "Codex login opened": "เปิดหน้าต่างล็อกอินแล้ว ล็อกอินในหน้าต่างนั้นให้เสร็จ สถานะตรงนี้จะอัปเดตเอง",
   "Codex sign in": "ล็อกอิน Codex",
   "Codex get CLI": "ดาวน์โหลด Codex CLI",
-  "Codex check again": "ตรวจอีกครั้ง"
+  "Codex check again": "ตรวจอีกครั้ง",
+  "Codex status custom path": "ตั้งตำแหน่งโปรแกรม Codex เองไว้ กดตรวจอีกครั้งเพื่อเรียกโปรแกรมนี้และอ่านสถานะบัญชี"
 }
