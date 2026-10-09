@@ -434,11 +434,147 @@ namespace MangaXSetup
         }
     }
 
+    /// <summary>
+    /// Keeps other local accounts from replacing the installed program files.
+    /// </summary>
+    internal static class FolderSecurity
+    {
+        private const string TrustedInstaller = "S-1-5-80-956008885-3418522649-1831038044-1853292631-2271478464";
+
+        // Rights that let an account swap a folder out from under its children.
+        private const FileSystemRights ReplaceRights =
+            FileSystemRights.Delete | FileSystemRights.DeleteSubdirectoriesAndFiles
+            | FileSystemRights.ChangePermissions | FileSystemRights.TakeOwnership;
+
+        // GENERIC_ALL and GENERIC_WRITE as they appear unmapped in some entries.
+        private const int GenericWriteBits = 0x50000000;
+
+        private static bool IsTrusted(IdentityReference identity)
+        {
+            SecurityIdentifier sid = identity as SecurityIdentifier;
+            if (sid == null)
+            {
+                return false;
+            }
+            return sid.Equals(WindowsIdentity.GetCurrent().User)
+                || sid.IsWellKnown(WellKnownSidType.BuiltinAdministratorsSid)
+                || sid.IsWellKnown(WellKnownSidType.LocalSystemSid)
+                || sid.Value == TrustedInstaller;
+        }
+
+        private static DirectorySecurity PrivateAccess()
+        {
+            DirectorySecurity security = new DirectorySecurity();
+            security.SetAccessRuleProtection(true, false);
+            SecurityIdentifier[] allowed = new SecurityIdentifier[]
+            {
+                WindowsIdentity.GetCurrent().User,
+                new SecurityIdentifier(WellKnownSidType.BuiltinAdministratorsSid, null),
+                new SecurityIdentifier(WellKnownSidType.LocalSystemSid, null),
+            };
+            foreach (SecurityIdentifier sid in allowed)
+            {
+                security.AddAccessRule(new FileSystemAccessRule(
+                    sid,
+                    FileSystemRights.FullControl,
+                    InheritanceFlags.ContainerInherit | InheritanceFlags.ObjectInherit,
+                    PropagationFlags.None,
+                    AccessControlType.Allow));
+            }
+            return security;
+        }
+
+        private static bool OthersCanReplace(string directory, bool isRoot)
+        {
+            DirectorySecurity security = Directory.GetAccessControl(directory, AccessControlSections.Access | AccessControlSections.Owner);
+            if (!isRoot && !IsTrusted(security.GetOwner(typeof(SecurityIdentifier))))
+            {
+                return true;
+            }
+            // A drive root cannot itself be deleted or renamed.
+            FileSystemRights risky = isRoot ? ReplaceRights & ~FileSystemRights.Delete : ReplaceRights;
+            foreach (FileSystemAccessRule rule in security.GetAccessRules(true, true, typeof(SecurityIdentifier)))
+            {
+                if (rule.AccessControlType != AccessControlType.Allow
+                    || (rule.PropagationFlags & PropagationFlags.InheritOnly) != 0
+                    || IsTrusted(rule.IdentityReference))
+                {
+                    continue;
+                }
+                if ((rule.FileSystemRights & risky) != 0 || ((int)rule.FileSystemRights & GenericWriteBits) != 0)
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        /// <summary>
+        /// Returns the nearest existing parent folder that another account
+        /// could rename or replace, or null when the location is private.
+        /// </summary>
+        public static string SharedAncestor(string directory)
+        {
+            DirectoryInfo current = new DirectoryInfo(directory).Parent;
+            while (current != null)
+            {
+                if (current.Exists && OthersCanReplace(current.FullName, current.Parent == null))
+                {
+                    return current.FullName;
+                }
+                current = current.Parent;
+            }
+            return null;
+        }
+
+        /// <summary>
+        /// Creates the folder, or tightens an existing one, so that only this
+        /// user, administrators and the system can write to it.
+        /// </summary>
+        public static void Prepare(string directory, bool allowSharedLocation)
+        {
+            string shared = SharedAncestor(directory);
+            if (shared != null)
+            {
+                Log.Write("Other accounts can modify " + shared);
+                if (!allowSharedLocation)
+                {
+                    throw new UnauthorizedAccessException(Text2.T(
+                        "บัญชีผู้ใช้อื่นในเครื่องนี้แก้ไขโฟลเดอร์ " + shared + " ได้ เลือกโฟลเดอร์อื่น",
+                        "Other accounts on this computer can modify " + shared + ". Choose a different folder."));
+                }
+            }
+            if (!Directory.Exists(directory))
+            {
+                Directory.CreateDirectory(directory, PrivateAccess());
+                return;
+            }
+            // A folder owned by another account could have been prepared in advance.
+            IdentityReference owner = Directory.GetAccessControl(directory, AccessControlSections.Owner).GetOwner(typeof(SecurityIdentifier));
+            if (!IsTrusted(owner))
+            {
+                throw new UnauthorizedAccessException(Text2.T(
+                    "โฟลเดอร์นี้เป็นของบัญชีผู้ใช้อื่น เลือกโฟลเดอร์อื่นเพื่อความปลอดภัย",
+                    "This folder is owned by another account. Choose a different folder to stay safe."));
+            }
+            // Drop inherited entries such as "Authenticated Users: Modify".
+            Directory.SetAccessControl(directory, PrivateAccess());
+        }
+
+        public static string CreatePrivateTempFolder()
+        {
+            string folder = Path.Combine(Path.GetTempPath(), "MangaX-Setup-" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(folder, PrivateAccess());
+            return folder;
+        }
+    }
+
     internal sealed class InstallOptions
     {
         public string VariantId;
         public string Directory;
         public bool DesktopShortcut = true;
+        public bool AllowSharedLocation;
     }
 
     internal sealed class Installer
@@ -477,7 +613,7 @@ namespace MangaXSetup
                         "This release publishes no SHA-256 digest to verify the files, so it will not be installed."));
                 }
             }
-            PrepareDirectory(options.Directory);
+            FolderSecurity.Prepare(options.Directory, options.AllowSharedLocation);
             string package = Path.Combine(options.Directory, "MangaX-package.7z.part");
             Log.Write("Installing " + release.Tag + " " + options.VariantId + " into " + options.Directory);
 
@@ -491,44 +627,6 @@ namespace MangaXSetup
                 CreateShortcut();
             }
             Log.Write("Installation finished.");
-        }
-
-        /// <summary>
-        /// Creates the install folder so that only this user, administrators and
-        /// the system can write to it. Folders made directly under a drive root
-        /// otherwise inherit write access for every local account, which would
-        /// let another account replace the program files.
-        /// </summary>
-        private static void PrepareDirectory(string path)
-        {
-            SecurityIdentifier user = WindowsIdentity.GetCurrent().User;
-            SecurityIdentifier administrators = new SecurityIdentifier(WellKnownSidType.BuiltinAdministratorsSid, null);
-            SecurityIdentifier system = new SecurityIdentifier(WellKnownSidType.LocalSystemSid, null);
-            if (!Directory.Exists(path))
-            {
-                DirectorySecurity security = new DirectorySecurity();
-                security.SetAccessRuleProtection(true, false);
-                foreach (SecurityIdentifier sid in new SecurityIdentifier[] { user, administrators, system })
-                {
-                    security.AddAccessRule(new FileSystemAccessRule(
-                        sid,
-                        FileSystemRights.FullControl,
-                        InheritanceFlags.ContainerInherit | InheritanceFlags.ObjectInherit,
-                        PropagationFlags.None,
-                        AccessControlType.Allow));
-                }
-                Directory.CreateDirectory(path, security);
-                return;
-            }
-            // An existing folder keeps its permissions, but it must not belong
-            // to someone else who could have prepared it in advance.
-            IdentityReference owner = Directory.GetAccessControl(path, AccessControlSections.Owner).GetOwner(typeof(SecurityIdentifier));
-            if (!user.Equals(owner) && !administrators.Equals(owner) && !system.Equals(owner))
-            {
-                throw new UnauthorizedAccessException(Text2.T(
-                    "โฟลเดอร์นี้เป็นของบัญชีผู้ใช้อื่น เลือกโฟลเดอร์อื่นเพื่อความปลอดภัย",
-                    "This folder is owned by another account. Choose a different folder to stay safe."));
-            }
         }
 
         private void Download(List<Asset> parts, string package)
@@ -695,8 +793,7 @@ namespace MangaXSetup
 
         private static string UnpackExtractor()
         {
-            string folder = Path.Combine(Path.GetTempPath(), "MangaX-Setup-" + Process.GetCurrentProcess().Id);
-            Directory.CreateDirectory(folder);
+            string folder = FolderSecurity.CreatePrivateTempFolder();
             string target = Path.Combine(folder, "7zr.exe");
             using (Stream resource = Assembly.GetExecutingAssembly().GetManifestResourceStream("7zr.exe"))
             {
@@ -841,19 +938,34 @@ namespace MangaXSetup
         private Release release;
         private CancellationTokenSource cancelSource;
         private bool installed;
+        private bool lookupFailed;
         public string ScreenshotPath;
         public string PresetVariant;
 
-        public SetupForm(string folder)
+        private readonly float scale;
+
+        private int Px(int value)
         {
+            return (int)Math.Round(value * scale);
+        }
+
+        public SetupForm(string folder, float extraScale)
+        {
+            // Sizes are computed from the real display scale and the window
+            // grows to fit its content, so nothing is clipped at 125-200%.
+            using (Graphics graphics = CreateGraphics())
+            {
+                scale = graphics.DpiX / 96f * extraScale;
+            }
             Text = "MangaX Setup";
-            Font = new Font("Segoe UI", 9.5f);
-            AutoScaleMode = AutoScaleMode.Dpi;
+            Font = new Font("Segoe UI", 9.5f * extraScale);
+            AutoScaleMode = AutoScaleMode.None;
             FormBorderStyle = FormBorderStyle.FixedDialog;
             MaximizeBox = false;
             StartPosition = FormStartPosition.CenterScreen;
-            ClientSize = new Size(560, 400);
-            Padding = new Padding(18);
+            AutoSize = true;
+            AutoSizeMode = AutoSizeMode.GrowAndShrink;
+            Padding = new Padding(Px(18));
             try
             {
                 Icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath);
@@ -863,15 +975,17 @@ namespace MangaXSetup
             }
 
             TableLayoutPanel layout = new TableLayoutPanel();
-            layout.Dock = DockStyle.Fill;
+            layout.AutoSize = true;
+            layout.AutoSizeMode = AutoSizeMode.GrowAndShrink;
+            layout.Location = new Point(Px(18), Px(18));
             layout.ColumnCount = 2;
-            layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-            layout.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+            layout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, Px(420)));
+            layout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, Px(110)));
             Controls.Add(layout);
 
             Label title = new Label();
             title.Text = Text2.T("ติดตั้ง MangaX", "Install MangaX");
-            title.Font = new Font("Segoe UI", 16f, FontStyle.Bold);
+            title.Font = new Font("Segoe UI", 16f * extraScale, FontStyle.Bold);
             title.AutoSize = true;
             title.Margin = new Padding(0, 0, 0, 2);
             AddRow(layout, title);
@@ -881,19 +995,19 @@ namespace MangaXSetup
                 "ตัวติดตั้งจะเลือกชุดที่ตรงกับการ์ดจอของเครื่องนี้ แล้วดาวน์โหลดให้เอง",
                 "Setup picks the package that matches this computer's graphics card and downloads it.");
             subtitle.AutoSize = true;
-            subtitle.MaximumSize = new Size(520, 0);
+            subtitle.MaximumSize = new Size(Px(520), 0);
             subtitle.ForeColor = SystemColors.GrayText;
             subtitle.Margin = new Padding(0, 0, 0, 14);
             AddRow(layout, subtitle);
 
             gpuLabel.Text = Text2.T("กำลังตรวจการ์ดจอ...", "Checking the graphics card...");
             gpuLabel.AutoSize = true;
-            gpuLabel.MaximumSize = new Size(520, 0);
+            gpuLabel.MaximumSize = new Size(Px(520), 0);
             gpuLabel.Margin = new Padding(0, 0, 0, 8);
             AddRow(layout, gpuLabel);
 
             noteLabel.AutoSize = true;
-            noteLabel.MaximumSize = new Size(520, 0);
+            noteLabel.MaximumSize = new Size(Px(520), 0);
             noteLabel.ForeColor = Color.FromArgb(176, 96, 0);
             noteLabel.Margin = new Padding(0, 0, 0, 8);
             noteLabel.Visible = false;
@@ -911,7 +1025,7 @@ namespace MangaXSetup
             folderBox.Dock = DockStyle.Fill;
             folderBox.Margin = new Padding(0, 0, 6, 10);
             browseButton.Text = Text2.T("เลือก...", "Browse...");
-            browseButton.AutoSize = true;
+            browseButton.Dock = DockStyle.Fill;
             browseButton.Margin = new Padding(0, 0, 0, 10);
             browseButton.Click += OnBrowse;
             layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
@@ -926,12 +1040,12 @@ namespace MangaXSetup
             AddRow(layout, shortcutBox);
 
             progressBar.Dock = DockStyle.Fill;
-            progressBar.Height = 18;
+            progressBar.Height = Px(18);
             progressBar.Margin = new Padding(0, 0, 0, 4);
             AddRow(layout, progressBar);
 
             statusLabel.AutoSize = true;
-            statusLabel.MaximumSize = new Size(520, 0);
+            statusLabel.MaximumSize = new Size(Px(520), 0);
             statusLabel.Margin = new Padding(0, 0, 0, 10);
             statusLabel.Text = Text2.T("กำลังตรวจเวอร์ชันล่าสุด...", "Looking up the latest version...");
             AddRow(layout, statusLabel);
@@ -940,18 +1054,20 @@ namespace MangaXSetup
             buttons.FlowDirection = FlowDirection.RightToLeft;
             buttons.Dock = DockStyle.Fill;
             buttons.AutoSize = true;
+            buttons.WrapContents = false;
+            buttons.Margin = new Padding(0);
             closeButton.Text = Text2.T("ปิด", "Close");
             closeButton.AutoSize = true;
-            closeButton.MinimumSize = new Size(96, 32);
+            closeButton.MinimumSize = new Size(Px(96), Px(32));
             closeButton.Click += delegate { Close(); };
             installButton.Text = Text2.T("ติดตั้ง", "Install");
             installButton.AutoSize = true;
-            installButton.MinimumSize = new Size(120, 32);
+            installButton.MinimumSize = new Size(Px(120), Px(32));
             installButton.Enabled = false;
             installButton.Click += OnInstall;
             buttons.Controls.Add(closeButton);
             buttons.Controls.Add(installButton);
-            layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+            layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
             layout.Controls.Add(buttons, 0, layout.RowCount);
             layout.SetColumnSpan(buttons, 2);
             layout.RowCount++;
@@ -980,6 +1096,10 @@ namespace MangaXSetup
 
         private void OnShown(object sender, EventArgs e)
         {
+            lookupFailed = false;
+            installButton.Enabled = false;
+            installButton.Text = Text2.T("ติดตั้ง", "Install");
+            statusLabel.Text = Text2.T("กำลังตรวจเวอร์ชันล่าสุด...", "Looking up the latest version...");
             Thread worker = new Thread(delegate()
             {
                 Detection detection = Hardware.Detect();
@@ -1011,8 +1131,11 @@ namespace MangaXSetup
             if (found == null)
             {
                 statusLabel.Text = Text2.T(
-                    "ตรวจเวอร์ชันล่าสุดไม่ได้ ตรวจอินเทอร์เน็ตแล้วเปิดใหม่อีกครั้ง\n",
-                    "Could not look up the latest version. Check the connection and start again.\n") + failure;
+                    "ตรวจเวอร์ชันล่าสุดไม่ได้ ตรวจอินเทอร์เน็ตแล้วกดลองใหม่\n",
+                    "Could not look up the latest version. Check the connection and try again.\n") + failure;
+                lookupFailed = true;
+                installButton.Text = Text2.T("ลองใหม่", "Try again");
+                installButton.Enabled = true;
                 return;
             }
             release = found;
@@ -1052,6 +1175,7 @@ namespace MangaXSetup
 
             if (ScreenshotPath != null)
             {
+                Log.Write("Window " + Width + "x" + Height + ", install button bottom " + (installButton.Parent.Bottom + installButton.Parent.Parent.Top) + ", client height " + ClientSize.Height);
                 using (Bitmap bitmap = new Bitmap(Width, Height))
                 {
                     DrawToBitmap(bitmap, new Rectangle(0, 0, Width, Height));
@@ -1081,6 +1205,11 @@ namespace MangaXSetup
 
         private void OnInstall(object sender, EventArgs e)
         {
+            if (lookupFailed)
+            {
+                OnShown(sender, e);
+                return;
+            }
             if (installed)
             {
                 Process.Start(new ProcessStartInfo(Path.Combine(folderBox.Text, "Win-Start.bat")) { WorkingDirectory = folderBox.Text });
@@ -1140,6 +1269,25 @@ namespace MangaXSetup
             }
 
             InstallOptions options = new InstallOptions();
+            try
+            {
+                string shared = FolderSecurity.SharedAncestor(folder);
+                if (shared != null)
+                {
+                    if (!Confirm(Text2.T(
+                        "บัญชีผู้ใช้อื่นในเครื่องนี้แก้ไขโฟลเดอร์ " + shared + " ได้ และอาจเปลี่ยนไฟล์โปรแกรมได้\nถ้าเครื่องนี้ใช้คนเดียวก็ติดตั้งต่อได้\n\nติดตั้งต่อหรือไม่",
+                        "Other accounts on this computer can modify " + shared + " and could replace the program files.\nThis is fine on a computer only you use.\n\nInstall anyway?")))
+                    {
+                        return;
+                    }
+                    options.AllowSharedLocation = true;
+                }
+            }
+            catch (Exception error)
+            {
+                MessageBox.Show(this, error.Message, Text, MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
             options.VariantId = item.Id;
             options.Directory = folder;
             options.DesktopShortcut = shortcutBox.Checked;
@@ -1310,6 +1458,12 @@ namespace MangaXSetup
             {
                 return SelfTest.Run();
             }
+            string checkFolder = Value(args, "--check-folder");
+            if (checkFolder != null)
+            {
+                Log.Write("Shared ancestor of " + checkFolder + ": " + (FolderSecurity.SharedAncestor(Path.GetFullPath(checkFolder)) ?? "none"));
+                return 0;
+            }
             if (Array.IndexOf(args, "--detect") >= 0)
             {
                 Detection detection = Hardware.Detect();
@@ -1324,7 +1478,12 @@ namespace MangaXSetup
             SetProcessDPIAware();
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
-            SetupForm form = new SetupForm(Value(args, "--dir") ?? DefaultFolder());
+            float extraScale;
+            if (!float.TryParse(Value(args, "--scale") ?? "1", NumberStyles.Float, CultureInfo.InvariantCulture, out extraScale))
+            {
+                extraScale = 1f;
+            }
+            SetupForm form = new SetupForm(Value(args, "--dir") ?? DefaultFolder(), extraScale);
             form.ScreenshotPath = Value(args, "--screenshot");
             form.PresetVariant = Value(args, "--variant");
             Application.Run(form);
@@ -1340,6 +1499,7 @@ namespace MangaXSetup
                 options.VariantId = Value(args, "--variant") ?? Hardware.Detect().VariantId;
                 options.Directory = Path.GetFullPath(Value(args, "--dir") ?? DefaultFolder());
                 options.DesktopShortcut = Array.IndexOf(args, "--no-shortcut") < 0;
+                options.AllowSharedLocation = Array.IndexOf(args, "--allow-shared-location") >= 0;
                 Installer installer = new Installer(GitHub.Latest(), options, CancellationToken.None);
                 int last = -2;
                 installer.Progress = delegate(string status, int percent)
