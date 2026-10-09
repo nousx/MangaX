@@ -188,7 +188,14 @@ memory_profiles/
 !dict/
 dict/*
 !dict/system_prompt_hq_format.yaml
-fonts/
+fonts/*
+# Bundled Thai fonts imported from the local Kotoba catalog.
+!fonts/MangaX-*.ttf
+!fonts/thai-font-catalog.json
+!fonts/README_TH.md
+!fonts/licenses/
+fonts/licenses/*
+!fonts/licenses/*-OFL.txt
 
 # Ignore local wheels
 *.whl
