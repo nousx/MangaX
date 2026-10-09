@@ -14,6 +14,17 @@ from pydantic import BaseModel, Field
 
 from manga_translator.server.core.config_manager import admin_settings
 from manga_translator.server.core.request_rate_limiter import SlidingWindowRateLimiter
+from manga_translator.server.core.setup_guard import (
+    SETUP_TOKEN_ENV,
+    SETUP_TOKEN_HEADER,
+    SETUP_TOKEN_MIN_LENGTH,
+    evaluate_setup_access,
+    is_direct_loopback_request,
+)
+from manga_translator.server.core.username_policy import (
+    InvalidUsernameError,
+    validate_username,
+)
 
 logger = logging.getLogger('manga_translator.server.routes.auth')
 
@@ -24,6 +35,8 @@ LOGIN_IP_MAX_ATTEMPTS = 15
 LOGIN_USER_MAX_ATTEMPTS = 8
 REGISTER_WINDOW = timedelta(minutes=10)
 REGISTER_IP_MAX_ATTEMPTS = 5
+SETUP_WINDOW = timedelta(minutes=10)
+SETUP_IP_MAX_DENIED_ATTEMPTS = 10
 
 _auth_rate_limiter = SlidingWindowRateLimiter()
 
@@ -89,6 +102,59 @@ def _consume_registration_attempt(client_ip: str) -> None:
     _auth_rate_limiter.record(key, REGISTER_IP_MAX_ATTEMPTS, REGISTER_WINDOW)
 
 
+def _require_valid_new_username(username: str) -> None:
+    """Reject usernames outside the allowlist with a clear 400 (new accounts only)."""
+    try:
+        validate_username(username)
+    except InvalidUsernameError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+def _require_setup_access(req: Request, body_token: Optional[str]) -> str:
+    """
+    Allow the initial admin setup only from a direct loopback client or with
+    the setup token.  Returns how access was granted ("loopback" or "token").
+
+    The loopback decision never uses X-Forwarded-For style headers: their
+    mere presence marks the request as proxied (i.e. not local).
+    """
+    client_ip = _client_ip(req)
+    key = f"auth:setup:denied:ip:{client_ip}"
+    allowed, retry_after = _auth_rate_limiter.check(key, SETUP_IP_MAX_DENIED_ATTEMPTS, SETUP_WINDOW)
+    if not allowed:
+        _raise_rate_limit("初始设置尝试过于频繁，请稍后再试", retry_after)
+
+    supplied_token = req.headers.get(SETUP_TOKEN_HEADER) or body_token
+    granted, reason = evaluate_setup_access(req, supplied_token)
+    if granted:
+        return reason
+
+    _auth_rate_limiter.record(key, SETUP_IP_MAX_DENIED_ATTEMPTS, SETUP_WINDOW)
+    logger.warning(f"Initial setup denied for {client_ip}: {reason}")
+    if _audit_service:
+        _audit_service.log_event(
+            event_type="initial_setup",
+            username="",
+            ip_address=client_ip,
+            details={"reason": reason},
+            result="failure"
+        )
+    if reason == "token_invalid":
+        detail = "设置令牌不正确 (invalid setup token)"
+    elif reason == "token_required":
+        detail = (
+            "初始设置只能在服务器本机 (127.0.0.1) 上完成，或提供设置令牌 "
+            f"(initial setup is only allowed from the server machine itself, or with the setup token from {SETUP_TOKEN_ENV})"
+        )
+    else:
+        detail = (
+            "初始设置只能在服务器本机 (127.0.0.1) 上完成；如需远程设置，请在启动服务器前设置环境变量 "
+            f"{SETUP_TOKEN_ENV}（至少 {SETUP_TOKEN_MIN_LENGTH} 个字符）并在此处填写 "
+            f"(initial setup is only allowed from the server machine itself; for remote setup start the server with {SETUP_TOKEN_ENV} set)"
+        )
+    raise HTTPException(status_code=403, detail=detail)
+
+
 class LoginRequest(BaseModel):
     """Login request model"""
     username: str
@@ -111,6 +177,11 @@ class InitialSetupRequest(BaseModel):
     """Initial admin setup request model"""
     username: str = Field(..., min_length=2, max_length=50, description="管理员用户名")
     password: str = Field(..., min_length=6, description="管理员密码（至少6个字符）")
+    setup_token: Optional[str] = Field(
+        None,
+        max_length=512,
+        description="Setup token (MANGA_TRANSLATOR_SETUP_TOKEN); required for non-loopback clients"
+    )
 
 
 class LoginResponse(BaseModel):
@@ -321,13 +392,14 @@ async def check_session(req: Request):
 
 
 @router.get("/status")
-async def get_auth_status():
+async def get_auth_status(req: Request):
     """
     获取认证系统状态
     
     返回：
     - need_setup: 是否需要初始设置（没有任何用户）
     - registration_enabled: 是否开启了用户注册
+    - setup_token_required: 当前客户端完成初始设置是否需要设置令牌（非本机访问时为 true）
     """
     if not _account_service:
         raise HTTPException(500, detail="Services not initialized")
@@ -342,7 +414,8 @@ async def get_auth_status():
     
     return {
         "need_setup": need_setup,
-        "registration_enabled": registration_enabled
+        "registration_enabled": registration_enabled,
+        "setup_token_required": need_setup and not is_direct_loopback_request(req)
     }
 
 
@@ -363,6 +436,11 @@ async def initial_setup(request: InitialSetupRequest, req: Request):
             status_code=400,
             detail="系统已初始化，无法再次设置"
         )
+
+    # Only the operator (loopback) or a holder of the setup token may create
+    # the first administrator.
+    setup_access = _require_setup_access(req, request.setup_token)
+    _require_valid_new_username(request.username)
     
     # 验证用户名
     if not request.username or len(request.username) < 2:
@@ -415,7 +493,7 @@ async def initial_setup(request: InitialSetupRequest, req: Request):
             event_type="initial_setup",
             username=request.username,
             ip_address=client_ip,
-            details={"action": "create_first_admin"},
+            details={"action": "create_first_admin", "access": setup_access},
             result="success"
         )
         
@@ -475,6 +553,8 @@ async def register_user(request: RegisterRequest, req: Request):
             detail="密码至少需要6个字符"
         )
     
+    _require_valid_new_username(request.username)
+
     # 检查用户名是否已存在
     existing_user = _account_service.get_user(request.username)
     if existing_user:

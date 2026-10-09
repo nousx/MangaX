@@ -83,22 +83,35 @@ class HistoryModule {
             return;
         }
         
-        tbody.innerHTML = users.map(([userId, stats]) => `
-            <tr>
-                <td><strong>👤 ${userId}</strong></td>
-                <td>${stats.count} 次</td>
-                <td>${stats.totalFiles} 个</td>
-                <td>${this.formatSize(stats.totalSize)}</td>
-                <td>${stats.lastActivity ? stats.lastActivity.toLocaleString() : '-'}</td>
-                <td>
-                    <button class="btn btn-primary btn-sm" onclick="historyModule.viewUserGallery('${userId}')">📷 查看相册</button>
-                    <button class="btn btn-danger btn-sm" onclick="historyModule.deleteUserHistory('${userId}')">🗑 删除全部</button>
-                </td>
-            </tr>
-        `).join('');
-        
+        // Built with DOM APIs: user ids (usernames) are untrusted.
+        const el = SafeDom.el;
+        const rows = users.map(([userId, stats]) => el('tr', null,
+            el('td', null, el('strong', { text: `👤 ${userId}` })),
+            el('td', { text: `${stats.count} 次` }),
+            el('td', { text: `${stats.totalFiles} 个` }),
+            el('td', { text: this.formatSize(stats.totalSize) }),
+            el('td', { text: stats.lastActivity ? stats.lastActivity.toLocaleString() : '-' }),
+            el('td', null,
+                el('button', {
+                    className: 'btn btn-primary btn-sm',
+                    text: '📷 查看相册',
+                    on: { click: () => this.viewUserGallery(userId) }
+                }),
+                ' ',
+                el('button', {
+                    className: 'btn btn-danger btn-sm',
+                    text: '🗑 删除全部',
+                    on: { click: () => this.deleteUserHistory(userId) }
+                })
+            )
+        ));
+        SafeDom.setChildren(tbody, rows);
+
         if (pagination) {
-            pagination.innerHTML = `<span style="color:#666;">共 ${users.length} 个用户，${this.allRecords.length} 条记录</span>`;
+            SafeDom.setChildren(pagination, SafeDom.el('span', {
+                style: 'color:#666;',
+                text: `共 ${users.length} 个用户，${this.allRecords.length} 条记录`
+            }));
         }
     }
     
@@ -133,7 +146,7 @@ class HistoryModule {
         
         modal.innerHTML = `
             <div style="background:#fff;padding:15px 20px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #ddd;">
-                <h3 style="margin:0;font-size:18px;">📷 ${userId} 的翻译历史 (${userRecords.length} 条)</h3>
+                <h3 style="margin:0;font-size:18px;" id="admin-gallery-title"></h3>
                 <div style="display:flex;gap:10px;align-items:center;">
                     <span id="admin-gallery-selection-info" style="font-size:13px;color:#666;"></span>
                     <button id="admin-gallery-download-selected" class="btn btn-secondary btn-sm" style="display:none;">下载选中</button>
@@ -147,6 +160,7 @@ class HistoryModule {
             </div>
         `;
         
+        modal.querySelector('#admin-gallery-title').textContent = `📷 ${userId} 的翻译历史 (${userRecords.length} 条)`;
         document.body.appendChild(modal);
         
         // 保存当前用户和选中状态
@@ -208,14 +222,14 @@ class HistoryModule {
         
         card.innerHTML = `
             <div style="position:absolute;top:8px;left:8px;z-index:1;">
-                <input type="checkbox" data-token="${item.session_token}" style="width:18px;height:18px;cursor:pointer;">
+                <input type="checkbox" style="width:18px;height:18px;cursor:pointer;">
             </div>
-            <div class="thumbnail-container" data-token="${item.session_token}" style="height:150px;background:#eee;display:flex;align-items:center;justify-content:center;overflow:hidden;">
+            <div class="thumbnail-container" style="height:150px;background:#eee;display:flex;align-items:center;justify-content:center;overflow:hidden;">
                 <span style="color:#999;">加载中...</span>
             </div>
             <div style="padding:10px;">
-                <div style="font-size:12px;color:#333;">${timestamp}</div>
-                <div style="font-size:11px;color:#888;margin-top:3px;">${fileCount} 个文件</div>
+                <div class="gallery-card-time" style="font-size:12px;color:#333;"></div>
+                <div class="gallery-card-count" style="font-size:11px;color:#888;margin-top:3px;"></div>
                 <div style="display:flex;gap:5px;margin-top:8px;">
                     <button class="gallery-view-btn btn btn-secondary btn-sm" style="flex:1;padding:4px 8px;font-size:11px;">查看</button>
                     <button class="gallery-download-btn btn btn-secondary btn-sm" style="flex:1;padding:4px 8px;font-size:11px;">下载</button>
@@ -234,8 +248,13 @@ class HistoryModule {
             card.style.boxShadow = '0 2px 8px rgba(0,0,0,0.1)';
         });
         
+        card.querySelector('.gallery-card-time').textContent = timestamp;
+        card.querySelector('.gallery-card-count').textContent = `${fileCount} 个文件`;
+
         // 复选框事件
         const checkbox = card.querySelector('input[type="checkbox"]');
+        checkbox.dataset.token = item.session_token;
+        card.querySelector('.thumbnail-container').dataset.token = item.session_token;
         checkbox.addEventListener('change', (e) => {
             e.stopPropagation();
             if (checkbox.checked) {
@@ -295,7 +314,7 @@ class HistoryModule {
                 return;
             }
             
-            const resp = await fetch(`/api/history/${sessionToken}/file/${filename}`, {
+            const resp = await fetch(`/api/history/${encodeURIComponent(sessionToken)}/file/${encodeURIComponent(filename)}`, {
                 headers: { 'X-Session-Token': this.app.sessionToken }
             });
             
@@ -563,7 +582,9 @@ class HistoryModule {
         
         for (const token of this.gallerySelectedItems) {
             await this.deleteHistoryItem(token);
-            document.querySelector(`.gallery-card[data-token="${token}"]`)?.remove();
+            document.querySelectorAll('.gallery-card').forEach(cardEl => {
+                if (cardEl.dataset.token === token) cardEl.remove();
+            });
         }
         
         this.gallerySelectedItems.clear();

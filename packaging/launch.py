@@ -115,14 +115,29 @@ def is_official_pytorch_index_url(url):
     )
 
 
+# Set to 1/true to restore the old behaviour of passing --trusted-host for
+# every package index (disables TLS certificate verification for those hosts).
+PIP_TRUST_ALL_INDEX_HOSTS_ENV = "MT_PIP_TRUST_ALL_INDEX_HOSTS"
+
+
 def build_trusted_host_args(urls):
-    """根据 URL 列表构建 pip 的 trusted-host 参数。"""
+    """
+    根据 URL 列表构建 pip 的 trusted-host 参数。
+
+    `--trusted-host` makes pip skip TLS certificate verification for a host,
+    so it is only emitted for plain-HTTP indexes (which pip refuses to use
+    otherwise).  HTTPS indexes/mirrors keep normal certificate verification
+    unless MT_PIP_TRUST_ALL_INDEX_HOSTS is set.
+    """
     import urllib.parse
 
+    trust_all = os.environ.get(PIP_TRUST_ALL_INDEX_HOSTS_ENV, "").strip().lower() in ("1", "true", "yes", "on")
     hosts = []
     for url in urls:
         parsed = urllib.parse.urlparse(url or "")
-        if parsed.hostname and parsed.hostname not in hosts:
+        if not parsed.hostname or parsed.hostname in hosts:
+            continue
+        if trust_all or parsed.scheme.lower() != "https":
             hosts.append(parsed.hostname)
     return "".join(f" --trusted-host {host}" for host in hosts)
 
@@ -397,10 +412,7 @@ def run_pip(args, desc=None):
         trusted_host_line = ''
         
         if mirror_url:
-            parsed = urllib.parse.urlparse(mirror_url)
-            if parsed.hostname:
-                trusted_host_line += f' --trusted-host {parsed.hostname}'
-            trusted_host_line += ' --trusted-host download.pytorch.org'
+            trusted_host_line = build_trusted_host_args([mirror_url, "https://download.pytorch.org"])
         
         return f'"{python}" -m pip {pip_args} --prefer-binary{index_url_line}{trusted_host_line} --disable-pip-version-check --no-warn-script-location'
     

@@ -15,6 +15,7 @@ from qfluentwidgets import (
     HorizontalSeparator,
     SimpleCardWidget,
     StrongBodyLabel,
+    SpinBox,
     themeColor,
 )
 from qfluentwidgets import LineEdit as FluentLineEdit
@@ -288,7 +289,10 @@ def _refresh_env_api_groups(self, *, force: bool = False):
 
     active_api_groups = _selected_api_group_keys(self.controller.config_service.get_config())
     current_env_values = self.controller.config_service.load_env_vars()
-    structure_signature = _env_group_structure_signature(active_api_groups, current_env_values)
+    structure_signature = json.dumps({
+        "api_groups": _env_group_structure_signature(active_api_groups, current_env_values),
+        "translator": _normalize_selected_value(self.controller.config_service.get_config().translator.translator),
+    }, sort_keys=True)
     value_signature = json.dumps(
         {
             "env": current_env_values,
@@ -324,7 +328,9 @@ def _refresh_env_api_groups(self, *, force: bool = False):
         "translation",
         active_api_groups["translation"],
         current_env_values,
-        "No translation API required",
+        ("Codex CLI account hint" if _normalize_selected_value(
+            self.controller.config_service.get_config().translator.translator
+        ) == "codex" else "No translation API required"),
     )
     self.env_group_container_layout.addStretch()
 
@@ -613,6 +619,8 @@ def _sync_setting_widget_values(self, config: dict) -> bool:
             try:
                 if isinstance(widget, ToggleSwitch):
                     widget.setChecked(bool(value))
+                elif isinstance(widget, SpinBox):
+                    widget.setValue(int(value))
                 elif isinstance(widget, FontComboBox):
                     widget.setCurrentFamily(str(value or ""))
                 elif isinstance(widget, QComboBox):
@@ -1266,6 +1274,12 @@ def _create_param_widgets(self, data, parent_layout, prefix=""):
             
             widget.currentTextChanged.connect(lambda text, k=full_key: self._on_upscale_ratio_changed(text, k))
         
+        elif full_key in {"translator.codex_timeout", "translator.codex_batch_size"}:
+            widget = SpinBox()
+            widget.setRange(10, 3600) if key == "codex_timeout" else widget.setRange(1, 100)
+            widget.setValue(int(value))
+            widget.valueChanged.connect(lambda number, k=full_key: self._on_setting_changed(number, k, None))
+
         elif isinstance(value, (int, float)):
             widget = QLineEdit(str(value))
             widget.editingFinished.connect(lambda k=full_key, w=widget: self._on_numeric_input_changed(w.text(), k, float if isinstance(value, float) else int))

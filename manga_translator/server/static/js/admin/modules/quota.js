@@ -41,32 +41,43 @@ class QuotaModule {
                 // API返回的是数组，不是{users: []}
                 const users = Array.isArray(data) ? data : (data.users || []);
                 
-                tbody.innerHTML = users.map(user => {
+                // Built with DOM APIs: usernames/group names are untrusted.
+                const el = SafeDom.el;
+                const rows = users.map(user => {
+                    const username = String(user.username ?? '');
                     const quota = user.quota || {};
-                    const dailyUsed = quota.daily_used || 0;
-                    const dailyLimit = quota.daily_limit || 100;
-                    const percentage = Math.min(100, (dailyUsed / dailyLimit) * 100);
-                    
-                    return `
-                        <tr>
-                            <td><strong>${user.username}</strong></td>
-                            <td>${user.group || 'default'}</td>
-                            <td>
-                                <div style="display:flex;align-items:center;gap:8px;">
-                                    <div style="flex:1;background:#e5e7eb;border-radius:4px;height:8px;">
-                                        <div style="width:${percentage}%;background:${percentage > 80 ? '#ef4444' : '#3b82f6'};height:100%;border-radius:4px;"></div>
-                                    </div>
-                                    <span style="font-size:12px;color:#6b7280;">${dailyUsed}/${dailyLimit}</span>
-                                </div>
-                            </td>
-                            <td>${quota.monthly_used || 0}/${quota.monthly_limit || 3000}</td>
-                            <td>
-                                <button class="btn btn-secondary btn-sm" onclick="quotaModule.editUserQuota('${user.username}')">编辑</button>
-                                <button class="btn btn-secondary btn-sm" onclick="quotaModule.resetUserQuota('${user.username}')">重置</button>
-                            </td>
-                        </tr>
-                    `;
-                }).join('');
+                    const dailyUsed = Number(quota.daily_used) || 0;
+                    const dailyLimit = Number(quota.daily_limit) || 100;
+                    const percentage = SafeDom.percent((dailyUsed / dailyLimit) * 100);
+
+                    return el('tr', null,
+                        el('td', null, el('strong', { text: username })),
+                        el('td', { text: user.group || 'default' }),
+                        el('td', null,
+                            el('div', { style: 'display:flex;align-items:center;gap:8px;' },
+                                el('div', { style: 'flex:1;background:#e5e7eb;border-radius:4px;height:8px;' },
+                                    el('div', { style: `width:${percentage}%;background:${percentage > 80 ? '#ef4444' : '#3b82f6'};height:100%;border-radius:4px;` })
+                                ),
+                                el('span', { style: 'font-size:12px;color:#6b7280;', text: `${dailyUsed}/${dailyLimit}` })
+                            )
+                        ),
+                        el('td', { text: `${quota.monthly_used || 0}/${quota.monthly_limit || 3000}` }),
+                        el('td', null,
+                            el('button', {
+                                className: 'btn btn-secondary btn-sm',
+                                text: '编辑',
+                                on: { click: () => this.editUserQuota(username) }
+                            }),
+                            ' ',
+                            el('button', {
+                                className: 'btn btn-secondary btn-sm',
+                                text: '重置',
+                                on: { click: () => this.resetUserQuota(username) }
+                            })
+                        )
+                    );
+                });
+                SafeDom.setChildren(tbody, rows);
             }
         } catch (e) {
             console.error('Failed to load user quotas:', e);

@@ -215,7 +215,8 @@ class ModelPaddleOCR(OfflineOCR):
                     dictionary_48px = [s[:-1] for s in fp.readlines()]
                 
                 self.color_model = OCR(dictionary_48px, 768)
-                sd = torch.load(ckpt_48px_path, map_location='cpu', weights_only=False)
+                # ocr_ar_48px.ckpt is a plain tensor state dict; verified to load with weights_only=True.
+                sd = torch.load(ckpt_48px_path, map_location='cpu', weights_only=True)
                 
                 # Handle PyTorch Lightning checkpoint format
                 if 'state_dict' in sd:

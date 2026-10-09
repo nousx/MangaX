@@ -12,6 +12,7 @@ import bcrypt
 
 from manga_translator.server.core.models import UserAccount, UserPermissions
 from manga_translator.server.core.persistence import atomic_write_json, load_json
+from manga_translator.server.core.username_policy import validate_username
 
 logger = logging.getLogger(__name__)
 
@@ -52,8 +53,12 @@ class AccountService:
             UserAccount: 创建的用户账号
         
         Raises:
-            ValueError: 如果用户名已存在、密码强度不足或角色无效
+            ValueError: 如果用户名不合法、用户名已存在、密码强度不足或角色无效
         """
+        # Allowlist check for new accounts only; existing accounts are loaded
+        # as-is by _load_accounts() so legacy usernames can still log in.
+        validate_username(username)
+
         # 验证用户名唯一性
         if username in self.accounts:
             raise ValueError(f"用户名 '{username}' 已存在")

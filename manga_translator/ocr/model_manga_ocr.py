@@ -192,7 +192,8 @@ class ModelMangaOCR(OfflineOCR):
             logger=self.logger
         )
         
-        sd = torch.load(self._get_file_path('ocr_ar_48px.ckpt'), map_location='cpu', weights_only=False)
+        # ocr_ar_48px.ckpt is a plain tensor state dict; verified to load with weights_only=True.
+        sd = torch.load(self._get_file_path('ocr_ar_48px.ckpt'), map_location='cpu', weights_only=True)
         if 'state_dict' in sd:
             sd = sd['state_dict']
 

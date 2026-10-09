@@ -20,6 +20,15 @@ from .generic import (
     replace_prefix,
 )
 from .log import get_logger
+from .model_hash_cache import verify_file as verify_model_file_cached
+
+# Set to 1/true to load local model files whose SHA-256 does not match the
+# hash declared in _MODEL_MAPPING (a warning is still printed).
+ALLOW_UNVERIFIED_MODELS_ENV = 'MANGA_TRANSLATOR_ALLOW_UNVERIFIED_MODELS'
+
+
+def _allow_unverified_models() -> bool:
+    return os.environ.get(ALLOW_UNVERIFIED_MODELS_ENV, '').strip().lower() in ('1', 'true', 'yes', 'on')
 
 
 class InfererModule(ABC):
@@ -365,6 +374,53 @@ class ModelWrapper(ABC):
 
         return True
 
+    def _iter_hashed_model_files(self):
+        """Yield (map_key, path, sha256) for every local `file` entry that declares a hash."""
+        for map_key, mapping in self._MODEL_MAPPING.items():
+            # For `archive` entries the hash describes the downloaded archive, not
+            # the extracted files, so those cannot be re-verified here.
+            if 'hash' not in mapping or 'file' not in mapping:
+                continue
+            path = mapping['file']
+            if os.path.basename(path) in ('.', ''):
+                url_for_filename = mapping['url'] if isinstance(mapping['url'], str) else mapping['url'][0]
+                path = os.path.join(path, get_filename_from_url(url_for_filename, map_key))
+            full_path = self._get_file_path(path)
+            if os.path.isfile(full_path):
+                yield map_key, full_path, mapping['hash']
+
+    def _verify_local_model_files(self):
+        '''
+        Verifies the SHA-256 of model files that are already on disk before they
+        are loaded. Each file is hashed once and then remembered by path, size
+        and mtime (see `model_hash_cache`), so later loads do not re-hash it.
+
+        Raises `ModelVerificationException` on a mismatch unless
+        MANGA_TRANSLATOR_ALLOW_UNVERIFIED_MODELS is set.
+        '''
+        for map_key, path, expected in self._iter_hashed_model_files():
+            try:
+                ok, actual, from_cache = verify_model_file_cached(path, expected)
+            except OSError as e:
+                self._model_logger().warning(f'Could not verify model file "{path}": {e}')
+                continue
+            if ok:
+                continue
+            message = (
+                f'[{self._key}->{map_key}] Model file "{path}" does not match the expected SHA-256 '
+                f'(expected {expected.lower()}, got {actual}). It may be corrupted or may have been replaced. '
+                f'Delete the file to download it again, or set {ALLOW_UNVERIFIED_MODELS_ENV}=1 '
+                'to load it anyway if you trust it.'
+            )
+            if _allow_unverified_models():
+                self._model_logger().warning(message)
+                continue
+            self._model_logger().error(message)
+            raise ModelVerificationException(message)
+
+    def _model_logger(self):
+        return getattr(self, 'logger', None) or get_logger(self.__class__.__name__)
+
     def _grant_execute_permissions(self, map_key: str):
         mapping = self._MODEL_MAPPING[map_key]
 
@@ -390,6 +446,7 @@ class ModelWrapper(ABC):
         if not self.is_downloaded():
             await self.download()
         if not self.is_loaded():
+            self._verify_local_model_files()
             await self._load(device=device, **kwargs)
             self._loaded = True
 

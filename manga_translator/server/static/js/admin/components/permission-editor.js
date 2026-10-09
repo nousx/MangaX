@@ -125,7 +125,7 @@ class PermissionEditor {
             modal.innerHTML = `
                 <div class="modal-container" style="max-width: 500px;">
                     <div class="modal-header">
-                        <h2>${this.title}</h2>
+                        <h2>${this.escapeHtml(this.title)}</h2>
                         <button class="modal-close" onclick="window._permEditor.close()">×</button>
                     </div>
                     <div class="modal-body">
@@ -134,7 +134,7 @@ class PermissionEditor {
                                 用户的权限和配额完全由所属用户组决定。如需修改权限，请编辑对应的用户组配置。
                             </p>
                             <div style="background:#f3f4f6;padding:12px;border-radius:8px;">
-                                <p style="margin:0;font-size:14px;"><strong>当前用户组：</strong> ${this.currentGroupName || '默认'}</p>
+                                <p style="margin:0;font-size:14px;"><strong>当前用户组：</strong> ${this.escapeHtml(this.currentGroupName || '默认')}</p>
                             </div>
                         </div>
                     </div>
@@ -148,7 +148,7 @@ class PermissionEditor {
             modal.innerHTML = `
                 <div class="modal-container modal-large">
                     <div class="modal-header">
-                        <h2>${this.title}</h2>
+                        <h2>${this.escapeHtml(this.title)}</h2>
                         <button class="modal-close" onclick="window._permEditor.close()">×</button>
                     </div>
                     <div class="modal-body">
@@ -269,7 +269,7 @@ class PermissionEditor {
         const optionsHtml = (options || []).map(opt => {
             const label = this.getOptionLabel(key, opt);
             const selected = (value === opt || String(value) === String(opt)) ? 'selected' : '';
-            return `<option value="${opt}" ${selected}>${label}</option>`;
+            return `<option value="${this.escapeHtml(opt)}" ${selected}>${this.escapeHtml(label)}</option>`;
         }).join('');
         return `<select id="${id}" class="form-control" data-section="${section}" data-key="${key}">${optionsHtml}</select>`;
     }
@@ -280,7 +280,7 @@ class PermissionEditor {
         const id = `perm-${section}-${key}`;
         const inputType = type === 'number' ? 'number' : 'text';
         const displayValue = value === null ? '' : value;
-        return `<input type="${inputType}" id="${id}" class="form-control" value="${displayValue}" data-section="${section}" data-key="${key}">`;
+        return `<input type="${inputType}" id="${id}" class="form-control" value="${this.escapeHtml(displayValue)}" data-section="${section}" data-key="${key}">`;
     }
     
     // 创建复选框
@@ -384,7 +384,7 @@ class PermissionEditor {
     createPresetSelect() {
         const currentPresetId = this.getValue('_meta', 'default_preset_id') || '';
         const presetOptions = this.presets.map(p => 
-            `<option value="${p.id}" ${currentPresetId === p.id ? 'selected' : ''}>${this.escapeHtml(p.name)}</option>`
+            `<option value="${this.escapeHtml(p.id)}" ${currentPresetId === p.id ? 'selected' : ''}>${this.escapeHtml(p.name)}</option>`
         ).join('');
         
         return `
@@ -396,8 +396,9 @@ class PermissionEditor {
     }
     
     escapeHtml(str) {
-        if (!str) return '';
-        return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        // Unlike the previous implementation this also escapes quotes/backticks
+        // and keeps falsy-but-meaningful values such as 0.
+        return SafeDom.escapeHtml(str);
     }
 
     // 基础设置标签页：API预设、翻译器、OCR、检测器、目标语言
@@ -719,7 +720,7 @@ class PermissionEditor {
                 const checked = isAllVisible || visiblePresets.includes(p.id);
                 html += `
                     <label class="translator-item">
-                        <input type="checkbox" class="preset-cb" data-preset-id="${p.id}" ${checked ? 'checked' : ''}>
+                        <input type="checkbox" class="preset-cb" data-preset-id="${this.escapeHtml(p.id)}" ${checked ? 'checked' : ''}>
                         <span>${this.escapeHtml(p.name)}</span>
                     </label>
                 `;
@@ -793,7 +794,7 @@ class PermissionEditor {
 
             html += `
                 <label class="translator-item${extraClass}" title="${title}">
-                    <input type="checkbox" class="${checkboxClass}" data-${dataAttr}="${value}" data-parent-denied="${inheritedDenied}" ${checked ? 'checked' : ''}>
+                    <input type="checkbox" class="${checkboxClass}" data-${dataAttr}="${this.escapeHtml(value)}" data-parent-denied="${inheritedDenied}" ${checked ? 'checked' : ''}>
                     <span>${this.escapeHtml(label)}</span>
                 </label>
             `;
@@ -894,7 +895,7 @@ class PermissionEditor {
             
             html += `
                 <label class="translator-item${extraClass}" title="${title}">
-                    <input type="checkbox" class="workflow-cb" data-workflow="${wf.id}" data-parent-denied="${inheritedDenied}" ${checked ? 'checked' : ''}>
+                    <input type="checkbox" class="workflow-cb" data-workflow="${this.escapeHtml(wf.id)}" data-parent-denied="${inheritedDenied}" ${checked ? 'checked' : ''}>
                     <span>${this.escapeHtml(wf.name)}</span>
                 </label>
             `;
@@ -984,7 +985,7 @@ class PermissionEditor {
                 if (!selected && value === 'x' + currentVal) selected = 'selected';
                 if (!selected && value === currentVal + 'x') selected = 'selected'; // 有些模型带x后缀
 
-                return `<option value="${value}" ${selected}>${opt}</option>`;
+                return `<option value="${this.escapeHtml(value)}" ${selected}>${this.escapeHtml(opt)}</option>`;
             }).join('');
             
             // 更新 data-current-value 以便下次切换保持

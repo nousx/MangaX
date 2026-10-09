@@ -706,23 +706,23 @@ function updateFontList(fonts) {
         return;
     }
     
-    let html = '<div style="display: flex; flex-direction: column; gap: 8px;">';
+    // Built with DOM APIs: font family / file names come from uploaded files.
+    const list = SafeDom.el('div', { style: 'display: flex; flex-direction: column; gap: 8px;' });
     fonts.forEach(font => {
         const family = font.font_family || font.filename;
-        const deleteBtn = `<button data-font-id="${font.id}" data-font-name="${font.filename}" class="secondary-btn delete-font-btn" style="padding: 4px 12px; font-size: 12px; background: #F44336; color: white;">删除</button>`;
-        
-        html += `
-            <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px; background: #F5F7FA; border-radius: 4px;">
-                <span style="font-size: 13px;">${family} · ${font.filename}</span>
-                ${deleteBtn}
-            </div>
-        `;
+        list.appendChild(SafeDom.el('div', {
+            style: 'display: flex; justify-content: space-between; align-items: center; padding: 8px; background: #F5F7FA; border-radius: 4px;'
+        },
+            SafeDom.el('span', { style: 'font-size: 13px;', text: `${family} · ${font.filename}` }),
+            SafeDom.el('button', {
+                className: 'secondary-btn delete-font-btn',
+                style: 'padding: 4px 12px; font-size: 12px; background: #F44336; color: white;',
+                text: '删除',
+                on: { click: () => deleteFont(font.id, font.filename) }
+            })
+        ));
     });
-    html += '</div>';
-    container.innerHTML = html;
-    container.querySelectorAll('.delete-font-btn').forEach(button => {
-        button.addEventListener('click', () => deleteFont(button.dataset.fontId, button.dataset.fontName));
-    });
+    SafeDom.setChildren(container, list);
 }
 
 async function refreshFontResources() {
@@ -752,24 +752,30 @@ function updatePromptList(prompts) {
         return;
     }
     
-    let html = '<div style="display: flex; flex-direction: column; gap: 8px;">';
-    prompts.forEach(prompt => {
+    // Built with DOM APIs: prompt paths / file names come from uploaded files.
+    const list = SafeDom.el('div', { style: 'display: flex; flex-direction: column; gap: 8px;' });
+    prompts.forEach(rawPrompt => {
+        const prompt = String(rawPrompt ?? '');
         // 判断是否是用户上传的提示词（路径包含 user_resources）
         const isUserPrompt = prompt.includes('user_resources');
         const displayName = isUserPrompt ? prompt.split('/').pop() : prompt;
-        const deleteBtn = isUserPrompt 
-            ? `<button onclick="deletePrompt('${prompt}')" class="secondary-btn" style="padding: 4px 12px; font-size: 12px; background: #F44336; color: white;">删除</button>`
-            : '<span style="color: #999; font-size: 11px;">服务器提示词</span>';
-        
-        html += `
-            <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px; background: #F5F7FA; border-radius: 4px;">
-                <span style="font-family: monospace; font-size: 13px;">${displayName}</span>
-                ${deleteBtn}
-            </div>
-        `;
+        const action = isUserPrompt
+            ? SafeDom.el('button', {
+                className: 'secondary-btn',
+                style: 'padding: 4px 12px; font-size: 12px; background: #F44336; color: white;',
+                text: '删除',
+                on: { click: () => deletePrompt(prompt) }
+            })
+            : SafeDom.el('span', { style: 'color: #999; font-size: 11px;', text: '服务器提示词' });
+
+        list.appendChild(SafeDom.el('div', {
+            style: 'display: flex; justify-content: space-between; align-items: center; padding: 8px; background: #F5F7FA; border-radius: 4px;'
+        },
+            SafeDom.el('span', { style: 'font-family: monospace; font-size: 13px;', text: displayName }),
+            action
+        ));
     });
-    html += '</div>';
-    container.innerHTML = html;
+    SafeDom.setChildren(container, list);
 }
 
 let availableTranslators = [];

@@ -680,8 +680,11 @@ Notes:
 
 ### Web mode arguments
 
-- `--host`: server host, default `0.0.0.0`
-  - If set to `127.0.0.1`, only the local machine can access it
+- `--host`: server host, default `127.0.0.1` (only the local machine can access it)
+  - Pass `--host 0.0.0.0` explicitly to accept LAN / container connections
+- `--cors-origins`: comma-separated origins allowed to call the API cross-origin (default: loopback origins only; environment variable `MT_WEB_CORS_ORIGINS`)
+
+> 🔐 **Creating the first admin account** is only possible from the server machine itself (`http://127.0.0.1:<port>`). To complete the initial setup from another machine (LAN, Docker port mapping, reverse proxy), start the server with the `MANGA_TRANSLATOR_SETUP_TOKEN` environment variable set to a random string of at least 16 characters and enter that token on the setup page.
 - `--port`: server port, default `8000`
 - `--use-gpu`: use GPU acceleration
 - `--disable-onnx-gpu`: disable ONNX Runtime GPU acceleration

@@ -97,7 +97,7 @@ def test_fetch_latest_release_reads_matching_remote_changelog(monkeypatch):
     ]
     assert info.release_notes.startswith("# v2.2.10 更新日志")
     assert info.release_url == (
-        "https://github.com/hgmzhn/manga-translator-ui/releases/tag/v2.2.10"
+        "https://github.com/nousx/MangaX/releases/tag/v2.2.10"
     )
 
 

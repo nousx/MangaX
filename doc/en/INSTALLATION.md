@@ -277,6 +277,8 @@ services:
       MT_WEB_HOST: 0.0.0.0
       MT_WEB_PORT: 8000
       MANGA_TRANSLATOR_ADMIN_PASSWORD: change_me_123456
+      # Required on the setup page when creating the first admin account (random string, 16+ characters)
+      MANGA_TRANSLATOR_SETUP_TOKEN: change_me_to_a_long_random_string
     volumes:
       - ./data/models:/app/models
       - ./data/fonts:/app/fonts
@@ -303,7 +305,9 @@ services:
 
 | Variable | Example | Default | Description |
 |--------|--------|--------|------|
-| `MT_WEB_HOST` | `0.0.0.0` | `0.0.0.0` | Listen address |
+| `MT_WEB_HOST` | `0.0.0.0` | `127.0.0.1` | Listen address (`0.0.0.0` accepts external connections; the Docker image command already passes `--host 0.0.0.0`) |
+| `MANGA_TRANSLATOR_SETUP_TOKEN` | random string | none | Setup token (16+ characters). Required to create the first admin account from anywhere but the server machine itself (including Docker port mappings and reverse proxies) |
+| `MT_WEB_CORS_ORIGINS` | `https://example.com` | loopback origins only | Comma-separated origins allowed to call the API cross-origin; `*` allows all |
 | `MT_WEB_PORT` | `8000` | `8000` | Web server port |
 | `MT_USE_GPU` | `true` | `false` | Enable GPU, only meaningful for GPU images |
 | `MT_MODELS_TTL` | `300` | `0` | Model lifetime in memory, in seconds. `0` keeps models loaded |

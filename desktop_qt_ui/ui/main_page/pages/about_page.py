@@ -49,7 +49,10 @@ from utils.app_version import format_version_label
 from utils.resource_helper import resource_path
 
 PROJECT_ROOT = Path(resource_path("."))
-GITHUB_REPOSITORY_URL = "https://github.com/hgmzhn/manga-translator-ui"
+GITHUB_REPOSITORY_URL = "https://github.com/nousx/MangaX"
+# MangaX is a GPL-3.0 fork; the About page credits the projects it is built on.
+UPSTREAM_REPOSITORY_URL = "https://github.com/hgmzhn/manga-translator-ui"
+ENGINE_REPOSITORY_URL = "https://github.com/zyddnys/manga-image-translator"
 GITHUB_COMMIT_HASH = os.environ.get("GITHUB_SHA") or current_commit(PROJECT_ROOT)
 KOFI_URL = "https://ko-fi.com/hgzmhn"
 WIKI_URL = "https://hgmzhn.github.io/manga-translator-ui/zh/"
@@ -61,7 +64,7 @@ def _open_about_directory(self, relative_path: str):
     QDesktopServices.openUrl(QUrl.fromLocalFile(directory))
 
 
-MIRROR_LABEL_KEYS = ("GitHub Official", "Gitee Mirror", "GitCode Mirror")
+MIRROR_LABEL_KEYS = ("GitHub Official",)
 
 
 def _populate_about_mirror_combo(self):
@@ -252,12 +255,12 @@ def show_sponsor_dialog(self):
 
     parent = normalize_dialog_parent(self._dialog_parent())
     dialog = Dialog("", "", parent)
-    dialog.setWindowTitle(self._t("Support the Project"))
+    dialog.setWindowTitle(self._t("Support Original Author"))
     dialog.titleLabel.hide()
     dialog.contentLabel.hide()
     dialog.textLayout.setSpacing(12)
 
-    heading = SubtitleLabel(self._t("Support the Project"), dialog)
+    heading = SubtitleLabel(self._t("Support Original Author"), dialog)
     message = BodyLabel(self._t("Sponsor Message"), dialog)
     message.setWordWrap(True)
     dialog.textLayout.addWidget(heading)
@@ -379,6 +382,29 @@ def create_about_page(self) -> QWidget:
     content.setSpacing(18)
     self.about_resource_rows = []
     self.about_link_buttons = []
+
+    credits_card, credits_layout = _create_section_card(
+        self._t("About Credits Title"),
+        self._t("About Credits Subtitle"),
+        FIF.PEOPLE,
+    )
+    self.about_credits_card = credits_card
+    self.about_credits_body = BodyLabel(self._t("About Credits Body"), credits_card)
+    self.about_credits_body.setWordWrap(True)
+    credits_layout.addWidget(self.about_credits_body)
+    credit_buttons = QHBoxLayout()
+    credit_buttons.setSpacing(8)
+    _add_about_link(self, credit_buttons, "Original Project", UPSTREAM_REPOSITORY_URL)
+    _add_about_link(self, credit_buttons, "Translation Engine", ENGINE_REPOSITORY_URL)
+    _add_about_link(
+        self,
+        credit_buttons,
+        "View License",
+        QUrl.fromLocalFile(resource_path("LICENSE.txt")).toString(),
+    )
+    credit_buttons.addStretch(1)
+    credits_layout.addLayout(credit_buttons)
+    page_layout.addWidget(credits_card)
 
     self.about_preference_rows = []
     preferences_card, preferences_layout = _create_section_card(
@@ -574,9 +600,10 @@ def create_about_page(self) -> QWidget:
     links_layout.addLayout(link_buttons)
     right_resources.addWidget(links_card)
 
+    # Donation channels belong to the upstream author, so the card says so.
     sponsor_card, sponsor_layout = _create_section_card(
-        self._t("Support the Project"),
-        self._t("Support Project Subtitle"),
+        self._t("Support Original Author"),
+        self._t("Support Original Author Subtitle"),
         FIF.HEART,
     )
     self.about_sponsor_card = sponsor_card
@@ -652,12 +679,14 @@ def refresh_about_page_texts(self):
         (self.about_links_card, "Web Resources", "Web Resources Subtitle"),
         (
             self.about_sponsor_card,
-            "Support the Project",
-            "Support Project Subtitle",
+            "Support Original Author",
+            "Support Original Author Subtitle",
         ),
+        (self.about_credits_card, "About Credits Title", "About Credits Subtitle"),
     ):
         card._about_title_label.setText(self._t(title_key))
         card._about_subtitle_label.setText(self._t(subtitle_key))
+    self.about_credits_body.setText(self._t("About Credits Body"))
     for title_label, path_label, button, title_key in self.about_resource_rows:
         title_label.setText(self._t(title_key))
         button.setText(self._t("Open Directory"))

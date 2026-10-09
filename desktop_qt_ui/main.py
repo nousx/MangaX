@@ -248,7 +248,7 @@ def main():
     
     # 1. 创建 QApplication 实例
     app = QApplication(sys.argv)
-    app.setApplicationName("Manga Translator UI")
+    app.setApplicationName("MangaX")
     app.setOrganizationName("Manga Translator UI")
     app_version = get_app_version()
     if app_version != "unknown":

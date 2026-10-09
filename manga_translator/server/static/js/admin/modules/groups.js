@@ -45,31 +45,55 @@ class GroupsModule {
         const tbody = document.getElementById('groups-table-body');
         if (!tbody) return;
         if (groups.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#6b7280;">暂无用户组</td></tr>';
+            SafeDom.setChildren(tbody, SafeDom.messageRow(6, '暂无用户组'));
             return;
         }
-        tbody.innerHTML = groups.map(group => {
+        // Built with DOM APIs: group ids/names/descriptions are untrusted.
+        const el = SafeDom.el;
+        const rows = groups.map(group => {
+            const groupId = String(group.id ?? '');
             const presetName = group.default_preset_id
                 ? (this.presets.find(p => p.id === group.default_preset_id)?.name || group.default_preset_id)
                 : '服务器默认';
-            return `
-            <tr>
-                <td><strong>${this.escapeHtml(group.name)}</strong><br><small style="color:#6b7280;">${group.id}</small></td>
-                <td>${this.escapeHtml(group.description || '-')}</td>
-                <td>${group.member_count || 0}</td>
-                <td><span class="badge badge-info" title="API密钥预设">${this.escapeHtml(presetName)}</span></td>
-                <td><span class="badge ${group.is_default ? 'badge-success' : 'badge-secondary'}">${group.is_default ? '是' : '否'}</span></td>
-                <td>
-                    <button class="btn btn-primary btn-sm" onclick="groupsModule.openEditModal('${group.id}')">编辑</button>
-                    ${!['admin', 'default', 'guest'].includes(group.id) ? `<button class="btn btn-danger btn-sm" onclick="groupsModule.deleteGroup('${group.id}')">删除</button>` : ''}
-                </td>
-            </tr>
-        `}).join('');
+            const isBuiltin = ['admin', 'default', 'guest'].includes(groupId);
+            return el('tr', null,
+                el('td', null,
+                    el('strong', { text: group.name }),
+                    el('br'),
+                    el('small', { style: 'color:#6b7280;', text: groupId })
+                ),
+                el('td', { text: group.description || '-' }),
+                el('td', { text: group.member_count || 0 }),
+                el('td', null, el('span', {
+                    className: 'badge badge-info',
+                    title: 'API密钥预设',
+                    text: presetName
+                })),
+                el('td', null, el('span', {
+                    className: `badge ${group.is_default ? 'badge-success' : 'badge-secondary'}`,
+                    text: group.is_default ? '是' : '否'
+                })),
+                el('td', null,
+                    el('button', {
+                        className: 'btn btn-primary btn-sm',
+                        text: '编辑',
+                        on: { click: () => this.openEditModal(groupId) }
+                    }),
+                    ' ',
+                    !isBuiltin && el('button', {
+                        className: 'btn btn-danger btn-sm',
+                        text: '删除',
+                        on: { click: () => this.deleteGroup(groupId) }
+                    })
+                )
+            );
+        });
+        SafeDom.setChildren(tbody, rows);
     }
 
     async openEditModal(groupId) {
         try {
-            const resp = await fetch(`/api/admin/groups/${groupId}`, {
+            const resp = await fetch(`/api/admin/groups/${encodeURIComponent(groupId)}`, {
                 headers: { 'X-Session-Token': this.app.sessionToken }
             });
             if (!resp.ok) throw new Error('获取用户组失败');
@@ -147,7 +171,7 @@ class GroupsModule {
         delete paramConfig.visible_presets;
 
         try {
-            const resp = await fetch(`/api/admin/groups/${this.currentEditGroup.id}/config`, {
+            const resp = await fetch(`/api/admin/groups/${encodeURIComponent(this.currentEditGroup.id)}/config`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
@@ -186,7 +210,7 @@ class GroupsModule {
         if (!confirm(`确定删除用户组 "${groupId}"? 组内用户将被移至默认组。`)) return;
 
         try {
-            const resp = await fetch(`/api/admin/groups/${groupId}`, {
+            const resp = await fetch(`/api/admin/groups/${encodeURIComponent(groupId)}`, {
                 method: 'DELETE',
                 headers: { 'X-Session-Token': this.app.sessionToken }
             });
@@ -204,10 +228,6 @@ class GroupsModule {
     }
 
     showCreateGroupModal() {
-        const presetOptions = this.presets.map(p =>
-            `<option value="${p.id}">${this.escapeHtml(p.name)}</option>`
-        ).join('');
-
         const modal = document.createElement('div');
         modal.className = 'modal-overlay';
         modal.innerHTML = `
@@ -234,7 +254,6 @@ class GroupsModule {
                         <label class="form-label">默认API密钥预设</label>
                         <select class="form-select" id="new-group-preset" style="width:100%;">
                             <option value="">使用服务器默认配置</option>
-                            ${presetOptions}
                         </select>
                     </div>
                 </div>
@@ -244,6 +263,13 @@ class GroupsModule {
                 </div>
             </div>
         `;
+        const presetSelect = modal.querySelector('#new-group-preset');
+        for (const preset of this.presets) {
+            const option = document.createElement('option');
+            option.value = preset.id;
+            option.textContent = preset.name;
+            presetSelect.appendChild(option);
+        }
         document.body.appendChild(modal);
     }
 
@@ -292,11 +318,7 @@ class GroupsModule {
     }
 
     escapeHtml(str) {
-        if (!str) return '';
-        return String(str).replace(/&/g, '&amp;')
-            .replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;')
-            .replace(/"/g, '&quot;');
+        return SafeDom.escapeHtml(str);
     }
 }
 

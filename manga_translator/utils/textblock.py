@@ -93,6 +93,10 @@ def _translation_plain_text(value: Any) -> str:
     return plain_text_of(value)
 
 
+# Optional per-region annotations written by the desktop editor's chapter assistant.
+EDITOR_METADATA_KEYS = ('speaker', 'listener', 'text_kind', 'locked', '_mangax_review')
+
+
 class TextBlock(object):
     """
     Object that stores a block of text made up of textlines.
@@ -227,6 +231,12 @@ class TextBlock(object):
                 )
             except (TypeError, ValueError):
                 self._center_override = None
+
+        # Editor review annotations ride along unchanged, so a backend JSON write-back
+        # (load_text -> to_dict) does not strip them. Absent keys stay absent.
+        self.editor_metadata = {
+            key: kwargs[key] for key in EDITOR_METADATA_KEYS if key in kwargs
+        }
 
     @cached_property
     def xyxy(self):
@@ -461,6 +471,7 @@ class TextBlock(object):
             if not is_redundant_plain_document(self.translation_rich, self.translation):
                 result['translation_rich'] = self.translation_rich
         result.update(render_box_extra)
+        result.update(getattr(self, 'editor_metadata', {}))
         return result
 
     def get_transformed_region(self, img: np.ndarray, line_idx: int, textheight: int, maxwidth: int = None) -> np.ndarray:

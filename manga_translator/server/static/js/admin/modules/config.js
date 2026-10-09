@@ -172,14 +172,20 @@ class ConfigModule {
             return;
         }
         
-        container.innerHTML = fonts.map(font => `
-            <div style="display:flex;justify-content:space-between;align-items:center;padding:10px;background:#f9fafb;border-radius:6px;">
-                <span style="font-family:monospace;">${font}</span>
-                <button class="btn btn-danger btn-sm" onclick="configModule.deleteServerFont('${font}')">删除</button>
-            </div>
-        `).join('');
+        // Built with DOM APIs: file names are untrusted.
+        const el = SafeDom.el;
+        SafeDom.setChildren(container, fonts.map(font => el('div', {
+            style: 'display:flex;justify-content:space-between;align-items:center;padding:10px;background:#f9fafb;border-radius:6px;'
+        },
+            el('span', { style: 'font-family:monospace;', text: font }),
+            el('button', {
+                className: 'btn btn-danger btn-sm',
+                text: '删除',
+                on: { click: () => this.deleteServerFont(font) }
+            })
+        )));
     }
-    
+
     async uploadServerFont(input) {
         const file = input.files[0];
         if (!file) return;
@@ -257,17 +263,27 @@ class ConfigModule {
             return;
         }
         
-        container.innerHTML = prompts.map(prompt => `
-            <div style="display:flex;justify-content:space-between;align-items:center;padding:10px;background:#f9fafb;border-radius:6px;">
-                <span style="font-family:monospace;">${prompt}</span>
-                <div style="display:flex;gap:8px;">
-                    <button class="btn btn-secondary btn-sm" onclick="configModule.viewServerPrompt('${prompt}')">查看</button>
-                    <button class="btn btn-danger btn-sm" onclick="configModule.deleteServerPrompt('${prompt}')">删除</button>
-                </div>
-            </div>
-        `).join('');
+        // Built with DOM APIs: file names are untrusted.
+        const el = SafeDom.el;
+        SafeDom.setChildren(container, prompts.map(prompt => el('div', {
+            style: 'display:flex;justify-content:space-between;align-items:center;padding:10px;background:#f9fafb;border-radius:6px;'
+        },
+            el('span', { style: 'font-family:monospace;', text: prompt }),
+            el('div', { style: 'display:flex;gap:8px;' },
+                el('button', {
+                    className: 'btn btn-secondary btn-sm',
+                    text: '查看',
+                    on: { click: () => this.viewServerPrompt(prompt) }
+                }),
+                el('button', {
+                    className: 'btn btn-danger btn-sm',
+                    text: '删除',
+                    on: { click: () => this.deleteServerPrompt(prompt) }
+                })
+            )
+        )));
     }
-    
+
     async viewServerPrompt(filename) {
         try {
             const resp = await fetch(`/prompts/${encodeURIComponent(filename)}`, {
@@ -297,11 +313,11 @@ class ConfigModule {
             modal.innerHTML = `
                 <div style="background:white;border-radius:12px;max-width:800px;width:90%;max-height:80vh;display:flex;flex-direction:column;box-shadow:0 25px 50px -12px rgba(0,0,0,0.25);">
                     <div style="padding:20px;border-bottom:1px solid #e5e7eb;display:flex;justify-content:space-between;align-items:center;">
-                        <h3 style="margin:0;font-size:18px;">提示词内容: ${filename}</h3>
+                        <h3 style="margin:0;font-size:18px;" data-role="prompt-title"></h3>
                         <button onclick="this.closest('.modal-overlay').remove()" style="background:none;border:none;font-size:24px;cursor:pointer;color:#6b7280;">&times;</button>
                     </div>
                     <div style="padding:20px;overflow:auto;flex:1;">
-                        <pre style="background:#f3f4f6;padding:16px;border-radius:8px;overflow:auto;margin:0;font-size:13px;line-height:1.5;white-space:pre-wrap;word-break:break-all;">${this.escapeHtml(formattedContent)}</pre>
+                        <pre style="background:#f3f4f6;padding:16px;border-radius:8px;overflow:auto;margin:0;font-size:13px;line-height:1.5;white-space:pre-wrap;word-break:break-all;" data-role="prompt-content"></pre>
                     </div>
                     <div style="padding:16px 20px;border-top:1px solid #e5e7eb;text-align:right;">
                         <button class="btn btn-primary" onclick="this.closest('.modal-overlay').remove()">关闭</button>
@@ -309,6 +325,8 @@ class ConfigModule {
                 </div>
             `;
             
+            modal.querySelector('[data-role="prompt-title"]').textContent = `提示词内容: ${filename}`;
+            modal.querySelector('[data-role="prompt-content"]').textContent = formattedContent ?? '';
             document.body.appendChild(modal);
             
             // 点击背景关闭

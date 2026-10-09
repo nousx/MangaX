@@ -73,10 +73,19 @@ def test_maintenance_fetch_failure_keeps_mirror_fallback(monkeypatch):
         "_run_git_fetch",
         lambda *args, **kwargs: SimpleNamespace(returncode=1, stdout="", stderr="network error"),
     )
+    # The shipped list may hold a single source; the fallback needs two.
+    monkeypatch.setattr(
+        launch,
+        "GIT_MIRRORS",
+        [
+            ("GitHub 官方", "GitHub official", "https://github.com/example/app.git"),
+            ("Gitee 镜像", "Gitee mirror", "https://gitee.com/example/app.git"),
+        ],
+    )
     monkeypatch.setattr(
         launch,
         "get_remote_url",
-        lambda: "https://github.com/hgmzhn/manga-translator-ui.git",
+        lambda: "https://github.com/example/app.git",
     )
     monkeypatch.setattr(launch, "get_mirror_display_name", lambda *args, **kwargs: "GitHub 官方")
     monkeypatch.setattr("builtins.input", lambda prompt: prompts.append(prompt) or "n")

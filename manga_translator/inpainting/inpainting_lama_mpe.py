@@ -576,7 +576,7 @@ class LamaLargeInpainter(LamaMPEInpainter):
         
         # 直接加载到目标设备，避免重复移动
         target_device = device if (device.startswith('cuda') or device == 'mps') else 'cpu'
-        self.model = load_lama_mpe(ckpt_path, device=target_device, use_mpe=False, large_arch=True)
+        self.model = load_lama_mpe(ckpt_path, device=target_device, use_mpe=False, large_arch=True, weights_only=True)
         self.model.eval()
         self.backend = 'torch'
     
@@ -706,7 +706,7 @@ class LamaLargeInpainter(LamaMPEInpainter):
                         self.logger.error(f"PyTorch model file does not exist: {ckpt_path}")
                         self.logger.error("ONNX inference failed and PyTorch model is missing; cannot inpaint")
                         raise FileNotFoundError(f'Model file not found: {ckpt_path}')
-                    self.model = load_lama_mpe(ckpt_path, device='cpu', use_mpe=False, large_arch=True)
+                    self.model = load_lama_mpe(ckpt_path, device='cpu', use_mpe=False, large_arch=True, weights_only=True)
                     self.model.eval()
                     if self.device.startswith('cuda') or self.device == 'mps':
                         self.model.to(self.device)
@@ -1427,9 +1427,13 @@ class LamaFourier:
         return rel_pos, abs_pos, direct
 
 
-def load_lama_mpe(model_path, device, use_mpe: bool = True, large_arch: bool = False) -> LamaFourier:
+def load_lama_mpe(model_path, device, use_mpe: bool = True, large_arch: bool = False,
+                  weights_only: bool = False) -> LamaFourier:
     model = LamaFourier(build_discriminator=False, use_mpe=use_mpe, large_arch=large_arch)
-    sd = torch.load(model_path, map_location='cpu', weights_only=False)
+    # weights_only=True refuses pickled code objects in the checkpoint.  Callers
+    # opt in per checkpoint: lama_large_512px.ckpt is verified to load that way;
+    # inpainting_lama_mpe.ckpt has not been verified, so it keeps the old default.
+    sd = torch.load(model_path, map_location='cpu', weights_only=weights_only)
     model.generator.load_state_dict(sd['gen_state_dict'])
     if use_mpe:
         model.mpe.load_state_dict(sd['str_state_dict'])

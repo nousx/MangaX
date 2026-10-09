@@ -10,6 +10,10 @@ VALID_LAYOUT_MODES = {"smart_scaling", "strict", "balloon_fill"}
 
 
 class TranslatorSettings(BaseModel):
+    codex_cli_path: str = ""
+    codex_model: str = ""
+    codex_timeout: int = Field(default=300, ge=10, le=3600)
+    codex_batch_size: int = Field(default=30, ge=1, le=100)
     translator: str = "openai_hq"
     target_lang: str = "CHS"
     keep_lang: str = "none"

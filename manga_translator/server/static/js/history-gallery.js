@@ -110,12 +110,13 @@ function renderHistoryList(historyItems) {
         const timestamp = new Date(item.timestamp).toLocaleString();
         const fileCount = item.file_count || 1;
         
-        li.innerHTML = `
-            <div style="flex: 1; overflow: hidden;">
-                <div style="color: #333; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${timestamp}</div>
-                <div style="font-size: 10px; color: #888;">${fileCount} 个文件</div>
-            </div>
-        `;
+        li.appendChild(SafeDom.el('div', { style: 'flex: 1; overflow: hidden;' },
+            SafeDom.el('div', {
+                style: 'color: #333; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;',
+                text: timestamp
+            }),
+            SafeDom.el('div', { style: 'font-size: 10px; color: #888;', text: `${fileCount} 个文件` })
+        ));
         
         li.addEventListener('click', () => viewHistoryDetail(item.session_token));
         historyList.appendChild(li);
@@ -241,14 +242,14 @@ async function createGalleryCard(item) {
     
     card.innerHTML = `
         <div class="gallery-checkbox" style="position: absolute; top: 8px; left: 8px; z-index: 1;">
-            <input type="checkbox" data-token="${item.session_token}" style="width: 18px; height: 18px; cursor: pointer;">
+            <input type="checkbox" style="width: 18px; height: 18px; cursor: pointer;">
         </div>
         <div class="thumbnail-container" style="height: 150px; background: #eee; display: flex; align-items: center; justify-content: center; overflow: hidden;">
             <span style="color: #999;">加载中...</span>
         </div>
         <div style="padding: 10px;">
-            <div style="font-size: 12px; color: #333;">${timestamp}</div>
-            <div style="font-size: 11px; color: #888; margin-top: 3px;">${fileCount} 个文件</div>
+            <div class="gallery-card-time" style="font-size: 12px; color: #333;"></div>
+            <div class="gallery-card-count" style="font-size: 11px; color: #888; margin-top: 3px;"></div>
             <div style="display: flex; gap: 5px; margin-top: 8px;">
                 <button class="gallery-view-btn secondary-btn" style="flex: 1; padding: 4px 8px; font-size: 11px;">查看</button>
                 <button class="gallery-download-btn secondary-btn" style="flex: 1; padding: 4px 8px; font-size: 11px;">下载</button>
@@ -267,8 +268,13 @@ async function createGalleryCard(item) {
         card.style.boxShadow = '0 2px 8px rgba(0,0,0,0.1)';
     });
     
+    // Server-provided values are set via DOM APIs, never interpolated into HTML.
+    card.querySelector('.gallery-card-time').textContent = timestamp;
+    card.querySelector('.gallery-card-count').textContent = `${fileCount} 个文件`;
+
     // 复选框事件
     const checkbox = card.querySelector('input[type="checkbox"]');
+    checkbox.dataset.token = item.session_token;
     checkbox.addEventListener('change', (e) => {
         e.stopPropagation();
         if (checkbox.checked) {

@@ -21,6 +21,11 @@ services:
       - MT_VERBOSE=false
       # 设置管理员密码（首次启动）
       - MANGA_TRANSLATOR_ADMIN_PASSWORD=admin123456
+      # 初始设置令牌：容器外的浏览器创建第一个管理员账户时必须在设置页面填写。
+      # Setup token: required on the setup page to create the first admin account from
+      # outside the container. Set it on the host (16+ random characters), e.g.
+      #   MANGA_TRANSLATOR_SETUP_TOKEN=$(openssl rand -hex 24) docker compose up -d
+      - MANGA_TRANSLATOR_SETUP_TOKEN=${MANGA_TRANSLATOR_SETUP_TOKEN:-}
     volumes:
       # 持久化数据
       - ./data/fonts:/app/fonts
@@ -72,6 +77,11 @@ services:
       - MT_VERBOSE=false
       # 设置管理员密码（首次启动）
       - MANGA_TRANSLATOR_ADMIN_PASSWORD=admin123456
+      # 初始设置令牌：容器外的浏览器创建第一个管理员账户时必须在设置页面填写。
+      # Setup token: required on the setup page to create the first admin account from
+      # outside the container. Set it on the host (16+ random characters), e.g.
+      #   MANGA_TRANSLATOR_SETUP_TOKEN=$(openssl rand -hex 24) docker compose up -d
+      - MANGA_TRANSLATOR_SETUP_TOKEN=${MANGA_TRANSLATOR_SETUP_TOKEN:-}
     volumes:
       # 持久化数据
       - ./data/fonts:/app/fonts

@@ -1397,6 +1397,7 @@ def _collect_required_api_candidate_groups(self, section_key: str) -> dict[tuple
 
 def validate_api_candidate_availability(self) -> bool:
     from PyQt6.QtWidgets import QMessageBox
+    from core.workflow_requirements import required_api_sections
 
     flush_all_pending_env_vars(self)
     if hasattr(self, "_refresh_env_api_groups"):
@@ -1404,7 +1405,11 @@ def validate_api_candidate_availability(self) -> bool:
 
     blocked: list[str] = []
     blocked_groups: list[tuple[str, str]] = []
+    active_sections = required_api_sections(self.controller.config_service.get_config())
     for section_key in ("translation", "ocr", "color", "render"):
+        config_section = {"translation": "translator", "color": "colorizer"}.get(section_key, section_key)
+        if config_section not in active_sections:
+            continue
         required_groups = _collect_required_api_candidate_groups(self, section_key)
         if not required_groups:
             continue

@@ -86,41 +86,63 @@ class EnvVarsModule {
             return;
         }
         
-        container.innerHTML = this.presets.map(preset => {
+        // Built with DOM APIs: preset names, descriptions, creators and group
+        // ids are untrusted.
+        const el = SafeDom.el;
+        const cards = this.presets.map(preset => {
+            const presetId = String(preset.id ?? '');
             // 显示配置了哪些API
             const configuredApis = Object.keys(preset.config || {}).filter(k => k.includes('API_KEY') || k.includes('AUTH_KEY') || k.includes('TOKEN'));
-            const apiTags = configuredApis.map(k => {
-                const name = k.replace('_API_KEY', '').replace('_AUTH_KEY', '').replace('_TOKEN', '');
-                return `<span class="badge badge-success" style="font-size:10px;margin-right:4px;">${name}</span>`;
-            }).join('');
-            
-            return `
-            <div class="preset-card" style="background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:16px;margin-bottom:12px;">
-                <div style="display:flex;justify-content:space-between;align-items:start;">
-                    <div style="flex:1;">
-                        <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
-                            <h4 style="margin:0;font-size:15px;font-weight:600;">${this.escapeHtml(preset.name)}</h4>
-                            ${apiTags}
-                        </div>
-                        <p style="margin:0 0 8px 0;color:#6b7280;font-size:13px;">${this.escapeHtml(preset.description || '无描述')}</p>
-                        <div style="font-size:12px;color:#9ca3af;">
-                            创建者: ${preset.created_by || '未知'} | 
-                            创建时间: ${preset.created_at ? new Date(preset.created_at).toLocaleString() : '未知'}
-                        </div>
-                        ${preset.visible_to_groups && preset.visible_to_groups.length > 0 ? `
-                            <div style="margin-top:8px;">
-                                <span style="font-size:12px;color:#6b7280;">可见用户组: </span>
-                                ${preset.visible_to_groups.map(g => `<span class="badge badge-info" style="font-size:11px;">${g}</span>`).join(' ')}
-                            </div>
-                        ` : '<div style="margin-top:8px;font-size:12px;color:#9ca3af;">所有用户组可见</div>'}
-                    </div>
-                    <div style="display:flex;gap:8px;margin-left:16px;">
-                        <button class="btn btn-secondary btn-sm" onclick="envVarsModule.editPreset('${preset.id}')">✏️ 编辑</button>
-                        <button class="btn btn-danger btn-sm" onclick="envVarsModule.deletePreset('${preset.id}')">🗑️ 删除</button>
-                    </div>
-                </div>
-            </div>
-        `}).join('');
+            const apiTags = configuredApis.map(k => el('span', {
+                className: 'badge badge-success',
+                style: 'font-size:10px;margin-right:4px;',
+                text: k.replace('_API_KEY', '').replace('_AUTH_KEY', '').replace('_TOKEN', '')
+            }));
+            const visibleGroups = Array.isArray(preset.visible_to_groups) ? preset.visible_to_groups : [];
+            const visibility = visibleGroups.length > 0
+                ? el('div', { style: 'margin-top:8px;' },
+                    el('span', { style: 'font-size:12px;color:#6b7280;', text: '可见用户组: ' }),
+                    visibleGroups.map(g => [
+                        el('span', { className: 'badge badge-info', style: 'font-size:11px;', text: g }),
+                        ' '
+                    ])
+                )
+                : el('div', { style: 'margin-top:8px;font-size:12px;color:#9ca3af;', text: '所有用户组可见' });
+            const createdAt = preset.created_at ? new Date(preset.created_at).toLocaleString() : '未知';
+
+            return el('div', {
+                className: 'preset-card',
+                style: 'background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:16px;margin-bottom:12px;'
+            },
+                el('div', { style: 'display:flex;justify-content:space-between;align-items:start;' },
+                    el('div', { style: 'flex:1;' },
+                        el('div', { style: 'display:flex;align-items:center;gap:8px;margin-bottom:4px;' },
+                            el('h4', { style: 'margin:0;font-size:15px;font-weight:600;', text: preset.name }),
+                            apiTags
+                        ),
+                        el('p', { style: 'margin:0 0 8px 0;color:#6b7280;font-size:13px;', text: preset.description || '无描述' }),
+                        el('div', {
+                            style: 'font-size:12px;color:#9ca3af;',
+                            text: `创建者: ${preset.created_by || '未知'} | 创建时间: ${createdAt}`
+                        }),
+                        visibility
+                    ),
+                    el('div', { style: 'display:flex;gap:8px;margin-left:16px;' },
+                        el('button', {
+                            className: 'btn btn-secondary btn-sm',
+                            text: '✏️ 编辑',
+                            on: { click: () => this.editPreset(presetId) }
+                        }),
+                        el('button', {
+                            className: 'btn btn-danger btn-sm',
+                            text: '🗑️ 删除',
+                            on: { click: () => this.deletePreset(presetId) }
+                        })
+                    )
+                )
+            );
+        });
+        SafeDom.setChildren(container, cards);
     }
 
     renderServerEnvVars() {
@@ -140,22 +162,22 @@ class EnvVarsModule {
             return `
                 <div class="env-category" style="margin-bottom:24px;">
                     <div style="margin-bottom:10px;font-size:12px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#64748b;">
-                        ${this.t(category.i18nKey, category.fallback)}
+                        ${this.escapeHtml(this.t(category.i18nKey, category.fallback))}
                     </div>
                     ${groups.map(group => `
                         <div class="env-group" style="margin-bottom:16px;padding:16px;background:linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);border-radius:12px;border:1px solid #e2e8f0;box-shadow:0 1px 3px rgba(0,0,0,0.05);">
                             <h5 style="margin:0 0 12px 0;font-size:14px;font-weight:600;color:#1e293b;display:flex;align-items:center;gap:8px;">
                                 <span style="width:8px;height:8px;background:#3b82f6;border-radius:50%;"></span>
-                                ${group.i18nKey ? this.t(group.i18nKey, group.name) : group.name}
+                                ${this.escapeHtml(group.i18nKey ? this.t(group.i18nKey, group.name) : group.name)}
                             </h5>
                             ${group.note ? `<p style="margin:0 0 12px 0;font-size:12px;color:#64748b;">${this.escapeHtml(group.note)}</p>` : ''}
                             <div class="form-grid" style="gap:12px;">
                                 ${group.keys.map(item => `
                                     <div class="form-group" style="margin-bottom:0;">
-                                        <label class="form-label" style="font-size:12px;color:#64748b;">${this.t(item.i18n, item.key)}</label>
-                                        <input type="${item.type}" class="form-input" id="${prefix}-${item.key}"
+                                        <label class="form-label" style="font-size:12px;color:#64748b;">${this.escapeHtml(this.t(item.i18n, item.key))}</label>
+                                        <input type="${this.escapeHtml(item.type)}" class="form-input" id="${this.escapeHtml(prefix)}-${this.escapeHtml(item.key)}"
                                                value="${this.escapeHtml(existingConfig[item.key] || '')}"
-                                               placeholder="${item.placeholder}"
+                                               placeholder="${this.escapeHtml(item.placeholder)}"
                                                style="font-size:13px;background:#fff;border:1px solid #cbd5e1;">
                                     </div>
                                 `).join('')}
@@ -172,9 +194,8 @@ class EnvVarsModule {
         const groupItems = this.groups.map(g => {
             const isSelected = selectedGroups.includes(g.id);
             return `
-                <div class="group-select-item" data-group-id="${g.id}" 
-                     style="display:flex;align-items:center;padding:10px 12px;background:${isSelected ? '#eff6ff' : '#fff'};border:1px solid ${isSelected ? '#3b82f6' : '#e2e8f0'};border-radius:8px;cursor:pointer;transition:all 0.2s;"
-                     onclick="envVarsModule.toggleGroupSelection(this, '${prefix}')">
+                <div class="group-select-item" data-group-id="${this.escapeHtml(g.id)}" data-prefix="${this.escapeHtml(prefix)}"
+                     style="display:flex;align-items:center;padding:10px 12px;background:${isSelected ? '#eff6ff' : '#fff'};border:1px solid ${isSelected ? '#3b82f6' : '#e2e8f0'};border-radius:8px;cursor:pointer;transition:all 0.2s;">
                     <div style="width:20px;height:20px;border:2px solid ${isSelected ? '#3b82f6' : '#cbd5e1'};border-radius:4px;margin-right:10px;display:flex;align-items:center;justify-content:center;background:${isSelected ? '#3b82f6' : '#fff'};">
                         ${isSelected ? '<span style="color:#fff;font-size:12px;">✓</span>' : ''}
                     </div>
@@ -187,13 +208,21 @@ class EnvVarsModule {
         }).join('');
         
         return `
-            <div id="${prefix}-groups-container" style="display:grid;gap:8px;max-height:200px;overflow-y:auto;padding:4px;">
+            <div id="${this.escapeHtml(prefix)}-groups-container" style="display:grid;gap:8px;max-height:200px;overflow-y:auto;padding:4px;">
                 ${groupItems || '<div style="color:#94a3b8;text-align:center;padding:20px;">暂无用户组</div>'}
             </div>
-            <input type="hidden" id="${prefix}-selected-groups" value="${selectedGroups.join(',')}">
+            <input type="hidden" id="${this.escapeHtml(prefix)}-selected-groups" value="${this.escapeHtml(selectedGroups.join(','))}">
         `;
     }
     
+    // Attach click handlers to the group selector items rendered by
+    // generateGroupSelectorHtml() (replaces the former inline onclick).
+    bindGroupSelector(root) {
+        root.querySelectorAll('.group-select-item').forEach(item => {
+            item.addEventListener('click', () => this.toggleGroupSelection(item, item.dataset.prefix));
+        });
+    }
+
     // 切换用户组选择
     toggleGroupSelection(element, prefix) {
         const groupId = element.dataset.groupId;
@@ -270,6 +299,7 @@ class EnvVarsModule {
                 </div>
             </div>
         `;
+        this.bindGroupSelector(modal);
         document.body.appendChild(modal);
     }
     
@@ -328,7 +358,7 @@ class EnvVarsModule {
     
     async editPreset(presetId) {
         try {
-            const resp = await fetch(`/api/admin/presets/${presetId}?decrypt=true`, {
+            const resp = await fetch(`/api/admin/presets/${encodeURIComponent(presetId)}?decrypt=true`, {
                 headers: { 'X-Session-Token': this.app.sessionToken }
             });
             
@@ -385,10 +415,13 @@ class EnvVarsModule {
                     </div>
                     <div class="modal-footer" style="background:#fff;border-top:1px solid #e5e7eb;padding:16px 24px;border-radius:0 0 16px 16px;">
                         <button class="btn btn-secondary" onclick="this.closest('.modal-overlay').remove()" style="border-radius:8px;">取消</button>
-                        <button class="btn btn-primary" onclick="envVarsModule.updatePreset('${presetId}')" style="border-radius:8px;background:linear-gradient(135deg, #667eea 0%, #764ba2 100%);border:none;">💾 保存修改</button>
+                        <button class="btn btn-primary" data-action="update-preset" style="border-radius:8px;background:linear-gradient(135deg, #667eea 0%, #764ba2 100%);border:none;">💾 保存修改</button>
                     </div>
                 </div>
             `;
+            this.bindGroupSelector(modal);
+            modal.querySelector('[data-action="update-preset"]')
+                .addEventListener('click', () => this.updatePreset(presetId));
             document.body.appendChild(modal);
         } catch (e) {
             alert('获取预设失败: ' + e.message);
@@ -415,7 +448,7 @@ class EnvVarsModule {
         });
         
         try {
-            const resp = await fetch(`/api/admin/presets/${presetId}`, {
+            const resp = await fetch(`/api/admin/presets/${encodeURIComponent(presetId)}`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
@@ -446,7 +479,7 @@ class EnvVarsModule {
         if (!confirm('确定要删除这个预设吗？此操作不可恢复。')) return;
         
         try {
-            const resp = await fetch(`/api/admin/presets/${presetId}`, {
+            const resp = await fetch(`/api/admin/presets/${encodeURIComponent(presetId)}`, {
                 method: 'DELETE',
                 headers: { 'X-Session-Token': this.app.sessionToken }
             });
@@ -493,11 +526,7 @@ class EnvVarsModule {
     }
     
     escapeHtml(str) {
-        if (!str) return '';
-        return String(str).replace(/&/g, '&amp;')
-                  .replace(/</g, '&lt;')
-                  .replace(/>/g, '&gt;')
-                  .replace(/"/g, '&quot;');
+        return SafeDom.escapeHtml(str);
     }
 }
 

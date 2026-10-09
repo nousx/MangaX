@@ -53,7 +53,8 @@ class Model48pxOCR(OfflineOCR):
             dictionary = [s[:-1] for s in fp.readlines()]
 
         self.model = OCR(dictionary, 768)
-        sd = torch.load(self._get_file_path('ocr_ar_48px.ckpt'), map_location='cpu', weights_only=False)
+        # ocr_ar_48px.ckpt is a plain tensor state dict; verified to load with weights_only=True.
+        sd = torch.load(self._get_file_path('ocr_ar_48px.ckpt'), map_location='cpu', weights_only=True)
         # Handle PyTorch Lightning checkpoint format
         if 'state_dict' in sd:
             sd = sd['state_dict']

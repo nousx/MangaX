@@ -418,6 +418,11 @@
                         <label for="setup-confirm">确认密码</label>
                         <input type="password" id="setup-confirm" placeholder="请再次输入密码" required minlength="6">
                     </div>
+                    <div class="form-group hidden" id="setup-token-group">
+                        <label for="setup-token">设置令牌 (Setup token)</label>
+                        <input type="password" id="setup-token" placeholder="MANGA_TRANSLATOR_SETUP_TOKEN" autocomplete="off">
+                        <small style="display:block;margin-top:6px;color:#6b7280;font-size:12px;">非本机访问时，需要填写服务器启动时通过环境变量 MANGA_TRANSLATOR_SETUP_TOKEN 设置的令牌；或直接在服务器本机打开 http://127.0.0.1:端口 完成初始设置。</small>
+                    </div>
                     <button type="submit" class="setup-btn" id="setup-btn">创建管理员账户</button>
                 </form>
             </div>
@@ -528,6 +533,8 @@
             document.getElementById('login-form').classList.remove('active');
             document.getElementById('setup-form').classList.add('active');
             document.getElementById('setup-form').classList.remove('hidden');
+            // Remote (non-loopback) clients must supply the setup token.
+            document.getElementById('setup-token-group').classList.toggle('hidden', !authStatus.setup_token_required);
             document.getElementById('setup-username').focus();
         }
 
@@ -591,6 +598,7 @@
             const username = document.getElementById('setup-username').value.trim();
             const password = document.getElementById('setup-password').value;
             const confirm = document.getElementById('setup-confirm').value;
+            const setupToken = document.getElementById('setup-token').value.trim();
             const btn = document.getElementById('setup-btn');
             
             if (password !== confirm) {
@@ -602,12 +610,18 @@
             btn.innerHTML = '<span class="loading-spinner"></span>创建中...';
             
             try {
+                const setupHeaders = { 'Content-Type': 'application/json' };
+                if (setupToken) setupHeaders['X-Setup-Token'] = setupToken;
                 const res = await fetch('/auth/setup', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: setupHeaders,
                     body: JSON.stringify({ username, password })
                 });
                 const data = await res.json();
+                if (res.status === 403) {
+                    // Access was refused: reveal the token field so the operator can retry.
+                    document.getElementById('setup-token-group').classList.remove('hidden');
+                }
                 
                 if (data.success && data.token) {
                     localStorage.setItem('session_token', data.token);

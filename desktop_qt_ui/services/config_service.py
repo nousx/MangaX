@@ -39,6 +39,7 @@ from manga_translator.utils.dotenv_utils import (
 from manga_translator.utils.openai_compat import resolve_openai_compatible_api_key
 
 from core.config_models import AppSettings
+from core.workflow_requirements import required_api_sections
 
 PRESET_SPECIAL_ENV_VARS = [
     "OCR_OPENAI_API_KEY",
@@ -350,7 +351,10 @@ class ConfigService(QObject):
             )
 
         missing: List[Dict[str, Any]] = []
+        active_sections = required_api_sections(config)
         for section, setting, selected_value in checks:
+            if section not in active_sections:
+                continue
             feature_name = str(selected_value or "").strip()
             if not feature_name:
                 continue

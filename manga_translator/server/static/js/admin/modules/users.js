@@ -63,27 +63,64 @@ class UsersModule {
         if (!tbody) return;
 
         if (users.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#6b7280;">暂无用户</td></tr>';
+            SafeDom.setChildren(tbody, SafeDom.messageRow(6, '暂无用户'));
             return;
         }
 
-        tbody.innerHTML = users.map(user => {
+        // Built with DOM APIs: usernames/group names are untrusted and must never
+        // be interpolated into HTML or inline event handlers.
+        const el = SafeDom.el;
+        const rows = users.map(user => {
+            const username = String(user.username ?? '');
             const presetName = user.default_preset_id
                 ? (this.presets.find(p => p.id === user.default_preset_id)?.name || '自定义')
                 : '继承用户组';
-            return `
-            <tr>
-                <td><strong>${this.escapeHtml(user.username)}</strong></td>
-                <td><span class="badge ${user.role === 'admin' ? 'badge-danger' : 'badge-info'}">${user.role || 'user'}</span></td>
-                <td>${this.escapeHtml(user.group || 'default')}</td>
-                <td><span class="badge badge-secondary" title="API密钥预设">${this.escapeHtml(presetName)}</span></td>
-                <td><span class="badge ${user.active !== false ? 'badge-success' : 'badge-warning'}">${user.active !== false ? '活跃' : '禁用'}</span></td>
-                <td>
-                    <button class="btn btn-secondary btn-sm" onclick="usersModule.editUser('${user.username}')">编辑</button>
-                    ${user.role !== 'admin' ? `<button class="btn btn-danger btn-sm" onclick="usersModule.deleteUser('${user.username}')">删除</button>` : ''}
-                </td>
-            </tr>
-        `}).join('');
+            const isAdmin = user.role === 'admin';
+            const isActive = user.active !== false;
+            return el('tr', null,
+                el('td', null, el('strong', { text: username })),
+                el('td', null, el('span', {
+                    className: `badge ${isAdmin ? 'badge-danger' : 'badge-info'}`,
+                    text: user.role || 'user'
+                })),
+                el('td', { text: user.group || 'default' }),
+                el('td', null, el('span', {
+                    className: 'badge badge-secondary',
+                    title: 'API密钥预设',
+                    text: presetName
+                })),
+                el('td', null, el('span', {
+                    className: `badge ${isActive ? 'badge-success' : 'badge-warning'}`,
+                    text: isActive ? '活跃' : '禁用'
+                })),
+                el('td', null,
+                    el('button', {
+                        className: 'btn btn-secondary btn-sm',
+                        text: '编辑',
+                        on: { click: () => this.editUser(username) }
+                    }),
+                    ' ',
+                    !isAdmin && el('button', {
+                        className: 'btn btn-danger btn-sm',
+                        text: '删除',
+                        on: { click: () => this.deleteUser(username) }
+                    })
+                )
+            );
+        });
+        SafeDom.setChildren(tbody, rows);
+    }
+
+    // Fill a <select> with {id, name} items using DOM APIs (no HTML parsing).
+    fillSelectOptions(select, items, selectedId) {
+        if (!select) return;
+        for (const item of items) {
+            const option = document.createElement('option');
+            option.value = item.id;
+            option.textContent = item.name;
+            if (item.id === selectedId) option.selected = true;
+            select.appendChild(option);
+        }
     }
 
     editUser(username) {
@@ -95,21 +132,13 @@ class UsersModule {
         
         this.currentEditUser = user;
         
-        // 显示基本信息编辑模态框
-        const groupOptions = this.groups.map(g =>
-            `<option value="${g.id}" ${g.id === user.group ? 'selected' : ''}>${this.escapeHtml(g.name)}</option>`
-        ).join('');
-
-        const presetOptions = this.presets.map(p =>
-            `<option value="${p.id}" ${p.id === user.default_preset_id ? 'selected' : ''}>${this.escapeHtml(p.name)}</option>`
-        ).join('');
-
+        // 显示基本信息编辑模态框（模板中不插入任何服务器数据，随后用 DOM API 填充）
         const modal = document.createElement('div');
         modal.className = 'modal-overlay';
         modal.innerHTML = `
             <div class="modal" style="max-width:500px;background:#fff;border-radius:8px;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
                 <div class="modal-header" style="background:linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);color:#fff;border-radius:8px 8px 0 0;">
-                    <h3 style="margin:0;">✏️ 编辑用户: ${this.escapeHtml(username)}</h3>
+                    <h3 style="margin:0;" id="edit-user-title"></h3>
                     <button class="modal-close" onclick="this.closest('.modal-overlay').remove()" style="color:#fff;">×</button>
                 </div>
                 <div class="modal-body" style="padding:24px;background:#fff;">
@@ -120,41 +149,47 @@ class UsersModule {
                     </div>
                     <div class="form-group">
                         <label class="form-label">用户组</label>
-                        <select class="form-select" id="edit-user-group" style="width:100%;">
-                            ${groupOptions}
-                        </select>
+                        <select class="form-select" id="edit-user-group" style="width:100%;"></select>
                     </div>
                     <div class="form-group">
                         <label class="form-label">API密钥预设</label>
                         <select class="form-select" id="edit-user-preset" style="width:100%;">
-                            <option value="" ${!user.default_preset_id ? 'selected' : ''}>继承用户组设置</option>
-                            ${presetOptions}
+                            <option value="">继承用户组设置</option>
                         </select>
                     </div>
                     <div class="form-group">
                         <label class="form-label">角色</label>
                         <select class="form-select" id="edit-user-role" style="width:100%;">
-                            <option value="user" ${user.role !== 'admin' ? 'selected' : ''}>普通用户</option>
-                            <option value="admin" ${user.role === 'admin' ? 'selected' : ''}>管理员</option>
+                            <option value="user">普通用户</option>
+                            <option value="admin">管理员</option>
                         </select>
                     </div>
                     <div class="form-group">
                         <label class="form-label" style="display:flex;align-items:center;gap:8px;">
-                            <input type="checkbox" id="edit-user-active" ${user.active !== false ? 'checked' : ''}>
+                            <input type="checkbox" id="edit-user-active">
                             账户启用
                         </label>
                     </div>
                     <hr style="margin:16px 0;border:none;border-top:1px solid #e5e7eb;">
-                    <button class="btn btn-secondary" style="width:100%;" onclick="usersModule.openPermissionEditor('${username}')">
+                    <button class="btn btn-secondary" style="width:100%;" data-action="open-permissions">
                         ⚙️ 编辑权限配置（翻译器、参数限制等）
                     </button>
                 </div>
                 <div class="modal-footer" style="background:#f9fafb;border-radius:0 0 8px 8px;">
                     <button class="btn btn-secondary" onclick="this.closest('.modal-overlay').remove()">取消</button>
-                    <button class="btn btn-primary" onclick="usersModule.saveUserBasicInfo('${username}')" style="background:linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);border:none;">💾 保存</button>
+                    <button class="btn btn-primary" data-action="save-user" style="background:linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);border:none;">💾 保存</button>
                 </div>
             </div>
         `;
+        modal.querySelector('#edit-user-title').textContent = `✏️ 编辑用户: ${username}`;
+        this.fillSelectOptions(modal.querySelector('#edit-user-group'), this.groups, user.group);
+        this.fillSelectOptions(modal.querySelector('#edit-user-preset'), this.presets, user.default_preset_id);
+        modal.querySelector('#edit-user-role').value = user.role === 'admin' ? 'admin' : 'user';
+        modal.querySelector('#edit-user-active').checked = user.active !== false;
+        modal.querySelector('[data-action="open-permissions"]')
+            .addEventListener('click', () => this.openPermissionEditor(username));
+        modal.querySelector('[data-action="save-user"]')
+            .addEventListener('click', () => this.saveUserBasicInfo(username));
         document.body.appendChild(modal);
     }
     
@@ -184,7 +219,7 @@ class UsersModule {
                 updateData.password = password;
             }
 
-            const resp = await fetch(`/api/admin/users/${username}`, {
+            const resp = await fetch(`/api/admin/users/${encodeURIComponent(username)}`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
@@ -342,7 +377,7 @@ class UsersModule {
 
         try {
             // 1. 更新用户基本信息和预设
-            const resp = await fetch(`/api/admin/users/${username}`, {
+            const resp = await fetch(`/api/admin/users/${encodeURIComponent(username)}`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
@@ -355,7 +390,7 @@ class UsersModule {
             });
             
             // 2. 更新权限（参数、翻译器、工作流的白名单/黑名单）
-            const permResp = await fetch(`/api/admin/users/${username}/permissions`, {
+            const permResp = await fetch(`/api/admin/users/${encodeURIComponent(username)}/permissions`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
@@ -402,7 +437,7 @@ class UsersModule {
         const active = document.getElementById('edit-user-active')?.checked;
 
         try {
-            const resp = await fetch(`/api/admin/users/${username}`, {
+            const resp = await fetch(`/api/admin/users/${encodeURIComponent(username)}`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
@@ -433,7 +468,7 @@ class UsersModule {
         if (!confirm(`确定删除用户 "${username}"?`)) return;
 
         try {
-            const resp = await fetch(`/api/admin/users/${username}`, {
+            const resp = await fetch(`/api/admin/users/${encodeURIComponent(username)}`, {
                 method: 'DELETE',
                 headers: { 'X-Session-Token': this.app.sessionToken }
             });
@@ -451,14 +486,6 @@ class UsersModule {
     }
 
     showCreateUserModal() {
-        const groupOptions = this.groups.map(g =>
-            `<option value="${g.id}" ${g.id === 'default' ? 'selected' : ''}>${this.escapeHtml(g.name)}</option>`
-        ).join('');
-
-        const presetOptions = this.presets.map(p =>
-            `<option value="${p.id}">${this.escapeHtml(p.name)}</option>`
-        ).join('');
-
         const modal = document.createElement('div');
         modal.className = 'modal-overlay';
         modal.innerHTML = `
@@ -479,15 +506,12 @@ class UsersModule {
                     </div>
                     <div class="form-group">
                         <label class="form-label">用户组</label>
-                        <select class="form-select" id="new-user-group" style="width:100%;">
-                            ${groupOptions}
-                        </select>
+                        <select class="form-select" id="new-user-group" style="width:100%;"></select>
                     </div>
                     <div class="form-group">
                         <label class="form-label">API密钥预设</label>
                         <select class="form-select" id="new-user-preset" style="width:100%;">
                             <option value="">继承用户组设置</option>
-                            ${presetOptions}
                         </select>
                     </div>
                     <div class="form-group">
@@ -504,6 +528,8 @@ class UsersModule {
                 </div>
             </div>
         `;
+        this.fillSelectOptions(modal.querySelector('#new-user-group'), this.groups, 'default');
+        this.fillSelectOptions(modal.querySelector('#new-user-preset'), this.presets, null);
         document.body.appendChild(modal);
     }
 
@@ -554,11 +580,7 @@ class UsersModule {
     }
 
     escapeHtml(str) {
-        if (!str) return '';
-        return String(str).replace(/&/g, '&amp;')
-            .replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;')
-            .replace(/"/g, '&quot;');
+        return SafeDom.escapeHtml(str);
     }
 }
 

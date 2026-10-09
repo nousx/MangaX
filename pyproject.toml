@@ -165,6 +165,15 @@ test = [
 package = false
 # 本仓库默认使用 NVIDIA CUDA 13.0 环境，并保留项目打包和测试工具
 default-groups = ["cuda13.0", "packaging", "test"]
+# Security floors for transitive dependencies (constraints only; they do not
+# add direct dependencies). Keep until the direct dependents require these
+# versions themselves.
+#   urllib3   >= 2.8.0 : CVE-2026-97687 / CVE-2026-97688 / CVE-2026-97689
+#   multidict >= 6.9.1 : CVE-2026-104874
+constraint-dependencies = [
+    "urllib3>=2.8.0",
+    "multidict>=6.9.1",
+]
 # 五种后端互斥，不能同时安装
 conflicts = [
     [

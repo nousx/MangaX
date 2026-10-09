@@ -63,7 +63,9 @@ class LogsModule {
             return;
         }
         
-        container.innerHTML = logs.map(log => {
+        // Built with DOM APIs: log levels, session ids and messages are untrusted.
+        const el = SafeDom.el;
+        const entries = logs.map(log => {
             const levelClass = {
                 'DEBUG': 'log-debug',
                 'INFO': 'log-info',
@@ -71,7 +73,7 @@ class LogsModule {
                 'ERROR': 'log-error',
                 'CRITICAL': 'log-critical'
             }[log.level] || 'log-info';
-            
+
             // 格式化时间戳
             let timeStr = '';
             if (log.timestamp) {
@@ -90,22 +92,30 @@ class LogsModule {
                     timeStr = log.timestamp;
                 }
             }
-            
+
             // 会话ID标签
-            const sessionTag = log.session_id 
-                ? `<span class="log-session" title="${log.session_id}" onclick="window.adminApp?.logsModule?.filterBySession('${log.session_id}')">[${log.session_id.substring(0, 8)}]</span>` 
-                : '';
-            
-            return `
-                <div class="log-entry ${levelClass}">
-                    <span class="log-time">${timeStr}</span>
-                    <span class="log-level">[${log.level}]</span>
-                    ${sessionTag}
-                    <span class="log-message">${this.escapeHtml(log.message)}</span>
-                </div>
-            `;
-        }).join('');
-        
+            const sessionId = log.session_id ? String(log.session_id) : '';
+            const sessionTag = sessionId
+                ? el('span', {
+                    className: 'log-session',
+                    title: sessionId,
+                    text: `[${sessionId.substring(0, 8)}]`,
+                    on: { click: () => this.filterBySession(sessionId) }
+                })
+                : null;
+
+            return el('div', { className: `log-entry ${levelClass}` },
+                el('span', { className: 'log-time', text: timeStr }),
+                ' ',
+                el('span', { className: 'log-level', text: `[${log.level}]` }),
+                ' ',
+                sessionTag,
+                sessionTag && ' ',
+                el('span', { className: 'log-message', text: log.message || '' })
+            );
+        });
+        SafeDom.setChildren(container, entries);
+
         if (this.autoScroll) {
             container.scrollTop = container.scrollHeight;
         }

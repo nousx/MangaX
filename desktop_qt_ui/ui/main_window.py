@@ -84,7 +84,7 @@ class MainWindow(FluentWindow):
 
     def _update_window_title(self):
         """Keep the product name stable across interface languages."""
-        self.setWindowTitle(format_app_title("Manga Translator UI", self.app_version))
+        self.setWindowTitle(format_app_title("MangaX", self.app_version))
 
     def _setup_logic_and_models(self):
         """实例化所有逻辑和数据模型"""

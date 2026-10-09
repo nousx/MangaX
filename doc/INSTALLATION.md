@@ -272,6 +272,8 @@ services:
       MT_WEB_HOST: 0.0.0.0
       MT_WEB_PORT: 8000
       MANGA_TRANSLATOR_ADMIN_PASSWORD: change_me_123456
+      # 首次创建管理员账户时需要在初始设置页面填写（至少 16 个字符的随机字符串）
+      MANGA_TRANSLATOR_SETUP_TOKEN: change_me_to_a_long_random_string
     volumes:
       - ./data/models:/app/models
       - ./data/fonts:/app/fonts
@@ -298,7 +300,9 @@ services:
 
 | 变量名 | 示例值 | 默认值 | 说明 |
 |--------|--------|--------|------|
-| `MT_WEB_HOST` | `0.0.0.0` | `0.0.0.0` | 监听地址（0.0.0.0 允许外部访问，127.0.0.1 仅本地访问） |
+| `MT_WEB_HOST` | `0.0.0.0` | `127.0.0.1` | 监听地址（0.0.0.0 允许外部访问，127.0.0.1 仅本地访问；Docker 镜像启动命令已显式使用 0.0.0.0） |
+| `MANGA_TRANSLATOR_SETUP_TOKEN` | 随机字符串 | 无 | 初始设置令牌（至少 16 个字符）。非本机访问（含 Docker 端口映射、反向代理）创建第一个管理员账户时必须提供 |
+| `MT_WEB_CORS_ORIGINS` | `https://example.com` | 仅本机来源 | 允许跨域调用 API 的来源，逗号分隔；`*` 表示全部 |
 | `MT_WEB_PORT` | `8000` | `8000` | 服务端口 |
 | `MT_USE_GPU` | `true` | `false` | 是否使用 GPU（仅 GPU 版本镜像需要设置） |
 | `MT_MODELS_TTL` | `300` | `0` | 模型在内存中的存活时间（秒），0 表示永久保留 |

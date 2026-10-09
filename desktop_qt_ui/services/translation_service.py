@@ -149,14 +149,15 @@ class TranslationService:
                                  target_lang: Optional[str] = None,
                                  config: Optional[TranslatorConfig] = None, # This is now effectively unused but kept for API compatibility
                                  image: Optional[Image.Image] = None,
-                                 regions: Optional[List[Dict[str, Any]]] = None) -> List[Optional[TranslationResult]]:
+                                 regions: Optional[List[Dict[str, Any]]] = None,
+                                 chapter_context: Optional[Dict[str, Any]] = None) -> List[Optional[TranslationResult]]:
         if not TRANSLATOR_AVAILABLE or not texts:
             return [None] * len(texts)
 
         translator_to_use = translator or self.current_translator_enum
         target_lang_to_use = target_lang or self.current_target_lang
 
-        final_config = self.config_service.get_config()
+        final_config = config if config is not None else self.config_service.get_config()
 
         try:
             chain_string = f"{translator_to_use.value}:{target_lang_to_use}"
@@ -165,6 +166,8 @@ class TranslationService:
             # The `args` parameter for dispatch_translator is a flexible context object.
             # We build it manually here.
             translator_args = Context()
+            translator_args.chapter_context = chapter_context or {}
+            translator_args.manga_regions = regions or []
 
             if image is not None:
                 translator_args.image = image

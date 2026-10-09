@@ -6,6 +6,7 @@
 import asyncio
 import base64
 import concurrent.futures
+import copy
 import io
 import logging
 import os
@@ -1182,6 +1183,7 @@ class MainAppLogic(QObject):
                     "4x-denoise3x": self._t("realcugan_4x_denoise3x"),
                 },
                 "translator": {
+                    "codex": self._t("translator_codex"),
                     "openai": "OpenAI",
                     "openai_hq": self._t("translator_openai_hq"),
                     "gemini": "Google Gemini",
@@ -1222,6 +1224,10 @@ class MainAppLogic(QObject):
                     "kernel_size": self._t("label_kernel_size"),
                     "mask_dilation_offset": self._t("label_mask_dilation_offset"),
                     "translator": self._t("label_translator"),
+                    "codex_cli_path": self._t("label_codex_cli_path"),
+                    "codex_model": self._t("label_codex_model"),
+                    "codex_timeout": self._t("label_codex_timeout"),
+                    "codex_batch_size": self._t("label_codex_batch_size"),
                     "target_lang": self._t("label_target_lang"),
                     "keep_lang": self._t("label_keep_lang"),
                     "enable_streaming": self._t("label_enable_streaming"),
@@ -1844,6 +1850,28 @@ class MainAppLogic(QObject):
 
     def _start_translation_worker(self, files_to_process, task_config):
         """启动翻译工作线程（内部方法，由扫描完成后调用）"""
+        cli = task_config.get('cli', {})
+        if cli.get('export_from_local_json') and (cli.get('original') or cli.get('save_text')):
+            from manga_translator.utils.path_manager import find_json_path
+            missing = [path for path in files_to_process if not find_json_path(path)]
+            if missing:
+                from PyQt6.QtWidgets import QMessageBox
+                box = QMessageBox()
+                box.setWindowTitle(self._t('No local OCR data yet'))
+                box.setText(self._t(
+                    'This mode only reads existing JSON, but {missing}/{total} page(s) have no JSON.\n'
+                    'Run OCR again, or go back and change the mode before starting.',
+                    missing=len(missing), total=len(files_to_process)))
+                ocr_button = box.addButton(self._t('Run OCR again'), QMessageBox.ButtonRole.AcceptRole)
+                box.addButton(self._t('Back to settings'), QMessageBox.ButtonRole.RejectRole)
+                box.exec()
+                if box.clickedButton() is not ocr_button:
+                    self.state_manager.set_translating(False)
+                    return
+                task_config = copy.deepcopy(task_config)
+                task_config['cli']['export_from_local_json'] = False
+                self.config_service.update_config({'cli': {'export_from_local_json': False}})
+                self.config_service.save_config_file()
         self.saved_files_count = 0
         self.completed_output_sources.clear()
         self._last_progress_log_at = 0.0
@@ -1886,6 +1914,10 @@ class MainAppLogic(QObject):
         Resolves input paths and uses a 'Worker-to-Thread' model to start the translation task.
         """
         # 检查是否有任务在运行
+        assistant = getattr(self, 'chapter_assistant', None)
+        if assistant is not None and assistant.busy():
+            self._ui_log(self._t('The assistant is working: pause its queue before starting a main-page task'), 'WARNING')
+            return
         if self.state_manager.is_translating():
             self._ui_log("A task is already running.", "WARNING")
             return

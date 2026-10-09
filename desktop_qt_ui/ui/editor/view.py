@@ -1,3 +1,4 @@
+import logging
 from functools import partial
 from typing import Any
 
@@ -11,6 +12,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 from qfluentwidgets import (
+    BodyLabel,
     CardWidget,
     LineEdit,
     PopUpAniStackedWidget,
@@ -115,6 +117,7 @@ class EditorView(QWidget):
 
     LEFT_TRANSLATION_ROUTE = "editor_left_translation"
     LEFT_PROPERTY_ROUTE = "editor_left_property"
+    LEFT_ASSISTANT_ROUTE = "chapter_assistant"
     EDITOR_SETTING_DEFAULTS = {
         "editor_snap_enabled": False,
         "editor_center_scale_enabled": False,
@@ -429,11 +432,34 @@ class EditorView(QWidget):
 
         self.left_stack.addWidget(translation_widget)
         self.left_stack.addWidget(self.property_panel)
+        # The assistant is optional: its failure must never keep the editor from opening.
+        self.chapter_assistant = None
+        try:
+            from ui.widgets.chapter_assistant import ChapterAssistant
+            self.chapter_assistant = ChapterAssistant(self, left_panel)
+            self.left_stack.addWidget(self.chapter_assistant)
+        except Exception:
+            logging.getLogger("manga_translator").exception(
+                "Chapter assistant failed to start; the editor continues without it"
+            )
+            self._chapter_assistant_placeholder = BodyLabel(left_panel)
+            self._chapter_assistant_placeholder.setWordWrap(True)
+            self._chapter_assistant_placeholder.setAlignment(
+                Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft
+            )
+            self._chapter_assistant_placeholder.setContentsMargins(12, 12, 12, 12)
+            self._chapter_assistant_placeholder.setText(
+                self._t("The assistant could not start. The rest of the editor works normally; see the log for details.")
+            )
+            self.left_stack.addWidget(self._chapter_assistant_placeholder)
         self.left_segmented_widget.addItem(
             self.LEFT_TRANSLATION_ROUTE, self._t("Translation List")
         )
         self.left_segmented_widget.addItem(
             self.LEFT_PROPERTY_ROUTE, self._t("Property Editor")
+        )
+        self.left_segmented_widget.addItem(
+            self.LEFT_ASSISTANT_ROUTE, self._t("Assistant")
         )
         self.left_segmented_widget.currentItemChanged.connect(self._set_left_route)
 
@@ -449,7 +475,11 @@ class EditorView(QWidget):
             index = 0
         elif route_key == self.LEFT_PROPERTY_ROUTE:
             index = 1
+        elif route_key == self.LEFT_ASSISTANT_ROUTE:
+            index = 2
         else:
+            return
+        if index >= self.left_stack.count():
             return
         changed = self.left_stack.currentIndex() != index
         self.left_stack.setCurrentIndex(index)
@@ -475,6 +505,9 @@ class EditorView(QWidget):
         )
         self.left_segmented_widget.setItemText(
             self.LEFT_PROPERTY_ROUTE, self._t("Property Editor")
+        )
+        self.left_segmented_widget.setItemText(
+            self.LEFT_ASSISTANT_ROUTE, self._t("Assistant")
         )
 
     def refresh_ui_texts(self):
@@ -503,6 +536,13 @@ class EditorView(QWidget):
         # 刷新属性面板
         if self.property_panel is not None:
             self.property_panel.refresh_ui_texts()
+
+        if getattr(self, "chapter_assistant", None) is not None:
+            self.chapter_assistant.refresh_ui_texts()
+        elif getattr(self, "_chapter_assistant_placeholder", None) is not None:
+            self._chapter_assistant_placeholder.setText(
+                self._t("The assistant could not start. The rest of the editor works normally; see the log for details.")
+            )
 
         if self.rich_text_editor is not None:
             self.rich_text_editor.refresh_ui_texts()

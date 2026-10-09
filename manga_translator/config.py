@@ -2,7 +2,7 @@ import argparse
 from enum import Enum
 from typing import Any, Optional, Union
 
-from pydantic import BaseModel, PrivateAttr, model_validator
+from pydantic import BaseModel, Field, PrivateAttr, model_validator
 
 from manga_translator.custom_api_params import migrate_legacy_custom_api_params_config
 
@@ -125,6 +125,7 @@ class Ocr(str, Enum):
     gemini_ocr = "gemini_ocr"
 
 class Translator(str, Enum):
+    codex = "codex"
     openai = "openai"
     openai_hq = "openai_hq"
     gemini = "gemini"
@@ -264,6 +265,10 @@ class UpscaleConfig(BaseModel):
     """Tile size for Real-CUGAN upscaling (default: 400, 0 = process full image without tiling)"""
 
 class TranslatorConfig(BaseModel):
+    codex_cli_path: str = ""
+    codex_model: str = ""
+    codex_timeout: int = Field(default=300, ge=10, le=3600)
+    codex_batch_size: int = Field(default=30, ge=1, le=100)
     translator: Translator = Translator.openai_hq
     """Language translator to use"""
     target_lang: str = 'ENG' #todo: validate VALID_LANGUAGES #todo: convert to enum

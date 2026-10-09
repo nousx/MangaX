@@ -94,7 +94,11 @@
         "translator.remove_trailing_period",
         "cli.context_size",
         "translator.convert_to_traditional",
-        "translator.convert_to_simplified"
+        "translator.convert_to_simplified",
+        "translator.codex_cli_path",
+        "translator.codex_model",
+        "translator.codex_timeout",
+        "translator.codex_batch_size"
       ]
     },
     {

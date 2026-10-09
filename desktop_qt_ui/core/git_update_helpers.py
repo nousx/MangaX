@@ -8,17 +8,9 @@ from pathlib import Path
 
 SUPPORTED_BRANCHES = ("main", "beta")
 GIT_MIRRORS = (
-    ("GitHub 官方", "GitHub official", "https://github.com/hgmzhn/manga-translator-ui.git"),
-    (
-        "Gitee 镜像",
-        "Gitee mirror",
-        "https://gitee.com/hgmzhn/manga-translator-ui.git",
-    ),
-    (
-        "GitCode 镜像",
-        "GitCode mirror",
-        "https://gitcode.com/hgmzhn/manga-translator-ui",
-    ),
+    # MangaX is published on GitHub only; the upstream Gitee/GitCode mirrors
+    # carry hgmzhn/manga-translator-ui, not this fork.
+    ("GitHub 官方", "GitHub official", "https://github.com/nousx/MangaX.git"),
 )
 
 

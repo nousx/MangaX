@@ -11,6 +11,7 @@ QFont 匹配固定落到同一字体；注册层会自动改写为去掉方括�
 import hashlib
 import logging
 import os
+import re
 import unicodedata
 import weakref
 from collections import Counter
@@ -18,6 +19,10 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from functools import lru_cache
 
+from manga_translator.rendering.rich_text import (
+    normalize_rich_linebreaks,
+    plain_text_of,
+)
 from manga_translator.rendering.text_render import (
     font_registry_revision,
     qt_family_is_ambiguous,
@@ -44,15 +49,25 @@ from PyQt6.QtCore import (
     pyqtSignal,
 )
 from PyQt6.QtGui import (
+    QColor,
     QFont,
     QFontDatabase,
+    QFontMetricsF,
     QGuiApplication,
+    QPainter,
     QRawFont,
     QRegion,
     QWheelEvent,
 )
-from PyQt6.QtWidgets import QListView, QVBoxLayout, QWidget
-from qfluentwidgets import LineEdit, MenuAnimationType
+from PyQt6.QtWidgets import (
+    QApplication,
+    QListView,
+    QStyle,
+    QStyleOptionViewItem,
+    QVBoxLayout,
+    QWidget,
+)
+from qfluentwidgets import LineEdit, MenuAnimationType, isDarkTheme, themeColor
 from qfluentwidgets.components.widgets.combo_box import ComboBoxMenu
 from qfluentwidgets.components.widgets.menu import (
     IndicatorMenuItemDelegate,
@@ -77,7 +92,34 @@ _FONT_SEARCH_PLACEHOLDERS = {
     "ko_KR": "글꼴 검색…",
     "es_ES": "Buscar fuentes…",
     "en_US": "Search fonts…",
+    "th_TH": "ค้นหาแบบอักษร…",
 }
+_FONT_NO_GLYPH_HINTS = {
+    "zh_CN": "此字体不含该文本的字形",
+    "zh_TW": "此字型不含這段文字的字形",
+    "ja_JP": "このテキストのグリフがありません",
+    "ko_KR": "이 텍스트의 글리프가 없습니다",
+    "es_ES": "Sin glifos para este texto",
+    "en_US": "No glyphs for this text",
+    "th_TH": "ฟอนต์นี้ไม่มีอักษรของข้อความนี้",
+}
+_FONT_PARTIAL_GLYPH_HINTS = {
+    "zh_CN": "缺少部分字符",
+    "zh_TW": "缺少部分字元",
+    "ja_JP": "一部の文字がありません",
+    "ko_KR": "일부 문자가 없습니다",
+    "es_ES": "Faltan algunos caracteres",
+    "en_US": "Some characters missing",
+    "th_TH": "ขาดอักษรบางตัว",
+}
+FONT_NAME_ROW_HEIGHT = 33
+# Sample rows stack a small name caption over the text drawn in the row's font.
+FONT_SAMPLE_ROW_HEIGHT = 62
+FONT_SAMPLE_PIXEL_SIZE = 20
+FONT_SAMPLE_MAX_CHARS = 140
+FONT_COVERAGE_FULL = "full"
+FONT_COVERAGE_PARTIAL = "partial"
+FONT_COVERAGE_NONE = "none"
 _SYSTEM_FONTS_ENABLED = True
 _FONT_COMBO_INSTANCES: weakref.WeakSet = weakref.WeakSet()
 _FONT_DIRECTORY_SIGNATURE: tuple | None = None
@@ -99,6 +141,7 @@ def _clear_font_catalog_caches() -> None:
     _list_font_style_entries_cached.cache_clear()
     _resolve_catalog_value.cache_clear()
     _cached_qfont_for_value.cache_clear()
+    _font_coverage_for_chars.cache_clear()
 
 
 def fonts_directory() -> str:
@@ -594,6 +637,45 @@ def qfont_for_value(value: str) -> QFont:
     return QFont(_cached_qfont_for_value(str(value or "")))
 
 
+def font_sample_line(text) -> str:
+    """Flatten stored region text into one readable preview line.
+
+    Accepts the storage form ([BR] markers, legacy <H> tags, richtext documents)
+    as well as plain editor text; rows elide whatever does not fit.
+    """
+    line = normalize_rich_linebreaks(plain_text_of(text))
+    line = re.sub(r"</?H>", "", line)
+    return " ".join(line.split())[:FONT_SAMPLE_MAX_CHARS].rstrip()
+
+
+@lru_cache(maxsize=16384)
+def _font_coverage_for_chars(value: str, chars: str) -> str:
+    raw = QRawFont.fromFont(_cached_qfont_for_value(value))
+    if not raw.isValid():
+        return FONT_COVERAGE_NONE
+    missing = {char for char in chars if not raw.supportsCharacter(ord(char))}
+    if not missing:
+        return FONT_COVERAGE_FULL
+    # Punctuation and digits shared with Latin must not make a font that lacks
+    # the script itself look usable: judge by letters and their marks.
+    letters = [
+        char for char in chars if unicodedata.category(char)[0] in "LM"
+    ] or list(chars)
+    covered = sum(char not in missing for char in letters)
+    return FONT_COVERAGE_PARTIAL if covered * 2 >= len(letters) else FONT_COVERAGE_NONE
+
+
+def font_text_coverage(value: str, text: str) -> str:
+    """Report whether the font itself, not a Qt fallback, has glyphs for ``text``."""
+    chars = "".join(sorted({
+        char for char in str(text or "")
+        if not char.isspace() and unicodedata.category(char) not in ("Cc", "Cf")
+    }))
+    if not chars:
+        return FONT_COVERAGE_FULL
+    return _font_coverage_for_chars(str(value or ""), chars)
+
+
 def populate_font_combo(
     combo, current: str | None = None, locale_code: str = "en_US"
 ) -> None:
@@ -655,7 +737,9 @@ class _FontMenuModel(QAbstractListModel):
                 if self.parent()
                 else len(display) * 8
             )
-            return QSize(40 + width, 33)
+            return QSize(
+                40 + width, getattr(self.parent(), "_itemHeight", FONT_NAME_ROW_HEIGHT)
+            )
         return None
 
 
@@ -672,6 +756,9 @@ class _FontFilterProxyModel(QSortFilterProxyModel):
         self.invalidateRowsFilter()
 
     def filterAcceptsRow(self, source_row, source_parent):
+        family_filter = getattr(self, '_family_filter', None)
+        if family_filter is not None:
+            return family_filter(source_row)
         if not self._query:
             return True
         model = self.sourceModel()
@@ -680,16 +767,141 @@ class _FontFilterProxyModel(QSortFilterProxyModel):
 
 
 class _FontMenuDelegate(IndicatorMenuItemDelegate):
-    """Resolve and paint preview fonts only for rows requested by the viewport."""
+    """Resolve and paint preview fonts only for rows requested by the viewport.
+
+    Without a sample each row is the font name in its own font. With a sample
+    the row shows that text in the row's font under a small name caption, and
+    fonts lacking its glyphs are labelled instead of showing fallback glyphs.
+    """
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.sample_text = ""
+        self.no_glyph_hint = ""
+        self.partial_glyph_hint = ""
+        self._sample_fonts: dict[tuple[str, bool], QFont] = {}
+
+    def set_sample(self, text: str, no_glyph_hint: str, partial_glyph_hint: str):
+        self.sample_text = str(text or "")
+        self.no_glyph_hint = no_glyph_hint
+        self.partial_glyph_hint = partial_glyph_hint
 
     def paint(self, painter, option, index):
-        value = index.model().data(index, Qt.ItemDataRole.UserRole)
-        option.font = _cached_qfont_for_value(str(value or ""))
+        value = str(index.model().data(index, Qt.ItemDataRole.UserRole) or "")
+        if self.sample_text:
+            self._paint_sample_row(painter, option, index, value)
+            return
+        option.font = _cached_qfont_for_value(value)
         super().paint(painter, option, index)
+
+    def _sample_font(self, value: str, merge_fallbacks: bool) -> QFont:
+        key = (value, merge_fallbacks)
+        font = self._sample_fonts.get(key)
+        if font is None:
+            font = QFont(_cached_qfont_for_value(value))
+            font.setPixelSize(FONT_SAMPLE_PIXEL_SIZE)
+            if not merge_fallbacks:
+                # Missing glyphs stay visible as boxes instead of borrowed glyphs.
+                font.setStyleStrategy(QFont.StyleStrategy.NoFontMerging)
+            self._sample_fonts[key] = font
+        return font
+
+    def _paint_sample_row(self, painter, option, index, value: str):
+        # Let the style draw hover/selection chrome, then draw both text lines.
+        panel = QStyleOptionViewItem(option)
+        self.initStyleOption(panel, index)
+        panel.text = ""
+        style = panel.widget.style() if panel.widget else QApplication.style()
+        style.drawControl(
+            QStyle.ControlElement.CE_ItemViewItem, panel, painter, panel.widget
+        )
+
+        name = str(index.model().data(index, Qt.ItemDataRole.DisplayRole) or "")
+        coverage = font_text_coverage(value, self.sample_text)
+        rect = option.rect
+        left = rect.x() + 18
+        width = max(1, rect.right() - 12 - left)
+        dark = isDarkTheme()
+        text_color = QColor(255, 255, 255) if dark else QColor(0, 0, 0)
+        dim_color = QColor(255, 255, 255, 160) if dark else QColor(0, 0, 0, 150)
+        warning_color = QColor("#ffb454") if dark else QColor("#a85400")
+
+        painter.save()
+        painter.setClipRect(rect)
+        painter.setRenderHints(
+            QPainter.RenderHint.Antialiasing | QPainter.RenderHint.TextAntialiasing
+        )
+        if option.state & QStyle.StateFlag.State_Selected:
+            painter.setPen(Qt.PenStyle.NoPen)
+            painter.setBrush(themeColor())
+            painter.drawRoundedRect(6, rect.center().y() - 9, 3, 18, 1.5, 1.5)
+
+        caption_font = QFont(option.font)
+        caption_font.setPixelSize(11)
+        caption_metrics = QFontMetricsF(caption_font)
+        caption_rect = QRect(left, rect.y() + 5, width, 15)
+        flags = Qt.AlignmentFlag.AlignVCenter | Qt.TextFlag.TextSingleLine
+        painter.setFont(caption_font)
+        hint = {
+            FONT_COVERAGE_NONE: self.no_glyph_hint,
+            FONT_COVERAGE_PARTIAL: self.partial_glyph_hint,
+        }.get(coverage, "")
+        name_width = width
+        if hint:
+            hint_width = min(width, round(caption_metrics.horizontalAdvance(hint)) + 2)
+            painter.setPen(warning_color)
+            painter.drawText(
+                caption_rect, flags | Qt.AlignmentFlag.AlignRight,
+                caption_metrics.elidedText(hint, Qt.TextElideMode.ElideRight, width),
+            )
+            name_width = max(0, width - hint_width - 10)
+
+        if coverage == FONT_COVERAGE_NONE:
+            # Never show substituted sample glyphs: fall back to the font's name.
+            line = name
+            font = self._sample_font(
+                value, font_text_coverage(value, name) != FONT_COVERAGE_FULL
+            )
+            line_color = dim_color
+        else:
+            line = self.sample_text
+            font = self._sample_font(value, coverage == FONT_COVERAGE_FULL)
+            line_color = text_color
+            painter.setPen(dim_color)
+            painter.drawText(
+                QRect(left, caption_rect.y(), name_width, caption_rect.height()),
+                flags | Qt.AlignmentFlag.AlignLeft,
+                caption_metrics.elidedText(
+                    name, Qt.TextElideMode.ElideRight, name_width
+                ),
+            )
+
+        # Centre on the font's own ascent/descent so stacked Thai marks and
+        # descenders stay inside the row; unusually tall faces are scaled down.
+        top = caption_rect.bottom() + 1
+        available = rect.bottom() - 2 - top
+        metrics = QFontMetricsF(font)
+        if metrics.height() > available:
+            font = QFont(font)
+            font.setPixelSize(
+                max(12, int(FONT_SAMPLE_PIXEL_SIZE * available / metrics.height()))
+            )
+            metrics = QFontMetricsF(font)
+        baseline = top + (available - metrics.height()) / 2 + metrics.ascent()
+        painter.setFont(font)
+        painter.setPen(line_color)
+        painter.drawText(
+            QPoint(left, round(baseline)),
+            metrics.elidedText(line, Qt.TextElideMode.ElideRight, width),
+        )
+        painter.restore()
 
     def sizeHint(self, option, index):
         hint = index.model().data(index, Qt.ItemDataRole.SizeHintRole)
-        return QSize(max(hint.width(), 1), 33)
+        return QSize(
+            max(hint.width(), 1),
+            getattr(self.parent(), "_itemHeight", FONT_NAME_ROW_HEIGHT),
+        )
 
 
 class _FontMenuScrollDelegate(SmoothScrollDelegate):
@@ -719,7 +931,7 @@ class _FontMenuListView(QListView):
 
     def __init__(self, entries, parent=None):
         super().__init__(parent)
-        self._itemHeight = 33
+        self._itemHeight = FONT_NAME_ROW_HEIGHT
         self._maxVisibleItems = -1
         self._font_model = _FontMenuModel(entries, self)
         self._filter_model = _FontFilterProxyModel(self)
@@ -749,6 +961,16 @@ class _FontMenuListView(QListView):
 
     def setItemHeight(self, height: int):
         self._itemHeight = int(height)
+        self.adjustSize()
+
+    def set_sample_text(
+        self, text: str, no_glyph_hint: str = "", partial_glyph_hint: str = ""
+    ):
+        """Switch rows between name-only and sample-text layout."""
+        self.itemDelegate().set_sample(text, no_glyph_hint, partial_glyph_hint)
+        self._itemHeight = FONT_SAMPLE_ROW_HEIGHT if text else FONT_NAME_ROW_HEIGHT
+        # Uniform item sizes cache the first hint; drop it with the old height.
+        self.scheduleDelayedItemsLayout()
         self.adjustSize()
 
     def setMaxVisibleItems(self, num: int):
@@ -837,8 +1059,18 @@ class _FontComboBoxMenu(ComboBoxMenu):
     fontHovered = pyqtSignal(str)
     fontSelected = pyqtSignal(int)
 
-    def __init__(self, font_entries, placeholder, parent=None):
+    def __init__(
+        self, font_entries, placeholder, parent=None, sample_text="", locale_code=""
+    ):
         self._font_entries = tuple(font_entries)
+        # Empty keeps the classic rows that show each font's name.
+        self.row_sample_text = font_sample_line(sample_text)
+        self.no_glyph_hint = _FONT_NO_GLYPH_HINTS.get(
+            locale_code, _FONT_NO_GLYPH_HINTS["en_US"]
+        )
+        self.partial_glyph_hint = _FONT_PARTIAL_GLYPH_HINTS.get(
+            locale_code, _FONT_PARTIAL_GLYPH_HINTS["en_US"]
+        )
         self._was_activated = False
         self._anchor = None
         self._anchor_watchers = ()
@@ -856,6 +1088,9 @@ class _FontComboBoxMenu(ComboBoxMenu):
         # construction. Reapply that step because this virtualized view replaces
         # the one initialized by ComboBoxMenu.
         self.view.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        self.view.set_sample_text(
+            self.row_sample_text, self.no_glyph_hint, self.partial_glyph_hint
+        )
         self.setShadowEffect()
         self._container = QWidget(self)
         self._content_layout = QVBoxLayout(self._container)
@@ -1138,6 +1373,11 @@ class FontComboBox(TopLevelComboBox):
         self._cached_locale_code: str | None = None
         self._include_system_fonts = _SYSTEM_FONTS_ENABLED
         self._font_search_terms: dict[str, str] = {}
+        # Text the menu rows preview. Owners with a text selection install a
+        # provider; it is read when the menu opens and enables sample rows even
+        # when it returns nothing (the menu then uses its default sentence).
+        self.preview_text = ''
+        self.preview_text_provider: Callable[[], str] | None = None
         super().__init__(parent)
         _FONT_COMBO_INSTANCES.add(self)
         self.currentIndexChanged.connect(self._emit_current_font_changed)
@@ -1145,6 +1385,12 @@ class FontComboBox(TopLevelComboBox):
 
     def _createComboMenu(self):
         locale_code = self._locale_code()
+        provider = self.preview_text_provider
+        if provider is not None:
+            try:
+                self.preview_text = str(provider() or "")
+            except RuntimeError:
+                self.preview_text = ""
         entries = [
             (
                 item.text,
@@ -1153,12 +1399,17 @@ class FontComboBox(TopLevelComboBox):
             )
             for item in self.items
         ]
-        menu = _FontComboBoxMenu(
+        from .thai_font_menu import ThaiFontMenu
+        menu = ThaiFontMenu(
             entries,
             _FONT_SEARCH_PLACEHOLDERS.get(
                 locale_code, _FONT_SEARCH_PLACEHOLDERS["en_US"]
             ),
+            self.preview_text,
+            locale_code == 'th_TH',
             self._popup_parent(),
+            sample_rows=provider is not None,
+            locale_code=locale_code,
         )
         menu.fontHovered.connect(self.fontPreviewChanged)
         menu.fontSelected.connect(self._on_menu_font_selected)
@@ -1175,7 +1426,7 @@ class FontComboBox(TopLevelComboBox):
         menu.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
         menu.closedSignal.connect(self._onDropMenuClosed)
         self.dropMenu = menu
-        menu.view.setCurrentRow(self.currentIndex())
+        menu.selectValue(self.currentFamily())
         menu.bind_to_anchor(self)
         menu.show_for_anchor()
 

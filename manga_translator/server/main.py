@@ -40,6 +40,12 @@ from manga_translator.server_paths import (
 
 # Import core modules
 from manga_translator.server.core import config_manager, logging_manager, task_manager
+from manga_translator.server.core.setup_guard import (
+    CORS_ORIGINS_ENV,
+    build_cors_options,
+    initial_setup_hint,
+    parse_cors_origins,
+)
 from manga_translator.server.instance import ExecutorInstance, executor_instances
 
 # 初始化服务器配置文件（如果不存在则从模板复制）
@@ -113,6 +119,24 @@ _session_service = None
 _permission_service = None
 _audit_service = None
 _system_initializer = None
+# Bind address of the running server (set by run_server); used for the
+# first-run setup hint.
+_bind_address = None
+
+
+def _log_initial_setup_hint() -> None:
+    """Explain how to create the first admin when no accounts exist yet."""
+    if _account_service is None or _bind_address is None:
+        return
+    if _account_service.list_users():
+        return
+    from manga_translator.server.core.logging_manager import add_log
+
+    host, port = _bind_address
+    for line in initial_setup_hint(host, port):
+        logger.warning(line)
+        print(f"[SETUP] {line}")
+        add_log(line, "WARNING")
 
 
 @app.on_event("startup")
@@ -224,6 +248,7 @@ async def startup_event():
     
     logger.info("Services initialized successfully")
     add_log("Server startup complete; all services initialized", "INFO")
+    _log_initial_setup_hint()
 
 
 @app.on_event("shutdown")
@@ -242,13 +267,18 @@ async def shutdown_event():
     logger.info("Server shutdown completed")
 
 # Configure middleware
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# CORS: by default only loopback origins may call the API cross-origin (the
+# bundled web UI is same-origin and unaffected).  Override with the
+# MT_WEB_CORS_ORIGINS environment variable or `web --cors-origins`.
+def configure_cors(origins=None) -> dict:
+    """(Re)install the CORS middleware. Must be called before the app starts serving."""
+    options = build_cors_options(origins)
+    app.user_middleware = [m for m in app.user_middleware if m.cls is not CORSMiddleware]
+    app.add_middleware(CORSMiddleware, **options)
+    return options
+
+
+configure_cors(parse_cors_origins(os.environ.get(CORS_ORIGINS_ENV)))
 
 # Add validation error handler
 @app.exception_handler(RequestValidationError)
@@ -313,7 +343,9 @@ app.include_router(logs_router)
 # Internal API endpoint for instance registration
 @app.post("/register", response_description="no response", tags=["internal-api"])
 async def register_instance(instance: ExecutorInstance, req: Request, req_nonce: str = Header(alias="X-Nonce")):
-    if req_nonce != nonce:
+    # Fail closed when no nonce is configured and compare in constant time:
+    # a registered executor is trusted to return pickled results.
+    if not nonce or not secrets.compare_digest(req_nonce.encode('utf-8'), nonce.encode('utf-8')):
         raise HTTPException(401, detail="Invalid nonce")
     instance.ip = req.client.host
     executor_instances.register(instance)
@@ -384,6 +416,15 @@ def init_translator(use_gpu=False, verbose=False):
 def run_server(args):
     """启动 Web API 服务器（纯API模式，不带界面）"""
     import uvicorn
+
+    global _bind_address
+    _bind_address = (args.host, args.port)
+
+    cors_origins = parse_cors_origins(getattr(args, 'cors_origins', None))
+    if cors_origins:
+        cors_options = configure_cors(cors_origins)
+        if cors_options['allow_origins'] == ['*']:
+            logger.warning("CORS: every origin is allowed to call this API (--cors-origins '*').")
 
     if getattr(args, 'disable_onnx_gpu', False):
         os.environ['MT_DISABLE_ONNX_GPU'] = '1'

@@ -49,7 +49,10 @@ class TasksModule {
         
         document.getElementById('tasks-count').textContent = taskList.length;
         
-        tbody.innerHTML = taskList.map(([id, task]) => {
+        // Built with DOM APIs: task ids, usernames, types and statuses are untrusted.
+        const el = SafeDom.el;
+        const rows = taskList.map(([rawId, task]) => {
+            const id = String(rawId ?? '');
             const statusClass = {
                 'pending': 'badge-warning',
                 'queued': 'badge-warning',
@@ -59,33 +62,43 @@ class TasksModule {
                 'failed': 'badge-danger',
                 'cancelled': 'badge-secondary'
             }[task.status] || 'badge-info';
-            
-            return `
-                <tr>
-                    <td><code style="background:#f3f4f6;padding:2px 6px;border-radius:4px;">${id.slice(0,12)}...</code></td>
-                    <td>${task.username || '-'}</td>
-                    <td>${task.type || 'translate'}</td>
-                    <td><span class="badge ${statusClass}">${task.status || 'processing'}</span></td>
-                    <td>
-                        <div style="display:flex;align-items:center;gap:8px;">
-                            <div style="flex:1;max-width:100px;background:#e5e7eb;border-radius:4px;height:6px;">
-                                <div style="width:${task.progress || 0}%;background:#3b82f6;height:100%;border-radius:4px;transition:width 0.3s;"></div>
-                            </div>
-                            <span style="font-size:12px;color:#6b7280;">${task.progress || 0}%</span>
-                        </div>
-                    </td>
-                    <td>${task.start_time ? new Date(task.start_time).toLocaleString() : '-'}</td>
-                    <td>
-                        ${['processing', 'pending', 'running', 'queued'].includes(task.status) ? 
-                            `<button class="btn btn-danger btn-sm" onclick="tasksModule.cancelTask('${id}')">取消</button>` : 
-                            `<button class="btn btn-secondary btn-sm" onclick="tasksModule.viewTaskDetail('${id}')">详情</button>`
-                        }
-                    </td>
-                </tr>
-            `;
-        }).join('');
+            const progress = SafeDom.percent(task.progress);
+            const isActive = ['processing', 'pending', 'running', 'queued'].includes(task.status);
+
+            return el('tr', null,
+                el('td', null, el('code', {
+                    style: 'background:#f3f4f6;padding:2px 6px;border-radius:4px;',
+                    text: `${id.slice(0, 12)}...`
+                })),
+                el('td', { text: task.username || '-' }),
+                el('td', { text: task.type || 'translate' }),
+                el('td', null, el('span', { className: `badge ${statusClass}`, text: task.status || 'processing' })),
+                el('td', null,
+                    el('div', { style: 'display:flex;align-items:center;gap:8px;' },
+                        el('div', { style: 'flex:1;max-width:100px;background:#e5e7eb;border-radius:4px;height:6px;' },
+                            el('div', { style: `width:${progress}%;background:#3b82f6;height:100%;border-radius:4px;transition:width 0.3s;` })
+                        ),
+                        el('span', { style: 'font-size:12px;color:#6b7280;', text: `${progress}%` })
+                    )
+                ),
+                el('td', { text: task.start_time ? new Date(task.start_time).toLocaleString() : '-' }),
+                el('td', null, isActive
+                    ? el('button', {
+                        className: 'btn btn-danger btn-sm',
+                        text: '取消',
+                        on: { click: () => this.cancelTask(id) }
+                    })
+                    : el('button', {
+                        className: 'btn btn-secondary btn-sm',
+                        text: '详情',
+                        on: { click: () => this.viewTaskDetail(id) }
+                    })
+                )
+            );
+        });
+        SafeDom.setChildren(tbody, rows);
     }
-    
+
     startAutoRefresh() {
         if (this.refreshInterval) clearInterval(this.refreshInterval);
         if (this.autoRefresh) {
@@ -119,7 +132,7 @@ class TasksModule {
         if (!confirm('确定要取消此任务吗？')) return;
         
         try {
-            const resp = await fetch(`/admin/tasks/${taskId}/cancel`, {
+            const resp = await fetch(`/admin/tasks/${encodeURIComponent(taskId)}/cancel`, {
                 method: 'POST',
                 headers: { 'X-Session-Token': this.app.sessionToken }
             });

@@ -21,7 +21,7 @@
 [![OCR](https://img.shields.io/badge/OCR-MangaOCR-blue)](https://github.com/kha-white/manga-ocr)
 [![OCR](https://img.shields.io/badge/OCR-PaddleOCR--VL--1.5-blue)](https://huggingface.co/PaddlePaddle/PaddleOCR-VL-1.5)
 
-**Language / 语言**: [简体中文](README.md) | English
+**Language / 语言**: [ไทย](README.md) | [简体中文](README_ZH.md) | English
 
 </div>
 

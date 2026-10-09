@@ -18,7 +18,7 @@ from desktop_qt_ui.core.git_update_helpers import (
 )
 from PyQt6.QtCore import QObject, QThread, pyqtSignal, pyqtSlot
 
-REPOSITORY_URL = "https://github.com/hgmzhn/manga-translator-ui"
+REPOSITORY_URL = "https://github.com/nousx/MangaX"
 
 
 @dataclass(frozen=True)

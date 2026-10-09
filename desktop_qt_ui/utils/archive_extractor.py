@@ -25,6 +25,152 @@ ORIGINAL_IMAGE_DIRNAME = 'original_images'
 ARCHIVE_SOURCE_MARKER_FILENAME = '.archive_source.txt'
 EXTRACT_META_FILENAME = '.extract_meta.json'
 
+# ---------------------------------------------------------------------------
+# Extraction limits (archive-bomb protection)
+#
+# Generous for real manga chapters/volumes (hundreds of pages, large PNGs), but
+# bounded so that a small crafted archive cannot exhaust RAM or disk space.
+# ---------------------------------------------------------------------------
+# Maximum number of entries an archive may list at all (directories included).
+MAX_ARCHIVE_ENTRY_COUNT = 100_000
+# Maximum number of images extracted from one archive/document.
+MAX_ARCHIVE_IMAGE_COUNT = 10_000
+# Maximum uncompressed size of a single extracted file.
+MAX_ARCHIVE_MEMBER_SIZE = 512 * 1024 * 1024  # 512 MiB
+# Maximum total uncompressed size extracted from one archive/document.
+MAX_ARCHIVE_TOTAL_SIZE = 8 * 1024 * 1024 * 1024  # 8 GiB
+# Maximum size of a metadata member read into memory (EPUB OPF / XHTML pages).
+MAX_ARCHIVE_METADATA_SIZE = 16 * 1024 * 1024  # 16 MiB
+# Members are streamed to disk in chunks of this size.
+EXTRACT_CHUNK_SIZE = 1024 * 1024  # 1 MiB
+
+
+class ArchiveLimitError(ValueError):
+    """Raised when an archive exceeds the extraction limits (possible archive bomb)."""
+
+
+def _format_size(num_bytes: int) -> str:
+    size = float(num_bytes)
+    for unit in ('B', 'KiB', 'MiB', 'GiB'):
+        if size < 1024 or unit == 'GiB':
+            return f"{size:.0f} {unit}" if unit == 'B' else f"{size:.1f} {unit}"
+        size /= 1024
+    return f"{num_bytes} B"
+
+
+class _ExtractionBudget:
+    """
+    Tracks what one extraction run has written and enforces the limits.
+
+    Limits are read from the module constants when the budget is created.
+    Sizes are counted from the bytes actually decompressed, never trusted
+    from the archive headers alone.
+    """
+
+    def __init__(self, archive_path: str):
+        self.archive_name = os.path.basename(archive_path)
+        self.max_entries = MAX_ARCHIVE_ENTRY_COUNT
+        self.max_images = MAX_ARCHIVE_IMAGE_COUNT
+        self.max_member_size = MAX_ARCHIVE_MEMBER_SIZE
+        self.max_total_size = MAX_ARCHIVE_TOTAL_SIZE
+        self.image_count = 0
+        self.total_size = 0
+        self.written_paths: List[str] = []
+
+    def _fail(self, reason: str) -> None:
+        raise ArchiveLimitError(
+            f"Archive '{self.archive_name}' exceeds the extraction limits and was not extracted: {reason}"
+        )
+
+    def check_entry_count(self, entry_count: int) -> None:
+        if entry_count > self.max_entries:
+            self._fail(f"it lists {entry_count} entries (limit {self.max_entries})")
+
+    def check_declared(self, declared_sizes) -> None:
+        """Fail fast, before writing anything, using the sizes declared in the headers."""
+        sizes = [max(0, int(size or 0)) for size in declared_sizes]
+        if len(sizes) > self.max_images:
+            self._fail(f"it contains {len(sizes)} images (limit {self.max_images})")
+        for size in sizes:
+            if size > self.max_member_size:
+                self._fail(
+                    f"a file is {_format_size(size)} uncompressed (limit {_format_size(self.max_member_size)} per file)"
+                )
+        total = sum(sizes)
+        if total > self.max_total_size:
+            self._fail(
+                f"total uncompressed size is {_format_size(total)} (limit {_format_size(self.max_total_size)})"
+            )
+
+    def add_image(self) -> None:
+        self.image_count += 1
+        if self.image_count > self.max_images:
+            self._fail(f"it contains more than {self.max_images} images")
+
+    def add_bytes(self, member_size_so_far: int, chunk_size: int) -> None:
+        if member_size_so_far > self.max_member_size:
+            self._fail(
+                f"a file is larger than {_format_size(self.max_member_size)} uncompressed"
+            )
+        self.total_size += chunk_size
+        if self.total_size > self.max_total_size:
+            self._fail(
+                f"total uncompressed size is larger than {_format_size(self.max_total_size)}"
+            )
+
+    def copy_stream(self, src, output_path: str) -> None:
+        """Stream `src` to `output_path` in chunks, enforcing the limits."""
+        self.add_image()
+        self.written_paths.append(output_path)
+        member_size = 0
+        with open(output_path, 'wb') as dst:
+            while True:
+                chunk = src.read(EXTRACT_CHUNK_SIZE)
+                if not chunk:
+                    break
+                member_size += len(chunk)
+                self.add_bytes(member_size, len(chunk))
+                dst.write(chunk)
+
+    def write_bytes(self, data: bytes, output_path: str) -> None:
+        """Write an in-memory image (e.g. extracted from a PDF), enforcing the limits."""
+        self.add_image()
+        self.add_bytes(len(data), len(data))
+        self.written_paths.append(output_path)
+        with open(output_path, 'wb') as dst:
+            dst.write(data)
+
+    def register_file(self, output_path: str) -> None:
+        """Account for a file written by a third-party API (e.g. a rendered page)."""
+        self.written_paths.append(output_path)
+        self.add_image()
+        try:
+            size = os.path.getsize(output_path)
+        except OSError:
+            size = 0
+        self.add_bytes(size, size)
+
+    def remove_partial_output(self) -> None:
+        """Delete everything this run wrote (used when extraction is aborted)."""
+        for path in self.written_paths:
+            try:
+                os.remove(path)
+            except OSError:
+                pass
+        self.written_paths.clear()
+
+
+def _read_member_bounded(zf, name: str, limit: Optional[int] = None) -> bytes:
+    """Read a small metadata member into memory, refusing oversized ones."""
+    limit = MAX_ARCHIVE_METADATA_SIZE if limit is None else limit
+    with zf.open(name) as src:
+        data = src.read(limit + 1)
+    if len(data) > limit:
+        raise ArchiveLimitError(
+            f"Archive member '{name}' is larger than {_format_size(limit)} and was not read"
+        )
+    return data
+
 
 def is_archive_file(file_path: str) -> bool:
     """检查文件是否是支持的压缩包/文档格式"""
@@ -154,6 +300,7 @@ def extract_images_from_pdf(pdf_path: str, output_dir: str) -> List[str]:
     os.makedirs(output_dir, exist_ok=True)
     extracted_images = []
     img_count = 0
+    budget = _ExtractionBudget(pdf_path)
 
     doc = None
     try:
@@ -168,9 +315,10 @@ def extract_images_from_pdf(pdf_path: str, output_dir: str) -> List[str]:
                         base = doc.extract_image(xref)
                         img_count += 1
                         image_path = os.path.join(output_dir, f"page_{img_count:04d}.{base['ext']}")
-                        with open(image_path, 'wb') as f:
-                            f.write(base['image'])
+                        budget.write_bytes(base['image'], image_path)
                         extracted_images.append(image_path)
+                    except ArchiveLimitError:
+                        raise
                     except Exception:
                         pass
             else:
@@ -181,10 +329,16 @@ def extract_images_from_pdf(pdf_path: str, output_dir: str) -> List[str]:
                     img_count += 1
                     image_path = os.path.join(output_dir, f"page_{img_count:04d}.png")
                     pix.save(image_path)
-                    extracted_images.append(image_path)
                     pix = None
+                    budget.register_file(image_path)
+                    extracted_images.append(image_path)
+                except ArchiveLimitError:
+                    raise
                 except Exception:
                     pass
+    except ArchiveLimitError:
+        budget.remove_partial_output()
+        raise
     finally:
         if doc is not None:
             doc.close()
@@ -204,6 +358,7 @@ def extract_images_from_epub(epub_path: str, output_dir: str) -> List[str]:
     os.makedirs(output_dir, exist_ok=True)
     extracted_images = []
     img_count = 0
+    budget = _ExtractionBudget(epub_path)
 
     fitz_doc = None
     try:
@@ -218,12 +373,17 @@ def extract_images_from_epub(epub_path: str, output_dir: str) -> List[str]:
     try:
         with zipfile.ZipFile(epub_path, 'r') as zf:
             namelist = zf.namelist()
+            budget.check_entry_count(len(namelist))
+            budget.check_declared(
+                info.file_size for info in zf.infolist()
+                if not info.is_dir() and os.path.splitext(info.filename)[1].lower() in IMAGE_EXTENSIONS
+            )
             lower_map = {name.lower(): name for name in namelist}
 
             # 1. 定位 OPF 清单路径
             opf_path = None
             try:
-                container = ET.fromstring(zf.read('META-INF/container.xml'))
+                container = ET.fromstring(_read_member_bounded(zf, 'META-INF/container.xml'))
                 rootfile = container.find('.//{*}rootfile')
                 if rootfile is not None and rootfile.get('full-path'):
                     fp = rootfile.get('full-path')
@@ -239,7 +399,7 @@ def extract_images_from_epub(epub_path: str, output_dir: str) -> List[str]:
             if opf_path and opf_path in namelist:
                 try:
                     opf_dir = posixpath.dirname(opf_path)
-                    opf = ET.fromstring(zf.read(opf_path))
+                    opf = ET.fromstring(_read_member_bounded(zf, opf_path))
                     manifest = {
                         item.get('id'): item.get('href', '')
                         for item in opf.findall('.//{*}item')
@@ -269,7 +429,7 @@ def extract_images_from_epub(epub_path: str, output_dir: str) -> List[str]:
                             real_html = lower_map.get(target.lower())
                             found = False
                             if real_html:
-                                html_text = zf.read(real_html).decode('utf-8', errors='replace')
+                                html_text = _read_member_bounded(zf, real_html).decode('utf-8', errors='replace')
                                 for match in img_pattern.findall(html_text):
                                     img_ref = urllib.parse.unquote(match.split('?')[0].split('#')[0])
                                     img_full = posixpath.normpath(posixpath.join(posixpath.dirname(real_html), img_ref))
@@ -291,8 +451,8 @@ def extract_images_from_epub(epub_path: str, output_dir: str) -> List[str]:
                     ext = os.path.splitext(zip_rel)[1].lower() or '.png'
                     img_count += 1
                     out_path = os.path.join(output_dir, f"page_{img_count:04d}{ext}")
-                    with zf.open(zip_rel) as src, open(out_path, 'wb') as dst:
-                        dst.write(src.read())
+                    with zf.open(zip_rel) as src:
+                        budget.copy_stream(src, out_path)
                     extracted_images.append(out_path)
                     extracted_paths.add(zip_rel)
                 elif fitz_doc is not None and spine_page_idx is not None and spine_page_idx < len(fitz_doc):
@@ -302,7 +462,10 @@ def extract_images_from_epub(epub_path: str, output_dir: str) -> List[str]:
                         img_count += 1
                         out_path = os.path.join(output_dir, f"page_{img_count:04d}.png")
                         pix.save(out_path)
+                        budget.register_file(out_path)
                         extracted_images.append(out_path)
+                    except ArchiveLimitError:
+                        raise
                     except Exception:
                         pass
 
@@ -316,8 +479,8 @@ def extract_images_from_epub(epub_path: str, output_dir: str) -> List[str]:
                 ext = os.path.splitext(rem)[1].lower() or '.png'
                 img_count += 1
                 out_path = os.path.join(output_dir, f"page_{img_count:04d}{ext}")
-                with zf.open(rem) as src, open(out_path, 'wb') as dst:
-                    dst.write(src.read())
+                with zf.open(rem) as src:
+                    budget.copy_stream(src, out_path)
                 extracted_images.append(out_path)
 
             # 5. 若未提取出任何图片，通过 fitz 全书渲染兜底
@@ -329,9 +492,15 @@ def extract_images_from_epub(epub_path: str, output_dir: str) -> List[str]:
                         img_count += 1
                         out_path = os.path.join(output_dir, f"page_{img_count:04d}.png")
                         pix.save(out_path)
+                        budget.register_file(out_path)
                         extracted_images.append(out_path)
+                    except ArchiveLimitError:
+                        raise
                     except Exception:
                         pass
+    except ArchiveLimitError:
+        budget.remove_partial_output()
+        raise
     finally:
         if fitz_doc is not None:
             fitz_doc.close()
@@ -339,35 +508,59 @@ def extract_images_from_epub(epub_path: str, output_dir: str) -> List[str]:
     return sorted(extracted_images)
 
 
-def extract_images_from_cbz(cbz_path: str, output_dir: str) -> List[str]:
-    """从 CBZ (Comic Book ZIP) 文件中提取图片"""
-    os.makedirs(output_dir, exist_ok=True)
+def _extract_image_members(archive, archive_path: str, output_dir: str) -> List[str]:
+    """
+    Extract the image members of an opened ZIP/RAR archive into `output_dir`.
+
+    Members are streamed to disk in chunks and checked against the extraction
+    limits.  If a limit is exceeded, everything written by this call is removed
+    and ArchiveLimitError is raised.
+    """
+    budget = _ExtractionBudget(archive_path)
     extracted_images = []
-    
-    with zipfile.ZipFile(cbz_path, 'r') as zf:
-        # 获取所有图片文件并排序
-        image_files = []
-        for file_info in zf.infolist():
-            if file_info.is_dir():
-                continue
-            ext = os.path.splitext(file_info.filename)[1].lower()
-            if ext in IMAGE_EXTENSIONS:
-                image_files.append(file_info)
-        
-        # 按文件名自然排序
-        image_files.sort(key=lambda x: natural_sort_key(x.filename))
-        
+
+    all_entries = archive.infolist()
+    budget.check_entry_count(len(all_entries))
+
+    # 获取所有图片文件并排序
+    image_files = []
+    for file_info in all_entries:
+        if file_info.is_dir():
+            continue
+        ext = os.path.splitext(file_info.filename)[1].lower()
+        if ext in IMAGE_EXTENSIONS:
+            image_files.append(file_info)
+
+    # Fail fast on the declared sizes before anything is written.
+    budget.check_declared(file_info.file_size for file_info in image_files)
+
+    # 按文件名自然排序
+    image_files.sort(key=lambda x: natural_sort_key(x.filename))
+
+    try:
         for idx, file_info in enumerate(image_files):
-            base_name = os.path.basename(file_info.filename)
+            # basename only: member paths can never escape output_dir
+            base_name = os.path.basename(file_info.filename.replace('\\', '/'))
             # 添加序号前缀以保持顺序
             new_name = f"{idx:04d}_{base_name}"
             output_path = os.path.join(output_dir, new_name)
-            
-            with zf.open(file_info) as src, open(output_path, 'wb') as dst:
-                dst.write(src.read())
+
+            with archive.open(file_info) as src:
+                budget.copy_stream(src, output_path)
             extracted_images.append(output_path)
-    
+    except ArchiveLimitError:
+        budget.remove_partial_output()
+        raise
+
     return extracted_images
+
+
+def extract_images_from_cbz(cbz_path: str, output_dir: str) -> List[str]:
+    """从 CBZ (Comic Book ZIP) 文件中提取图片"""
+    os.makedirs(output_dir, exist_ok=True)
+
+    with zipfile.ZipFile(cbz_path, 'r') as zf:
+        return _extract_image_members(zf, cbz_path, output_dir)
 
 
 def extract_images_from_cbr(cbr_path: str, output_dir: str) -> List[str]:
@@ -376,31 +569,11 @@ def extract_images_from_cbr(cbr_path: str, output_dir: str) -> List[str]:
         import rarfile
     except ImportError:
         raise ImportError("需要安装 rarfile: pip install rarfile")
-    
+
     os.makedirs(output_dir, exist_ok=True)
-    extracted_images = []
-    
+
     with rarfile.RarFile(cbr_path, 'r') as rf:
-        image_files = []
-        for file_info in rf.infolist():
-            if file_info.is_dir():
-                continue
-            ext = os.path.splitext(file_info.filename)[1].lower()
-            if ext in IMAGE_EXTENSIONS:
-                image_files.append(file_info)
-        
-        image_files.sort(key=lambda x: natural_sort_key(x.filename))
-        
-        for idx, file_info in enumerate(image_files):
-            base_name = os.path.basename(file_info.filename)
-            new_name = f"{idx:04d}_{base_name}"
-            output_path = os.path.join(output_dir, new_name)
-            
-            with rf.open(file_info) as src, open(output_path, 'wb') as dst:
-                dst.write(src.read())
-            extracted_images.append(output_path)
-    
-    return extracted_images
+        return _extract_image_members(rf, cbr_path, output_dir)
 
 
 def natural_sort_key(s: str):
@@ -443,16 +616,22 @@ def extract_images_from_archive(archive_path: str, output_dir: Optional[str] = N
     
     ext = os.path.splitext(archive_path)[1].lower()
     
-    if ext == '.pdf':
-        images = extract_images_from_pdf(archive_path, output_dir)
-    elif ext == '.epub':
-        images = extract_images_from_epub(archive_path, output_dir)
-    elif ext in {'.cbz', '.zip'}:
-        images = extract_images_from_cbz(archive_path, output_dir)
-    elif ext == '.cbr':
-        images = extract_images_from_cbr(archive_path, output_dir)
-    else:
-        raise ValueError(f"不支持的文件格式: {ext}")
+    try:
+        if ext == '.pdf':
+            images = extract_images_from_pdf(archive_path, output_dir)
+        elif ext == '.epub':
+            images = extract_images_from_epub(archive_path, output_dir)
+        elif ext in {'.cbz', '.zip'}:
+            images = extract_images_from_cbz(archive_path, output_dir)
+        elif ext == '.cbr':
+            images = extract_images_from_cbr(archive_path, output_dir)
+        else:
+            raise ValueError(f"不支持的文件格式: {ext}")
+    except ArchiveLimitError:
+        # Extraction was aborted: drop the (already emptied) output directory so
+        # that no partial result can be mistaken for a valid cache later.
+        shutil.rmtree(output_dir, ignore_errors=True)
+        raise
 
     _write_extract_meta(output_dir, archive_path)
     return images, output_dir

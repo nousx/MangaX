@@ -63,5 +63,10 @@
       "SAKURA_API_BASE",
       "SAKURA_DICT_PATH"
     ]
+  },
+  "codex": {
+    "name": "codex",
+    "display_name": "Codex (signed-in ChatGPT account)",
+    "required_env_vars": []
   }
 }

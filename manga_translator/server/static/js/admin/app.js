@@ -210,18 +210,29 @@ class AdminApp {
             tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#6b7280;">暂无进行中的任务</td></tr>';
             return;
         }
-        tbody.innerHTML = taskList.map(([id, task]) => `
-            <tr>
-                <td><code style="background:#f3f4f6;padding:2px 6px;border-radius:4px;">${id.slice(0,8)}...</code></td>
-                <td>${task.username || '-'}</td>
-                <td><span class="badge badge-info">${task.status || 'processing'}</span></td>
-                <td>${task.progress || 0}%</td>
-                <td>${task.start_time ? new Date(task.start_time).toLocaleString() : '-'}</td>
-                <td><button class="btn btn-danger btn-sm" onclick="app.cancelTask('${id}')">取消</button></td>
-            </tr>
-        `).join('');
+        // Built with DOM APIs: task ids, usernames and statuses are untrusted.
+        const el = SafeDom.el;
+        const rows = taskList.map(([rawId, task]) => {
+            const id = String(rawId ?? '');
+            return el('tr', null,
+                el('td', null, el('code', {
+                    style: 'background:#f3f4f6;padding:2px 6px;border-radius:4px;',
+                    text: `${id.slice(0, 8)}...`
+                })),
+                el('td', { text: task.username || '-' }),
+                el('td', null, el('span', { className: 'badge badge-info', text: task.status || 'processing' })),
+                el('td', { text: `${SafeDom.percent(task.progress)}%` }),
+                el('td', { text: task.start_time ? new Date(task.start_time).toLocaleString() : '-' }),
+                el('td', null, el('button', {
+                    className: 'btn btn-danger btn-sm',
+                    text: '取消',
+                    on: { click: () => this.cancelTask(id) }
+                }))
+            );
+        });
+        SafeDom.setChildren(tbody, rows);
     }
-    
+
     refreshTasks() {
         if (this.currentModule === 'dashboard') this.loadDashboardData();
     }
@@ -229,7 +240,7 @@ class AdminApp {
     async cancelTask(taskId) {
         if (!confirm('确定要取消此任务吗？')) return;
         try {
-            await fetch(`/admin/tasks/${taskId}/cancel`, {
+            await fetch(`/admin/tasks/${encodeURIComponent(taskId)}/cancel`, {
                 method: 'POST',
                 headers: { 'X-Session-Token': this.sessionToken }
             });

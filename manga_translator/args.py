@@ -22,8 +22,13 @@ def create_parser():
     # ===== Web 模式（Web服务器：API + Web界面）=====
     web_parser = subparsers.add_parser('web', help='Web服务器模式（API + Web界面）')
     web_parser.add_argument('--host', 
-                           default=os.getenv('MT_WEB_HOST', '0.0.0.0'),
-                           help='服务器主机（默认：0.0.0.0，环境变量：MT_WEB_HOST）')
+                           default=os.getenv('MT_WEB_HOST', '127.0.0.1'),
+                           help='服务器主机（默认：127.0.0.1，仅本机可访问；'
+                                '需要局域网/容器访问时显式指定 --host 0.0.0.0，环境变量：MT_WEB_HOST）')
+    web_parser.add_argument('--cors-origins',
+                           default=os.getenv('MT_WEB_CORS_ORIGINS'),
+                           help='允许跨域访问 API 的来源列表，逗号分隔（默认：仅本机来源；'
+                                '"*" 表示允许所有来源，环境变量：MT_WEB_CORS_ORIGINS）')
     web_parser.add_argument('--port', 
                            default=int(os.getenv('MT_WEB_PORT', '8000')), 
                            type=int,

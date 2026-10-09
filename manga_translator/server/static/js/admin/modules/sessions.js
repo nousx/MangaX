@@ -35,35 +35,48 @@ class SessionsModule {
             return;
         }
         
-        tbody.innerHTML = sessions.map(session => {
+        // Built with DOM APIs: usernames, IPs and especially user agents are
+        // attacker-controlled request data.
+        const el = SafeDom.el;
+        const rows = sessions.map(session => {
             const isCurrentSession = session.token === this.app.sessionToken;
-            
-            return `
-                <tr ${isCurrentSession ? 'style="background:#f0fdf4;"' : ''}>
-                    <td>
-                        <strong>${session.username}</strong>
-                        ${isCurrentSession ? '<span class="badge badge-success" style="margin-left:8px;">当前</span>' : ''}
-                    </td>
-                    <td><code style="background:#f3f4f6;padding:2px 6px;border-radius:4px;">${(session.token || '').slice(0,12)}...</code></td>
-                    <td>${session.ip || '-'}</td>
-                    <td>${session.user_agent ? session.user_agent.slice(0, 30) + '...' : '-'}</td>
-                    <td>${session.created_at ? new Date(session.created_at).toLocaleString() : '-'}</td>
-                    <td>
-                        ${!isCurrentSession ? 
-                            `<button class="btn btn-danger btn-sm" onclick="sessionsModule.revokeSession('${session.token}')">撤销</button>` :
-                            '<span style="color:#6b7280;">-</span>'
-                        }
-                    </td>
-                </tr>
-            `;
-        }).join('');
+            const token = String(session.token || '');
+            const userAgent = session.user_agent ? `${String(session.user_agent).slice(0, 30)}...` : '-';
+
+            return el('tr', { style: isCurrentSession ? 'background:#f0fdf4;' : '' },
+                el('td', null,
+                    el('strong', { text: session.username }),
+                    isCurrentSession && el('span', {
+                        className: 'badge badge-success',
+                        style: 'margin-left:8px;',
+                        text: '当前'
+                    })
+                ),
+                el('td', null, el('code', {
+                    style: 'background:#f3f4f6;padding:2px 6px;border-radius:4px;',
+                    text: `${token.slice(0, 12)}...`
+                })),
+                el('td', { text: session.ip || '-' }),
+                el('td', { text: userAgent }),
+                el('td', { text: session.created_at ? new Date(session.created_at).toLocaleString() : '-' }),
+                el('td', null, !isCurrentSession
+                    ? el('button', {
+                        className: 'btn btn-danger btn-sm',
+                        text: '撤销',
+                        on: { click: () => this.revokeSession(token) }
+                    })
+                    : el('span', { style: 'color:#6b7280;', text: '-' })
+                )
+            );
+        });
+        SafeDom.setChildren(tbody, rows);
     }
-    
+
     async revokeSession(token) {
         if (!confirm('确定要撤销此会话吗？该用户将被强制登出。')) return;
         
         try {
-            const resp = await fetch(`/sessions/${token}`, {
+            const resp = await fetch(`/sessions/${encodeURIComponent(token)}`, {
                 method: 'DELETE',
                 headers: { 'X-Session-Token': this.app.sessionToken }
             });

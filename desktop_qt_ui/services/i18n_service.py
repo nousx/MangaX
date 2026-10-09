@@ -64,6 +64,7 @@ class I18nManager:
             "zh_CN": LocaleInfo("zh_CN", "简体中文", "Simplified Chinese"),
             "zh_TW": LocaleInfo("zh_TW", "繁體中文", "Traditional Chinese"),
             "en_US": LocaleInfo("en_US", "English", "English"),
+            "th_TH": LocaleInfo("th_TH", "ไทย", "Thai"),
             "ja_JP": LocaleInfo("ja_JP", "日本語", "Japanese"),
             "ko_KR": LocaleInfo("ko_KR", "한국어", "Korean"),
             "es_ES": LocaleInfo("es_ES", "Español", "Spanish"),
@@ -81,6 +82,7 @@ class I18nManager:
                     lang_country_map = {
                         'zh': 'zh_CN',
                         'en': 'en_US',
+                        'th': 'th_TH',
                         'ja': 'ja_JP',
                         'ko': 'ko_KR',
                         'es': 'es_ES',

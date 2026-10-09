@@ -5179,6 +5179,17 @@ class MangaTranslator:
         if config.translator.translator == Translator.none:
             return ["" for _ in texts]
 
+        if config.translator.translator == Translator.codex:
+            from .translators.codex_cli import CodexCLITranslator
+            translator = CodexCLITranslator()
+            translator.parse_args(config)
+            translator.set_cancel_check_callback(self._cancel_check_callback)
+            ctx.config = config
+            return await translator.translate(
+                getattr(ctx, 'from_lang', None) or 'auto',
+                config.translator.target_lang, texts, ctx=ctx,
+            )
+
 
 
         # 如果是OpenAI翻译器、Gemini翻译器或高质量翻译器，需要处理上下文

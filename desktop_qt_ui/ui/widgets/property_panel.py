@@ -651,6 +651,9 @@ class PropertyPanel(QWidget):
         page_buttons[self._paint_current_index()][position].click()
 
     def _create_text_section(self, layout):
+        self.local_ocr_hint = CaptionLabel(self._t("Local OCR selection hint"))
+        self.local_ocr_hint.setWordWrap(True)
+        layout.addWidget(self.local_ocr_hint)
         self.text_edit_frame, text_card = self._make_group(self._t("Text Content"))
         text_layout = QVBoxLayout(text_card)
         text_layout.setContentsMargins(8, 8, 8, 6)
@@ -673,8 +676,8 @@ class PropertyPanel(QWidget):
         self.ocr_button = PushButton()
         self.ocr_button.setText(self._t("Recognize"))
         self.ocr_button.setIcon(FIF.ROBOT)
-        self.ocr_button.setMinimumWidth(72)
-        self.ocr_button.setMaximumWidth(92)
+        self.ocr_button.setMinimumWidth(112)
+        self.ocr_button.setMaximumWidth(160)
         ocr_row.addWidget(self.ocr_button)
         translator_row = QHBoxLayout()
         translator_row.setContentsMargins(0, 0, 0, 0)
@@ -780,6 +783,9 @@ class PropertyPanel(QWidget):
         locale_getter = self.i18n.get_current_locale if self.i18n else None
         self.font_family_combo = FontComboBox(self, locale_getter=locale_getter)
         self.font_family_combo.setMinimumWidth(120)
+        # The font list previews the selected region's own text; it is read
+        # each time the menu opens so unsaved edits are included.
+        self.font_family_combo.preview_text_provider = self._font_preview_sample_text
         self.font_label = BodyLabel(self._t("Font:"))
         style_layout.addRow(self.font_label, self.font_family_combo)
 
@@ -1092,6 +1098,8 @@ class PropertyPanel(QWidget):
         # 刷新按钮
         if hasattr(self, "ocr_button"):
             self.ocr_button.setText(self._t("Recognize"))
+        if hasattr(self, "local_ocr_hint"):
+            self.local_ocr_hint.setText(self._t("Local OCR selection hint"))
         if hasattr(self, "translate_button"):
             self.translate_button.setText(self._t("Translate"))
         if hasattr(self, "brush_button"):
@@ -2057,6 +2065,33 @@ class PropertyPanel(QWidget):
         # Get the font filename from combo box data
         font_filename = self.font_family_combo.currentFamily()
         self._emit_style_patch({"font_family": font_filename})
+
+    def _font_preview_sample_text(self) -> str:
+        """Text shown in every row of the font list for the current selection.
+
+        Translation first, original text as fallback; a multi-selection uses
+        its first region. Empty means the font menu shows its default sample.
+        """
+        selected_indices = self.model.get_selection()
+        if not selected_indices:
+            return ""
+        region_index = selected_indices[0]
+        region_data = self.model.get_region_by_index(region_index) or {}
+        translation = region_data.get("translation") or region_data.get(
+            "translation_rich"
+        )
+        original = region_data.get("text", "")
+        if len(selected_indices) == 1 and region_index == self.current_region_index:
+            # The text boxes hold this region, possibly with edits not saved yet.
+            # In raw mode the box shows the pre-replacement text, not the render.
+            if not self.translation_raw_checkbox.isChecked():
+                translation = self.translated_text_box.toPlainText()
+            original = self.original_text_box.toPlainText()
+        for candidate in (translation, original):
+            text = strip_legacy_horizontal_tags(storage_text_to_editor_text(candidate))
+            if text.strip():
+                return text
+        return ""
 
     def _on_font_family_preview_changed(self, family: str):
         if self.block_updates:

@@ -6,6 +6,7 @@ from typing import Optional
 
 import numpy as np
 from PIL import Image
+from manga_translator.translators.manga_context import load_chapter_context
 from PyQt6.QtCore import QObject, Qt, pyqtSignal, pyqtSlot
 
 from editor.commands import _NO_MASK_CHANGE, MoveRegionCommand, UpdateRegionCommand
@@ -245,6 +246,9 @@ class EditorController(QObject):
 
     def shutdown(self) -> None:
         """Stop cancellable editor work, then drain the durable export queue."""
+        assistant = getattr(self.view, 'chapter_assistant', None)
+        if assistant is not None:
+            assistant.shutdown()
         try:
             self.document_service.shutdown()
         except Exception as e:
@@ -2140,6 +2144,7 @@ class EditorController(QObject):
                 regions_context,
                 translator_to_use,
                 target_lang_to_use,
+                load_chapter_context(self.model.get_source_image_path(), self.config_service.root_dir),
             )
         )
 
@@ -2151,6 +2156,7 @@ class EditorController(QObject):
         regions,
         translator_to_use,
         target_lang_to_use,
+        chapter_context=None,
     ):
         # 将image和所有regions信息传递给翻译服务以提供完整上下文
         try:
@@ -2160,6 +2166,7 @@ class EditorController(QObject):
                 target_lang=target_lang_to_use,
                 image=image,
                 regions=regions,
+                chapter_context=chapter_context,
             )
             pending_updates: list[tuple[int, str]] = []
             for i, result in enumerate(results):

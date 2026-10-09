@@ -566,7 +566,10 @@ docker run -e MANGA_TRANSLATOR_ADMIN_PASSWORD=your_password_here ...
 - 🌍 多语言界面支持
 
 **参数说明**：
-- `--host` - 服务器主机（默认：0.0.0.0；设置为 `127.0.0.1` 时仅本机可访问）
+- `--host` - 服务器主机（默认：`127.0.0.1`，仅本机可访问；需要局域网/容器访问时显式指定 `--host 0.0.0.0`）
+- `--cors-origins` - 允许跨域调用 API 的来源，逗号分隔（默认仅本机来源；环境变量 `MT_WEB_CORS_ORIGINS`）
+
+> 🔐 **首次创建管理员账户**：只能在服务器本机（`http://127.0.0.1:端口`）完成。若必须从其他机器（局域网、Docker 端口映射、反向代理）完成初始设置，请在启动前设置环境变量 `MANGA_TRANSLATOR_SETUP_TOKEN`（至少 16 个字符的随机字符串），并在初始设置页面填写该令牌。
 - `--port` - 服务器端口（默认：8000）
 - `--use-gpu` - 使用 GPU 加速
 - `--disable-onnx-gpu` - 禁用 ONNX Runtime GPU 加速

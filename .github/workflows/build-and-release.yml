@@ -183,14 +183,14 @@ jobs:
         $releaseDir = Join-Path $env:GITHUB_WORKSPACE 'release'
         New-Item -ItemType Directory -Path $releaseDir -Force | Out-Null
         Push-Location $env:PORTABLE_DIR
-        7z a -v1990m -m0=lzma2 -ms=on (Join-Path $releaseDir 'manga-translator-${{ matrix.package-label }}-${{ github.ref_name }}.7z') .
+        7z a -v1990m -m0=lzma2 -ms=on (Join-Path $releaseDir 'MangaX-${{ matrix.package-label }}-${{ github.ref_name }}.7z') .
         $archiveExitCode = $LASTEXITCODE
         Pop-Location
         if ($archiveExitCode -ne 0) { throw 'Failed to archive the portable package.' }
     - name: Upload ${{ matrix.package-label }} portable archive
       uses: actions/upload-artifact@v4
       with:
-        name: manga-translator-${{ matrix.package-label }}-portable
+        name: MangaX-${{ matrix.package-label }}-portable
         path: release/*.7z.*
   release-and-publish:
     needs: [build-portable]
@@ -222,7 +222,7 @@ jobs:
             printf '%s\n' "$DELIM"
           } >> "$GITHUB_OUTPUT"
         else
-          printf 'changelog=%s\n' "未找到更新日志文件" >> "$GITHUB_OUTPUT"
+          printf 'changelog=%s\n' "No changelog file was found for this version." >> "$GITHUB_OUTPUT"
         fi
     - name: Delete existing GitHub Release for this version
       env:
@@ -243,7 +243,7 @@ jobs:
       uses: softprops/action-gh-release@v3
       with:
         tag_name: ${{ github.ref_name }}
-        name: Release ${{ github.ref_name }}
+        name: MangaX ${{ github.ref_name }}
         body: ${{ steps.changelog.outputs.changelog }}
         files: release_assets/*
         draft: true

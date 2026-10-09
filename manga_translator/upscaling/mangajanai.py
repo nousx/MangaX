@@ -421,6 +421,8 @@ class MangaJaNaiUpscaler(OfflineUpscaler):
 
         logger.info(f"Loading MangaJaNai model: {filename}")
         
+        # Left as weights_only=False: no MangaJaNai checkpoint was available locally to
+        # confirm it loads with weights_only=True. Only load files from a trusted source.
         sd = torch.load(model_path, map_location='cpu', weights_only=False)
         
         # Handle cases where state_dict is inside a key like 'params' or 'params_ema'
