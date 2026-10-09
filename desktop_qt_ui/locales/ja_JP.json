@@ -1664,5 +1664,7 @@
   "Codex sign in": "Codex にサインイン",
   "Codex get CLI": "Codex CLI を入手",
   "Codex check again": "再確認",
-  "Codex status custom path": "Codex のパスが手動で設定されています。「再確認」を押すと、このプログラムを実行してアカウントの状態を確認します。"
+  "Codex status custom path": "設定に Codex のパスが手動で指定されていますが、まだ承認されていません。承認するまでこのファイルは実行されません。",
+  "Codex approve path": "このパスを承認",
+  "Codex approve path question": "MangaX がこのプログラムを Codex として実行することを許可しますか？ご自身でインストールしたファイルのみ承認してください。他の人から受け取った設定は有害なプログラムを指している可能性があります。"
 }

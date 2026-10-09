@@ -9,8 +9,11 @@ from manga_translator import codex_account
 from manga_translator.codex_account import (
     STATE_ERROR,
     STATE_MISSING,
+    STATE_NEEDS_APPROVAL,
     STATE_SIGNED_IN,
     STATE_SIGNED_OUT,
+    CodexPathNotApproved,
+    approve_codex_cli,
     codex_status,
     find_codex_cli,
     start_codex_login,
@@ -43,6 +46,48 @@ class CodexAccountTests(unittest.TestCase):
 
             with self.assertRaises(FileNotFoundError):
                 find_codex_cli(str(other))
+
+    def test_should_reject_network_and_relative_configured_paths(self):
+        for path in (r"\\server\share\codex.exe", "//server/share/codex.exe", "codex.exe"):
+            with self.subTest(path=path), self.assertRaises(FileNotFoundError):
+                find_codex_cli(path)
+
+    def test_should_require_approval_before_using_a_configured_path(self):
+        name = "codex.exe" if os.name == "nt" else "codex"
+        with tempfile.TemporaryDirectory() as directory:
+            configured = Path(directory) / name
+            configured.write_bytes(b"")
+            approval = Path(directory) / "state" / "approved.txt"
+            with patch.object(codex_account, "_approval_file", return_value=approval), \
+                    patch.object(codex_account.subprocess, "run") as run, \
+                    patch.object(codex_account.subprocess, "Popen") as popen:
+                with self.assertRaises(CodexPathNotApproved):
+                    find_codex_cli(str(configured))
+                status = codex_status(str(configured))
+                started = start_codex_login(str(configured))
+
+                self.assertEqual(status.state, STATE_NEEDS_APPROVAL)
+                self.assertFalse(started)
+                run.assert_not_called()
+                popen.assert_not_called()
+
+                approve_codex_cli(str(configured))
+
+                self.assertEqual(find_codex_cli(str(configured)), str(configured.resolve()))
+
+    def test_should_not_carry_approval_over_to_a_different_path(self):
+        name = "codex.exe" if os.name == "nt" else "codex"
+        with tempfile.TemporaryDirectory() as directory:
+            first = Path(directory) / "a" / name
+            second = Path(directory) / "b" / name
+            for path in (first, second):
+                path.parent.mkdir()
+                path.write_bytes(b"")
+            with patch.object(codex_account, "_approval_file", return_value=Path(directory) / "approved.txt"):
+                approve_codex_cli(str(first))
+
+                with self.assertRaises(CodexPathNotApproved):
+                    find_codex_cli(str(second))
 
     def test_should_ignore_codex_in_the_current_directory(self):
         name = "codex.exe" if os.name == "nt" else "codex"

@@ -35,7 +35,7 @@ class CodexCLITranslator(CommonTranslator):
     def resolve_cli(self):
         try:
             executable = find_codex_cli(self.cli_path)
-        except FileNotFoundError as exc:
+        except (FileNotFoundError, PermissionError) as exc:
             raise RuntimeError(str(exc)) from exc
         if executable:
             return executable

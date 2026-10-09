@@ -1664,5 +1664,7 @@
   "Codex sign in": "Iniciar sesión en Codex",
   "Codex get CLI": "Obtener Codex CLI",
   "Codex check again": "Comprobar de nuevo",
-  "Codex status custom path": "Hay una ruta de Codex personalizada. Pulsa Comprobar de nuevo para ejecutarla y leer el estado de la cuenta."
+  "Codex status custom path": "Hay una ruta de Codex personalizada en los ajustes, pero aún no la has aprobado. La aplicación no la ejecutará hasta entonces.",
+  "Codex approve path": "Aprobar esta ruta",
+  "Codex approve path question": "¿Permitir que MangaX ejecute este programa como Codex? Aprueba solo un archivo que hayas instalado tú. Unos ajustes importados de otra persona pueden apuntar a un programa dañino."
 }

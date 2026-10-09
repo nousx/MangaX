@@ -1674,5 +1674,7 @@
   "Codex sign in": "Sign in to Codex",
   "Codex get CLI": "Get Codex CLI",
   "Codex check again": "Check again",
-  "Codex status custom path": "A custom Codex path is set. Press Check again to run it and read the account status."
+  "Codex status custom path": "A custom Codex path is set in the settings but you have not approved it yet. The app will not run it until you do.",
+  "Codex approve path": "Approve this path",
+  "Codex approve path question": "Allow MangaX to run this program as Codex? Only approve a file you installed yourself. Settings imported from someone else can point to a harmful program."
 }

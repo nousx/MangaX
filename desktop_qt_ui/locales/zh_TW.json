@@ -1666,5 +1666,7 @@
   "Codex sign in": "登入 Codex",
   "Codex get CLI": "取得 Codex CLI",
   "Codex check again": "重新檢查",
-  "Codex status custom path": "已手動設定 Codex 路徑。點選重新檢查將執行該程式並讀取帳號狀態。"
+  "Codex status custom path": "設定中手動指定了 Codex 路徑，但你尚未核准。核准之前程式不會執行該檔案。",
+  "Codex approve path": "核准此路徑",
+  "Codex approve path question": "允許 MangaX 將此程式作為 Codex 執行嗎？請只核准你自己安裝的檔案。從他人處匯入的設定可能指向有害程式。"
 }

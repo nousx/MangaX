@@ -1664,5 +1664,7 @@
   "Codex sign in": "Codex 로그인",
   "Codex get CLI": "Codex CLI 받기",
   "Codex check again": "다시 확인",
-  "Codex status custom path": "Codex 경로가 직접 설정되어 있습니다. 다시 확인을 누르면 이 프로그램을 실행해 계정 상태를 확인합니다."
+  "Codex status custom path": "설정에 Codex 경로가 직접 지정되어 있지만 아직 승인하지 않았습니다. 승인하기 전에는 이 파일을 실행하지 않습니다.",
+  "Codex approve path": "이 경로 승인",
+  "Codex approve path question": "MangaX가 이 프로그램을 Codex로 실행하도록 허용할까요? 직접 설치한 파일만 승인하세요. 다른 사람에게서 받은 설정은 해로운 프로그램을 가리킬 수 있습니다."
 }

@@ -5,14 +5,16 @@ from manga_translator.codex_account import (
     CODEX_INSTALL_URL,
     STATE_ERROR,
     STATE_MISSING,
+    STATE_NEEDS_APPROVAL,
     STATE_SIGNED_IN,
     CodexStatus,
+    approve_codex_cli,
     codex_status,
     start_codex_login,
 )
 from PyQt6.QtCore import Qt, QTimer, QUrl, pyqtSignal
 from PyQt6.QtGui import QDesktopServices
-from PyQt6.QtWidgets import QHBoxLayout, QSizePolicy, QVBoxLayout
+from PyQt6.QtWidgets import QHBoxLayout, QMessageBox, QSizePolicy, QVBoxLayout
 from qfluentwidgets import BodyLabel, PrimaryPushButton, PushButton, SimpleCardWidget, StrongBodyLabel
 
 # After the sign-in window opens, re-check until the account appears.
@@ -56,9 +58,11 @@ class CodexAccountPanel(SimpleCardWidget):
         self.login_button.clicked.connect(self._on_login)
         self.install_button = PrimaryPushButton(self._t("Codex get CLI"))
         self.install_button.clicked.connect(lambda: QDesktopServices.openUrl(QUrl(CODEX_INSTALL_URL)))
+        self.approve_button = PrimaryPushButton(self._t("Codex approve path"))
+        self.approve_button.clicked.connect(self._on_approve)
         self.refresh_button = PushButton(self._t("Codex check again"))
         self.refresh_button.clicked.connect(self.refresh)
-        for button in (self.login_button, self.install_button, self.refresh_button):
+        for button in (self.login_button, self.install_button, self.approve_button, self.refresh_button):
             buttons.addWidget(button)
         buttons.addStretch(1)
         layout.addLayout(buttons)
@@ -71,14 +75,9 @@ class CodexAccountPanel(SimpleCardWidget):
 
         self.login_button.hide()
         self.install_button.hide()
-        if self._cli_path():
-            # A custom path comes from the settings file, which may have been
-            # imported from someone else: run it only when the user asks.
-            self.status_label.setText(self._t("Codex status custom path"))
-            self.detail_label.setText(self._cli_path())
-            self.detail_label.show()
-        else:
-            self.refresh()
+        self.approve_button.hide()
+        # Safe to run on open: an unapproved custom path is reported, not executed.
+        self.refresh()
 
     def _cli_path(self) -> str:
         try:
@@ -110,6 +109,16 @@ class CodexAccountPanel(SimpleCardWidget):
         self.refresh_button.setEnabled(True)
         signed_in = status.state == STATE_SIGNED_IN
         missing = status.state == STATE_MISSING
+        needs_approval = status.state == STATE_NEEDS_APPROVAL
+        self.approve_button.setVisible(needs_approval)
+        if needs_approval:
+            self._poll_timer.stop()
+            self.status_label.setText(self._t("Codex status custom path"))
+            self.detail_label.setText(status.detail)
+            self.detail_label.show()
+            self.install_button.hide()
+            self.login_button.hide()
+            return
         if signed_in:
             self._poll_timer.stop()
             text = self._t("Codex status signed in")
@@ -124,6 +133,27 @@ class CodexAccountPanel(SimpleCardWidget):
         self.detail_label.setVisible(bool(status.detail))
         self.install_button.setVisible(missing)
         self.login_button.setVisible(not missing and not signed_in)
+
+    def _on_approve(self):
+        """Ask before trusting a path that came from the settings file."""
+        path = self.status.detail if self.status else ""
+        answer = QMessageBox.question(
+            self.window(),
+            self._t("Codex approve path"),
+            self._t("Codex approve path question") + "\n\n" + path,
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+        if answer != QMessageBox.StandardButton.Yes:
+            return
+        try:
+            approve_codex_cli(self._cli_path())
+        except OSError as exc:
+            self.status_label.setText(self._t("Codex status error"))
+            self.detail_label.setText(str(exc))
+            self.detail_label.show()
+            return
+        self.refresh()
 
     def _on_login(self):
         if not start_codex_login(self._cli_path()):
