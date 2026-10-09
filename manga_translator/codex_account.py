@@ -13,6 +13,7 @@ The app runs this executable, so where it comes from matters:
   shareable settings.
 """
 
+import functools
 import os
 import subprocess
 from dataclasses import dataclass
@@ -48,42 +49,65 @@ class CodexStatus:
     executable: str = ""
 
 
-def _local_app_data() -> Path | None:
-    """Return the per-user data folder as the operating system reports it.
+@functools.lru_cache(maxsize=1)
+def _trusted_environment() -> dict[str, str]:
+    """Return this user's environment as the operating system defines it.
 
-    Environment variables such as LOCALAPPDATA are deliberately not used: the
-    app loads variables from its shareable .env file into the process, so they
-    could redirect this to a location someone else controls.
+    The process environment is not trusted here: the app loads variables from
+    its shareable .env file into os.environ, so PATH, LOCALAPPDATA or
+    USERPROFILE could point wherever an imported file wants. Windows rebuilds
+    the environment from the registry for the account that owns the process;
+    other systems get the account's home folder and the standard folders.
     """
     if os.name != "nt":
         import pwd
 
-        return Path(pwd.getpwuid(os.getuid()).pw_dir) / ".config"
+        home = pwd.getpwuid(os.getuid()).pw_dir
+        folders = ["/usr/local/bin", "/usr/bin", "/bin", "/opt/homebrew/bin", f"{home}/.local/bin"]
+        return {"PATH": os.pathsep.join(folders), "LOCALAPPDATA": f"{home}/.config"}
+
     import ctypes
     from ctypes import wintypes
 
-    class _Guid(ctypes.Structure):
-        _fields_ = [
-            ("data1", wintypes.DWORD),
-            ("data2", wintypes.WORD),
-            ("data3", wintypes.WORD),
-            ("data4", ctypes.c_ubyte * 8),
-        ]
+    token_access = 0x0008 | 0x0002 | 0x0004  # TOKEN_QUERY | TOKEN_DUPLICATE | TOKEN_IMPERSONATE
+    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    advapi32 = ctypes.WinDLL("advapi32", use_last_error=True)
+    userenv = ctypes.WinDLL("userenv", use_last_error=True)
+    kernel32.GetCurrentProcess.restype = wintypes.HANDLE
+    kernel32.CloseHandle.argtypes = [wintypes.HANDLE]
+    advapi32.OpenProcessToken.argtypes = [wintypes.HANDLE, wintypes.DWORD, ctypes.POINTER(wintypes.HANDLE)]
+    userenv.CreateEnvironmentBlock.argtypes = [ctypes.POINTER(ctypes.c_void_p), wintypes.HANDLE, wintypes.BOOL]
+    userenv.DestroyEnvironmentBlock.argtypes = [ctypes.c_void_p]
 
-    # FOLDERID_LocalAppData {F1B32785-6FBA-4FCF-9D55-7B8E7F157091}
-    folder_id = _Guid(0xF1B32785, 0x6FBA, 0x4FCF,
-                      (ctypes.c_ubyte * 8)(0x9D, 0x55, 0x7B, 0x8E, 0x7F, 0x15, 0x70, 0x91))
-    buffer = ctypes.c_void_p()
-    shell32 = ctypes.WinDLL("shell32")
-    ole32 = ctypes.WinDLL("ole32")
-    ole32.CoTaskMemFree.argtypes = [ctypes.c_void_p]
-    result = shell32.SHGetKnownFolderPath(ctypes.byref(folder_id), 0, None, ctypes.byref(buffer))
+    token = wintypes.HANDLE()
+    if not advapi32.OpenProcessToken(kernel32.GetCurrentProcess(), token_access, ctypes.byref(token)):
+        return {}
     try:
-        if result != 0 or not buffer.value:
-            return None
-        return Path(ctypes.wstring_at(buffer.value))
+        block = ctypes.c_void_p()
+        # bInherit=False: do not merge in this process's own environment.
+        if not userenv.CreateEnvironmentBlock(ctypes.byref(block), token, False):
+            return {}
+        try:
+            result = {}
+            address = block.value
+            while True:
+                entry = ctypes.wstring_at(address)
+                if not entry:
+                    break
+                address += (len(entry) + 1) * ctypes.sizeof(ctypes.c_wchar)
+                name, separator, value = entry.partition("=")
+                if name and separator:
+                    result[name.upper()] = value
+            return result
+        finally:
+            userenv.DestroyEnvironmentBlock(block)
     finally:
-        ole32.CoTaskMemFree(buffer)
+        kernel32.CloseHandle(token)
+
+
+def _local_app_data() -> Path | None:
+    value = _trusted_environment().get("LOCALAPPDATA")
+    return Path(value) if value and Path(value).is_absolute() else None
 
 
 def _approval_file() -> Path | None:
@@ -138,16 +162,16 @@ def approve_codex_cli(cli_path: str) -> str:
 
 
 def _search_path() -> str | None:
-    """Look for Codex in absolute PATH folders only.
+    """Look for Codex in the folders of the account's own PATH.
 
-    shutil.which() on Windows also searches the current directory, which is
-    the app folder: a planted codex.exe there must never be picked up.
+    The process PATH is not used because the shareable .env file can replace
+    it. shutil.which() is not used because on Windows it also searches the
+    current directory, which is the app folder: a planted codex.exe there
+    must never be picked up. Network folders are skipped as well.
     """
     here = Path.cwd().resolve()
-    for entry in os.environ.get("PATH", "").split(os.pathsep):
+    for entry in _trusted_environment().get("PATH", "").split(os.pathsep):
         folder = Path(entry.strip('"'))
-        # PATH can be overridden from the shareable .env file, so a network
-        # folder in it must not be able to supply the executable.
         if not entry or not folder.is_absolute() or _is_network_path(entry.strip('"')):
             continue
         try:

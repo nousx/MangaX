@@ -95,15 +95,15 @@ class CodexAccountTests(unittest.TestCase):
             planted = Path(directory) / name
             planted.write_bytes(b"")
             planted.chmod(0o755)
-            with patch.dict(os.environ, {"PATH": os.pathsep.join([directory, ".", ""])}), \
-                    patch.object(codex_account, "_local_app_data", return_value=Path(directory) / "none"), \
+            trusted = {"PATH": os.pathsep.join([directory, ".", ""]), "LOCALAPPDATA": str(Path(directory) / "none")}
+            with patch.object(codex_account, "_trusted_environment", return_value=trusted), \
                     patch.object(codex_account.Path, "cwd", return_value=Path(directory)):
                 self.assertIsNone(find_codex_cli())
 
     def test_should_ignore_network_folders_in_path(self):
         with tempfile.TemporaryDirectory() as directory, \
-                patch.dict(os.environ, {"PATH": "//server/share"}), \
-                patch.object(codex_account, "_local_app_data", return_value=Path(directory)), \
+                patch.object(codex_account, "_trusted_environment",
+                             return_value={"PATH": "//server/share", "LOCALAPPDATA": directory}), \
                 patch.object(codex_account.os, "access", side_effect=AssertionError("network folder was probed")):
             self.assertIsNone(find_codex_cli())
 
@@ -118,8 +118,29 @@ class CodexAccountTests(unittest.TestCase):
             installed = Path(directory) / name
             installed.write_bytes(b"")
             installed.chmod(0o755)
-            with patch.dict(os.environ, {"PATH": directory}):
+            with patch.object(codex_account, "_trusted_environment", return_value={"PATH": directory}):
                 self.assertEqual(find_codex_cli(), str(installed))
+
+    def test_should_not_search_the_process_path(self):
+        name = "codex.exe" if os.name == "nt" else "codex"
+        with tempfile.TemporaryDirectory() as directory:
+            planted = Path(directory) / name
+            planted.write_bytes(b"")
+            planted.chmod(0o755)
+            with patch.dict(os.environ, {"PATH": directory}), \
+                    patch.object(codex_account, "_trusted_environment", return_value={"PATH": ""}):
+                self.assertIsNone(find_codex_cli())
+
+    def test_should_build_the_trusted_environment_without_process_overrides(self):
+        codex_account._trusted_environment.cache_clear()
+        with tempfile.TemporaryDirectory() as directory, \
+                patch.dict(os.environ, {"LOCALAPPDATA": directory, "PATH": directory, "USERPROFILE": directory}):
+            trusted = codex_account._trusted_environment()
+        codex_account._trusted_environment.cache_clear()
+
+        self.assertTrue(trusted.get("PATH"))
+        self.assertNotIn(directory, trusted["PATH"].split(os.pathsep))
+        self.assertNotEqual(trusted.get("LOCALAPPDATA"), directory)
 
     def test_should_report_signed_in_when_status_command_succeeds(self):
         with patch.object(codex_account, "find_codex_cli", return_value="codex"), \
