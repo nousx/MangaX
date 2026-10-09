@@ -95,9 +95,22 @@ class CodexAccountTests(unittest.TestCase):
             planted = Path(directory) / name
             planted.write_bytes(b"")
             planted.chmod(0o755)
-            with patch.dict(os.environ, {"PATH": os.pathsep.join([directory, ".", ""]), "LOCALAPPDATA": directory}), \
+            with patch.dict(os.environ, {"PATH": os.pathsep.join([directory, ".", ""])}), \
+                    patch.object(codex_account, "_local_app_data", return_value=Path(directory) / "none"), \
                     patch.object(codex_account.Path, "cwd", return_value=Path(directory)):
                 self.assertIsNone(find_codex_cli())
+
+    def test_should_ignore_network_folders_in_path(self):
+        with tempfile.TemporaryDirectory() as directory, \
+                patch.dict(os.environ, {"PATH": "//server/share"}), \
+                patch.object(codex_account, "_local_app_data", return_value=Path(directory)), \
+                patch.object(codex_account.os, "access", side_effect=AssertionError("network folder was probed")):
+            self.assertIsNone(find_codex_cli())
+
+    def test_should_not_take_the_approval_location_from_the_environment(self):
+        with tempfile.TemporaryDirectory() as directory, \
+                patch.dict(os.environ, {"LOCALAPPDATA": directory, "XDG_CONFIG_HOME": directory}):
+            self.assertNotEqual(codex_account._approval_file().parent.parent, Path(directory))
 
     def test_should_find_codex_in_an_absolute_path_folder(self):
         name = "codex.exe" if os.name == "nt" else "codex"

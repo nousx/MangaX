@@ -147,7 +147,9 @@ class CodexAccountPanel(SimpleCardWidget):
         if answer != QMessageBox.StandardButton.Yes:
             return
         try:
-            approve_codex_cli(self._cli_path())
+            # Approve exactly the file the dialog showed, not whatever the
+            # settings contain by now.
+            approve_codex_cli(path)
         except OSError as exc:
             self.status_label.setText(self._t("Codex status error"))
             self.detail_label.setText(str(exc))

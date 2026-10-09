@@ -48,9 +48,47 @@ class CodexStatus:
     executable: str = ""
 
 
-def _approval_file() -> Path:
-    base = os.environ.get("LOCALAPPDATA") if os.name == "nt" else os.environ.get("XDG_CONFIG_HOME")
-    return (Path(base) if base else Path.home() / ".config") / "MangaX" / "approved_codex_cli.txt"
+def _local_app_data() -> Path | None:
+    """Return the per-user data folder as the operating system reports it.
+
+    Environment variables such as LOCALAPPDATA are deliberately not used: the
+    app loads variables from its shareable .env file into the process, so they
+    could redirect this to a location someone else controls.
+    """
+    if os.name != "nt":
+        import pwd
+
+        return Path(pwd.getpwuid(os.getuid()).pw_dir) / ".config"
+    import ctypes
+    from ctypes import wintypes
+
+    class _Guid(ctypes.Structure):
+        _fields_ = [
+            ("data1", wintypes.DWORD),
+            ("data2", wintypes.WORD),
+            ("data3", wintypes.WORD),
+            ("data4", ctypes.c_ubyte * 8),
+        ]
+
+    # FOLDERID_LocalAppData {F1B32785-6FBA-4FCF-9D55-7B8E7F157091}
+    folder_id = _Guid(0xF1B32785, 0x6FBA, 0x4FCF,
+                      (ctypes.c_ubyte * 8)(0x9D, 0x55, 0x7B, 0x8E, 0x7F, 0x15, 0x70, 0x91))
+    buffer = ctypes.c_void_p()
+    shell32 = ctypes.WinDLL("shell32")
+    ole32 = ctypes.WinDLL("ole32")
+    ole32.CoTaskMemFree.argtypes = [ctypes.c_void_p]
+    result = shell32.SHGetKnownFolderPath(ctypes.byref(folder_id), 0, None, ctypes.byref(buffer))
+    try:
+        if result != 0 or not buffer.value:
+            return None
+        return Path(ctypes.wstring_at(buffer.value))
+    finally:
+        ole32.CoTaskMemFree(buffer)
+
+
+def _approval_file() -> Path | None:
+    base = _local_app_data()
+    return base / "MangaX" / "approved_codex_cli.txt" if base else None
 
 
 def _is_network_path(path: str) -> bool:
@@ -78,8 +116,11 @@ def _validated_configured_path(cli_path: str) -> str:
 
 
 def _is_approved(resolved: str) -> bool:
+    target = _approval_file()
+    if target is None:
+        return False
     try:
-        approved = _approval_file().read_text(encoding="utf-8").strip()
+        approved = target.read_text(encoding="utf-8").strip()
     except OSError:
         return False
     return bool(approved) and os.path.normcase(approved) == os.path.normcase(resolved)
@@ -89,6 +130,8 @@ def approve_codex_cli(cli_path: str) -> str:
     """Record that this user allows the app to run the configured Codex path."""
     resolved = _validated_configured_path(cli_path)
     target = _approval_file()
+    if target is None:
+        raise OSError("The per-user data folder is unavailable, so the path cannot be approved.")
     target.parent.mkdir(parents=True, exist_ok=True)
     target.write_text(resolved, encoding="utf-8")
     return resolved
@@ -103,12 +146,15 @@ def _search_path() -> str | None:
     here = Path.cwd().resolve()
     for entry in os.environ.get("PATH", "").split(os.pathsep):
         folder = Path(entry.strip('"'))
-        if not entry or not folder.is_absolute():
+        # PATH can be overridden from the shareable .env file, so a network
+        # folder in it must not be able to supply the executable.
+        if not entry or not folder.is_absolute() or _is_network_path(entry.strip('"')):
             continue
         try:
-            if folder.resolve() == here:
-                continue
+            resolved = folder.resolve()
         except OSError:
+            continue
+        if resolved == here or _is_network_path(str(resolved)):
             continue
         for name in _EXECUTABLE_NAMES:
             candidate = folder / name
@@ -132,8 +178,9 @@ def find_codex_cli(cli_path: str = "") -> str | None:
     executable = _search_path()
     if executable:
         return executable
-    if os.name == "nt":
-        candidate = Path(os.environ.get("LOCALAPPDATA", "")) / "Programs/OpenAI/Codex/bin/codex.exe"
+    base = _local_app_data() if os.name == "nt" else None
+    if base:
+        candidate = base / "Programs/OpenAI/Codex/bin/codex.exe"
         if candidate.is_file():
             return str(candidate)
     return None
