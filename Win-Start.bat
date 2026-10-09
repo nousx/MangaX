@@ -4,6 +4,9 @@ setlocal EnableDelayedExpansion
 REM Avoid conda/python encoding issues
 set "PYTHONUTF8=1"
 
+REM Ignore per-user site-packages: a stray torch there breaks the bundled runtime
+set "PYTHONNOUSERSITE=1"
+
 REM Use the script's own directory as the working directory
 REM (fixes %CD% being system32 when run as administrator)
 cd /d "%~dp0"
@@ -94,7 +97,7 @@ if not "%EXITCODE%"=="0" (
     echo Please try reinstalling first: run Win-Install-or-Update.bat and choose [1] Install.
     echo.
     echo If it still fails, please take a screenshot of this window and report it via:
-    echo   GitHub Issues: https://github.com/hgmzhn/manga-translator-ui/issues
+    echo   GitHub Issues: https://github.com/nousx/MangaX/issues
     echo   or the QQ group
     echo.
     set /p OPEN_MAINT="Open Win-Install-or-Update.bat now? (y/n): "

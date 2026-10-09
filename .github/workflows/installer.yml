@@ -1,0 +1,31 @@
+name: Build Setup Program
+
+# Rebuilds MangaX-Setup.exe and attaches it to an existing release, without
+# rebuilding the multi-gigabyte portable packages.
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag to attach MangaX-Setup.exe to
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  build-installer:
+    runs-on: windows-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Compile and self-test the setup program
+      shell: pwsh
+      run: ./packaging/installer/build.ps1 -Output (Join-Path $env:GITHUB_WORKSPACE 'release\MangaX-Setup.exe')
+    - name: Attach to release
+      env:
+        GH_TOKEN: ${{ github.token }}
+        RELEASE_TAG: ${{ inputs.tag }}
+      shell: pwsh
+      run: |
+        gh release upload $env:RELEASE_TAG release/MangaX-Setup.exe --repo $env:GITHUB_REPOSITORY --clobber
+        if ($LASTEXITCODE -ne 0) { throw 'Failed to attach MangaX-Setup.exe to the release.' }

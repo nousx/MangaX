@@ -4,6 +4,9 @@ setlocal EnableDelayedExpansion
 REM Avoid conda/python encoding issues
 set "PYTHONUTF8=1"
 
+REM Ignore per-user site-packages: a stray torch there breaks the bundled runtime
+set "PYTHONNOUSERSITE=1"
+
 REM Use the script's own directory as the working directory
 REM (fixes %CD% being system32 when run as administrator)
 cd /d "%~dp0"

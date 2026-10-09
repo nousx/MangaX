@@ -192,8 +192,21 @@ jobs:
       with:
         name: MangaX-${{ matrix.package-label }}-portable
         path: release/*.7z.*
+  build-installer:
+    runs-on: windows-latest
+    name: Build MangaX-Setup.exe
+    steps:
+    - uses: actions/checkout@v4
+    - name: Compile and self-test the setup program
+      shell: pwsh
+      run: ./packaging/installer/build.ps1 -Output (Join-Path $env:GITHUB_WORKSPACE 'release\MangaX-Setup.exe')
+    - name: Upload setup program
+      uses: actions/upload-artifact@v4
+      with:
+        name: MangaX-Setup
+        path: release/MangaX-Setup.exe
   release-and-publish:
-    needs: [build-portable]
+    needs: [build-portable, build-installer]
     runs-on: ubuntu-latest
     name: Create Release and Publish Updates
     permissions:

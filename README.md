@@ -30,6 +30,14 @@ MangaX เป็น fork ของ [Manga Translator UI](https://github.com/hgmz
 - **แท็บผู้ช่วย** ในตัวแก้ไข: OCR ทั้งหน้า, คิวงานทั้งบทที่ทำต่อจากจุดค้างได้, บริบทเรื่องและเสียงตัวละครสำหรับตัวแปล, ตรวจคุณภาพก่อนส่งออก
 - **ปรับความปลอดภัยของโหมดเว็บ** เช่น host เริ่มต้นเป็น `127.0.0.1`
 
+## ติดตั้ง (Windows)
+
+ดาวน์โหลด [**MangaX-Setup.exe**](https://github.com/nousx/MangaX/releases/latest/download/MangaX-Setup.exe) แล้วเปิด ตัวติดตั้งจะตรวจการ์ดจอของเครื่อง เลือกชุดที่ตรงกัน (NVIDIA CUDA 13.0 / CUDA 12.6, AMD ROCm หรือ CPU) ดาวน์โหลด แตกไฟล์ และสร้างทางลัดให้ ถ้าเน็ตหลุดกลางทาง เปิดใหม่แล้วกดติดตั้งอีกครั้งจะโหลดต่อจากจุดเดิม
+
+ไฟล์ยังไม่ได้เซ็นลายเซ็นดิจิทัล Windows SmartScreen จะเตือนตอนเปิดครั้งแรก กด **More info** แล้ว **Run anyway**
+
+ต้องการโหลดเองทีละชุดก็ได้จากหน้า [Releases](https://github.com/nousx/MangaX/releases) ชุดที่มีหลายไฟล์ต้องโหลดให้ครบแล้วแตกจาก `.001`
+
 ## ติดตั้งจากซอร์ส (Windows)
 
 ต้องมี [uv](https://docs.astral.sh/uv/) และ Git
@@ -44,8 +52,6 @@ uv run --no-sync python desktop_qt_ui\main.py
 ```
 
 โมเดลจะดาวน์โหลดครั้งแรกที่ใช้งาน ไฟล์โมเดลโฮสต์โดยโครงการต้นทาง
-
-ชุด portable สำหรับ Windows จะอยู่ในหน้า [Releases](https://github.com/nousx/MangaX/releases) เมื่อมีการออกเวอร์ชัน
 
 ## เริ่มใช้งานแบบสั้น
 
