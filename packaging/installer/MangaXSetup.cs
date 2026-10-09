@@ -13,7 +13,9 @@ using System.IO;
 using System.Management;
 using System.Net;
 using System.Reflection;
+using System.Security.AccessControl;
 using System.Security.Cryptography;
+using System.Security.Principal;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -465,7 +467,17 @@ namespace MangaXSetup
                     "ไม่พบไฟล์ของชุดนี้ในเวอร์ชันล่าสุด",
                     "The latest release has no files for this package."));
             }
-            Directory.CreateDirectory(options.Directory);
+            foreach (Asset part in parts)
+            {
+                // Never unpack a file that cannot be checked against the release.
+                if (string.IsNullOrEmpty(part.Sha256))
+                {
+                    throw new InvalidDataException(Text2.T(
+                        "เวอร์ชันนี้ไม่มีค่า SHA-256 สำหรับตรวจสอบไฟล์ จึงไม่ติดตั้ง",
+                        "This release publishes no SHA-256 digest to verify the files, so it will not be installed."));
+                }
+            }
+            PrepareDirectory(options.Directory);
             string package = Path.Combine(options.Directory, "MangaX-package.7z.part");
             Log.Write("Installing " + release.Tag + " " + options.VariantId + " into " + options.Directory);
 
@@ -479,6 +491,44 @@ namespace MangaXSetup
                 CreateShortcut();
             }
             Log.Write("Installation finished.");
+        }
+
+        /// <summary>
+        /// Creates the install folder so that only this user, administrators and
+        /// the system can write to it. Folders made directly under a drive root
+        /// otherwise inherit write access for every local account, which would
+        /// let another account replace the program files.
+        /// </summary>
+        private static void PrepareDirectory(string path)
+        {
+            SecurityIdentifier user = WindowsIdentity.GetCurrent().User;
+            SecurityIdentifier administrators = new SecurityIdentifier(WellKnownSidType.BuiltinAdministratorsSid, null);
+            SecurityIdentifier system = new SecurityIdentifier(WellKnownSidType.LocalSystemSid, null);
+            if (!Directory.Exists(path))
+            {
+                DirectorySecurity security = new DirectorySecurity();
+                security.SetAccessRuleProtection(true, false);
+                foreach (SecurityIdentifier sid in new SecurityIdentifier[] { user, administrators, system })
+                {
+                    security.AddAccessRule(new FileSystemAccessRule(
+                        sid,
+                        FileSystemRights.FullControl,
+                        InheritanceFlags.ContainerInherit | InheritanceFlags.ObjectInherit,
+                        PropagationFlags.None,
+                        AccessControlType.Allow));
+                }
+                Directory.CreateDirectory(path, security);
+                return;
+            }
+            // An existing folder keeps its permissions, but it must not belong
+            // to someone else who could have prepared it in advance.
+            IdentityReference owner = Directory.GetAccessControl(path, AccessControlSections.Owner).GetOwner(typeof(SecurityIdentifier));
+            if (!user.Equals(owner) && !administrators.Equals(owner) && !system.Equals(owner))
+            {
+                throw new UnauthorizedAccessException(Text2.T(
+                    "โฟลเดอร์นี้เป็นของบัญชีผู้ใช้อื่น เลือกโฟลเดอร์อื่นเพื่อความปลอดภัย",
+                    "This folder is owned by another account. Choose a different folder to stay safe."));
+            }
         }
 
         private void Download(List<Asset> parts, string package)
@@ -629,11 +679,7 @@ namespace MangaXSetup
                         }
                         sha.TransformFinalBlock(buffer, 0, 0);
                         string actual = BitConverter.ToString(sha.Hash).Replace("-", "").ToLowerInvariant();
-                        if (part.Sha256 == null)
-                        {
-                            Log.Write("No published digest for " + part.Name + ", size check only.");
-                        }
-                        else if (actual != part.Sha256)
+                        if (actual != part.Sha256)
                         {
                             input.Close();
                             File.Delete(package);
