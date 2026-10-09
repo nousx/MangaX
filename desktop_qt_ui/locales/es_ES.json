@@ -1654,5 +1654,14 @@
   "Translation Engine": "manga-image-translator",
   "View License": "Licencia (GPL-3.0)",
   "Support Original Author": "Apoyar al autor original",
-  "Support Original Author Subtitle": "Estos canales de donación pertenecen a hgmzhn, autor de Manga Translator UI. MangaX no acepta donaciones."
+  "Support Original Author Subtitle": "Estos canales de donación pertenecen a hgmzhn, autor de Manga Translator UI. MangaX no acepta donaciones.",
+  "Codex status checking": "Comprobando la cuenta de Codex...",
+  "Codex status signed in": "Codex tiene la sesión iniciada y está listo para traducir.",
+  "Codex status signed out": "Codex está instalado pero sin sesión iniciada. Pulsa Iniciar sesión y usa tu propia cuenta de ChatGPT.",
+  "Codex status missing": "No se encontró Codex CLI en este equipo. Instálalo y pulsa Comprobar de nuevo.",
+  "Codex status error": "No se pudo comprobar Codex. Los detalles aparecen abajo.",
+  "Codex login opened": "Se abrió una ventana de inicio de sesión. Termina allí; este estado se actualiza solo.",
+  "Codex sign in": "Iniciar sesión en Codex",
+  "Codex get CLI": "Obtener Codex CLI",
+  "Codex check again": "Comprobar de nuevo"
 }

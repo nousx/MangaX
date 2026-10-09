@@ -165,6 +165,16 @@ def _add_api_section_panel(
                     list(SIMPLE_API_GROUP_SPECS[group_key]),
                     current_env_values,
                 )
+    elif empty_hint_key == "Codex CLI account hint":
+        from ui.widgets.codex_account_panel import CodexAccountPanel
+
+        row = self.env_layout.rowCount()
+        panel = CodexAccountPanel(
+            self._t,
+            lambda: self.controller.config_service.get_config().translator.codex_cli_path,
+        )
+        self.env_layout.addWidget(panel, row, 0, 1, 3)
+        self.env_layout.setRowStretch(row, 1)
     else:
         _add_empty_api_hint(self, self.env_layout, self.env_layout.rowCount(), empty_hint_key)
 

@@ -1654,5 +1654,14 @@
   "Translation Engine": "manga-image-translator",
   "View License": "ライセンス (GPL-3.0)",
   "Support Original Author": "原作者を支援",
-  "Support Original Author Subtitle": "これらの支援窓口は Manga Translator UI の作者 hgmzhn 氏のものです。MangaX は寄付を受け付けていません。"
+  "Support Original Author Subtitle": "これらの支援窓口は Manga Translator UI の作者 hgmzhn 氏のものです。MangaX は寄付を受け付けていません。",
+  "Codex status checking": "Codex アカウントを確認中...",
+  "Codex status signed in": "Codex はサインイン済みで、翻訳できます。",
+  "Codex status signed out": "Codex はインストール済みですが、サインインしていません。「サインイン」を押して、ご自身の ChatGPT アカウントを使用してください。",
+  "Codex status missing": "このコンピューターに Codex CLI が見つかりません。インストールしてから「再確認」を押してください。",
+  "Codex status error": "Codex を確認できませんでした。詳細は下に表示されます。",
+  "Codex login opened": "サインイン用のウィンドウを開きました。そちらでサインインを完了すると、この状態は自動で更新されます。",
+  "Codex sign in": "Codex にサインイン",
+  "Codex get CLI": "Codex CLI を入手",
+  "Codex check again": "再確認"
 }

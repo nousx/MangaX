@@ -4,11 +4,11 @@ import asyncio
 import contextlib
 import json
 import os
-import shutil
 import subprocess
 import tempfile
 from pathlib import Path
 
+from ..codex_account import codex_child_env, find_codex_cli
 from .common import CommonTranslator, InvalidServerResponse, VALID_LANGUAGES
 from .manga_context import bounded_context
 
@@ -33,18 +33,12 @@ class CodexCLITranslator(CommonTranslator):
         self.batch_size = max(1, min(100, int(self._get_config_value(settings, "codex_batch_size", 30))))
 
     def resolve_cli(self):
-        if self.cli_path:
-            executable = Path(self.cli_path).expanduser()
-            if not executable.is_file():
-                raise RuntimeError("Codex CLI path does not exist. Check Translation settings.")
-            return str(executable.resolve())
-        executable = shutil.which("codex.exe" if os.name == "nt" else "codex")
+        try:
+            executable = find_codex_cli(self.cli_path)
+        except FileNotFoundError as exc:
+            raise RuntimeError(str(exc)) from exc
         if executable:
             return executable
-        if os.name == "nt":
-            candidate = Path(os.environ.get("LOCALAPPDATA", "")) / "Programs/OpenAI/Codex/bin/codex.exe"
-            if candidate.is_file():
-                return str(candidate)
         raise RuntimeError("Codex CLI was not found. Install Codex and run 'codex login', or set Codex CLI path.")
 
     @staticmethod
@@ -122,11 +116,7 @@ class CodexCLITranslator(CommonTranslator):
                 command.extend(["--model", self.model])
             command.append("-")
             flags = subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0
-            child_env = os.environ.copy()
-            # App API settings must not override the user's saved Codex account
-            # or redirect account authentication to an app's custom API endpoint.
-            for name in ("CODEX_API_KEY", "OPENAI_API_KEY", "OPENAI_BASE_URL"):
-                child_env.pop(name, None)
+            child_env = codex_child_env()
             # The concurrent Windows pipeline uses a Selector loop, which cannot
             # create asyncio subprocesses. communicate() in a worker supports both loops.
             process = subprocess.Popen(

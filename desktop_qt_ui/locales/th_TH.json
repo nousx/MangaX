@@ -1664,5 +1664,14 @@
   "Translation Engine": "manga-image-translator",
   "View License": "สัญญาอนุญาต (GPL-3.0)",
   "Support Original Author": "สนับสนุนผู้พัฒนาต้นทาง",
-  "Support Original Author Subtitle": "ช่องทางสนับสนุนเหล่านี้เป็นของ hgmzhn ผู้พัฒนา Manga Translator UI MangaX ไม่รับเงินสนับสนุน"
+  "Support Original Author Subtitle": "ช่องทางสนับสนุนเหล่านี้เป็นของ hgmzhn ผู้พัฒนา Manga Translator UI MangaX ไม่รับเงินสนับสนุน",
+  "Codex status checking": "กำลังตรวจบัญชี Codex...",
+  "Codex status signed in": "Codex ล็อกอินแล้ว พร้อมแปล",
+  "Codex status signed out": "ติดตั้ง Codex แล้วแต่ยังไม่ได้ล็อกอิน กดล็อกอินแล้วใช้บัญชี ChatGPT ของคุณเอง",
+  "Codex status missing": "ไม่พบ Codex CLI ในเครื่องนี้ ติดตั้งก่อนแล้วกดตรวจอีกครั้ง",
+  "Codex status error": "ตรวจ Codex ไม่ได้ ดูรายละเอียดด้านล่าง",
+  "Codex login opened": "เปิดหน้าต่างล็อกอินแล้ว ล็อกอินในหน้าต่างนั้นให้เสร็จ สถานะตรงนี้จะอัปเดตเอง",
+  "Codex sign in": "ล็อกอิน Codex",
+  "Codex get CLI": "ดาวน์โหลด Codex CLI",
+  "Codex check again": "ตรวจอีกครั้ง"
 }

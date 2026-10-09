@@ -1664,5 +1664,14 @@
   "Translation Engine": "manga-image-translator",
   "View License": "许可证 (GPL-3.0)",
   "Support Original Author": "支持原作者",
-  "Support Original Author Subtitle": "这些赞助渠道属于 Manga Translator UI 的作者 hgmzhn。MangaX 不接受赞助。"
+  "Support Original Author Subtitle": "这些赞助渠道属于 Manga Translator UI 的作者 hgmzhn。MangaX 不接受赞助。",
+  "Codex status checking": "正在检查 Codex 账号...",
+  "Codex status signed in": "Codex 已登录，可以翻译。",
+  "Codex status signed out": "已安装 Codex，但尚未登录。请点击登录并使用你自己的 ChatGPT 账号。",
+  "Codex status missing": "这台电脑上未找到 Codex CLI。请先安装，然后点击重新检查。",
+  "Codex status error": "无法检查 Codex，详情见下方。",
+  "Codex login opened": "已打开登录窗口。请在该窗口完成登录，此处状态会自动更新。",
+  "Codex sign in": "登录 Codex",
+  "Codex get CLI": "获取 Codex CLI",
+  "Codex check again": "重新检查"
 }
