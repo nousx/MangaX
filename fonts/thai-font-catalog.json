@@ -2,10 +2,9 @@
   "source_project": "C:\\Users\\SpecTruM\\Desktop\\Working\\manga-system",
   "format": "merged Thai+Latin static TrueType",
   "conversion_tool": "fontTools",
-  "derived_font_prefix": "MangaX",
   "families": [
     {
-      "family": "MangaX Noto Sans Thai",
+      "family": "Noto Sans Thai",
       "original_family": "Noto Sans Thai",
       "source_id": "noto-sans-thai",
       "group": "dialogue",
@@ -13,10 +12,10 @@
       "license": "licenses/noto-sans-thai-OFL.txt",
       "variants": [
         {
-          "file": "MangaX-noto-sans-thai-100-normal.ttf",
+          "file": "noto-sans-thai-100-normal.ttf",
           "weight": 100,
           "italic": false,
-          "sha256": "47d0872d0be80235194588aeeee8c3bafbf4567a2b76863b4fcded2b469dbd5e",
+          "sha256": "abb0415cf127670a68d0a80f5d28b6bb73e3b9bb87b0d01092168c668e8b5810",
           "sources": [
             {
               "file": "noto-sans-thai-thai-wght-normal.woff2",
@@ -33,10 +32,10 @@
           ]
         },
         {
-          "file": "MangaX-noto-sans-thai-200-normal.ttf",
+          "file": "noto-sans-thai-200-normal.ttf",
           "weight": 200,
           "italic": false,
-          "sha256": "28077e475ef02cfac8bea63b631ec0015e4efa5250a19c39576e8f3cc65cab04",
+          "sha256": "e467b63bbf8b1c219604ac20ed104d48ae75e802f1f33c25c2028118a5500c3f",
           "sources": [
             {
               "file": "noto-sans-thai-thai-wght-normal.woff2",
@@ -53,10 +52,10 @@
           ]
         },
         {
-          "file": "MangaX-noto-sans-thai-300-normal.ttf",
+          "file": "noto-sans-thai-300-normal.ttf",
           "weight": 300,
           "italic": false,
-          "sha256": "9272462c71a24bdfdb27c0055bd8be5d391244a6ab17b7ff8a237bbd34b0e920",
+          "sha256": "8ddb2a4bfd49c1c198ce7480e8dd2ce66d387064d4a48513384af4cb04429baa",
           "sources": [
             {
               "file": "noto-sans-thai-thai-wght-normal.woff2",
@@ -73,10 +72,10 @@
           ]
         },
         {
-          "file": "MangaX-noto-sans-thai-400-normal.ttf",
+          "file": "noto-sans-thai-400-normal.ttf",
           "weight": 400,
           "italic": false,
-          "sha256": "75c37458807f336b73ab3301d97f6bb40abca159ffde0e43e0b57966a578f419",
+          "sha256": "e7ccc23d3c92a21f3caef15de16dc16387d6ddbe381cfcfdfdcb70e3b5cc24c2",
           "sources": [
             {
               "file": "noto-sans-thai-thai-wght-normal.woff2",
@@ -93,10 +92,10 @@
           ]
         },
         {
-          "file": "MangaX-noto-sans-thai-500-normal.ttf",
+          "file": "noto-sans-thai-500-normal.ttf",
           "weight": 500,
           "italic": false,
-          "sha256": "72f32d19c66479bcf0335b3aeb3827f241a64b3ebbf6f14fbdc33130d733e8a5",
+          "sha256": "c0516301b6ceb8153e4666d0d8cbb652aa15d6cb3563f7f62c5790af9937a98a",
           "sources": [
             {
               "file": "noto-sans-thai-thai-wght-normal.woff2",
@@ -113,10 +112,10 @@
           ]
         },
         {
-          "file": "MangaX-noto-sans-thai-600-normal.ttf",
+          "file": "noto-sans-thai-600-normal.ttf",
           "weight": 600,
           "italic": false,
-          "sha256": "85412ec63c51ce574097d84ed31b34d4f4e7a61799983247504971f15c69199b",
+          "sha256": "c15481d6318793e5315e19a40690855dee0a5d2dbec2150191956425f03935bb",
           "sources": [
             {
               "file": "noto-sans-thai-thai-wght-normal.woff2",
@@ -133,10 +132,10 @@
           ]
         },
         {
-          "file": "MangaX-noto-sans-thai-700-normal.ttf",
+          "file": "noto-sans-thai-700-normal.ttf",
           "weight": 700,
           "italic": false,
-          "sha256": "b5eaef186bd501ea6e12ea812a5cbac58ed55cdaa11e7001d3b917204474a7e3",
+          "sha256": "cd6f32fa3622e4438c0ec3274c2e039b85085e402dba7cf6967ad5f3e3bf1377",
           "sources": [
             {
               "file": "noto-sans-thai-thai-wght-normal.woff2",
@@ -153,10 +152,10 @@
           ]
         },
         {
-          "file": "MangaX-noto-sans-thai-800-normal.ttf",
+          "file": "noto-sans-thai-800-normal.ttf",
           "weight": 800,
           "italic": false,
-          "sha256": "74bdf071a8de373207683cb5440236ac8b798fa8524851a40ce30d0cd6685b9f",
+          "sha256": "d68913256a32b7e7e040dbd27f4f217c309a84d1592c5cc684046bee28e00ea8",
           "sources": [
             {
               "file": "noto-sans-thai-thai-wght-normal.woff2",
@@ -173,10 +172,10 @@
           ]
         },
         {
-          "file": "MangaX-noto-sans-thai-900-normal.ttf",
+          "file": "noto-sans-thai-900-normal.ttf",
           "weight": 900,
           "italic": false,
-          "sha256": "ef5ea472eaf56a422814b9b1e1e5e9107bec8cba1d18993c911f52d5751fb12f",
+          "sha256": "54d4b8573e48d253c2ac052f89e6df46b7381483f70e4b6bb975588384324e76",
           "sources": [
             {
               "file": "noto-sans-thai-thai-wght-normal.woff2",
@@ -192,10 +191,11 @@
             }
           ]
         }
-      ]
+      ],
+      "previous_family": "MangaX Noto Sans Thai"
     },
     {
-      "family": "MangaX Sarabun",
+      "family": "Sarabun",
       "original_family": "Sarabun",
       "source_id": "sarabun",
       "group": "dialogue",
@@ -203,10 +203,10 @@
       "license": "licenses/sarabun-OFL.txt",
       "variants": [
         {
-          "file": "MangaX-sarabun-100-normal.ttf",
+          "file": "sarabun-100-normal.ttf",
           "weight": 100,
           "italic": false,
-          "sha256": "9ef60b991b951c71117ece88ba9a3a69a0cf517196f4572333bf2acba9a1f345",
+          "sha256": "d58a217a17e0b29fd0cb9bab2f45101ae177f98e42721dd4937f4bfc188b3206",
           "sources": [
             {
               "file": "sarabun-thai-100-normal.woff2",
@@ -223,10 +223,10 @@
           ]
         },
         {
-          "file": "MangaX-sarabun-100-italic.ttf",
+          "file": "sarabun-100-italic.ttf",
           "weight": 100,
           "italic": true,
-          "sha256": "747668aac6234c52e18f6d2410d5e0808d45d719affc467ec8f0c5f3d5b13eb5",
+          "sha256": "d7d0d64b76053556d4d7eacca8fb2204ef6a07de2f581d96c1a0f71c6a97786f",
           "sources": [
             {
               "file": "sarabun-thai-100-italic.woff2",
@@ -243,10 +243,10 @@
           ]
         },
         {
-          "file": "MangaX-sarabun-200-normal.ttf",
+          "file": "sarabun-200-normal.ttf",
           "weight": 200,
           "italic": false,
-          "sha256": "7d4f3ab234ac3762bff2cb017e0c7d83d2c5c0da6eeef58d673d56bd86afb28a",
+          "sha256": "526d34917ca6613c7bf1c270734f0bd92d8c5567942dfb12fa79bcf7c523c29e",
           "sources": [
             {
               "file": "sarabun-thai-200-normal.woff2",
@@ -263,10 +263,10 @@
           ]
         },
         {
-          "file": "MangaX-sarabun-200-italic.ttf",
+          "file": "sarabun-200-italic.ttf",
           "weight": 200,
           "italic": true,
-          "sha256": "17b813c1087ffb2559c62fa8d54d39fbdfc2062db2295b3a52c6f90771ea63c3",
+          "sha256": "9108254530cad2de73edccc580d26b41658a53bacffbd2b1b935db2fc5a14f58",
           "sources": [
             {
               "file": "sarabun-thai-200-italic.woff2",
@@ -283,10 +283,10 @@
           ]
         },
         {
-          "file": "MangaX-sarabun-300-normal.ttf",
+          "file": "sarabun-300-normal.ttf",
           "weight": 300,
           "italic": false,
-          "sha256": "75688b6fc1e569f8e84f9eca5245331f0dd2b5a6b43ffd81ad65aad9954a120a",
+          "sha256": "ff5561f22c2f1b4036104848ed8d85db90319b7de8c77f523bfa733889567f4e",
           "sources": [
             {
               "file": "sarabun-thai-300-normal.woff2",
@@ -303,10 +303,10 @@
           ]
         },
         {
-          "file": "MangaX-sarabun-300-italic.ttf",
+          "file": "sarabun-300-italic.ttf",
           "weight": 300,
           "italic": true,
-          "sha256": "448b9cd914b4d6b54254d36ccb0e3591d3f51b9e0eac3e11244c283909924c79",
+          "sha256": "e42d84c4f44b4280fb323e80cf15d4974d12cd827644b2f9780521dc0b25aafe",
           "sources": [
             {
               "file": "sarabun-thai-300-italic.woff2",
@@ -323,10 +323,10 @@
           ]
         },
         {
-          "file": "MangaX-sarabun-400-normal.ttf",
+          "file": "sarabun-400-normal.ttf",
           "weight": 400,
           "italic": false,
-          "sha256": "9fecaa1000e87d600761ca8cdacab8b04d686e7bbdcd7c1166812eb466d072dd",
+          "sha256": "ef22bc9d719e55bd8dfc752f85931218cf14a6702ebdaf60367b011b9579763f",
           "sources": [
             {
               "file": "sarabun-thai-400-normal.woff2",
@@ -343,10 +343,10 @@
           ]
         },
         {
-          "file": "MangaX-sarabun-400-italic.ttf",
+          "file": "sarabun-400-italic.ttf",
           "weight": 400,
           "italic": true,
-          "sha256": "8ca969550fd4a48a709ad532f6a3dc638d0f46b0a0a940897625405128b14da3",
+          "sha256": "de4d1dbf2eeb2540826b75353de02b3964e6b931f6f9e43afa80c66d02655291",
           "sources": [
             {
               "file": "sarabun-thai-400-italic.woff2",
@@ -363,10 +363,10 @@
           ]
         },
         {
-          "file": "MangaX-sarabun-500-normal.ttf",
+          "file": "sarabun-500-normal.ttf",
           "weight": 500,
           "italic": false,
-          "sha256": "f89cfe129b402d76214b81754698dd09cdbe33cbb93d47c1c58dcb0b8d059a25",
+          "sha256": "7529c739cd6da86f04ff89164454b740992398faec45a7af5fdd64015ab10689",
           "sources": [
             {
               "file": "sarabun-thai-500-normal.woff2",
@@ -383,10 +383,10 @@
           ]
         },
         {
-          "file": "MangaX-sarabun-500-italic.ttf",
+          "file": "sarabun-500-italic.ttf",
           "weight": 500,
           "italic": true,
-          "sha256": "a8dc50783d4e38b96520991e61c1f25f05973bb8bca6721bac67ab5451cc2023",
+          "sha256": "35547e009466d848de0c24e3b1ed58585a31e66012e3c5c47d18e93fa12541d9",
           "sources": [
             {
               "file": "sarabun-thai-500-italic.woff2",
@@ -403,10 +403,10 @@
           ]
         },
         {
-          "file": "MangaX-sarabun-600-normal.ttf",
+          "file": "sarabun-600-normal.ttf",
           "weight": 600,
           "italic": false,
-          "sha256": "386f008e5a6f7023520f4a6a6bf50a61e8608749ee0952d646d2a35c3e21aa2f",
+          "sha256": "8fbbe90dea7b69b0ed53bfb6558fd1987d1924aba2de74008c6bd8ad0f718087",
           "sources": [
             {
               "file": "sarabun-thai-600-normal.woff2",
@@ -423,10 +423,10 @@
           ]
         },
         {
-          "file": "MangaX-sarabun-600-italic.ttf",
+          "file": "sarabun-600-italic.ttf",
           "weight": 600,
           "italic": true,
-          "sha256": "13723786a8cfc60eeb21abadeabc54614ce97fa24b57eb7c27c9db3884195625",
+          "sha256": "a3c0dc84b4298a1627c2a5bb7ddea39aa3e5ac45a3f4ffa5e87151d6afeed782",
           "sources": [
             {
               "file": "sarabun-thai-600-italic.woff2",
@@ -443,10 +443,10 @@
           ]
         },
         {
-          "file": "MangaX-sarabun-700-normal.ttf",
+          "file": "sarabun-700-normal.ttf",
           "weight": 700,
           "italic": false,
-          "sha256": "d99c8a0205cf41cdad03a181876e64189b4c40513839c4b95df9b0d1325aec0c",
+          "sha256": "a58e28b3ec8297d25a69b6ddaeca2f481f7d0b758ad84ab902078306d1284f6d",
           "sources": [
             {
               "file": "sarabun-thai-700-normal.woff2",
@@ -463,10 +463,10 @@
           ]
         },
         {
-          "file": "MangaX-sarabun-700-italic.ttf",
+          "file": "sarabun-700-italic.ttf",
           "weight": 700,
           "italic": true,
-          "sha256": "12ca41cf612bd1317990e8f8ad6b1c0018a131f4dc5a58842339bbfb4e901f0d",
+          "sha256": "ee149d819c746745b196bd7a4b2d3c805a6dec70a787f26fb3ef72c46a609544",
           "sources": [
             {
               "file": "sarabun-thai-700-italic.woff2",
@@ -483,10 +483,10 @@
           ]
         },
         {
-          "file": "MangaX-sarabun-800-normal.ttf",
+          "file": "sarabun-800-normal.ttf",
           "weight": 800,
           "italic": false,
-          "sha256": "a9b02425db17c4ba3baaa8c9878b549e7342b49a3fafbc32c772f2793f63f60e",
+          "sha256": "4ebcfff7973245c8379e35679b1c1f98ac031f3254d8fc77c9a9fd3214942c0e",
           "sources": [
             {
               "file": "sarabun-thai-800-normal.woff2",
@@ -503,10 +503,10 @@
           ]
         },
         {
-          "file": "MangaX-sarabun-800-italic.ttf",
+          "file": "sarabun-800-italic.ttf",
           "weight": 800,
           "italic": true,
-          "sha256": "ad61df93d2f994a60943e7a2667594e2a1b743a275a4fb07b31bbb1e3a8ff014",
+          "sha256": "ec08332054d8cbc69ce68a0c21e751ac37406c37fde390fc9c38fa24cabed88b",
           "sources": [
             {
               "file": "sarabun-thai-800-italic.woff2",
@@ -522,10 +522,11 @@
             }
           ]
         }
-      ]
+      ],
+      "previous_family": "MangaX Sarabun"
     },
     {
-      "family": "MangaX Noto Serif Thai",
+      "family": "Noto Serif Thai",
       "original_family": "Noto Serif Thai",
       "source_id": "noto-serif-thai",
       "group": "story",
@@ -533,10 +534,10 @@
       "license": "licenses/noto-serif-thai-OFL.txt",
       "variants": [
         {
-          "file": "MangaX-noto-serif-thai-100-normal.ttf",
+          "file": "noto-serif-thai-100-normal.ttf",
           "weight": 100,
           "italic": false,
-          "sha256": "087d2c1583de33ab1910998d336100bad7be37e87f1099fbc32fd81335b1e889",
+          "sha256": "27f60b945e7076d92ab5222eaaa612fd935341d4f0d7f1183be133798b13de7b",
           "sources": [
             {
               "file": "noto-serif-thai-thai-wght-normal.woff2",
@@ -553,10 +554,10 @@
           ]
         },
         {
-          "file": "MangaX-noto-serif-thai-200-normal.ttf",
+          "file": "noto-serif-thai-200-normal.ttf",
           "weight": 200,
           "italic": false,
-          "sha256": "73ef8cff5083d71faf5319f463abe6ef472915526d0be78160d4d6c9c8b7809f",
+          "sha256": "d8b7027bc9969296ed4ec5e82f18fe117be7d2848f25190f47d20ccaba783c2b",
           "sources": [
             {
               "file": "noto-serif-thai-thai-wght-normal.woff2",
@@ -573,10 +574,10 @@
           ]
         },
         {
-          "file": "MangaX-noto-serif-thai-300-normal.ttf",
+          "file": "noto-serif-thai-300-normal.ttf",
           "weight": 300,
           "italic": false,
-          "sha256": "8bb72ba1b61141882010d6dc5c957bcebf0c61f65b0fe9aac677913b132f39b6",
+          "sha256": "0c36b3c9c91aa12136a425371871058cf29824d2b22d515a8b65a16cb44c272c",
           "sources": [
             {
               "file": "noto-serif-thai-thai-wght-normal.woff2",
@@ -593,10 +594,10 @@
           ]
         },
         {
-          "file": "MangaX-noto-serif-thai-400-normal.ttf",
+          "file": "noto-serif-thai-400-normal.ttf",
           "weight": 400,
           "italic": false,
-          "sha256": "3533260b5ff992b8acd217d665ec903ad1f15318c154a49223a30faa404df03b",
+          "sha256": "8afe71d7bc56024287d312b108c4471bf39e83b7ff2a9bbe80990dbcfe5d8785",
           "sources": [
             {
               "file": "noto-serif-thai-thai-wght-normal.woff2",
@@ -613,10 +614,10 @@
           ]
         },
         {
-          "file": "MangaX-noto-serif-thai-500-normal.ttf",
+          "file": "noto-serif-thai-500-normal.ttf",
           "weight": 500,
           "italic": false,
-          "sha256": "425f7306d39418d2f4ab2086d1031086f487001e2fcf484761b82aed95a31a90",
+          "sha256": "99f78b8250e6350826de3e0e17c639c6bb28024c21d714538c409dacb13bd6e7",
           "sources": [
             {
               "file": "noto-serif-thai-thai-wght-normal.woff2",
@@ -633,10 +634,10 @@
           ]
         },
         {
-          "file": "MangaX-noto-serif-thai-600-normal.ttf",
+          "file": "noto-serif-thai-600-normal.ttf",
           "weight": 600,
           "italic": false,
-          "sha256": "a3d9f8c9ab3e55936b4c3012c37ab4727596dab7d3472af64131621c22efe1c1",
+          "sha256": "c7a747e447858f737fa12644a2f3cf2e52d8f11a2e72bffd8ab68cb20abf6c64",
           "sources": [
             {
               "file": "noto-serif-thai-thai-wght-normal.woff2",
@@ -653,10 +654,10 @@
           ]
         },
         {
-          "file": "MangaX-noto-serif-thai-700-normal.ttf",
+          "file": "noto-serif-thai-700-normal.ttf",
           "weight": 700,
           "italic": false,
-          "sha256": "60bdcd6249c52199e8513f12c4b0ed9f6ee9be2ea17eca64a33e10d06f50425b",
+          "sha256": "39b75283e8f74649300d8ef9e64042099d956cd0d7f82d8ce16a6396338eac59",
           "sources": [
             {
               "file": "noto-serif-thai-thai-wght-normal.woff2",
@@ -673,10 +674,10 @@
           ]
         },
         {
-          "file": "MangaX-noto-serif-thai-800-normal.ttf",
+          "file": "noto-serif-thai-800-normal.ttf",
           "weight": 800,
           "italic": false,
-          "sha256": "6718ea55e5368c7b13c567c39441afbc6889c83cd76f38446f3bb03eaee5d362",
+          "sha256": "9a825608e9b99e01179d907b24bf47dd4ec5ea4d909cf7f7beb851764c5a2a59",
           "sources": [
             {
               "file": "noto-serif-thai-thai-wght-normal.woff2",
@@ -693,10 +694,10 @@
           ]
         },
         {
-          "file": "MangaX-noto-serif-thai-900-normal.ttf",
+          "file": "noto-serif-thai-900-normal.ttf",
           "weight": 900,
           "italic": false,
-          "sha256": "a5ab3789496d82adaafdc7c4e965eb51026b1d7f2f038985495349bbe7718b8b",
+          "sha256": "a5094fb0f7df99fe3969ddd02579c68a14ca14c248fcce4732bf4e0bf67c5c9c",
           "sources": [
             {
               "file": "noto-serif-thai-thai-wght-normal.woff2",
@@ -712,10 +713,11 @@
             }
           ]
         }
-      ]
+      ],
+      "previous_family": "MangaX Noto Serif Thai"
     },
     {
-      "family": "MangaX Anuphan",
+      "family": "Anuphan",
       "original_family": "Anuphan",
       "source_id": "anuphan",
       "group": "dialogue",
@@ -723,10 +725,10 @@
       "license": "licenses/anuphan-OFL.txt",
       "variants": [
         {
-          "file": "MangaX-anuphan-100-normal.ttf",
+          "file": "anuphan-100-normal.ttf",
           "weight": 100,
           "italic": false,
-          "sha256": "2309362cb2b68990a787640a31b0d69ad74ae77e08b88a2375a031428c5893a2",
+          "sha256": "6c375262fc7f12ee0a2b3def3c1cdacf6f3aa7fbc20afed7633d1ee0bf685ae8",
           "sources": [
             {
               "file": "anuphan-thai-100-normal.woff2",
@@ -743,10 +745,10 @@
           ]
         },
         {
-          "file": "MangaX-anuphan-200-normal.ttf",
+          "file": "anuphan-200-normal.ttf",
           "weight": 200,
           "italic": false,
-          "sha256": "a5637e92a4d80ac61b9f643e26856be8db13112f1e4765f061ce0b0e123fe049",
+          "sha256": "21953ab81dbbd7565bd9b35bfdfe54ceae0c812a8dc34b9472bf5bf086cb8d03",
           "sources": [
             {
               "file": "anuphan-thai-200-normal.woff2",
@@ -763,10 +765,10 @@
           ]
         },
         {
-          "file": "MangaX-anuphan-300-normal.ttf",
+          "file": "anuphan-300-normal.ttf",
           "weight": 300,
           "italic": false,
-          "sha256": "a5492ac8b4f2f653cd12e7a459dec3547c15f6f7983b903f1e2c3f82321191a4",
+          "sha256": "edbc50570ffc0ddfddaa8d8f2dea184bbc5b1ae0a629a4da2faa86b1a69b517e",
           "sources": [
             {
               "file": "anuphan-thai-300-normal.woff2",
@@ -783,10 +785,10 @@
           ]
         },
         {
-          "file": "MangaX-anuphan-400-normal.ttf",
+          "file": "anuphan-400-normal.ttf",
           "weight": 400,
           "italic": false,
-          "sha256": "09b755bc5e7b6455d5fb79d8e17f3a9825bdaa1e747ebccc9d147601bba9c8e0",
+          "sha256": "705a85496ee00b85f72ce0b68a2c157446bf42d88e1da8164c7adcebed9f1443",
           "sources": [
             {
               "file": "anuphan-thai-400-normal.woff2",
@@ -803,10 +805,10 @@
           ]
         },
         {
-          "file": "MangaX-anuphan-500-normal.ttf",
+          "file": "anuphan-500-normal.ttf",
           "weight": 500,
           "italic": false,
-          "sha256": "810f44094e40c80c81189166b45d74c1324e52a0ccdb3b084d86f431fa24a4be",
+          "sha256": "8cc6e5975583759d238b94dc95efc30926cfd79dc030dfe0788f4c79a0395175",
           "sources": [
             {
               "file": "anuphan-thai-500-normal.woff2",
@@ -823,10 +825,10 @@
           ]
         },
         {
-          "file": "MangaX-anuphan-600-normal.ttf",
+          "file": "anuphan-600-normal.ttf",
           "weight": 600,
           "italic": false,
-          "sha256": "89979d202fbea014ab8f8104b7f44b0b5cfd9cf557daef627270ba16f7c500f7",
+          "sha256": "9aca25349f8dca58b30d7daadb8eb3ced6401d6d0cba6c12e126f551c9564c61",
           "sources": [
             {
               "file": "anuphan-thai-600-normal.woff2",
@@ -843,10 +845,10 @@
           ]
         },
         {
-          "file": "MangaX-anuphan-700-normal.ttf",
+          "file": "anuphan-700-normal.ttf",
           "weight": 700,
           "italic": false,
-          "sha256": "3553148173565838abcafc9ceaee935d5f2bcea73ff4e550bde2f7ddf4d7b09d",
+          "sha256": "62d14ed99a11697211bc7531448b8a1362a492cfa5379785c1ad65d8984a8f4d",
           "sources": [
             {
               "file": "anuphan-thai-700-normal.woff2",
@@ -862,10 +864,11 @@
             }
           ]
         }
-      ]
+      ],
+      "previous_family": "MangaX Anuphan"
     },
     {
-      "family": "MangaX Athiti",
+      "family": "Athiti",
       "original_family": "Athiti",
       "source_id": "athiti",
       "group": "dialogue",
@@ -873,10 +876,10 @@
       "license": "licenses/athiti-OFL.txt",
       "variants": [
         {
-          "file": "MangaX-athiti-200-normal.ttf",
+          "file": "athiti-200-normal.ttf",
           "weight": 200,
           "italic": false,
-          "sha256": "a04f07ac2bb46a78758c6845b0be72f98c9d6bffcd5d954665498115f6f1cb91",
+          "sha256": "3a1134e1050f0ee0689291eab76f93b8c7539870558e06e12c2f955ac3313456",
           "sources": [
             {
               "file": "athiti-thai-200-normal.woff2",
@@ -893,10 +896,10 @@
           ]
         },
         {
-          "file": "MangaX-athiti-300-normal.ttf",
+          "file": "athiti-300-normal.ttf",
           "weight": 300,
           "italic": false,
-          "sha256": "a2e620b7e89d9c0546829499f09b0b03702142798d2e6eaeea2c8ce2da52dc57",
+          "sha256": "4914996072acbf9d496aa44b960f01f64b8c1a5fd0437803e4ee74046cea6c5f",
           "sources": [
             {
               "file": "athiti-thai-300-normal.woff2",
@@ -913,10 +916,10 @@
           ]
         },
         {
-          "file": "MangaX-athiti-400-normal.ttf",
+          "file": "athiti-400-normal.ttf",
           "weight": 400,
           "italic": false,
-          "sha256": "a6a6aa2a2771927532e402e699ef69620e4eb3c9b308e6785b6a44a621f71eea",
+          "sha256": "d53bffd7de31d66f48fa2ff8b271b5f70602e525bf3ddd11a0b4eda22187ceae",
           "sources": [
             {
               "file": "athiti-thai-400-normal.woff2",
@@ -933,10 +936,10 @@
           ]
         },
         {
-          "file": "MangaX-athiti-500-normal.ttf",
+          "file": "athiti-500-normal.ttf",
           "weight": 500,
           "italic": false,
-          "sha256": "8174e9ef5913d90a2e748018b0f0c1ee1c81ea69bcd3fe4def049eb5491c2b5c",
+          "sha256": "b88fa27a7056acb15538e2b890cf0fd13cce25c0cc637895f24108d945b3d526",
           "sources": [
             {
               "file": "athiti-thai-500-normal.woff2",
@@ -953,10 +956,10 @@
           ]
         },
         {
-          "file": "MangaX-athiti-600-normal.ttf",
+          "file": "athiti-600-normal.ttf",
           "weight": 600,
           "italic": false,
-          "sha256": "79234145ef57e495ec2001a8e193c3764b0523eb064a3e3e245229857fd84dcc",
+          "sha256": "0da5394fe7a5125dbab7dd0e45408e26e344ff35aa236efde84443622c5e0f95",
           "sources": [
             {
               "file": "athiti-thai-600-normal.woff2",
@@ -973,10 +976,10 @@
           ]
         },
         {
-          "file": "MangaX-athiti-700-normal.ttf",
+          "file": "athiti-700-normal.ttf",
           "weight": 700,
           "italic": false,
-          "sha256": "e11cf212a710c5056f35def385c937a88d5ee4a58ef19a7bd6ae55e5c40cc179",
+          "sha256": "1f36be98f392bacadfe9df9d5473a574f691dc93f87c15cfb3e87b6a7ad52a0d",
           "sources": [
             {
               "file": "athiti-thai-700-normal.woff2",
@@ -992,10 +995,11 @@
             }
           ]
         }
-      ]
+      ],
+      "previous_family": "MangaX Athiti"
     },
     {
-      "family": "MangaX Bai Jamjuree",
+      "family": "Bai Jamjuree",
       "original_family": "Bai Jamjuree",
       "source_id": "bai-jamjuree",
       "group": "dialogue",
@@ -1003,10 +1007,10 @@
       "license": "licenses/bai-jamjuree-OFL.txt",
       "variants": [
         {
-          "file": "MangaX-bai-jamjuree-200-normal.ttf",
+          "file": "bai-jamjuree-200-normal.ttf",
           "weight": 200,
           "italic": false,
-          "sha256": "fd58446c033fc10015fe9f6659abbc411a87fe8b4b54e68b538b628b55bff14c",
+          "sha256": "43adb6cc0ed85395485157a7603d20d38397f5b3e8141b586f2931762ad66a94",
           "sources": [
             {
               "file": "bai-jamjuree-thai-200-normal.woff2",
@@ -1023,10 +1027,10 @@
           ]
         },
         {
-          "file": "MangaX-bai-jamjuree-200-italic.ttf",
+          "file": "bai-jamjuree-200-italic.ttf",
           "weight": 200,
           "italic": true,
-          "sha256": "d81826942b4d348b05d5e4ef0ab11667cd419389064dbb83a13b815610aa78d6",
+          "sha256": "bafc700fd2a3d9e7f80391b1024292f2464739419a4b63688c468d73326454f2",
           "sources": [
             {
               "file": "bai-jamjuree-thai-200-italic.woff2",
@@ -1043,10 +1047,10 @@
           ]
         },
         {
-          "file": "MangaX-bai-jamjuree-300-normal.ttf",
+          "file": "bai-jamjuree-300-normal.ttf",
           "weight": 300,
           "italic": false,
-          "sha256": "0c6229069549d5acb7b8129485cbd86cfdb46df04f9a723757f85ebbe2b1fb21",
+          "sha256": "ed4ff1624534bf50308b1a3c6874de5d709a0b475619a1fe4e675b386f17c319",
           "sources": [
             {
               "file": "bai-jamjuree-thai-300-normal.woff2",
@@ -1063,10 +1067,10 @@
           ]
         },
         {
-          "file": "MangaX-bai-jamjuree-300-italic.ttf",
+          "file": "bai-jamjuree-300-italic.ttf",
           "weight": 300,
           "italic": true,
-          "sha256": "b7b20c746b41de8ea671f1b14b300e032210810780cb45aab67b5a717186adb8",
+          "sha256": "84c473b4e62a7506faf7261f09e32c01a5fc6306a924edb25754baacb9181543",
           "sources": [
             {
               "file": "bai-jamjuree-thai-300-italic.woff2",
@@ -1083,10 +1087,10 @@
           ]
         },
         {
-          "file": "MangaX-bai-jamjuree-400-normal.ttf",
+          "file": "bai-jamjuree-400-normal.ttf",
           "weight": 400,
           "italic": false,
-          "sha256": "5157b373a7f4de74f0c567dac395805257a5cf6b63fda6ca6cfaa000f4cd73e6",
+          "sha256": "7247594c76c48dd8e69b119d90cb9ef2032747121df719a3dac048015fb49ce0",
           "sources": [
             {
               "file": "bai-jamjuree-thai-400-normal.woff2",
@@ -1103,10 +1107,10 @@
           ]
         },
         {
-          "file": "MangaX-bai-jamjuree-400-italic.ttf",
+          "file": "bai-jamjuree-400-italic.ttf",
           "weight": 400,
           "italic": true,
-          "sha256": "9c8cdb1f49bf15fcf33ab7f9cf1831992bb5d058846401cd67c83adff6f20323",
+          "sha256": "87d60e6ef1703aa9dc7d33d92db95da1d272fb17c48dd6ab2d3ddeeac3e12b14",
           "sources": [
             {
               "file": "bai-jamjuree-thai-400-italic.woff2",
@@ -1123,10 +1127,10 @@
           ]
         },
         {
-          "file": "MangaX-bai-jamjuree-500-normal.ttf",
+          "file": "bai-jamjuree-500-normal.ttf",
           "weight": 500,
           "italic": false,
-          "sha256": "9d2407d76242fd0f70c88c5979a74eafd466c7880ee47c62a7050404faf25030",
+          "sha256": "74cd67a9004f45a88a96d37d736a2881446fb82d16508b5b93621741e0fa1f4d",
           "sources": [
             {
               "file": "bai-jamjuree-thai-500-normal.woff2",
@@ -1143,10 +1147,10 @@
           ]
         },
         {
-          "file": "MangaX-bai-jamjuree-500-italic.ttf",
+          "file": "bai-jamjuree-500-italic.ttf",
           "weight": 500,
           "italic": true,
-          "sha256": "3a14489fa998eac8d4e86801fed77e0462a9bdefbeba3e5436b477d321c6e5ab",
+          "sha256": "599e097d188796f42fd966abf740a43716c9bd9c1af823fa84748db6711bfb58",
           "sources": [
             {
               "file": "bai-jamjuree-thai-500-italic.woff2",
@@ -1163,10 +1167,10 @@
           ]
         },
         {
-          "file": "MangaX-bai-jamjuree-600-normal.ttf",
+          "file": "bai-jamjuree-600-normal.ttf",
           "weight": 600,
           "italic": false,
-          "sha256": "84f63b2a3b5b17465001cf2078eaa03223ac52a15c466f33f8d22dbc48e15a9d",
+          "sha256": "c7d9eb68ae6f04f774033f6b435217907e0918d185f408004c79dd4e6d8e4c47",
           "sources": [
             {
               "file": "bai-jamjuree-thai-600-normal.woff2",
@@ -1183,10 +1187,10 @@
           ]
         },
         {
-          "file": "MangaX-bai-jamjuree-600-italic.ttf",
+          "file": "bai-jamjuree-600-italic.ttf",
           "weight": 600,
           "italic": true,
-          "sha256": "ec165c822c62f870f1b1ed9ee96a1a765808eb4ca1b05a3a25be70ed8d06c243",
+          "sha256": "a579bcfe235ade35bdb3ee8396669035fdd0654e5b2b70660b9dce4f2463415c",
           "sources": [
             {
               "file": "bai-jamjuree-thai-600-italic.woff2",
@@ -1203,10 +1207,10 @@
           ]
         },
         {
-          "file": "MangaX-bai-jamjuree-700-normal.ttf",
+          "file": "bai-jamjuree-700-normal.ttf",
           "weight": 700,
           "italic": false,
-          "sha256": "9fb5bc0ad33cb3bf04c505e190e7f17533a1edc12caf4e5e5ee17075d46524d4",
+          "sha256": "f92f67540ca34a4a98bfc60f02d76b9c53230dad40df7454b0cb8996502b2784",
           "sources": [
             {
               "file": "bai-jamjuree-thai-700-normal.woff2",
@@ -1223,10 +1227,10 @@
           ]
         },
         {
-          "file": "MangaX-bai-jamjuree-700-italic.ttf",
+          "file": "bai-jamjuree-700-italic.ttf",
           "weight": 700,
           "italic": true,
-          "sha256": "0e5669800c0bc6672620663fdcb465539efdaa1a984e2e1d115b0c075ca8b302",
+          "sha256": "abdf94edca3f0c37a3123ec28369ecfc3616f14fc1fdbb4832c8c6941e01d690",
           "sources": [
             {
               "file": "bai-jamjuree-thai-700-italic.woff2",
@@ -1242,10 +1246,11 @@
             }
           ]
         }
-      ]
+      ],
+      "previous_family": "MangaX Bai Jamjuree"
     },
     {
-      "family": "MangaX Chakra Petch",
+      "family": "Chakra Petch",
       "original_family": "Chakra Petch",
       "source_id": "chakra-petch",
       "group": "effect",
@@ -1253,10 +1258,10 @@
       "license": "licenses/chakra-petch-OFL.txt",
       "variants": [
         {
-          "file": "MangaX-chakra-petch-300-normal.ttf",
+          "file": "chakra-petch-300-normal.ttf",
           "weight": 300,
           "italic": false,
-          "sha256": "59fed1bdc23f1032ea3416fc89e78e9b968ea5524ac10825c9735b7fd6a37b61",
+          "sha256": "dee836f0b40beea29f1019279a3d8121a8e6185a07b261c3067d266dd881e441",
           "sources": [
             {
               "file": "chakra-petch-thai-300-normal.woff2",
@@ -1273,10 +1278,10 @@
           ]
         },
         {
-          "file": "MangaX-chakra-petch-300-italic.ttf",
+          "file": "chakra-petch-300-italic.ttf",
           "weight": 300,
           "italic": true,
-          "sha256": "8d13eac65f0a0b7b5447133a700372bbd59b7783ae44e5d6ec3b49a1cfc825fa",
+          "sha256": "61c54ebfeff5020a52d10983f88a4ffe4bf8848661246c99d854a065591f8427",
           "sources": [
             {
               "file": "chakra-petch-thai-300-italic.woff2",
@@ -1293,10 +1298,10 @@
           ]
         },
         {
-          "file": "MangaX-chakra-petch-400-normal.ttf",
+          "file": "chakra-petch-400-normal.ttf",
           "weight": 400,
           "italic": false,
-          "sha256": "91aecd45155b05e2c4e416add5c747eca4a485118ae832d72f7de2081704a2da",
+          "sha256": "8d1bd1f048e8dbba289bf447c7c7c752980565679b4de3c9519809c8bf9b029b",
           "sources": [
             {
               "file": "chakra-petch-thai-400-normal.woff2",
@@ -1313,10 +1318,10 @@
           ]
         },
         {
-          "file": "MangaX-chakra-petch-400-italic.ttf",
+          "file": "chakra-petch-400-italic.ttf",
           "weight": 400,
           "italic": true,
-          "sha256": "d35f01c6701f3509261eaf2d26549f072a496fd0f053bc8a135e143a5ba1808c",
+          "sha256": "ae5702e134d27c50609fb265b566db58323b239eb3b219b57095b32d18b80284",
           "sources": [
             {
               "file": "chakra-petch-thai-400-italic.woff2",
@@ -1333,10 +1338,10 @@
           ]
         },
         {
-          "file": "MangaX-chakra-petch-500-normal.ttf",
+          "file": "chakra-petch-500-normal.ttf",
           "weight": 500,
           "italic": false,
-          "sha256": "69065c6bd75abe7c47f74ac05336202dbfc325b75f50118d6cd28b9a9dc7014e",
+          "sha256": "9b2c478ecd55170ea1d590736c05ac8dc0a264ae4e1df9b0cd8b91f89feb5a4f",
           "sources": [
             {
               "file": "chakra-petch-thai-500-normal.woff2",
@@ -1353,10 +1358,10 @@
           ]
         },
         {
-          "file": "MangaX-chakra-petch-500-italic.ttf",
+          "file": "chakra-petch-500-italic.ttf",
           "weight": 500,
           "italic": true,
-          "sha256": "643aeeaef6e20881f2dae44b4bb8f15e4e5e9b52f37e1e40c10ab5c7772e1796",
+          "sha256": "a5995ef27c91ac18719727a16e5eb3c2bafe587208d1da0c06670f59ba0fa053",
           "sources": [
             {
               "file": "chakra-petch-thai-500-italic.woff2",
@@ -1373,10 +1378,10 @@
           ]
         },
         {
-          "file": "MangaX-chakra-petch-600-normal.ttf",
+          "file": "chakra-petch-600-normal.ttf",
           "weight": 600,
           "italic": false,
-          "sha256": "4e57bb0c95540f093d61ce1078c72ba40e57f261f96f3093759868be90c0cf9c",
+          "sha256": "c8c3c8ea9b54a8d9b241cbb82c1b8d2f30fb0aa48ade1f041487cece16c810b2",
           "sources": [
             {
               "file": "chakra-petch-thai-600-normal.woff2",
@@ -1393,10 +1398,10 @@
           ]
         },
         {
-          "file": "MangaX-chakra-petch-600-italic.ttf",
+          "file": "chakra-petch-600-italic.ttf",
           "weight": 600,
           "italic": true,
-          "sha256": "514582de376bd57e61a8f5d06a1f19bc4ca53b9d891a0ac39f998b4928795393",
+          "sha256": "31e106c293bd37389a481646acbdd451e2016975659396ea7421f538d5573038",
           "sources": [
             {
               "file": "chakra-petch-thai-600-italic.woff2",
@@ -1413,10 +1418,10 @@
           ]
         },
         {
-          "file": "MangaX-chakra-petch-700-normal.ttf",
+          "file": "chakra-petch-700-normal.ttf",
           "weight": 700,
           "italic": false,
-          "sha256": "eb08d97d725beec92fad92bba1624b5512de2b2c1f1f61a8f4209a9bf3f290a5",
+          "sha256": "a60ecea93f31296419c31dd6954827e09b79e954b9fbdab87ba1b2bfbf93a264",
           "sources": [
             {
               "file": "chakra-petch-thai-700-normal.woff2",
@@ -1433,10 +1438,10 @@
           ]
         },
         {
-          "file": "MangaX-chakra-petch-700-italic.ttf",
+          "file": "chakra-petch-700-italic.ttf",
           "weight": 700,
           "italic": true,
-          "sha256": "dd1594712e6d0b39e3cd06ff65f62ec0848cf2d91720716924695eb070bcfe02",
+          "sha256": "e76b88d040351c2306a7fbe6d8d0c6f39f73704acabb5a937e9a0e71408c5179",
           "sources": [
             {
               "file": "chakra-petch-thai-700-italic.woff2",
@@ -1452,10 +1457,11 @@
             }
           ]
         }
-      ]
+      ],
+      "previous_family": "MangaX Chakra Petch"
     },
     {
-      "family": "MangaX Charm",
+      "family": "Charm",
       "original_family": "Charm",
       "source_id": "charm",
       "group": "hand",
@@ -1463,10 +1469,10 @@
       "license": "licenses/charm-OFL.txt",
       "variants": [
         {
-          "file": "MangaX-charm-400-normal.ttf",
+          "file": "charm-400-normal.ttf",
           "weight": 400,
           "italic": false,
-          "sha256": "55e6d2839cee74929185c225fc22413a523723d23bb276874a0f1cda8b4cf0ce",
+          "sha256": "8ee601b221260167762e08dd3d24c8b7930a877738f64f888ecb70df713d7ebd",
           "sources": [
             {
               "file": "charm-thai-400-normal.woff2",
@@ -1483,10 +1489,10 @@
           ]
         },
         {
-          "file": "MangaX-charm-700-normal.ttf",
+          "file": "charm-700-normal.ttf",
           "weight": 700,
           "italic": false,
-          "sha256": "a249f82abcb1d02fbd8daea52144b3e4d326edbc14caba8c902dd029da6f5094",
+          "sha256": "c7355a2e3d94ca2ff646e9dcf936d56b2d11d41d0fcf649a41e8fe6792d9ba62",
           "sources": [
             {
               "file": "charm-thai-700-normal.woff2",
@@ -1502,10 +1508,11 @@
             }
           ]
         }
-      ]
+      ],
+      "previous_family": "MangaX Charm"
     },
     {
-      "family": "MangaX Charmonman",
+      "family": "Charmonman",
       "original_family": "Charmonman",
       "source_id": "charmonman",
       "group": "hand",
@@ -1513,10 +1520,10 @@
       "license": "licenses/charmonman-OFL.txt",
       "variants": [
         {
-          "file": "MangaX-charmonman-400-normal.ttf",
+          "file": "charmonman-400-normal.ttf",
           "weight": 400,
           "italic": false,
-          "sha256": "9451735309e0d682d5342499f7151eae93a724260ac6c8730341b019c8683d9e",
+          "sha256": "5c017d350c328df49c1b0455d757d10befa16207ebfb96ea369b51c4e27c35fd",
           "sources": [
             {
               "file": "charmonman-thai-400-normal.woff2",
@@ -1533,10 +1540,10 @@
           ]
         },
         {
-          "file": "MangaX-charmonman-700-normal.ttf",
+          "file": "charmonman-700-normal.ttf",
           "weight": 700,
           "italic": false,
-          "sha256": "ecc8ea5dc6e38f3b78e0b38345d91d2c0ff44cc7068f1e4c6ceddc386883862c",
+          "sha256": "48d5137036bdb1f5e15ba359bc8c3c4b807dc74d06f94f34f17234363bb790c7",
           "sources": [
             {
               "file": "charmonman-thai-700-normal.woff2",
@@ -1552,10 +1559,11 @@
             }
           ]
         }
-      ]
+      ],
+      "previous_family": "MangaX Charmonman"
     },
     {
-      "family": "MangaX Chonburi",
+      "family": "Chonburi",
       "original_family": "Chonburi",
       "source_id": "chonburi",
       "group": "effect",
@@ -1563,10 +1571,10 @@
       "license": "licenses/chonburi-OFL.txt",
       "variants": [
         {
-          "file": "MangaX-chonburi-400-normal.ttf",
+          "file": "chonburi-400-normal.ttf",
           "weight": 400,
           "italic": false,
-          "sha256": "aba988009884fe89293dcde8585e8ce6c327ce17d70a9ef0d750efea7d507e79",
+          "sha256": "971bf283268b846d63bd9328be433856f32a2d6caba63ca9abdc860dd71774c2",
           "sources": [
             {
               "file": "chonburi-thai-400-normal.woff2",
@@ -1582,10 +1590,11 @@
             }
           ]
         }
-      ]
+      ],
+      "previous_family": "MangaX Chonburi"
     },
     {
-      "family": "MangaX Fahkwang",
+      "family": "Fahkwang",
       "original_family": "Fahkwang",
       "source_id": "fahkwang",
       "group": "dialogue",
@@ -1593,10 +1602,10 @@
       "license": "licenses/fahkwang-OFL.txt",
       "variants": [
         {
-          "file": "MangaX-fahkwang-200-normal.ttf",
+          "file": "fahkwang-200-normal.ttf",
           "weight": 200,
           "italic": false,
-          "sha256": "16a02722cfc92562e342860d504d16eed2cb8095d14cc996b641fa21b642c06d",
+          "sha256": "991047cabf1946ff71fc18707ebe7c738463f4db5cd4207811131576702bd3d7",
           "sources": [
             {
               "file": "fahkwang-thai-200-normal.woff2",
@@ -1613,10 +1622,10 @@
           ]
         },
         {
-          "file": "MangaX-fahkwang-200-italic.ttf",
+          "file": "fahkwang-200-italic.ttf",
           "weight": 200,
           "italic": true,
-          "sha256": "fea067b01d69a3d8d7f7fac2bf7ef7cb9d02722e786bee0efd85f39d363c8113",
+          "sha256": "9f6145264f0e493eeb5058ee0f7a1c2b7057f3a1893f9f6bd20add9dd4d3175e",
           "sources": [
             {
               "file": "fahkwang-thai-200-italic.woff2",
@@ -1633,10 +1642,10 @@
           ]
         },
         {
-          "file": "MangaX-fahkwang-300-normal.ttf",
+          "file": "fahkwang-300-normal.ttf",
           "weight": 300,
           "italic": false,
-          "sha256": "755fafe06b998ee4e9ebe624426c27f803414a16901901e02044a05946e85c58",
+          "sha256": "9751ee185c83351e1cafe75d9ecdad28e936a344c56b23cc9814d1f06e557ea1",
           "sources": [
             {
               "file": "fahkwang-thai-300-normal.woff2",
@@ -1653,10 +1662,10 @@
           ]
         },
         {
-          "file": "MangaX-fahkwang-300-italic.ttf",
+          "file": "fahkwang-300-italic.ttf",
           "weight": 300,
           "italic": true,
-          "sha256": "9c14b24a299fd11250f4055543fcd2fa415294c26d1f2bc56c990063b4d74de2",
+          "sha256": "0d5aee944cb8ae9ea5befaf8b81dfa26946abcc7427f1521a3d3e668c96e1875",
           "sources": [
             {
               "file": "fahkwang-thai-300-italic.woff2",
@@ -1673,10 +1682,10 @@
           ]
         },
         {
-          "file": "MangaX-fahkwang-400-normal.ttf",
+          "file": "fahkwang-400-normal.ttf",
           "weight": 400,
           "italic": false,
-          "sha256": "0258a3c5922f1e43fbf26e552b067b08dfd873cfa93d882a1707e27988a8cd91",
+          "sha256": "e4107472cb8c19ab3dfbe2d3644c12af8aa55f74b2f90036e56920f5614edfb5",
           "sources": [
             {
               "file": "fahkwang-thai-400-normal.woff2",
@@ -1693,10 +1702,10 @@
           ]
         },
         {
-          "file": "MangaX-fahkwang-400-italic.ttf",
+          "file": "fahkwang-400-italic.ttf",
           "weight": 400,
           "italic": true,
-          "sha256": "18ca40d2192dd848d72c809f8ee68b46344b3303f0c06d2bdb7337063a3a89c0",
+          "sha256": "079891bec353046ed9eb9cb34829bbddaa158fbde9cd25c724848f0c4e9cbec8",
           "sources": [
             {
               "file": "fahkwang-thai-400-italic.woff2",
@@ -1713,10 +1722,10 @@
           ]
         },
         {
-          "file": "MangaX-fahkwang-500-normal.ttf",
+          "file": "fahkwang-500-normal.ttf",
           "weight": 500,
           "italic": false,
-          "sha256": "bdccf429754716b45f24066b4d9d68111d541cbb2681f2651649254486948f02",
+          "sha256": "97a39c76bb9f59dae31ca2e0dae539b7b6ef26f20924d9042373199a410077cc",
           "sources": [
             {
               "file": "fahkwang-thai-500-normal.woff2",
@@ -1733,10 +1742,10 @@
           ]
         },
         {
-          "file": "MangaX-fahkwang-500-italic.ttf",
+          "file": "fahkwang-500-italic.ttf",
           "weight": 500,
           "italic": true,
-          "sha256": "2eb4ccc97f621870614f8b1eac3d3e7d1ffd91740c6ce9e614035ef0cbd1b7c2",
+          "sha256": "3d6a7246b986d7f2ff5694164d77fca1445199df686f88fa24b7637aa38aa85c",
           "sources": [
             {
               "file": "fahkwang-thai-500-italic.woff2",
@@ -1753,10 +1762,10 @@
           ]
         },
         {
-          "file": "MangaX-fahkwang-600-normal.ttf",
+          "file": "fahkwang-600-normal.ttf",
           "weight": 600,
           "italic": false,
-          "sha256": "664201f5f0bf865b75e35c9d1ede48459c9223eafb56b53a8ea9941a73bc711c",
+          "sha256": "3900df3d73299bc4573325ee90e72c17a62fbe22269c0625ea839c2166f1824d",
           "sources": [
             {
               "file": "fahkwang-thai-600-normal.woff2",
@@ -1773,10 +1782,10 @@
           ]
         },
         {
-          "file": "MangaX-fahkwang-600-italic.ttf",
+          "file": "fahkwang-600-italic.ttf",
           "weight": 600,
           "italic": true,
-          "sha256": "17e4a3631c5e08f34726b6b4e817acec7752aaab85845d56a0cca9496c3f4f19",
+          "sha256": "09e20c7c3ebf6d28acb3bc059f8bb39de7e5d459061009144b03af3c14635887",
           "sources": [
             {
               "file": "fahkwang-thai-600-italic.woff2",
@@ -1793,10 +1802,10 @@
           ]
         },
         {
-          "file": "MangaX-fahkwang-700-normal.ttf",
+          "file": "fahkwang-700-normal.ttf",
           "weight": 700,
           "italic": false,
-          "sha256": "2491053556149aa1ffab470a60e59b6a6f531c55bfa5996c8a9596ff3b7ea6c9",
+          "sha256": "9abb26a26984b3f4ccbc6a8f46c342d4f5be2399c1447b6d9a865da0283dae27",
           "sources": [
             {
               "file": "fahkwang-thai-700-normal.woff2",
@@ -1813,10 +1822,10 @@
           ]
         },
         {
-          "file": "MangaX-fahkwang-700-italic.ttf",
+          "file": "fahkwang-700-italic.ttf",
           "weight": 700,
           "italic": true,
-          "sha256": "01dafdb566ea987823620a9759fbbbe418d4944a3d925ccb7e8bb4ffe0395a17",
+          "sha256": "a39adf159fcfdf1d78a33641f1d01a1d4e41c074757991401e097a5656fcc52a",
           "sources": [
             {
               "file": "fahkwang-thai-700-italic.woff2",
@@ -1832,10 +1841,11 @@
             }
           ]
         }
-      ]
+      ],
+      "previous_family": "MangaX Fahkwang"
     },
     {
-      "family": "MangaX Google Sans",
+      "family": "Google Sans",
       "original_family": "Google Sans",
       "source_id": "google-sans",
       "group": "dialogue",
@@ -1843,10 +1853,10 @@
       "license": "licenses/google-sans-OFL.txt",
       "variants": [
         {
-          "file": "MangaX-google-sans-400-normal.ttf",
+          "file": "google-sans-400-normal.ttf",
           "weight": 400,
           "italic": false,
-          "sha256": "7527bc3f6eef1b252fc42a0049f058906b89e0411c5c7055c33d0a43af604d60",
+          "sha256": "1141ea07fdc9909efe03def0ba4a5ee2811ba3b0982bdfa70b861caebb49ebd4",
           "sources": [
             {
               "file": "google-sans-thai-400-normal.woff2",
@@ -1863,10 +1873,10 @@
           ]
         },
         {
-          "file": "MangaX-google-sans-400-italic.ttf",
+          "file": "google-sans-400-italic.ttf",
           "weight": 400,
           "italic": true,
-          "sha256": "79cdc5cfc33dcaef147c2520a58eb69db19fc6b404dc174a3b9618f8a7f4f1b1",
+          "sha256": "042415b22fb557a272ddf7d1a289e6651a9d311926168e31120c1f8ef0452d09",
           "sources": [
             {
               "file": "google-sans-thai-400-italic.woff2",
@@ -1883,10 +1893,10 @@
           ]
         },
         {
-          "file": "MangaX-google-sans-500-normal.ttf",
+          "file": "google-sans-500-normal.ttf",
           "weight": 500,
           "italic": false,
-          "sha256": "83289b8a89821c7b9b7a0708701f6e14e705ab8619186ce1014ef524ea6a7cc0",
+          "sha256": "db47a91017ed0c4aa96815ac01d6e4df3a7b51acf3db07ec606f0b91764eef5d",
           "sources": [
             {
               "file": "google-sans-thai-500-normal.woff2",
@@ -1903,10 +1913,10 @@
           ]
         },
         {
-          "file": "MangaX-google-sans-500-italic.ttf",
+          "file": "google-sans-500-italic.ttf",
           "weight": 500,
           "italic": true,
-          "sha256": "64cadb3e0be2384644e2121182901b0451f54d97ce5fc5ecd9a5ef95a07ba0d8",
+          "sha256": "f9f4a66e1d4a85d2b9db59ed3fadf697be49445963f6d36d60ab9a73b8174e9d",
           "sources": [
             {
               "file": "google-sans-thai-500-italic.woff2",
@@ -1923,10 +1933,10 @@
           ]
         },
         {
-          "file": "MangaX-google-sans-600-normal.ttf",
+          "file": "google-sans-600-normal.ttf",
           "weight": 600,
           "italic": false,
-          "sha256": "21a5a803c08cc6f599f11f03beb1c9acd3c093751e022de910aad8a80bb68331",
+          "sha256": "931d490e1d1abe49913e693c41005563be1ba835a1ee7c3d08acb25924c2d9de",
           "sources": [
             {
               "file": "google-sans-thai-600-normal.woff2",
@@ -1943,10 +1953,10 @@
           ]
         },
         {
-          "file": "MangaX-google-sans-600-italic.ttf",
+          "file": "google-sans-600-italic.ttf",
           "weight": 600,
           "italic": true,
-          "sha256": "6a3140ff398757471eae87751eefaf0ad6c14ae99c77a93c15131776b783383f",
+          "sha256": "b79d26e2a280834fd1fbaf203cf7c3e82ddbc727dfbaf9d59f93555f8c09b484",
           "sources": [
             {
               "file": "google-sans-thai-600-italic.woff2",
@@ -1963,10 +1973,10 @@
           ]
         },
         {
-          "file": "MangaX-google-sans-700-normal.ttf",
+          "file": "google-sans-700-normal.ttf",
           "weight": 700,
           "italic": false,
-          "sha256": "acd00d41a1cccdd9080c80bbc3962d1667e6aeb78821c0477bf32a5ff956f6e7",
+          "sha256": "b9e0313c1d5093ecb578dd8e41246c2890b5f52e9b8f14484cc22e8908712c1b",
           "sources": [
             {
               "file": "google-sans-thai-700-normal.woff2",
@@ -1983,10 +1993,10 @@
           ]
         },
         {
-          "file": "MangaX-google-sans-700-italic.ttf",
+          "file": "google-sans-700-italic.ttf",
           "weight": 700,
           "italic": true,
-          "sha256": "d7ef93862bb6423b6c993691a9934f0109bbccfa2dab8541fa3fe301c980babf",
+          "sha256": "1a8a7e19c16aee289c9e7c504744b02916bbea67dfb0cf0306ce5050f8c7e85a",
           "sources": [
             {
               "file": "google-sans-thai-700-italic.woff2",
@@ -2002,10 +2012,11 @@
             }
           ]
         }
-      ]
+      ],
+      "previous_family": "MangaX Google Sans"
     },
     {
-      "family": "MangaX IBM Plex Sans Thai",
+      "family": "IBM Plex Sans Thai",
       "original_family": "IBM Plex Sans Thai",
       "source_id": "ibm-plex-sans-thai",
       "group": "dialogue",
@@ -2013,10 +2024,10 @@
       "license": "licenses/ibm-plex-sans-thai-OFL.txt",
       "variants": [
         {
-          "file": "MangaX-ibm-plex-sans-thai-100-normal.ttf",
+          "file": "ibm-plex-sans-thai-100-normal.ttf",
           "weight": 100,
           "italic": false,
-          "sha256": "607af72f1c81e53410aee9eb0dfe4c1da36db3202cb17a3f8b879a42c600c4f0",
+          "sha256": "62629c49ab455fbc1265189bc58533d3eb401b45fe0d183182637c95dd3e4ddc",
           "sources": [
             {
               "file": "ibm-plex-sans-thai-thai-100-normal.woff2",
@@ -2033,10 +2044,10 @@
           ]
         },
         {
-          "file": "MangaX-ibm-plex-sans-thai-200-normal.ttf",
+          "file": "ibm-plex-sans-thai-200-normal.ttf",
           "weight": 200,
           "italic": false,
-          "sha256": "d9cd981a69047f73eb1c497346201462397a486b5d9bbb7dc4a01f76cd3a5324",
+          "sha256": "b3d71682fddce7df7973422208bd2fcbb2694b71079d56044f105e68df815f4e",
           "sources": [
             {
               "file": "ibm-plex-sans-thai-thai-200-normal.woff2",
@@ -2053,10 +2064,10 @@
           ]
         },
         {
-          "file": "MangaX-ibm-plex-sans-thai-300-normal.ttf",
+          "file": "ibm-plex-sans-thai-300-normal.ttf",
           "weight": 300,
           "italic": false,
-          "sha256": "fbbc92edc24332c05594b84e18b7447cfc006b127a9b377a5d93fdd293f47061",
+          "sha256": "52cb671f096808fd49fd2ed662595b807c6bfa1390b2a4e8a6dfbecfac6087f9",
           "sources": [
             {
               "file": "ibm-plex-sans-thai-thai-300-normal.woff2",
@@ -2073,10 +2084,10 @@
           ]
         },
         {
-          "file": "MangaX-ibm-plex-sans-thai-400-normal.ttf",
+          "file": "ibm-plex-sans-thai-400-normal.ttf",
           "weight": 400,
           "italic": false,
-          "sha256": "68b6dc6e42240e92c3f3c3b8630378899cbcbaea4938fe4019937e8dd2af4652",
+          "sha256": "dc179f0de8e6ce401282e7008d72a73974a946cde3b99a1a52aa840b65df83be",
           "sources": [
             {
               "file": "ibm-plex-sans-thai-thai-400-normal.woff2",
@@ -2093,10 +2104,10 @@
           ]
         },
         {
-          "file": "MangaX-ibm-plex-sans-thai-500-normal.ttf",
+          "file": "ibm-plex-sans-thai-500-normal.ttf",
           "weight": 500,
           "italic": false,
-          "sha256": "603c3a336b930df17bcdddefcd2d3cb82643ec94cad903e3460e94c1179330e7",
+          "sha256": "9de4857ce19078d5877c8603afcac96005fffa31c8c341089386cd4f4d012705",
           "sources": [
             {
               "file": "ibm-plex-sans-thai-thai-500-normal.woff2",
@@ -2113,10 +2124,10 @@
           ]
         },
         {
-          "file": "MangaX-ibm-plex-sans-thai-600-normal.ttf",
+          "file": "ibm-plex-sans-thai-600-normal.ttf",
           "weight": 600,
           "italic": false,
-          "sha256": "98ec2dbd4155eb1c07aaf8595beab234287d50a73225badb01b4718c101f07e0",
+          "sha256": "e6fc93c887565f56c52f5add65dfc77e2ec35e15a20d5da71c01de0977472036",
           "sources": [
             {
               "file": "ibm-plex-sans-thai-thai-600-normal.woff2",
@@ -2133,10 +2144,10 @@
           ]
         },
         {
-          "file": "MangaX-ibm-plex-sans-thai-700-normal.ttf",
+          "file": "ibm-plex-sans-thai-700-normal.ttf",
           "weight": 700,
           "italic": false,
-          "sha256": "360e0e71d342cbafd2d25b4c80147b5d7fc154976e1133ab3dbcffd14b48c8ba",
+          "sha256": "d65fd307899f8816132a67072140ad9dd6038fc8070aeaaed6202e2d4d56babc",
           "sources": [
             {
               "file": "ibm-plex-sans-thai-thai-700-normal.woff2",
@@ -2152,10 +2163,11 @@
             }
           ]
         }
-      ]
+      ],
+      "previous_family": "MangaX IBM Plex Sans Thai"
     },
     {
-      "family": "MangaX IBM Plex Sans Thai Looped",
+      "family": "IBM Plex Sans Thai Looped",
       "original_family": "IBM Plex Sans Thai Looped",
       "source_id": "ibm-plex-sans-thai-looped",
       "group": "dialogue",
@@ -2163,10 +2175,10 @@
       "license": "licenses/ibm-plex-sans-thai-looped-OFL.txt",
       "variants": [
         {
-          "file": "MangaX-ibm-plex-sans-thai-looped-100-normal.ttf",
+          "file": "ibm-plex-sans-thai-looped-100-normal.ttf",
           "weight": 100,
           "italic": false,
-          "sha256": "ebac272937c6e85cb07b06b215c099d5f0205362c9df6b22cfaff0bc62b00475",
+          "sha256": "9db244e586a5d951b9e86cfdc48c2d39553fe8fdc75d9fea4d57c438a956c83b",
           "sources": [
             {
               "file": "ibm-plex-sans-thai-looped-thai-100-normal.woff2",
@@ -2183,10 +2195,10 @@
           ]
         },
         {
-          "file": "MangaX-ibm-plex-sans-thai-looped-200-normal.ttf",
+          "file": "ibm-plex-sans-thai-looped-200-normal.ttf",
           "weight": 200,
           "italic": false,
-          "sha256": "0f3455d29f134f24816321876d74e6d1f5f922d57ea378fd3022bf2cbbd13dd9",
+          "sha256": "e370620e77a2200ecd2dc4d14faf632904af5f3dc8d09ab9b67509e852b50ff1",
           "sources": [
             {
               "file": "ibm-plex-sans-thai-looped-thai-200-normal.woff2",
@@ -2203,10 +2215,10 @@
           ]
         },
         {
-          "file": "MangaX-ibm-plex-sans-thai-looped-300-normal.ttf",
+          "file": "ibm-plex-sans-thai-looped-300-normal.ttf",
           "weight": 300,
           "italic": false,
-          "sha256": "575047e00e5ad482d75d939e99170a5c52bb0f2f2e2f0b34a2755fc3dffc534e",
+          "sha256": "f500f902a91e1230003491dd586206636ac0f9a07f9d16ad2eda324516c24efb",
           "sources": [
             {
               "file": "ibm-plex-sans-thai-looped-thai-300-normal.woff2",
@@ -2223,10 +2235,10 @@
           ]
         },
         {
-          "file": "MangaX-ibm-plex-sans-thai-looped-400-normal.ttf",
+          "file": "ibm-plex-sans-thai-looped-400-normal.ttf",
           "weight": 400,
           "italic": false,
-          "sha256": "60ebaa021a9a5f79356ee0a684e28eb8985ce30138c0cf466745ffdb30f8fd4f",
+          "sha256": "1e81464928475b84cad18609f4910ff444e92dda8626b2e19bf4d44cea6fe53b",
           "sources": [
             {
               "file": "ibm-plex-sans-thai-looped-thai-400-normal.woff2",
@@ -2243,10 +2255,10 @@
           ]
         },
         {
-          "file": "MangaX-ibm-plex-sans-thai-looped-500-normal.ttf",
+          "file": "ibm-plex-sans-thai-looped-500-normal.ttf",
           "weight": 500,
           "italic": false,
-          "sha256": "eaee38722b6e99b76dd719fa459c7949c1be3e67afbaae8ad33ef06f6a6d0cff",
+          "sha256": "50abaaa62bce9311341f8a74f7291a78e45824cdba281013a6040940ff526187",
           "sources": [
             {
               "file": "ibm-plex-sans-thai-looped-thai-500-normal.woff2",
@@ -2263,10 +2275,10 @@
           ]
         },
         {
-          "file": "MangaX-ibm-plex-sans-thai-looped-600-normal.ttf",
+          "file": "ibm-plex-sans-thai-looped-600-normal.ttf",
           "weight": 600,
           "italic": false,
-          "sha256": "c4003fedb237331f65877dd26a97bb494cc1a02090e76d241424214750daa8e7",
+          "sha256": "72c9aa66f7aaa8858f5ea0bec471c952e9e758df2a095c2924772c959423f85f",
           "sources": [
             {
               "file": "ibm-plex-sans-thai-looped-thai-600-normal.woff2",
@@ -2283,10 +2295,10 @@
           ]
         },
         {
-          "file": "MangaX-ibm-plex-sans-thai-looped-700-normal.ttf",
+          "file": "ibm-plex-sans-thai-looped-700-normal.ttf",
           "weight": 700,
           "italic": false,
-          "sha256": "123b1b30af5f23d42b3b672047628fbff65b36ff5c26fc79ceee5aa615ba83a4",
+          "sha256": "dbc36792e8ae4370b930d083fb291b877462cb753304daa288a6b77eb2cf1f25",
           "sources": [
             {
               "file": "ibm-plex-sans-thai-looped-thai-700-normal.woff2",
@@ -2302,10 +2314,11 @@
             }
           ]
         }
-      ]
+      ],
+      "previous_family": "MangaX IBM Plex Sans Thai Looped"
     },
     {
-      "family": "MangaX Itim",
+      "family": "Itim",
       "original_family": "Itim",
       "source_id": "itim",
       "group": "hand",
@@ -2313,10 +2326,10 @@
       "license": "licenses/itim-OFL.txt",
       "variants": [
         {
-          "file": "MangaX-itim-400-normal.ttf",
+          "file": "itim-400-normal.ttf",
           "weight": 400,
           "italic": false,
-          "sha256": "aa975ce1429799160bda769e37b1828bf12523647c2889499a2299ae48af235e",
+          "sha256": "6dc47855813dd68d2e306067fc4df92a5d9fc70a13567f8345ef8e447c2bb0f3",
           "sources": [
             {
               "file": "itim-thai-400-normal.woff2",
@@ -2332,10 +2345,11 @@
             }
           ]
         }
-      ]
+      ],
+      "previous_family": "MangaX Itim"
     },
     {
-      "family": "MangaX K2D",
+      "family": "K2D",
       "original_family": "K2D",
       "source_id": "k2d",
       "group": "effect",
@@ -2343,10 +2357,10 @@
       "license": "licenses/k2d-OFL.txt",
       "variants": [
         {
-          "file": "MangaX-k2d-100-normal.ttf",
+          "file": "k2d-100-normal.ttf",
           "weight": 100,
           "italic": false,
-          "sha256": "52889f6c379db34ddc115b0ad12127126a1a6a11084dbf7d02609f091a86cc45",
+          "sha256": "7d98c3aa0654adb81d9b2d58d5c80e7641b1b2eec7e084e2d6092c2c87582e25",
           "sources": [
             {
               "file": "k2d-thai-100-normal.woff2",
@@ -2363,10 +2377,10 @@
           ]
         },
         {
-          "file": "MangaX-k2d-100-italic.ttf",
+          "file": "k2d-100-italic.ttf",
           "weight": 100,
           "italic": true,
-          "sha256": "b640f92134c2cb45c666e8b1681fa9378bf9adc26477b5b021fed9dba3b1fb30",
+          "sha256": "a522ae0f528acc39678c6b47c0e69d0f5a552f0065b075176af25ea1c4c458d8",
           "sources": [
             {
               "file": "k2d-thai-100-italic.woff2",
@@ -2383,10 +2397,10 @@
           ]
         },
         {
-          "file": "MangaX-k2d-200-normal.ttf",
+          "file": "k2d-200-normal.ttf",
           "weight": 200,
           "italic": false,
-          "sha256": "4aef2a7e07859638caaad55359f401030ba5c25e96d6b2715c0d81ebd40795b9",
+          "sha256": "3fb9c9a83000299b3f3780fa429dd1ce84cfe7e13b70b534cbd3654bfa8090d4",
           "sources": [
             {
               "file": "k2d-thai-200-normal.woff2",
@@ -2403,10 +2417,10 @@
           ]
         },
         {
-          "file": "MangaX-k2d-200-italic.ttf",
+          "file": "k2d-200-italic.ttf",
           "weight": 200,
           "italic": true,
-          "sha256": "8871dacbafe06956ad5107e469880f805f1c390fe5988a4d5bc8d8845444872a",
+          "sha256": "83afd6b10475503000400b6f8caf95587b18c0252cd76f6e4dbe5ad7e1e96519",
           "sources": [
             {
               "file": "k2d-thai-200-italic.woff2",
@@ -2423,10 +2437,10 @@
           ]
         },
         {
-          "file": "MangaX-k2d-300-normal.ttf",
+          "file": "k2d-300-normal.ttf",
           "weight": 300,
           "italic": false,
-          "sha256": "1e02a59d3a22b2986225504239185f0d30dea1418626867a81aae635f6d476d4",
+          "sha256": "b53a6eefc069084e291fc1a774966a230944eb8b4d7250144d7c19e3b8cf9721",
           "sources": [
             {
               "file": "k2d-thai-300-normal.woff2",
@@ -2443,10 +2457,10 @@
           ]
         },
         {
-          "file": "MangaX-k2d-300-italic.ttf",
+          "file": "k2d-300-italic.ttf",
           "weight": 300,
           "italic": true,
-          "sha256": "4f22b2359d05768eff89ffd54f2b6d12b994681042f0fc1cc17d6e3844d01c43",
+          "sha256": "6f2de697072acac216304272e74c88d23270a44f6950be64f921905878219f59",
           "sources": [
             {
               "file": "k2d-thai-300-italic.woff2",
@@ -2463,10 +2477,10 @@
           ]
         },
         {
-          "file": "MangaX-k2d-400-normal.ttf",
+          "file": "k2d-400-normal.ttf",
           "weight": 400,
           "italic": false,
-          "sha256": "733640932965e01407db920701ec55723d39a787d6598692eedcf8adf9bfcc5f",
+          "sha256": "69d2a984a76acee74f31b0665f474fa6fb583dd39f2e124a5b21184dbdcabe7a",
           "sources": [
             {
               "file": "k2d-thai-400-normal.woff2",
@@ -2483,10 +2497,10 @@
           ]
         },
         {
-          "file": "MangaX-k2d-400-italic.ttf",
+          "file": "k2d-400-italic.ttf",
           "weight": 400,
           "italic": true,
-          "sha256": "b36b842d1f55ab77ccabd8d9aae4ff40a4b2c965f36147b40f3ad7364c02f2a6",
+          "sha256": "3c898cb8889607c1f42303756a265c5cd4db6ad9da28393286cb621fad858e5f",
           "sources": [
             {
               "file": "k2d-thai-400-italic.woff2",
@@ -2503,10 +2517,10 @@
           ]
         },
         {
-          "file": "MangaX-k2d-500-normal.ttf",
+          "file": "k2d-500-normal.ttf",
           "weight": 500,
           "italic": false,
-          "sha256": "cd9dd8f27c9323993e1e4257a52832ccf9dc87c0649ecc536eb531d4dc7f7ee5",
+          "sha256": "e43bf0f78a5effd6c6ce9146ec45969e83eb9b079295edfcee900c69a5eddc92",
           "sources": [
             {
               "file": "k2d-thai-500-normal.woff2",
@@ -2523,10 +2537,10 @@
           ]
         },
         {
-          "file": "MangaX-k2d-500-italic.ttf",
+          "file": "k2d-500-italic.ttf",
           "weight": 500,
           "italic": true,
-          "sha256": "616affc9e72a21d1b3d9fbffa87f01054ff32192d6b49c2382266d360e9f6586",
+          "sha256": "e165d1b241ff7b5f80b3d568ee44360617f52dc9d53591456ca7ffd7a3d46995",
           "sources": [
             {
               "file": "k2d-thai-500-italic.woff2",
@@ -2543,10 +2557,10 @@
           ]
         },
         {
-          "file": "MangaX-k2d-600-normal.ttf",
+          "file": "k2d-600-normal.ttf",
           "weight": 600,
           "italic": false,
-          "sha256": "f9a0db5e57bb0462c4d8a4066460583a7ad195a68d000c680e60e3115f168742",
+          "sha256": "0d455f8353c8ccf721f6c724593212b834e9f314f426b53a644566c5bcbeca34",
           "sources": [
             {
               "file": "k2d-thai-600-normal.woff2",
@@ -2563,10 +2577,10 @@
           ]
         },
         {
-          "file": "MangaX-k2d-600-italic.ttf",
+          "file": "k2d-600-italic.ttf",
           "weight": 600,
           "italic": true,
-          "sha256": "1d0af4818f1eba7a0beb6bbd53ad95f7360d89fa49588cdf064b7f2475f8b42b",
+          "sha256": "82d544e0f0d0526ad18ee8b5fb33fc85a6b90bfacb615f05d3e5614c45213925",
           "sources": [
             {
               "file": "k2d-thai-600-italic.woff2",
@@ -2583,10 +2597,10 @@
           ]
         },
         {
-          "file": "MangaX-k2d-700-normal.ttf",
+          "file": "k2d-700-normal.ttf",
           "weight": 700,
           "italic": false,
-          "sha256": "225131d8c48347ad61e26a573d133f037994cd3c9cb9c401124862164a1860fc",
+          "sha256": "4d6c4fd76a280919aa64ac091fdd58634c46a7388c65742fdfecf7371198db9a",
           "sources": [
             {
               "file": "k2d-thai-700-normal.woff2",
@@ -2603,10 +2617,10 @@
           ]
         },
         {
-          "file": "MangaX-k2d-700-italic.ttf",
+          "file": "k2d-700-italic.ttf",
           "weight": 700,
           "italic": true,
-          "sha256": "6d281c06e1f1cca54a99223dcd9861fbaff032b4a9f799eb36f023c2194dc575",
+          "sha256": "f1e627d9787b2a206ae7a1f1a00c04f01c5d04b6fffc6595fc3ff5d724dc48b0",
           "sources": [
             {
               "file": "k2d-thai-700-italic.woff2",
@@ -2623,10 +2637,10 @@
           ]
         },
         {
-          "file": "MangaX-k2d-800-normal.ttf",
+          "file": "k2d-800-normal.ttf",
           "weight": 800,
           "italic": false,
-          "sha256": "bb98c2a467d36a823f3b25d0b4d563378e7b207a8e7fd2c36b4c8943eeda4496",
+          "sha256": "4e7e95eec88af7ab7f00d5b397850e288c25e2d2f32202aba0b090158581b7f2",
           "sources": [
             {
               "file": "k2d-thai-800-normal.woff2",
@@ -2643,10 +2657,10 @@
           ]
         },
         {
-          "file": "MangaX-k2d-800-italic.ttf",
+          "file": "k2d-800-italic.ttf",
           "weight": 800,
           "italic": true,
-          "sha256": "790438de3a081481a1f231c79a475a7a09810c5ec454ea8a13cbbc760159215c",
+          "sha256": "37461fc4b1d2bac21ad19fff9a9b24bd4e70eea9037c794b4882c9577b9ed96a",
           "sources": [
             {
               "file": "k2d-thai-800-italic.woff2",
@@ -2662,10 +2676,11 @@
             }
           ]
         }
-      ]
+      ],
+      "previous_family": "MangaX K2D"
     },
     {
-      "family": "MangaX Kanit",
+      "family": "Kanit",
       "original_family": "Kanit",
       "source_id": "kanit",
       "group": "effect",
@@ -2673,10 +2688,10 @@
       "license": "licenses/kanit-OFL.txt",
       "variants": [
         {
-          "file": "MangaX-kanit-100-normal.ttf",
+          "file": "kanit-100-normal.ttf",
           "weight": 100,
           "italic": false,
-          "sha256": "476dde05e97f1ae248ea64c3f75f18be746f3da856432dad7206228071b0af60",
+          "sha256": "07673fca99317de3ccb52ba22db87580ee0b3b5a0d8aecd9b3fae346e0e11690",
           "sources": [
             {
               "file": "kanit-thai-100-normal.woff2",
@@ -2693,10 +2708,10 @@
           ]
         },
         {
-          "file": "MangaX-kanit-100-italic.ttf",
+          "file": "kanit-100-italic.ttf",
           "weight": 100,
           "italic": true,
-          "sha256": "e733757756e01a896c8d0b4a5e23bf0f286acad7c58984c70c074fdbc07297e8",
+          "sha256": "bfc8633e3779c0b41599a2f5b207a7d2703f4f13a0fc5b3e66d53b00b605d54a",
           "sources": [
             {
               "file": "kanit-thai-100-italic.woff2",
@@ -2713,10 +2728,10 @@
           ]
         },
         {
-          "file": "MangaX-kanit-200-normal.ttf",
+          "file": "kanit-200-normal.ttf",
           "weight": 200,
           "italic": false,
-          "sha256": "e8a30a8f0fb32e0bc803b8bdc50c44c2325dcebba9414e69ca87d9b295d212b9",
+          "sha256": "6c2679848f370c407af1f5faf458dc7a65005340deab15595b65da1240908e86",
           "sources": [
             {
               "file": "kanit-thai-200-normal.woff2",
@@ -2733,10 +2748,10 @@
           ]
         },
         {
-          "file": "MangaX-kanit-200-italic.ttf",
+          "file": "kanit-200-italic.ttf",
           "weight": 200,
           "italic": true,
-          "sha256": "c4e9a280c50883608d75439ee620bad531688c74eab7cc4c09dfa419845fa050",
+          "sha256": "a762a0605ba4271d97b34e24f3db776bd51326c5e336e51e697b014d5505c0d7",
           "sources": [
             {
               "file": "kanit-thai-200-italic.woff2",
@@ -2753,10 +2768,10 @@
           ]
         },
         {
-          "file": "MangaX-kanit-300-normal.ttf",
+          "file": "kanit-300-normal.ttf",
           "weight": 300,
           "italic": false,
-          "sha256": "47b3b1e429f028d892ddb6431f881c688b384750f956f36e77673054deb039b0",
+          "sha256": "7ae874aa0883c073b51f170b485867f00780eaf95c8a735a3b7fc7486cb3acdb",
           "sources": [
             {
               "file": "kanit-thai-300-normal.woff2",
@@ -2773,10 +2788,10 @@
           ]
         },
         {
-          "file": "MangaX-kanit-300-italic.ttf",
+          "file": "kanit-300-italic.ttf",
           "weight": 300,
           "italic": true,
-          "sha256": "db9d2eeb77e8641ba5b15dd2efc2cb8c6b93aa6bb3720217a1ff44adfd79c2bd",
+          "sha256": "abc2a1cda8716571f282f9208da456e2630d4f81e9f142f7a1fd044619f37cee",
           "sources": [
             {
               "file": "kanit-thai-300-italic.woff2",
@@ -2793,10 +2808,10 @@
           ]
         },
         {
-          "file": "MangaX-kanit-400-normal.ttf",
+          "file": "kanit-400-normal.ttf",
           "weight": 400,
           "italic": false,
-          "sha256": "f1a11cf68ece9bca40841cb11a0e0365c5c7e2347c2bbbafe7f029d07e9e721c",
+          "sha256": "4ddb238f964a5d2af6fa8c473b66650ec9437b64e8ac8b7d6544c6e169537a43",
           "sources": [
             {
               "file": "kanit-thai-400-normal.woff2",
@@ -2813,10 +2828,10 @@
           ]
         },
         {
-          "file": "MangaX-kanit-400-italic.ttf",
+          "file": "kanit-400-italic.ttf",
           "weight": 400,
           "italic": true,
-          "sha256": "bd96cf939f4ea913b373542a6b32dea77271901aa54a2dbbc6ab614a8d0152e6",
+          "sha256": "e5de54b8208493a7111df063b6a85b49dafc44536ce6815a5c006e0218c9b394",
           "sources": [
             {
               "file": "kanit-thai-400-italic.woff2",
@@ -2833,10 +2848,10 @@
           ]
         },
         {
-          "file": "MangaX-kanit-500-normal.ttf",
+          "file": "kanit-500-normal.ttf",
           "weight": 500,
           "italic": false,
-          "sha256": "6f0340ec318f3a73844bdb84ac847d973a3df509ff792d007c68d0b72aafc18f",
+          "sha256": "2e7112978bb566230627366d2f89c3c2745815ff358f97225d6421e9268f7c22",
           "sources": [
             {
               "file": "kanit-thai-500-normal.woff2",
@@ -2853,10 +2868,10 @@
           ]
         },
         {
-          "file": "MangaX-kanit-500-italic.ttf",
+          "file": "kanit-500-italic.ttf",
           "weight": 500,
           "italic": true,
-          "sha256": "4a385be8ffe459aa0bbb6406d9f787ccc2de67705e2cab880f230b8ccb737a48",
+          "sha256": "d18018e0b7b3796085ad8a4d9554375930ddb369c592a9b3894d82524e309754",
           "sources": [
             {
               "file": "kanit-thai-500-italic.woff2",
@@ -2873,10 +2888,10 @@
           ]
         },
         {
-          "file": "MangaX-kanit-600-normal.ttf",
+          "file": "kanit-600-normal.ttf",
           "weight": 600,
           "italic": false,
-          "sha256": "3a228cc1833284c76cbed8b0d9fbcf08c594d6d6ffbcdf0e1a395b97eaa10f17",
+          "sha256": "1ff619866f78451e05cab4757605be51a1f3d298025e890c69137fa1a8f69c52",
           "sources": [
             {
               "file": "kanit-thai-600-normal.woff2",
@@ -2893,10 +2908,10 @@
           ]
         },
         {
-          "file": "MangaX-kanit-600-italic.ttf",
+          "file": "kanit-600-italic.ttf",
           "weight": 600,
           "italic": true,
-          "sha256": "b91f4e8a09f1bd5c7165c0f62c9e88e39f2c7e6333d11fa26f3aa46b65b847c1",
+          "sha256": "480b08cf9280d37683f1b97235e521a547ece36e1a66b7e1d9b915ad87d1592d",
           "sources": [
             {
               "file": "kanit-thai-600-italic.woff2",
@@ -2913,10 +2928,10 @@
           ]
         },
         {
-          "file": "MangaX-kanit-700-normal.ttf",
+          "file": "kanit-700-normal.ttf",
           "weight": 700,
           "italic": false,
-          "sha256": "7c904762cbf33cc00dc3b71b5bb7c62dc111f2e23cf66f2a07752b936c037d67",
+          "sha256": "d2c51349f228ffb9e0c6aaf9be398eaa4d234b5d2d98f06a6c661ffc7613ce7e",
           "sources": [
             {
               "file": "kanit-thai-700-normal.woff2",
@@ -2933,10 +2948,10 @@
           ]
         },
         {
-          "file": "MangaX-kanit-700-italic.ttf",
+          "file": "kanit-700-italic.ttf",
           "weight": 700,
           "italic": true,
-          "sha256": "67e19a16a875080c0f3112a61901394ec3746210b9e20c2a1fc7149ca977ac07",
+          "sha256": "93d0f01379930fe155eddd7dd60c8bd4482c97fb2dd46a9682121398bba9becd",
           "sources": [
             {
               "file": "kanit-thai-700-italic.woff2",
@@ -2953,10 +2968,10 @@
           ]
         },
         {
-          "file": "MangaX-kanit-800-normal.ttf",
+          "file": "kanit-800-normal.ttf",
           "weight": 800,
           "italic": false,
-          "sha256": "82d1497ffe9bb1537c2e132eb06e9362ab749cd80c7080d88734462546d304e7",
+          "sha256": "37146ff9cc5bbebfe6e269c9e6abd00600c2d5bcf105cfb70401e4ddec6efae4",
           "sources": [
             {
               "file": "kanit-thai-800-normal.woff2",
@@ -2973,10 +2988,10 @@
           ]
         },
         {
-          "file": "MangaX-kanit-800-italic.ttf",
+          "file": "kanit-800-italic.ttf",
           "weight": 800,
           "italic": true,
-          "sha256": "a96015d742113058565834f84829d71344398cded1b68dd998fcf97ae0115dbb",
+          "sha256": "bef4c6f3b8e31f230d06b16fa3266c7c7b9f9fd77cc40b4d9d07649898cad744",
           "sources": [
             {
               "file": "kanit-thai-800-italic.woff2",
@@ -2993,10 +3008,10 @@
           ]
         },
         {
-          "file": "MangaX-kanit-900-normal.ttf",
+          "file": "kanit-900-normal.ttf",
           "weight": 900,
           "italic": false,
-          "sha256": "6935301b4eb83d9694d5bb1edf9f0936f0fa3d85c4cdaf0555814dd2c18ec437",
+          "sha256": "9ad09c291db7a5d9d8de5edfb3709e3fca6188eff49893f66ed0ab8b494dd803",
           "sources": [
             {
               "file": "kanit-thai-900-normal.woff2",
@@ -3013,10 +3028,10 @@
           ]
         },
         {
-          "file": "MangaX-kanit-900-italic.ttf",
+          "file": "kanit-900-italic.ttf",
           "weight": 900,
           "italic": true,
-          "sha256": "3a5523c6fc07e460d7c9e0b2c4bb9177bd5ff176a6b3bbb58a344c1f9d4fe684",
+          "sha256": "66c1ed917faa26d175cabae36212847cd70b8acd4ecf6f789f12757c8b79ac6d",
           "sources": [
             {
               "file": "kanit-thai-900-italic.woff2",
@@ -3032,10 +3047,11 @@
             }
           ]
         }
-      ]
+      ],
+      "previous_family": "MangaX Kanit"
     },
     {
-      "family": "MangaX Kodchasan",
+      "family": "Kodchasan",
       "original_family": "Kodchasan",
       "source_id": "kodchasan",
       "group": "dialogue",
@@ -3043,10 +3059,10 @@
       "license": "licenses/kodchasan-OFL.txt",
       "variants": [
         {
-          "file": "MangaX-kodchasan-200-normal.ttf",
+          "file": "kodchasan-200-normal.ttf",
           "weight": 200,
           "italic": false,
-          "sha256": "96dc9da3bb83173a9e41105c7c790f15d3ec472638bfc221a93478c54b47dce0",
+          "sha256": "d215dedb0429afdbd54c5e497b57b79b2e9a30d2c76373462cc8a71e5b224e22",
           "sources": [
             {
               "file": "kodchasan-thai-200-normal.woff2",
@@ -3063,10 +3079,10 @@
           ]
         },
         {
-          "file": "MangaX-kodchasan-200-italic.ttf",
+          "file": "kodchasan-200-italic.ttf",
           "weight": 200,
           "italic": true,
-          "sha256": "f92572043bc29bc5f78312e7cfea8d1b73289b4478b56c7ab967e88e28531076",
+          "sha256": "5f2415280f0bc460c39cffafe4850eae4206b8903915fa96e77daada422b9f20",
           "sources": [
             {
               "file": "kodchasan-thai-200-italic.woff2",
@@ -3083,10 +3099,10 @@
           ]
         },
         {
-          "file": "MangaX-kodchasan-300-normal.ttf",
+          "file": "kodchasan-300-normal.ttf",
           "weight": 300,
           "italic": false,
-          "sha256": "1c3c99b90c22ea7f0f97301a5024dc3f7bcb6e987c7f7b7867e65e902f5f5a3a",
+          "sha256": "e9fc3cff16d182e2089557d9ea29f5f071e7faa85dee5cd8e60f1a3654850e03",
           "sources": [
             {
               "file": "kodchasan-thai-300-normal.woff2",
@@ -3103,10 +3119,10 @@
           ]
         },
         {
-          "file": "MangaX-kodchasan-300-italic.ttf",
+          "file": "kodchasan-300-italic.ttf",
           "weight": 300,
           "italic": true,
-          "sha256": "8727a3048f042a8c513b0d93b67bbfbb201e1071ca676908ce1833bb92835c47",
+          "sha256": "8c16e08eb5f67ea0cb6b0bd65eed1ccdc04247149c1387ad4018cc4c99278cc9",
           "sources": [
             {
               "file": "kodchasan-thai-300-italic.woff2",
@@ -3123,10 +3139,10 @@
           ]
         },
         {
-          "file": "MangaX-kodchasan-400-normal.ttf",
+          "file": "kodchasan-400-normal.ttf",
           "weight": 400,
           "italic": false,
-          "sha256": "56945a0030927e5da34091bb50cfac709efdb8fb0ea7c11133c3f60ac9801978",
+          "sha256": "b280f9ce0b012255d2b2cabea66c185bfa3bb961429b1b760df83359c88ccf25",
           "sources": [
             {
               "file": "kodchasan-thai-400-normal.woff2",
@@ -3143,10 +3159,10 @@
           ]
         },
         {
-          "file": "MangaX-kodchasan-400-italic.ttf",
+          "file": "kodchasan-400-italic.ttf",
           "weight": 400,
           "italic": true,
-          "sha256": "eefbff35c2e42951b9ba9f47579ff3b303af93024e762b64a971564c2be8a2bc",
+          "sha256": "ee107034ea658042bbb6dd573bf454c0a01076f06eefb255a2d976504e4a3b0c",
           "sources": [
             {
               "file": "kodchasan-thai-400-italic.woff2",
@@ -3163,10 +3179,10 @@
           ]
         },
         {
-          "file": "MangaX-kodchasan-500-normal.ttf",
+          "file": "kodchasan-500-normal.ttf",
           "weight": 500,
           "italic": false,
-          "sha256": "7e32c89cf3eda5a887ad9ee363a01d8b408cf9ffe0b4c6ef310a6d5da0b34ef9",
+          "sha256": "7bc58814da8ccf7de33e9a2c791e16e96164e1f62407068ea6b64ab946996b8d",
           "sources": [
             {
               "file": "kodchasan-thai-500-normal.woff2",
@@ -3183,10 +3199,10 @@
           ]
         },
         {
-          "file": "MangaX-kodchasan-500-italic.ttf",
+          "file": "kodchasan-500-italic.ttf",
           "weight": 500,
           "italic": true,
-          "sha256": "f3dac44f63e6828c4a7e7070c625b54e444597c3ba8ef0e7ea69c271e0367e2d",
+          "sha256": "16076c74a1a43b53b39ea792a3bc7f09e49dec5e58b4b3ef12b0e505ddeeac55",
           "sources": [
             {
               "file": "kodchasan-thai-500-italic.woff2",
@@ -3203,10 +3219,10 @@
           ]
         },
         {
-          "file": "MangaX-kodchasan-600-normal.ttf",
+          "file": "kodchasan-600-normal.ttf",
           "weight": 600,
           "italic": false,
-          "sha256": "7a1891b3ba8292bad031c0f193d009ad31e2cec5ea81267830d561d2730bdfbc",
+          "sha256": "e5071332f3ee1a27e909d4b015a76fa5b88aa7b21d5e7836137aa672b90c867e",
           "sources": [
             {
               "file": "kodchasan-thai-600-normal.woff2",
@@ -3223,10 +3239,10 @@
           ]
         },
         {
-          "file": "MangaX-kodchasan-600-italic.ttf",
+          "file": "kodchasan-600-italic.ttf",
           "weight": 600,
           "italic": true,
-          "sha256": "4dbedcec2a4736fcd428146533585803219410fa3759e3823f083a532b760019",
+          "sha256": "7260b0717d19f9043e79204e1d879e139526f2d4f8a4da7350d488105ac61afe",
           "sources": [
             {
               "file": "kodchasan-thai-600-italic.woff2",
@@ -3243,10 +3259,10 @@
           ]
         },
         {
-          "file": "MangaX-kodchasan-700-normal.ttf",
+          "file": "kodchasan-700-normal.ttf",
           "weight": 700,
           "italic": false,
-          "sha256": "841a1e4b1e6fde4e088d7a19d0b54a21a7650a8b757ba02cb324d79098e52aff",
+          "sha256": "87a74ee90ece24d4e1fb9956c27b57f4a68ff1083ce3995812c49ee8a1e34bee",
           "sources": [
             {
               "file": "kodchasan-thai-700-normal.woff2",
@@ -3263,10 +3279,10 @@
           ]
         },
         {
-          "file": "MangaX-kodchasan-700-italic.ttf",
+          "file": "kodchasan-700-italic.ttf",
           "weight": 700,
           "italic": true,
-          "sha256": "ce3c717950d8c90427ff4e0e34c9608e07b0ece3238d81cb84ca43fd3592d3a3",
+          "sha256": "54a78ec8bcf67d6a00ab233dd52a872eb626ee0edaadefaab827c813fcfb5050",
           "sources": [
             {
               "file": "kodchasan-thai-700-italic.woff2",
@@ -3282,10 +3298,11 @@
             }
           ]
         }
-      ]
+      ],
+      "previous_family": "MangaX Kodchasan"
     },
     {
-      "family": "MangaX KoHo",
+      "family": "KoHo",
       "original_family": "KoHo",
       "source_id": "koho",
       "group": "dialogue",
@@ -3293,10 +3310,10 @@
       "license": "licenses/koho-OFL.txt",
       "variants": [
         {
-          "file": "MangaX-koho-200-normal.ttf",
+          "file": "koho-200-normal.ttf",
           "weight": 200,
           "italic": false,
-          "sha256": "f1af1350b939cb9bd28d0efde623ac3e20ba18136afec982d479ddf41e9ccc3b",
+          "sha256": "d0c81d70d37e3ef0da83d1dee51f4fc095fede49bf996f245f434deee8ed3795",
           "sources": [
             {
               "file": "koho-thai-200-normal.woff2",
@@ -3313,10 +3330,10 @@
           ]
         },
         {
-          "file": "MangaX-koho-200-italic.ttf",
+          "file": "koho-200-italic.ttf",
           "weight": 200,
           "italic": true,
-          "sha256": "c4854283b1d5bdb62c4348ce1f25960f26899621fe38bea0e889a2496b19a083",
+          "sha256": "12992149896664346439e829f293be11c808cf55d95094fbee5f57e43b9bba74",
           "sources": [
             {
               "file": "koho-thai-200-italic.woff2",
@@ -3333,10 +3350,10 @@
           ]
         },
         {
-          "file": "MangaX-koho-300-normal.ttf",
+          "file": "koho-300-normal.ttf",
           "weight": 300,
           "italic": false,
-          "sha256": "0c4a4b0d5d58bf684b8f2d8cfaa0b597e49ed2d1704c0d25d09b2ab8668edcf7",
+          "sha256": "e4f9a99131091927ded18b697f95167d09efe6c117cfdd20af7932bc5001603f",
           "sources": [
             {
               "file": "koho-thai-300-normal.woff2",
@@ -3353,10 +3370,10 @@
           ]
         },
         {
-          "file": "MangaX-koho-300-italic.ttf",
+          "file": "koho-300-italic.ttf",
           "weight": 300,
           "italic": true,
-          "sha256": "6d5976b5ded15e832ab3b8dc68524749b56a708033e50c2e41c108c344de77fc",
+          "sha256": "4a5cc60754ee990c80fc75bc93214068fd12824881295f7972716ae6e705231b",
           "sources": [
             {
               "file": "koho-thai-300-italic.woff2",
@@ -3373,10 +3390,10 @@
           ]
         },
         {
-          "file": "MangaX-koho-400-normal.ttf",
+          "file": "koho-400-normal.ttf",
           "weight": 400,
           "italic": false,
-          "sha256": "2ea30a37245710040518af24ed798df50bcafd5a837d44129b9f266863128214",
+          "sha256": "e37f549ae7124331dfa27968f2320fad39c1ec289694634687b4c34e92ad6fca",
           "sources": [
             {
               "file": "koho-thai-400-normal.woff2",
@@ -3393,10 +3410,10 @@
           ]
         },
         {
-          "file": "MangaX-koho-400-italic.ttf",
+          "file": "koho-400-italic.ttf",
           "weight": 400,
           "italic": true,
-          "sha256": "1809f22df70743a4788045e93a6fe3230645d78539d2a2d423de07224036a5a6",
+          "sha256": "76ad2aafd4961f3878bee0cf8a6701da4ffae046905b46891e0a744db81c5f1b",
           "sources": [
             {
               "file": "koho-thai-400-italic.woff2",
@@ -3413,10 +3430,10 @@
           ]
         },
         {
-          "file": "MangaX-koho-500-normal.ttf",
+          "file": "koho-500-normal.ttf",
           "weight": 500,
           "italic": false,
-          "sha256": "cc077a4b21dae39543e3f93dff24586905be50e103526d0374b4b13c87f43f7f",
+          "sha256": "823aa9fa733eb4d809e3e8ad3734587c6c952fecdad624a3a88de38cb3a6de9c",
           "sources": [
             {
               "file": "koho-thai-500-normal.woff2",
@@ -3433,10 +3450,10 @@
           ]
         },
         {
-          "file": "MangaX-koho-500-italic.ttf",
+          "file": "koho-500-italic.ttf",
           "weight": 500,
           "italic": true,
-          "sha256": "bac91a93831d324f85582aff930dba0e8148ab8f7cd29094477bd9c6c532b71b",
+          "sha256": "3c881bc12868455b271a9654c511cf65e85346640c77e49bec1d3f13100fcf93",
           "sources": [
             {
               "file": "koho-thai-500-italic.woff2",
@@ -3453,10 +3470,10 @@
           ]
         },
         {
-          "file": "MangaX-koho-600-normal.ttf",
+          "file": "koho-600-normal.ttf",
           "weight": 600,
           "italic": false,
-          "sha256": "821e0c38fc3cf34c5f2ec30893974096f17c260f87f9d349a443ee7e797b52b1",
+          "sha256": "fa9373ce14c6641397815b0a2a57d5e30927ef4e63d6588e2ca6057811087fbe",
           "sources": [
             {
               "file": "koho-thai-600-normal.woff2",
@@ -3473,10 +3490,10 @@
           ]
         },
         {
-          "file": "MangaX-koho-600-italic.ttf",
+          "file": "koho-600-italic.ttf",
           "weight": 600,
           "italic": true,
-          "sha256": "cd4d13998ad6e655f3de22aadcbf9bca75cbe9cc651ef5fc793fc9a2324fc6bb",
+          "sha256": "b6f3fb30343651f49f586742849de66ba3b71c0702d09c95bcfdbcef860be1f2",
           "sources": [
             {
               "file": "koho-thai-600-italic.woff2",
@@ -3493,10 +3510,10 @@
           ]
         },
         {
-          "file": "MangaX-koho-700-normal.ttf",
+          "file": "koho-700-normal.ttf",
           "weight": 700,
           "italic": false,
-          "sha256": "c28a738734c368d93cfb31e93e3fd04b33241b107845665f7de1f452ffa54987",
+          "sha256": "e236111175fe0a06c5215b13364b619f8f8f0eb69c5249e1373bcc95aacedd65",
           "sources": [
             {
               "file": "koho-thai-700-normal.woff2",
@@ -3513,10 +3530,10 @@
           ]
         },
         {
-          "file": "MangaX-koho-700-italic.ttf",
+          "file": "koho-700-italic.ttf",
           "weight": 700,
           "italic": true,
-          "sha256": "774cc34faa8784719a750e11fa86fa889d876a7413dae90788d6eed9b5bd123c",
+          "sha256": "0a6a837e2743f33d4d29b27f56f8c1f2be11b50d51d25aaf5846761878acef43",
           "sources": [
             {
               "file": "koho-thai-700-italic.woff2",
@@ -3532,10 +3549,11 @@
             }
           ]
         }
-      ]
+      ],
+      "previous_family": "MangaX KoHo"
     },
     {
-      "family": "MangaX Krub",
+      "family": "Krub",
       "original_family": "Krub",
       "source_id": "krub",
       "group": "dialogue",
@@ -3543,10 +3561,10 @@
       "license": "licenses/krub-OFL.txt",
       "variants": [
         {
-          "file": "MangaX-krub-200-normal.ttf",
+          "file": "krub-200-normal.ttf",
           "weight": 200,
           "italic": false,
-          "sha256": "c59759ee78eaff47d9838be77f5a0e78c6a87684106ecdf10b7089202cc9d157",
+          "sha256": "d8a23982452e0e9629c7436f1a894475e6f7fb4eed3ef4f2f6ff0b2d5093a3a2",
           "sources": [
             {
               "file": "krub-thai-200-normal.woff2",
@@ -3563,10 +3581,10 @@
           ]
         },
         {
-          "file": "MangaX-krub-200-italic.ttf",
+          "file": "krub-200-italic.ttf",
           "weight": 200,
           "italic": true,
-          "sha256": "c3a773ebbd2306ff812ba951fcfa274577546737858d63f94bafe760be43de3c",
+          "sha256": "f31bc6495bde385d17dc887e82b1563269f6552848a9b8fe419374203b705bca",
           "sources": [
             {
               "file": "krub-thai-200-italic.woff2",
@@ -3583,10 +3601,10 @@
           ]
         },
         {
-          "file": "MangaX-krub-300-normal.ttf",
+          "file": "krub-300-normal.ttf",
           "weight": 300,
           "italic": false,
-          "sha256": "dab2fe6b4712a1caa53260dcb159afaabee7bf7e473075de0550a21d51f137ec",
+          "sha256": "e991b61fa9eb8ab12415c027b4fec6d7842f8c5b608a8536fa6acea4fa32c9dc",
           "sources": [
             {
               "file": "krub-thai-300-normal.woff2",
@@ -3603,10 +3621,10 @@
           ]
         },
         {
-          "file": "MangaX-krub-300-italic.ttf",
+          "file": "krub-300-italic.ttf",
           "weight": 300,
           "italic": true,
-          "sha256": "81e853b79358921d7871e24a40c34bab21af0d60d395522b9a778d78006195f2",
+          "sha256": "28a55dbf4222b45ca32a4a7c4a7f458e2f0d9dad22809fab82f21173abbe5a94",
           "sources": [
             {
               "file": "krub-thai-300-italic.woff2",
@@ -3623,10 +3641,10 @@
           ]
         },
         {
-          "file": "MangaX-krub-400-normal.ttf",
+          "file": "krub-400-normal.ttf",
           "weight": 400,
           "italic": false,
-          "sha256": "6a5583662e33b018d3190898c92329772144673908090e197f00be5dc5c6f4bc",
+          "sha256": "2bbfc5c99162135cde3ca566c7b897ef194172dcc59e890139a85a06e361364e",
           "sources": [
             {
               "file": "krub-thai-400-normal.woff2",
@@ -3643,10 +3661,10 @@
           ]
         },
         {
-          "file": "MangaX-krub-400-italic.ttf",
+          "file": "krub-400-italic.ttf",
           "weight": 400,
           "italic": true,
-          "sha256": "6c89a334f2a80acfed57f2af870fb7fe1708c401f36e6aa6a1c9a4d4134116ce",
+          "sha256": "9f4a4989a27f5af1e17365435cbe186b8593d04e786113aded257035e458a482",
           "sources": [
             {
               "file": "krub-thai-400-italic.woff2",
@@ -3663,10 +3681,10 @@
           ]
         },
         {
-          "file": "MangaX-krub-500-normal.ttf",
+          "file": "krub-500-normal.ttf",
           "weight": 500,
           "italic": false,
-          "sha256": "86ebbf4bb0458eacfc4f13d6faa0e69cd8f9078ed04f9710e9c177c3c5cd27ce",
+          "sha256": "47e07721ab1cab8f0053b8b3ec8b7255128e420c8ea4df257d42c6c38106b6ef",
           "sources": [
             {
               "file": "krub-thai-500-normal.woff2",
@@ -3683,10 +3701,10 @@
           ]
         },
         {
-          "file": "MangaX-krub-500-italic.ttf",
+          "file": "krub-500-italic.ttf",
           "weight": 500,
           "italic": true,
-          "sha256": "ddc577261f23f3fafc578e5c6b0e2ba865c64550dd77ddaa07359040c64ab7b6",
+          "sha256": "dee03d912c2458057a7ae68c3c6286e4ee3c254b23a9bcaa8721a900816a0b9e",
           "sources": [
             {
               "file": "krub-thai-500-italic.woff2",
@@ -3703,10 +3721,10 @@
           ]
         },
         {
-          "file": "MangaX-krub-600-normal.ttf",
+          "file": "krub-600-normal.ttf",
           "weight": 600,
           "italic": false,
-          "sha256": "97fabba82b9ca520e8d4a4da05bfb09358dc3a91e9ad3b4f73940326dc269758",
+          "sha256": "55e6189d20643f2707f7dbb30b4e893e8fa95b60be87317b6ef62896ef8c920d",
           "sources": [
             {
               "file": "krub-thai-600-normal.woff2",
@@ -3723,10 +3741,10 @@
           ]
         },
         {
-          "file": "MangaX-krub-600-italic.ttf",
+          "file": "krub-600-italic.ttf",
           "weight": 600,
           "italic": true,
-          "sha256": "6b79228d1e9b7f6ae474f401d20900c47bf1a2515dc5d47c73871300b50a1de6",
+          "sha256": "e1e28105170ac82a8ca3e950dbd198bbaa13c1e3413a0789ea28c3a07f1a1199",
           "sources": [
             {
               "file": "krub-thai-600-italic.woff2",
@@ -3743,10 +3761,10 @@
           ]
         },
         {
-          "file": "MangaX-krub-700-normal.ttf",
+          "file": "krub-700-normal.ttf",
           "weight": 700,
           "italic": false,
-          "sha256": "7b31032ec41fdb31e60d454458f32d99aa0e5810182f1a86f70c8f999eff581a",
+          "sha256": "c2fce6d52ce62cdd0f34cc97fc1670e7b3d8f456443fa69426ae5b643a031b58",
           "sources": [
             {
               "file": "krub-thai-700-normal.woff2",
@@ -3763,10 +3781,10 @@
           ]
         },
         {
-          "file": "MangaX-krub-700-italic.ttf",
+          "file": "krub-700-italic.ttf",
           "weight": 700,
           "italic": true,
-          "sha256": "6fd229a0fd503e89bba52b634a4afad3825fb50c7472a48bc0d741a236dd7481",
+          "sha256": "21320e80bea2815a4c27be2118c2d7fd7d301a77de87706eba0b7660e7a4bc12",
           "sources": [
             {
               "file": "krub-thai-700-italic.woff2",
@@ -3782,10 +3800,11 @@
             }
           ]
         }
-      ]
+      ],
+      "previous_family": "MangaX Krub"
     },
     {
-      "family": "MangaX Maitree",
+      "family": "Maitree",
       "original_family": "Maitree",
       "source_id": "maitree",
       "group": "story",
@@ -3793,10 +3812,10 @@
       "license": "licenses/maitree-OFL.txt",
       "variants": [
         {
-          "file": "MangaX-maitree-200-normal.ttf",
+          "file": "maitree-200-normal.ttf",
           "weight": 200,
           "italic": false,
-          "sha256": "f48419aee8ecd882944c58f56c42ca740fb323eb98ef4ef85b30d586e272a3a1",
+          "sha256": "8b36be276f1df295ffc0ff9e59acfdfc38653ccc988c0f890e5a42beb342f9dd",
           "sources": [
             {
               "file": "maitree-thai-200-normal.woff2",
@@ -3813,10 +3832,10 @@
           ]
         },
         {
-          "file": "MangaX-maitree-300-normal.ttf",
+          "file": "maitree-300-normal.ttf",
           "weight": 300,
           "italic": false,
-          "sha256": "b4906bfc75a1c7633fb750d033735c759a680741dc39e807dfa4caf007eab6e6",
+          "sha256": "9c1bb68cf308fb0d61e8cf01c0033429156f25436f42ff040476c1c7b783fccb",
           "sources": [
             {
               "file": "maitree-thai-300-normal.woff2",
@@ -3833,10 +3852,10 @@
           ]
         },
         {
-          "file": "MangaX-maitree-400-normal.ttf",
+          "file": "maitree-400-normal.ttf",
           "weight": 400,
           "italic": false,
-          "sha256": "f416d389ff575a22682adf8f8870ac5a6632e0977c22dac2fe0bf2ca69116ab7",
+          "sha256": "13bbe364b5e9b89a28268110a3f83a073afb04ae5f148d3a9de46cd6a2b3b389",
           "sources": [
             {
               "file": "maitree-thai-400-normal.woff2",
@@ -3853,10 +3872,10 @@
           ]
         },
         {
-          "file": "MangaX-maitree-500-normal.ttf",
+          "file": "maitree-500-normal.ttf",
           "weight": 500,
           "italic": false,
-          "sha256": "ead22d58976cd23157393732d1cf5a7b760320846aa63469a3bda143987a93a0",
+          "sha256": "b183cfbe9a114678b04c2344f1345176cafd9fce3e4488bcca0a61f4060243b7",
           "sources": [
             {
               "file": "maitree-thai-500-normal.woff2",
@@ -3873,10 +3892,10 @@
           ]
         },
         {
-          "file": "MangaX-maitree-600-normal.ttf",
+          "file": "maitree-600-normal.ttf",
           "weight": 600,
           "italic": false,
-          "sha256": "cda7e689faf6658a9e3e37f030c01688ef38fd6eaf2d57092a58066c2b6d6089",
+          "sha256": "b5451fa28740f5040c7ed36076a90bb7d26eb7e57279324bbd071d3edf9d6783",
           "sources": [
             {
               "file": "maitree-thai-600-normal.woff2",
@@ -3893,10 +3912,10 @@
           ]
         },
         {
-          "file": "MangaX-maitree-700-normal.ttf",
+          "file": "maitree-700-normal.ttf",
           "weight": 700,
           "italic": false,
-          "sha256": "f4792666ee57d1e77865d72a692cbff12db1f090d93a35ebe3c987200ef9aa23",
+          "sha256": "64bceeee867a794bb5399fd30ff5c31ea2358cab3e1cc15608f0fde9df40f347",
           "sources": [
             {
               "file": "maitree-thai-700-normal.woff2",
@@ -3912,10 +3931,11 @@
             }
           ]
         }
-      ]
+      ],
+      "previous_family": "MangaX Maitree"
     },
     {
-      "family": "MangaX Mali",
+      "family": "Mali",
       "original_family": "Mali",
       "source_id": "mali",
       "group": "hand",
@@ -3923,10 +3943,10 @@
       "license": "licenses/mali-OFL.txt",
       "variants": [
         {
-          "file": "MangaX-mali-200-normal.ttf",
+          "file": "mali-200-normal.ttf",
           "weight": 200,
           "italic": false,
-          "sha256": "7480f6a0d59ed489a7dc5f33ab7dd81253aca66ecdfae5acab223e0dd6ee4de1",
+          "sha256": "5d0782b41a35c884a13a8c6f8efeae181e59c3c8423c34b657710827ba98c572",
           "sources": [
             {
               "file": "mali-thai-200-normal.woff2",
@@ -3943,10 +3963,10 @@
           ]
         },
         {
-          "file": "MangaX-mali-200-italic.ttf",
+          "file": "mali-200-italic.ttf",
           "weight": 200,
           "italic": true,
-          "sha256": "c758f18c70b700555fbffcbb8120c3595603c684c5e6cb0b0ef48cc99bc38afd",
+          "sha256": "1bd3d3313496c7f675ea5db7c811d9d603537ef156c78d496cea9c82b2ee95b2",
           "sources": [
             {
               "file": "mali-thai-200-italic.woff2",
@@ -3963,10 +3983,10 @@
           ]
         },
         {
-          "file": "MangaX-mali-300-normal.ttf",
+          "file": "mali-300-normal.ttf",
           "weight": 300,
           "italic": false,
-          "sha256": "9261c0c2eb2249e5c80be9afbc5a1c65109b2f72dcc65c675f993728fe8e1166",
+          "sha256": "fb5ff522238b7afab7c4f2e2b02997435a9de07797482f8845aeb9e846fb2f9a",
           "sources": [
             {
               "file": "mali-thai-300-normal.woff2",
@@ -3983,10 +4003,10 @@
           ]
         },
         {
-          "file": "MangaX-mali-300-italic.ttf",
+          "file": "mali-300-italic.ttf",
           "weight": 300,
           "italic": true,
-          "sha256": "4aac9997a6459d4b8dcf7718c42ffc23a437bcb33561621cba13c798ee87485a",
+          "sha256": "71400e88770e8b81a9dadf09983f231aacbedd209215a901b21add1e76714c17",
           "sources": [
             {
               "file": "mali-thai-300-italic.woff2",
@@ -4003,10 +4023,10 @@
           ]
         },
         {
-          "file": "MangaX-mali-400-normal.ttf",
+          "file": "mali-400-normal.ttf",
           "weight": 400,
           "italic": false,
-          "sha256": "07a7122d9b4f2a3875f0bdfa96a67601ea6e7057e5a7ee7bcdcf9c5e85b444ef",
+          "sha256": "08ed4bbaffba241ab51a340d188893d5febc45ef27dd5f62822a84ce48b557a6",
           "sources": [
             {
               "file": "mali-thai-400-normal.woff2",
@@ -4023,10 +4043,10 @@
           ]
         },
         {
-          "file": "MangaX-mali-400-italic.ttf",
+          "file": "mali-400-italic.ttf",
           "weight": 400,
           "italic": true,
-          "sha256": "5a0b2c555b8ef0a40041e17e3bc5ba63f75bb869aa9fcba0ba8d66289dbebc0c",
+          "sha256": "49ca1bc9168dbe84bfc61af5fc3af07b2371a32560981b0ef3079ed4e3b2baae",
           "sources": [
             {
               "file": "mali-thai-400-italic.woff2",
@@ -4043,10 +4063,10 @@
           ]
         },
         {
-          "file": "MangaX-mali-500-normal.ttf",
+          "file": "mali-500-normal.ttf",
           "weight": 500,
           "italic": false,
-          "sha256": "50a1677a05b9b0477a0e1cf8a223eb44ee0a152a9d0d3d822ecbc2e68a818fe2",
+          "sha256": "b14e4e5f5a244e4ec2267a4e57e1a90d5ccd5b0d4e8b45e408a50d7f7fb5b92c",
           "sources": [
             {
               "file": "mali-thai-500-normal.woff2",
@@ -4063,10 +4083,10 @@
           ]
         },
         {
-          "file": "MangaX-mali-500-italic.ttf",
+          "file": "mali-500-italic.ttf",
           "weight": 500,
           "italic": true,
-          "sha256": "9142fada959dd15b1e5c9f413b6ee3f385101048c9642d6ae6e1e1c31295449e",
+          "sha256": "0bedee4dbc515918c6856f87ef0b1dc06632e21e987a37c125b13ecc6f82fd64",
           "sources": [
             {
               "file": "mali-thai-500-italic.woff2",
@@ -4083,10 +4103,10 @@
           ]
         },
         {
-          "file": "MangaX-mali-600-normal.ttf",
+          "file": "mali-600-normal.ttf",
           "weight": 600,
           "italic": false,
-          "sha256": "2256a6b38642015487cb15676258bd520e9d1186fb0c8c7766a08e15e55d8a8b",
+          "sha256": "82e7ea6bafd6d9efa3a7b70ba8e2ed8c909297039c0e90d0bc91eea5d95fede6",
           "sources": [
             {
               "file": "mali-thai-600-normal.woff2",
@@ -4103,10 +4123,10 @@
           ]
         },
         {
-          "file": "MangaX-mali-600-italic.ttf",
+          "file": "mali-600-italic.ttf",
           "weight": 600,
           "italic": true,
-          "sha256": "4d5dabced5cf38a2802392cafc9ebf3865614a9957ce11fc5c9ad1b598f84888",
+          "sha256": "751c89c3629e229032830fdbb5f0b3357aaa44f7dfa3f3d77596ff9a1ac46f9b",
           "sources": [
             {
               "file": "mali-thai-600-italic.woff2",
@@ -4123,10 +4143,10 @@
           ]
         },
         {
-          "file": "MangaX-mali-700-normal.ttf",
+          "file": "mali-700-normal.ttf",
           "weight": 700,
           "italic": false,
-          "sha256": "ea44ea176e1d9c4cc3a6ffaf3d0385694ae3668aaa2f6a08c813fd25d4385f79",
+          "sha256": "c39122c88b7d3213e835ca892c3efb103a7a531b85b4794ed79bf34adac3cf4f",
           "sources": [
             {
               "file": "mali-thai-700-normal.woff2",
@@ -4143,10 +4163,10 @@
           ]
         },
         {
-          "file": "MangaX-mali-700-italic.ttf",
+          "file": "mali-700-italic.ttf",
           "weight": 700,
           "italic": true,
-          "sha256": "de7a3481e823fde4fa21ede9e5cec387a7ddba05c5c38d6e6eb0b4be6095bfeb",
+          "sha256": "85996dbac66fa53122f2a62ec615679c7395333ffb397869d46fc66cba216527",
           "sources": [
             {
               "file": "mali-thai-700-italic.woff2",
@@ -4162,10 +4182,11 @@
             }
           ]
         }
-      ]
+      ],
+      "previous_family": "MangaX Mali"
     },
     {
-      "family": "MangaX Mitr",
+      "family": "Mitr",
       "original_family": "Mitr",
       "source_id": "mitr",
       "group": "effect",
@@ -4173,10 +4194,10 @@
       "license": "licenses/mitr-OFL.txt",
       "variants": [
         {
-          "file": "MangaX-mitr-200-normal.ttf",
+          "file": "mitr-200-normal.ttf",
           "weight": 200,
           "italic": false,
-          "sha256": "c5305c07722e8e28b814c083aad727b3e7b19c79d8a7271f3d3a9a5b5f3fadb9",
+          "sha256": "1678052f1cb2d155594ff892849dbfa8a0c600f7f87f0e81ccd61f700e063bd7",
           "sources": [
             {
               "file": "mitr-thai-200-normal.woff2",
@@ -4193,10 +4214,10 @@
           ]
         },
         {
-          "file": "MangaX-mitr-300-normal.ttf",
+          "file": "mitr-300-normal.ttf",
           "weight": 300,
           "italic": false,
-          "sha256": "5df98ea55f82b8131bd1a560f884c94cf2f6c97f89cdbd0dc6701ec967364b1f",
+          "sha256": "f694c7271fd480b8365e37182c2a5d9eafde6cdb005adaffcc78d0028c94c37e",
           "sources": [
             {
               "file": "mitr-thai-300-normal.woff2",
@@ -4213,10 +4234,10 @@
           ]
         },
         {
-          "file": "MangaX-mitr-400-normal.ttf",
+          "file": "mitr-400-normal.ttf",
           "weight": 400,
           "italic": false,
-          "sha256": "cd82c72c8fcc8f0e3ceadac2adff3467699e4c46db128bb0e35f1c3e3d5dbc71",
+          "sha256": "e5d61ae7e9d2923a3f7c5426c6064a04f107c0edb8e943870cd9fd64ea6840ae",
           "sources": [
             {
               "file": "mitr-thai-400-normal.woff2",
@@ -4233,10 +4254,10 @@
           ]
         },
         {
-          "file": "MangaX-mitr-500-normal.ttf",
+          "file": "mitr-500-normal.ttf",
           "weight": 500,
           "italic": false,
-          "sha256": "e6562920024d2970a12d87e977b9180061f6554949a4b2b08cfd1357796e4a9f",
+          "sha256": "4cd2e0a5c909e519a143e845c0bc568c930cae5c6241cfa3a22ca61f0560dd65",
           "sources": [
             {
               "file": "mitr-thai-500-normal.woff2",
@@ -4253,10 +4274,10 @@
           ]
         },
         {
-          "file": "MangaX-mitr-600-normal.ttf",
+          "file": "mitr-600-normal.ttf",
           "weight": 600,
           "italic": false,
-          "sha256": "03a4a9e3aa74c912ead98b479e4b47c1ad7456cc23a7c953b68345e341bb5cbe",
+          "sha256": "a57bed1a506b504f232ac689aa3e915d3545ff7dd1d1c92f50f5689301e826c8",
           "sources": [
             {
               "file": "mitr-thai-600-normal.woff2",
@@ -4273,10 +4294,10 @@
           ]
         },
         {
-          "file": "MangaX-mitr-700-normal.ttf",
+          "file": "mitr-700-normal.ttf",
           "weight": 700,
           "italic": false,
-          "sha256": "932e3c1a3e4ba695b30e13dc0766f4cdc4bd0c3becd294bf459a4ac40b1fbcc9",
+          "sha256": "87705e57448e03c67662a0e86acd8b9327b2e3d0dcb0cd6cd61525963db51434",
           "sources": [
             {
               "file": "mitr-thai-700-normal.woff2",
@@ -4292,10 +4313,11 @@
             }
           ]
         }
-      ]
+      ],
+      "previous_family": "MangaX Mitr"
     },
     {
-      "family": "MangaX Niramit",
+      "family": "Niramit",
       "original_family": "Niramit",
       "source_id": "niramit",
       "group": "dialogue",
@@ -4303,10 +4325,10 @@
       "license": "licenses/niramit-OFL.txt",
       "variants": [
         {
-          "file": "MangaX-niramit-200-normal.ttf",
+          "file": "niramit-200-normal.ttf",
           "weight": 200,
           "italic": false,
-          "sha256": "ef748ba26900425c36aa519adc1bd5ed00aeb52e446a83501e0e6f3d9f99d63b",
+          "sha256": "a9015f995567bfb1650d4a91921151e41d3c05542a2dc885a8875c5a4ffb5304",
           "sources": [
             {
               "file": "niramit-thai-200-normal.woff2",
@@ -4323,10 +4345,10 @@
           ]
         },
         {
-          "file": "MangaX-niramit-200-italic.ttf",
+          "file": "niramit-200-italic.ttf",
           "weight": 200,
           "italic": true,
-          "sha256": "269243ac9919f1ce2cb634787ee648525e4f60321f85c11650ed0390a9c41916",
+          "sha256": "bd6a77b988da4f624b530e36074520b4128663e114f97dd4e11b5acb197e94d7",
           "sources": [
             {
               "file": "niramit-thai-200-italic.woff2",
@@ -4343,10 +4365,10 @@
           ]
         },
         {
-          "file": "MangaX-niramit-300-normal.ttf",
+          "file": "niramit-300-normal.ttf",
           "weight": 300,
           "italic": false,
-          "sha256": "f8164abfc9f08122a213ae9ae6f2a3007be5de449a5d187c168762a1a59ac6f7",
+          "sha256": "22be3ccc857cff9819a9eb9b19ace47d05450895318fb5b86e770ab33b10bde0",
           "sources": [
             {
               "file": "niramit-thai-300-normal.woff2",
@@ -4363,10 +4385,10 @@
           ]
         },
         {
-          "file": "MangaX-niramit-300-italic.ttf",
+          "file": "niramit-300-italic.ttf",
           "weight": 300,
           "italic": true,
-          "sha256": "9f5b9bb4709a0b2c64105d64397a1ae74a6390e20e9b8648ff54744583b6ba94",
+          "sha256": "8d57f3afe27a2638512fbd0e288eab98145f1ad5b90aab5f1e67cb462aa01e58",
           "sources": [
             {
               "file": "niramit-thai-300-italic.woff2",
@@ -4383,10 +4405,10 @@
           ]
         },
         {
-          "file": "MangaX-niramit-400-normal.ttf",
+          "file": "niramit-400-normal.ttf",
           "weight": 400,
           "italic": false,
-          "sha256": "b81898ae151db346859501e1bb94961ee53b0cd90110327a163a1249e71229d9",
+          "sha256": "ac164d1de549e1025b93448246ccc7baa725143df922852909b161de2706dcf1",
           "sources": [
             {
               "file": "niramit-thai-400-normal.woff2",
@@ -4403,10 +4425,10 @@
           ]
         },
         {
-          "file": "MangaX-niramit-400-italic.ttf",
+          "file": "niramit-400-italic.ttf",
           "weight": 400,
           "italic": true,
-          "sha256": "aa025d58bad2d6ba635a16628d49d62095d5e7c57c8178b62165310236c3b6c9",
+          "sha256": "d0fcac0a7018bebddc82d35a015fded865fd9e5b5b3b9194bae114a8e65f3ab4",
           "sources": [
             {
               "file": "niramit-thai-400-italic.woff2",
@@ -4423,10 +4445,10 @@
           ]
         },
         {
-          "file": "MangaX-niramit-500-normal.ttf",
+          "file": "niramit-500-normal.ttf",
           "weight": 500,
           "italic": false,
-          "sha256": "9bdb972fd4f14842430bba170122629a8fc124fd620a27018750cba74800a19b",
+          "sha256": "f577cd58f9c5bfbd77092605ea3985e15fa27dc057ce5fff39bac0071e257b43",
           "sources": [
             {
               "file": "niramit-thai-500-normal.woff2",
@@ -4443,10 +4465,10 @@
           ]
         },
         {
-          "file": "MangaX-niramit-500-italic.ttf",
+          "file": "niramit-500-italic.ttf",
           "weight": 500,
           "italic": true,
-          "sha256": "6606c80064bbb8eb21683b61d882b9e55443e7ee7813ec684ade37e69aeb1391",
+          "sha256": "817b32ad730bd5ba89dfecc772c93528721ac312b8467f58ed20bfdce4439c52",
           "sources": [
             {
               "file": "niramit-thai-500-italic.woff2",
@@ -4463,10 +4485,10 @@
           ]
         },
         {
-          "file": "MangaX-niramit-600-normal.ttf",
+          "file": "niramit-600-normal.ttf",
           "weight": 600,
           "italic": false,
-          "sha256": "3b462afc227d97b3f8b40a8a7789291c5f36339001ccf704412986ed9f4d8d5d",
+          "sha256": "1a8ae199da26dbb51297d8f9e037af6d9e23c89f497254123688a988d9838a75",
           "sources": [
             {
               "file": "niramit-thai-600-normal.woff2",
@@ -4483,10 +4505,10 @@
           ]
         },
         {
-          "file": "MangaX-niramit-600-italic.ttf",
+          "file": "niramit-600-italic.ttf",
           "weight": 600,
           "italic": true,
-          "sha256": "59969528ef5abb55e33fab76aa11e87c5916fd2d199b207627c43bea6c033e26",
+          "sha256": "1064b932c57d26b29c6bc64d80ebc90e124713cd8a769c0287c300f2e7c5c1b8",
           "sources": [
             {
               "file": "niramit-thai-600-italic.woff2",
@@ -4503,10 +4525,10 @@
           ]
         },
         {
-          "file": "MangaX-niramit-700-normal.ttf",
+          "file": "niramit-700-normal.ttf",
           "weight": 700,
           "italic": false,
-          "sha256": "a0ba859710bcfe16dac8debe6cd2bae7ddb9b4cc092713cdec9553f810746bbc",
+          "sha256": "736f023804c5b91ff3a4143660c0ecd429acfb49355d6d785094104386a15b95",
           "sources": [
             {
               "file": "niramit-thai-700-normal.woff2",
@@ -4523,10 +4545,10 @@
           ]
         },
         {
-          "file": "MangaX-niramit-700-italic.ttf",
+          "file": "niramit-700-italic.ttf",
           "weight": 700,
           "italic": true,
-          "sha256": "12eeebe778927d6a435124cbe2d7a3af60aeb37447383b9a560bcaff5226885e",
+          "sha256": "87599a5cb3d124716feb4efa60cb48663116226d5b8855ca03895b032858e071",
           "sources": [
             {
               "file": "niramit-thai-700-italic.woff2",
@@ -4542,10 +4564,11 @@
             }
           ]
         }
-      ]
+      ],
+      "previous_family": "MangaX Niramit"
     },
     {
-      "family": "MangaX Noto Sans Thai Looped",
+      "family": "Noto Sans Thai Looped",
       "original_family": "Noto Sans Thai Looped",
       "source_id": "noto-sans-thai-looped",
       "group": "dialogue",
@@ -4553,10 +4576,10 @@
       "license": "licenses/noto-sans-thai-looped-OFL.txt",
       "variants": [
         {
-          "file": "MangaX-noto-sans-thai-looped-100-normal.ttf",
+          "file": "noto-sans-thai-looped-100-normal.ttf",
           "weight": 100,
           "italic": false,
-          "sha256": "c29b8ef7416d48a969f961734ab8a5c918d616b726a871dbc140431c46c02f9d",
+          "sha256": "4fb0de5b8139c6202fd295662c8ef779e1d0f7aa1d112fa4d77df170e34ae869",
           "sources": [
             {
               "file": "noto-sans-thai-looped-thai-100-normal.woff2",
@@ -4573,10 +4596,10 @@
           ]
         },
         {
-          "file": "MangaX-noto-sans-thai-looped-200-normal.ttf",
+          "file": "noto-sans-thai-looped-200-normal.ttf",
           "weight": 200,
           "italic": false,
-          "sha256": "999a04893a6987817e36772011eb3c23711d833057eb63e37b1350c5232ecce6",
+          "sha256": "a57ac923afe553a2343f2ee2c012e1ba23bbc81fe3abd44a4ae2e1c478a5cd5c",
           "sources": [
             {
               "file": "noto-sans-thai-looped-thai-200-normal.woff2",
@@ -4593,10 +4616,10 @@
           ]
         },
         {
-          "file": "MangaX-noto-sans-thai-looped-300-normal.ttf",
+          "file": "noto-sans-thai-looped-300-normal.ttf",
           "weight": 300,
           "italic": false,
-          "sha256": "d9a3e584c45c4c9a0eea55a951b69481ec5d442bab36840b69f9fd4040a2f1ae",
+          "sha256": "9a7ef6db50af680f5064cbdd7805de8b8303304c32d94d0b6038293fe9616ad9",
           "sources": [
             {
               "file": "noto-sans-thai-looped-thai-300-normal.woff2",
@@ -4613,10 +4636,10 @@
           ]
         },
         {
-          "file": "MangaX-noto-sans-thai-looped-400-normal.ttf",
+          "file": "noto-sans-thai-looped-400-normal.ttf",
           "weight": 400,
           "italic": false,
-          "sha256": "85fa2db3d594379f1eea5874e3c29649d3a4264ddec78162d47f744a1d127d23",
+          "sha256": "d5ec1ec56131248168bb42ce7d9baf96780ad69f543de893b621a3929e72c9ef",
           "sources": [
             {
               "file": "noto-sans-thai-looped-thai-400-normal.woff2",
@@ -4633,10 +4656,10 @@
           ]
         },
         {
-          "file": "MangaX-noto-sans-thai-looped-500-normal.ttf",
+          "file": "noto-sans-thai-looped-500-normal.ttf",
           "weight": 500,
           "italic": false,
-          "sha256": "48e2fd30214c878eb43c1af671e1f84295260b4cbfea42b06b7fd623708f5e1b",
+          "sha256": "85a8b6246bd2de71490a31d1c42ab9b09d6d480534724b860dc27d0fa01b4ecf",
           "sources": [
             {
               "file": "noto-sans-thai-looped-thai-500-normal.woff2",
@@ -4653,10 +4676,10 @@
           ]
         },
         {
-          "file": "MangaX-noto-sans-thai-looped-600-normal.ttf",
+          "file": "noto-sans-thai-looped-600-normal.ttf",
           "weight": 600,
           "italic": false,
-          "sha256": "5f8e52fc363c87fc00b1d3d1a6feb2a3c7cb608c76a64d97c78f59794dbb0575",
+          "sha256": "55afda9395322f64a4c308508059fad68b9a1ed5ac883b80b6ecd6fc12988e63",
           "sources": [
             {
               "file": "noto-sans-thai-looped-thai-600-normal.woff2",
@@ -4673,10 +4696,10 @@
           ]
         },
         {
-          "file": "MangaX-noto-sans-thai-looped-700-normal.ttf",
+          "file": "noto-sans-thai-looped-700-normal.ttf",
           "weight": 700,
           "italic": false,
-          "sha256": "fa2948b32e8c3e336594588112f7e9e9d91cfd00dd71c86238bb3463cdce63de",
+          "sha256": "21c3d9354c9d18d07732b2b6d8f010fffa5e25fa10bc52710fe46f2d3e089c35",
           "sources": [
             {
               "file": "noto-sans-thai-looped-thai-700-normal.woff2",
@@ -4693,10 +4716,10 @@
           ]
         },
         {
-          "file": "MangaX-noto-sans-thai-looped-800-normal.ttf",
+          "file": "noto-sans-thai-looped-800-normal.ttf",
           "weight": 800,
           "italic": false,
-          "sha256": "4ab305b93d56002312e3f839e78294c2dbc2fba304346a3243c20fbdc2bc45b7",
+          "sha256": "97be6406af32b65577808d31dad23a4a4ba68ed1477545f09c63b46ac87687f8",
           "sources": [
             {
               "file": "noto-sans-thai-looped-thai-800-normal.woff2",
@@ -4713,10 +4736,10 @@
           ]
         },
         {
-          "file": "MangaX-noto-sans-thai-looped-900-normal.ttf",
+          "file": "noto-sans-thai-looped-900-normal.ttf",
           "weight": 900,
           "italic": false,
-          "sha256": "5dedd9bfa35d434f82119d8088a6ae6593b9abe46d00d3fa3e7aef234b598a23",
+          "sha256": "075e05756b551b5a139e5f4c0c43b4798afec23b67cdf1cc932280a8ea3f8179",
           "sources": [
             {
               "file": "noto-sans-thai-looped-thai-900-normal.woff2",
@@ -4732,10 +4755,11 @@
             }
           ]
         }
-      ]
+      ],
+      "previous_family": "MangaX Noto Sans Thai Looped"
     },
     {
-      "family": "MangaX Pattaya",
+      "family": "Pattaya",
       "original_family": "Pattaya",
       "source_id": "pattaya",
       "group": "effect",
@@ -4743,10 +4767,10 @@
       "license": "licenses/pattaya-OFL.txt",
       "variants": [
         {
-          "file": "MangaX-pattaya-400-normal.ttf",
+          "file": "pattaya-400-normal.ttf",
           "weight": 400,
           "italic": false,
-          "sha256": "5bf74bcda1ae7aa11154a1beaa7ab83c60d8b81fce0795be4b300984bc16b489",
+          "sha256": "11066cfc407b4ef60ee80fff494565be4b688fd8396568635ff4d9264cfae7b4",
           "sources": [
             {
               "file": "pattaya-thai-400-normal.woff2",
@@ -4762,10 +4786,11 @@
             }
           ]
         }
-      ]
+      ],
+      "previous_family": "MangaX Pattaya"
     },
     {
-      "family": "MangaX Playpen Sans Thai",
+      "family": "Playpen Sans Thai",
       "original_family": "Playpen Sans Thai",
       "source_id": "playpen-sans-thai",
       "group": "hand",
@@ -4773,10 +4798,10 @@
       "license": "licenses/playpen-sans-thai-OFL.txt",
       "variants": [
         {
-          "file": "MangaX-playpen-sans-thai-100-normal.ttf",
+          "file": "playpen-sans-thai-100-normal.ttf",
           "weight": 100,
           "italic": false,
-          "sha256": "7f6b4b0aedfd2c317a6834754932c9330f9e5093097856bc35baf48660acc74d",
+          "sha256": "50dd2a64bdc8a3ba61659520de4c6a487cad53855a0e18977a1d21ae1422ff5d",
           "sources": [
             {
               "file": "playpen-sans-thai-thai-100-normal.woff2",
@@ -4793,10 +4818,10 @@
           ]
         },
         {
-          "file": "MangaX-playpen-sans-thai-200-normal.ttf",
+          "file": "playpen-sans-thai-200-normal.ttf",
           "weight": 200,
           "italic": false,
-          "sha256": "35c0b67ff4ea60c79f09d3cc91175a174849de7c3533e25ece5120f31bbe83a3",
+          "sha256": "d094e35f83e660fe70e3aa475fff6af21095e1ef380711e61fa3b2848c6fb37b",
           "sources": [
             {
               "file": "playpen-sans-thai-thai-200-normal.woff2",
@@ -4813,10 +4838,10 @@
           ]
         },
         {
-          "file": "MangaX-playpen-sans-thai-300-normal.ttf",
+          "file": "playpen-sans-thai-300-normal.ttf",
           "weight": 300,
           "italic": false,
-          "sha256": "d891c92be4427867cf4b1469417e8d347e1e6ac3e72ab328455b486321d6ceb1",
+          "sha256": "e1f61bad787c43ed0166fbdb7133efd484a8089da28e1f1f28206cd4593ff66e",
           "sources": [
             {
               "file": "playpen-sans-thai-thai-300-normal.woff2",
@@ -4833,10 +4858,10 @@
           ]
         },
         {
-          "file": "MangaX-playpen-sans-thai-400-normal.ttf",
+          "file": "playpen-sans-thai-400-normal.ttf",
           "weight": 400,
           "italic": false,
-          "sha256": "52113dc1c51c4f2102be472c6f607d3d47b9179e733e888c0e14cb0121086808",
+          "sha256": "d10be1244617cad2aad762819f045795c9f4aa43c2acbef4fe8e691a163395fd",
           "sources": [
             {
               "file": "playpen-sans-thai-thai-400-normal.woff2",
@@ -4853,10 +4878,10 @@
           ]
         },
         {
-          "file": "MangaX-playpen-sans-thai-500-normal.ttf",
+          "file": "playpen-sans-thai-500-normal.ttf",
           "weight": 500,
           "italic": false,
-          "sha256": "12d0bc87615d18c3f439e91fa20337a68e9454016c2c25dd2cc089772735918f",
+          "sha256": "21e5b86527d8c2f0283cf06336cdb3c740d214abacc7dcb3bef8e6f14e036f81",
           "sources": [
             {
               "file": "playpen-sans-thai-thai-500-normal.woff2",
@@ -4873,10 +4898,10 @@
           ]
         },
         {
-          "file": "MangaX-playpen-sans-thai-600-normal.ttf",
+          "file": "playpen-sans-thai-600-normal.ttf",
           "weight": 600,
           "italic": false,
-          "sha256": "e47ba3c7d3fcc87db3062554045a7862c10ed4a1621b7eee44e39da1fb4d82b1",
+          "sha256": "4c08e6bf593400ed021b20d1546c7ba8aec5a27ffe8385449d695da6ecc28731",
           "sources": [
             {
               "file": "playpen-sans-thai-thai-600-normal.woff2",
@@ -4893,10 +4918,10 @@
           ]
         },
         {
-          "file": "MangaX-playpen-sans-thai-700-normal.ttf",
+          "file": "playpen-sans-thai-700-normal.ttf",
           "weight": 700,
           "italic": false,
-          "sha256": "1b68a1ed903562145a8362da9e2b215d6fb0db6764400e69b6f4c91edc9e2b5b",
+          "sha256": "0ffb3850d302fdfcd2d535c0da2e427ea03d5d9bb70623c83267df97ac8f7773",
           "sources": [
             {
               "file": "playpen-sans-thai-thai-700-normal.woff2",
@@ -4913,10 +4938,10 @@
           ]
         },
         {
-          "file": "MangaX-playpen-sans-thai-800-normal.ttf",
+          "file": "playpen-sans-thai-800-normal.ttf",
           "weight": 800,
           "italic": false,
-          "sha256": "f23bf815a240e1d1cf48a755d396a4110234d79c5459fb5bf9c22c27d4cb7944",
+          "sha256": "55143b2861283d00e96ab0a704887bc78bec4f07ad331043acb7e858325e1517",
           "sources": [
             {
               "file": "playpen-sans-thai-thai-800-normal.woff2",
@@ -4932,10 +4957,11 @@
             }
           ]
         }
-      ]
+      ],
+      "previous_family": "MangaX Playpen Sans Thai"
     },
     {
-      "family": "MangaX Pridi",
+      "family": "Pridi",
       "original_family": "Pridi",
       "source_id": "pridi",
       "group": "story",
@@ -4943,10 +4969,10 @@
       "license": "licenses/pridi-OFL.txt",
       "variants": [
         {
-          "file": "MangaX-pridi-200-normal.ttf",
+          "file": "pridi-200-normal.ttf",
           "weight": 200,
           "italic": false,
-          "sha256": "17ab0811d63179ae4e870a30aa674ee0378a5fd8b474f6fb523177d2637ac4de",
+          "sha256": "32211634b0c39016378da30209d8b3e41a6fd3432aa6018f9be880ac2d1d78fd",
           "sources": [
             {
               "file": "pridi-thai-200-normal.woff2",
@@ -4963,10 +4989,10 @@
           ]
         },
         {
-          "file": "MangaX-pridi-300-normal.ttf",
+          "file": "pridi-300-normal.ttf",
           "weight": 300,
           "italic": false,
-          "sha256": "3271a04de16288f32f695a2a9ec8dd039b86d70968c9d4ceb48ffb6dd04c4f9d",
+          "sha256": "28f8a34f71a76c5dce40c9bf6caec95e779fd46f74eca977afd2c774f7668b29",
           "sources": [
             {
               "file": "pridi-thai-300-normal.woff2",
@@ -4983,10 +5009,10 @@
           ]
         },
         {
-          "file": "MangaX-pridi-400-normal.ttf",
+          "file": "pridi-400-normal.ttf",
           "weight": 400,
           "italic": false,
-          "sha256": "61a02b7b44d9ba9b3824f4eeb0fd0e2fbcdad975c37a697f0a16134a98b541b3",
+          "sha256": "c663556d596549ca4d0ca15a769f47243e83baa603d4b5acfe841fedf06d4358",
           "sources": [
             {
               "file": "pridi-thai-400-normal.woff2",
@@ -5003,10 +5029,10 @@
           ]
         },
         {
-          "file": "MangaX-pridi-500-normal.ttf",
+          "file": "pridi-500-normal.ttf",
           "weight": 500,
           "italic": false,
-          "sha256": "56c4025a4c8d6191db81d1a35a0cd6bf6ea4f35343015f77238792233f8b9883",
+          "sha256": "4387ca21e8653bd625df127f3cc5098a5f39ceb9f85c4801a9194510f9f87c2d",
           "sources": [
             {
               "file": "pridi-thai-500-normal.woff2",
@@ -5023,10 +5049,10 @@
           ]
         },
         {
-          "file": "MangaX-pridi-600-normal.ttf",
+          "file": "pridi-600-normal.ttf",
           "weight": 600,
           "italic": false,
-          "sha256": "495223f1540425256f1f1286597c64393af549ae1ea794d888fd20c7b2f86872",
+          "sha256": "55391cf45fcb630882d656631ba140f22dc48ff5b4045ced9ea9aeb260c9c63c",
           "sources": [
             {
               "file": "pridi-thai-600-normal.woff2",
@@ -5043,10 +5069,10 @@
           ]
         },
         {
-          "file": "MangaX-pridi-700-normal.ttf",
+          "file": "pridi-700-normal.ttf",
           "weight": 700,
           "italic": false,
-          "sha256": "827db97bb22e666f66b720966a12ea6892d4e3ece22a84635c303cf20dfad18d",
+          "sha256": "c001ea3b7663bec92d832d218ece8b267ff1ea64fca872ec2b202aef40fe69e4",
           "sources": [
             {
               "file": "pridi-thai-700-normal.woff2",
@@ -5062,10 +5088,11 @@
             }
           ]
         }
-      ]
+      ],
+      "previous_family": "MangaX Pridi"
     },
     {
-      "family": "MangaX Prompt",
+      "family": "Prompt",
       "original_family": "Prompt",
       "source_id": "prompt",
       "group": "dialogue",
@@ -5073,10 +5100,10 @@
       "license": "licenses/prompt-OFL.txt",
       "variants": [
         {
-          "file": "MangaX-prompt-100-normal.ttf",
+          "file": "prompt-100-normal.ttf",
           "weight": 100,
           "italic": false,
-          "sha256": "156cf4cc326656bb9ddf3e83e4d390138abd5e907c54299ebdc4219febe77bc4",
+          "sha256": "e46c69a81396d784af04335cde3468fc5c43920fc05892428b509341c839f5ff",
           "sources": [
             {
               "file": "prompt-thai-100-normal.woff2",
@@ -5093,10 +5120,10 @@
           ]
         },
         {
-          "file": "MangaX-prompt-100-italic.ttf",
+          "file": "prompt-100-italic.ttf",
           "weight": 100,
           "italic": true,
-          "sha256": "08dfc6731798b80ebccbe3c06d365f4481980a9bb7592480a0a4ab31d0d7defe",
+          "sha256": "4cddcdbcffc9262c687a8c61ef17ff8f24a187cbfb78e9c06e0a0d724bd00d95",
           "sources": [
             {
               "file": "prompt-thai-100-italic.woff2",
@@ -5113,10 +5140,10 @@
           ]
         },
         {
-          "file": "MangaX-prompt-200-normal.ttf",
+          "file": "prompt-200-normal.ttf",
           "weight": 200,
           "italic": false,
-          "sha256": "9bbbd54b3dd28c5d14c52f3abb20bc301f637ffbd296699a08151b671f234007",
+          "sha256": "884a6364fc4703d5ed109a6a5ee3db493f16be9587ebda25abe7dd8a0e0b72c6",
           "sources": [
             {
               "file": "prompt-thai-200-normal.woff2",
@@ -5133,10 +5160,10 @@
           ]
         },
         {
-          "file": "MangaX-prompt-200-italic.ttf",
+          "file": "prompt-200-italic.ttf",
           "weight": 200,
           "italic": true,
-          "sha256": "bb579be2f8aeb6c3664d63bd0bd961291ee64264771cb02d393d1bdc0eefea36",
+          "sha256": "e751c8662951567b2ec431ee93b3e339b60eedd27446ef2e0659854dc8135d0c",
           "sources": [
             {
               "file": "prompt-thai-200-italic.woff2",
@@ -5153,10 +5180,10 @@
           ]
         },
         {
-          "file": "MangaX-prompt-300-normal.ttf",
+          "file": "prompt-300-normal.ttf",
           "weight": 300,
           "italic": false,
-          "sha256": "6056f94aecec968700aba1a0265b9dd20748cedcbd3523805370c65181cab795",
+          "sha256": "802db4d52b918c13129c194b62b0e864bee753c78913c1607f92b78af19f07a9",
           "sources": [
             {
               "file": "prompt-thai-300-normal.woff2",
@@ -5173,10 +5200,10 @@
           ]
         },
         {
-          "file": "MangaX-prompt-300-italic.ttf",
+          "file": "prompt-300-italic.ttf",
           "weight": 300,
           "italic": true,
-          "sha256": "6c404611e1449152dfbc64e83c65ac566a7b21f074bbbe0b49e0383496f3cbe8",
+          "sha256": "5778fc422938bc6d2b4c77ce5303e0854ede5bb148da43cd703129ba67da6624",
           "sources": [
             {
               "file": "prompt-thai-300-italic.woff2",
@@ -5193,10 +5220,10 @@
           ]
         },
         {
-          "file": "MangaX-prompt-400-normal.ttf",
+          "file": "prompt-400-normal.ttf",
           "weight": 400,
           "italic": false,
-          "sha256": "120000955f5652b9c2046084c01aab9e3bc18c59818940fd93df0f95175bd3a9",
+          "sha256": "43a0176e570c5ee204748718b30ba63b44924f83adb071b1a6ce20484523f675",
           "sources": [
             {
               "file": "prompt-thai-400-normal.woff2",
@@ -5213,10 +5240,10 @@
           ]
         },
         {
-          "file": "MangaX-prompt-400-italic.ttf",
+          "file": "prompt-400-italic.ttf",
           "weight": 400,
           "italic": true,
-          "sha256": "b59bd5b0c0bc87f0779dd10039f3f6bf02d0eba8da40b0a9c0bd94a908c20b33",
+          "sha256": "aa046ed24d0e5b2f1a9c516685379f5ffa75061a09c4246df14a9a9eaed4df4f",
           "sources": [
             {
               "file": "prompt-thai-400-italic.woff2",
@@ -5233,10 +5260,10 @@
           ]
         },
         {
-          "file": "MangaX-prompt-500-normal.ttf",
+          "file": "prompt-500-normal.ttf",
           "weight": 500,
           "italic": false,
-          "sha256": "673dcea16ff9e941bbfa5279599c486dcdd3e7868e398e92e281c4cb410d44f8",
+          "sha256": "d433f9477813ed91a3fa0005fe28ffb1570be991b54b9797390b231689898181",
           "sources": [
             {
               "file": "prompt-thai-500-normal.woff2",
@@ -5253,10 +5280,10 @@
           ]
         },
         {
-          "file": "MangaX-prompt-500-italic.ttf",
+          "file": "prompt-500-italic.ttf",
           "weight": 500,
           "italic": true,
-          "sha256": "ece39d4b4d611cd9beed48717c834a284cbebe08f08abce5559298e1bdfd26d5",
+          "sha256": "5e8d16bd438f218abd72e7974199c81a502846d52fed4a6e07e2c936761d8307",
           "sources": [
             {
               "file": "prompt-thai-500-italic.woff2",
@@ -5273,10 +5300,10 @@
           ]
         },
         {
-          "file": "MangaX-prompt-600-normal.ttf",
+          "file": "prompt-600-normal.ttf",
           "weight": 600,
           "italic": false,
-          "sha256": "355a68c9e74aeb813e583f0b43144fd526df42d0b4d4062e1e0f65f31c8e44e1",
+          "sha256": "10588302e48e5f08373ac45ed448af71acc326e4b902df82679a017f19c48868",
           "sources": [
             {
               "file": "prompt-thai-600-normal.woff2",
@@ -5293,10 +5320,10 @@
           ]
         },
         {
-          "file": "MangaX-prompt-600-italic.ttf",
+          "file": "prompt-600-italic.ttf",
           "weight": 600,
           "italic": true,
-          "sha256": "a0ea4a1609716592f631bec212896d5e16d19f1552e68ff9ca376975375191b4",
+          "sha256": "053673454adabca1c426db9db02ef2c5b346d67d8d73b387f463459ca162b6d0",
           "sources": [
             {
               "file": "prompt-thai-600-italic.woff2",
@@ -5313,10 +5340,10 @@
           ]
         },
         {
-          "file": "MangaX-prompt-700-normal.ttf",
+          "file": "prompt-700-normal.ttf",
           "weight": 700,
           "italic": false,
-          "sha256": "c6b20a85d79f20ef0ccbd04875f49ee6c6dee2528e20e0a99ac434959ca24f47",
+          "sha256": "c5cb9dba8842167723a19a73ea48854c9a5a96d1237793dab999f92861149e02",
           "sources": [
             {
               "file": "prompt-thai-700-normal.woff2",
@@ -5333,10 +5360,10 @@
           ]
         },
         {
-          "file": "MangaX-prompt-700-italic.ttf",
+          "file": "prompt-700-italic.ttf",
           "weight": 700,
           "italic": true,
-          "sha256": "ae055c61569efc2b0b0cd0090e3f2f1348e5589a18806db335b0df5ecfff1c09",
+          "sha256": "b76bc424d13ede04619f472d50371c2a094b73b1ee3ff127f198e46302533536",
           "sources": [
             {
               "file": "prompt-thai-700-italic.woff2",
@@ -5353,10 +5380,10 @@
           ]
         },
         {
-          "file": "MangaX-prompt-800-normal.ttf",
+          "file": "prompt-800-normal.ttf",
           "weight": 800,
           "italic": false,
-          "sha256": "eb946baee913d6dac314b1a5139631570221803a9064af733383dfb3bb7b26cd",
+          "sha256": "d7a9a83198afa84b34c8838b85dce7227f12e592269346dba9488bd95aa4112d",
           "sources": [
             {
               "file": "prompt-thai-800-normal.woff2",
@@ -5373,10 +5400,10 @@
           ]
         },
         {
-          "file": "MangaX-prompt-800-italic.ttf",
+          "file": "prompt-800-italic.ttf",
           "weight": 800,
           "italic": true,
-          "sha256": "9f9f8dd86eea97494dbd86722a4d87e34125703fdbf725837efc6696858800e3",
+          "sha256": "4185c0b9f0c5b04a71b005ef42fcc06d19ad0b2811348e9a0bed501e5986de72",
           "sources": [
             {
               "file": "prompt-thai-800-italic.woff2",
@@ -5393,10 +5420,10 @@
           ]
         },
         {
-          "file": "MangaX-prompt-900-normal.ttf",
+          "file": "prompt-900-normal.ttf",
           "weight": 900,
           "italic": false,
-          "sha256": "197afd10eff9af6c4977330269b6c2cf5ba3764d9f52b1a0354aed6a3bde5b48",
+          "sha256": "0ba1af0ff92845afe90a654baaf1e6620a9084070af721a7b2d0fbf32770a91f",
           "sources": [
             {
               "file": "prompt-thai-900-normal.woff2",
@@ -5413,10 +5440,10 @@
           ]
         },
         {
-          "file": "MangaX-prompt-900-italic.ttf",
+          "file": "prompt-900-italic.ttf",
           "weight": 900,
           "italic": true,
-          "sha256": "10281cee44473f38165de090a55e3bd0aa8841427dfc41255ee001a31d0ac03a",
+          "sha256": "7539dc0146786b48f37b8f4cb5ee44ccf4b09d1add5d2da016cd9877eb34cfe7",
           "sources": [
             {
               "file": "prompt-thai-900-italic.woff2",
@@ -5432,10 +5459,11 @@
             }
           ]
         }
-      ]
+      ],
+      "previous_family": "MangaX Prompt"
     },
     {
-      "family": "MangaX Sriracha",
+      "family": "Sriracha",
       "original_family": "Sriracha",
       "source_id": "sriracha",
       "group": "hand",
@@ -5443,10 +5471,10 @@
       "license": "licenses/sriracha-OFL.txt",
       "variants": [
         {
-          "file": "MangaX-sriracha-400-normal.ttf",
+          "file": "sriracha-400-normal.ttf",
           "weight": 400,
           "italic": false,
-          "sha256": "e0338345e74132cadf125a11ce5dc8ffbcaa1f936e62e71f395446f38139c295",
+          "sha256": "fc796f0ed8a969362c10d05a7b96beffc52610ccc5117155ebf0912dfb7dceae",
           "sources": [
             {
               "file": "sriracha-thai-400-normal.woff2",
@@ -5462,10 +5490,11 @@
             }
           ]
         }
-      ]
+      ],
+      "previous_family": "MangaX Sriracha"
     },
     {
-      "family": "MangaX Srisakdi",
+      "family": "Srisakdi",
       "original_family": "Srisakdi",
       "source_id": "srisakdi",
       "group": "effect",
@@ -5473,10 +5502,10 @@
       "license": "licenses/srisakdi-OFL.txt",
       "variants": [
         {
-          "file": "MangaX-srisakdi-400-normal.ttf",
+          "file": "srisakdi-400-normal.ttf",
           "weight": 400,
           "italic": false,
-          "sha256": "d5e7e0ae01fa5af84b0b2a96d0c23f208bc26cc0794beb3622cc8818c41aa79b",
+          "sha256": "bb51c6208843dd550400f0d11b83f3003a0f7c82ae93fa00c1c04dc0b531e2ef",
           "sources": [
             {
               "file": "srisakdi-thai-400-normal.woff2",
@@ -5493,10 +5522,10 @@
           ]
         },
         {
-          "file": "MangaX-srisakdi-700-normal.ttf",
+          "file": "srisakdi-700-normal.ttf",
           "weight": 700,
           "italic": false,
-          "sha256": "ddb71ad41d27f0de6db3f9d079d7471a12c16facbbb3418734bc8700c3894af5",
+          "sha256": "6cee50185a1f00d11a9952df66f9ed458c813bf23db132808858c93cfdd74e9e",
           "sources": [
             {
               "file": "srisakdi-thai-700-normal.woff2",
@@ -5512,10 +5541,11 @@
             }
           ]
         }
-      ]
+      ],
+      "previous_family": "MangaX Srisakdi"
     },
     {
-      "family": "MangaX Taviraj",
+      "family": "Taviraj",
       "original_family": "Taviraj",
       "source_id": "taviraj",
       "group": "story",
@@ -5523,10 +5553,10 @@
       "license": "licenses/taviraj-OFL.txt",
       "variants": [
         {
-          "file": "MangaX-taviraj-100-normal.ttf",
+          "file": "taviraj-100-normal.ttf",
           "weight": 100,
           "italic": false,
-          "sha256": "2301056962c0955f3038200fd389ad0083564108970f4f51f739459a1677f42e",
+          "sha256": "7a65608c89d01d7d0f3fe2d2628c5ae7de82153373d5530d3996e367290e3007",
           "sources": [
             {
               "file": "taviraj-thai-100-normal.woff2",
@@ -5543,10 +5573,10 @@
           ]
         },
         {
-          "file": "MangaX-taviraj-100-italic.ttf",
+          "file": "taviraj-100-italic.ttf",
           "weight": 100,
           "italic": true,
-          "sha256": "309a91aa873c897759b9a1281ac3966ea8922f540d63da5b0eddda9ec915a1a7",
+          "sha256": "9a6db0e1b6eff12e3691b9ca902a3adaae40a58d381fe4086fcac32b3d0f023f",
           "sources": [
             {
               "file": "taviraj-thai-100-italic.woff2",
@@ -5563,10 +5593,10 @@
           ]
         },
         {
-          "file": "MangaX-taviraj-200-normal.ttf",
+          "file": "taviraj-200-normal.ttf",
           "weight": 200,
           "italic": false,
-          "sha256": "06794de24d72322e9b65197c55d094c7fc27ce96b154ead88cd25c659f770c61",
+          "sha256": "a19c8881fcdf456e4379fbdb184ca241072b6b3c66f0009f3aa067a524e60ba0",
           "sources": [
             {
               "file": "taviraj-thai-200-normal.woff2",
@@ -5583,10 +5613,10 @@
           ]
         },
         {
-          "file": "MangaX-taviraj-200-italic.ttf",
+          "file": "taviraj-200-italic.ttf",
           "weight": 200,
           "italic": true,
-          "sha256": "9660d69528e72e2bd29d20ccfe6711ac72b2b2568b8a81acee7dd274e869b6ef",
+          "sha256": "0d45c6519d807b6f3bd5d87e7ee3db1e411194197ecd8bc1b56780b8df0b7d3e",
           "sources": [
             {
               "file": "taviraj-thai-200-italic.woff2",
@@ -5603,10 +5633,10 @@
           ]
         },
         {
-          "file": "MangaX-taviraj-300-normal.ttf",
+          "file": "taviraj-300-normal.ttf",
           "weight": 300,
           "italic": false,
-          "sha256": "78416cf5b2e3df4357cc10c2e17ca4f56dfda8db0904b8b54a1fa1bdba30cc34",
+          "sha256": "3c6b48784d6b048ce452ec75cb243ee46a61c3c51c3cb86674c7ca92895007a3",
           "sources": [
             {
               "file": "taviraj-thai-300-normal.woff2",
@@ -5623,10 +5653,10 @@
           ]
         },
         {
-          "file": "MangaX-taviraj-300-italic.ttf",
+          "file": "taviraj-300-italic.ttf",
           "weight": 300,
           "italic": true,
-          "sha256": "9391cc397cf9e707bb48850be4cc5fa4d7701a04db2f6ccb61fec3e6d3e1b98a",
+          "sha256": "dab824f465174615a5fb88e06d7b85772f63795e008ca0defa69528c4fcd55d3",
           "sources": [
             {
               "file": "taviraj-thai-300-italic.woff2",
@@ -5643,10 +5673,10 @@
           ]
         },
         {
-          "file": "MangaX-taviraj-400-normal.ttf",
+          "file": "taviraj-400-normal.ttf",
           "weight": 400,
           "italic": false,
-          "sha256": "0bc13bfb20687a21c380718aa8b0603401d94be20e54acdf7e6ce2404460a35d",
+          "sha256": "c94f6c3be79e66d7150b219c14eed25137709889e39e6e84501b31d3ace1cea5",
           "sources": [
             {
               "file": "taviraj-thai-400-normal.woff2",
@@ -5663,10 +5693,10 @@
           ]
         },
         {
-          "file": "MangaX-taviraj-400-italic.ttf",
+          "file": "taviraj-400-italic.ttf",
           "weight": 400,
           "italic": true,
-          "sha256": "121a9ce2fdc848ccb8a4fa7ce9e91bc509cb66d12594d03f63eb76e8f675804a",
+          "sha256": "3c69a3e1b4193649e3329ec16909157ba0a004ba27f58a316994cefd985ce58a",
           "sources": [
             {
               "file": "taviraj-thai-400-italic.woff2",
@@ -5683,10 +5713,10 @@
           ]
         },
         {
-          "file": "MangaX-taviraj-500-normal.ttf",
+          "file": "taviraj-500-normal.ttf",
           "weight": 500,
           "italic": false,
-          "sha256": "ae14f444567d9038e3dd4c0c708d56f35979affac829c9032b2a8a61cf988c50",
+          "sha256": "62e78364a82aafa43d0e9621eaf06899e306e4d02acd86e12f3992c795b67bc3",
           "sources": [
             {
               "file": "taviraj-thai-500-normal.woff2",
@@ -5703,10 +5733,10 @@
           ]
         },
         {
-          "file": "MangaX-taviraj-500-italic.ttf",
+          "file": "taviraj-500-italic.ttf",
           "weight": 500,
           "italic": true,
-          "sha256": "18cab642452132a28517a493ee6b586be24e7603ad09c289cfab0b726d545e47",
+          "sha256": "747c77324da156176ac093c0e36319f2f0edd1f72c079ea5f0fb913bb1c60e83",
           "sources": [
             {
               "file": "taviraj-thai-500-italic.woff2",
@@ -5723,10 +5753,10 @@
           ]
         },
         {
-          "file": "MangaX-taviraj-600-normal.ttf",
+          "file": "taviraj-600-normal.ttf",
           "weight": 600,
           "italic": false,
-          "sha256": "e9e0d5609dfd5036bb026e91cda9a57d72c5355562d370f70c6122c27ea069d1",
+          "sha256": "afbb0014c0a51e6dc8ae2ce01ceb637b7f41138735d9ff0bcf8c0fac5b91edb6",
           "sources": [
             {
               "file": "taviraj-thai-600-normal.woff2",
@@ -5743,10 +5773,10 @@
           ]
         },
         {
-          "file": "MangaX-taviraj-600-italic.ttf",
+          "file": "taviraj-600-italic.ttf",
           "weight": 600,
           "italic": true,
-          "sha256": "624b374a1840d3263f3b867572cdf2d80881152b4bc2a8e3cf5ebabda77afb15",
+          "sha256": "3f25674077ce9420d5f750688dde0b1f4d9efe26e0f78a177961cc99dd7d2a3a",
           "sources": [
             {
               "file": "taviraj-thai-600-italic.woff2",
@@ -5763,10 +5793,10 @@
           ]
         },
         {
-          "file": "MangaX-taviraj-700-normal.ttf",
+          "file": "taviraj-700-normal.ttf",
           "weight": 700,
           "italic": false,
-          "sha256": "c71ee00b13eea3f445f52e4b6b42e738ef9410f49977aaaf4cd4515fc26feab2",
+          "sha256": "8ae8c57262dede8d5b54bb0c321c70caa9d198a29833e657c375b6ac527dec6b",
           "sources": [
             {
               "file": "taviraj-thai-700-normal.woff2",
@@ -5783,10 +5813,10 @@
           ]
         },
         {
-          "file": "MangaX-taviraj-700-italic.ttf",
+          "file": "taviraj-700-italic.ttf",
           "weight": 700,
           "italic": true,
-          "sha256": "bf7f900ca89633f43761070028e20488a06388bfbb667b36420e8889c1493782",
+          "sha256": "d2638895bed11bca830d61296fbd77c14b16a4ff53bdebcdb242c08157950773",
           "sources": [
             {
               "file": "taviraj-thai-700-italic.woff2",
@@ -5803,10 +5833,10 @@
           ]
         },
         {
-          "file": "MangaX-taviraj-800-normal.ttf",
+          "file": "taviraj-800-normal.ttf",
           "weight": 800,
           "italic": false,
-          "sha256": "db21d95601404e3677fc6d4df4a95282bb84c57cc228a01a84dc39ae6c812af7",
+          "sha256": "7d1b03a3bd4dd1e538e302cad1125dc89b37135204c25dc0ea29797424a9b42a",
           "sources": [
             {
               "file": "taviraj-thai-800-normal.woff2",
@@ -5823,10 +5853,10 @@
           ]
         },
         {
-          "file": "MangaX-taviraj-800-italic.ttf",
+          "file": "taviraj-800-italic.ttf",
           "weight": 800,
           "italic": true,
-          "sha256": "baba588a8d5bd9749580b637f8dd5516da54f2edeab1a3024a23e02dfb63dafc",
+          "sha256": "aa405dac8a940e71c48f0d552f89ac59f4e3656a2741d6a0e36b079806ea1ead",
           "sources": [
             {
               "file": "taviraj-thai-800-italic.woff2",
@@ -5843,10 +5873,10 @@
           ]
         },
         {
-          "file": "MangaX-taviraj-900-normal.ttf",
+          "file": "taviraj-900-normal.ttf",
           "weight": 900,
           "italic": false,
-          "sha256": "0b5862bcc0d5f3483172e2b783ab1515f1f2de204958d1283c93df9153fb0f60",
+          "sha256": "393ab8cb26df9a4177c68e550abd58ec574e606e8b76caa351bb1455e8ee4ead",
           "sources": [
             {
               "file": "taviraj-thai-900-normal.woff2",
@@ -5863,10 +5893,10 @@
           ]
         },
         {
-          "file": "MangaX-taviraj-900-italic.ttf",
+          "file": "taviraj-900-italic.ttf",
           "weight": 900,
           "italic": true,
-          "sha256": "d1e174d479d95fb0e0f857a523ca4933f9e1d24d5c209f2cf8b91c2167cbffb9",
+          "sha256": "f5a265321fa5e162fdfb7f13e701a00edb0e94e01773bcc359c73bdde685bd2f",
           "sources": [
             {
               "file": "taviraj-thai-900-italic.woff2",
@@ -5882,10 +5912,11 @@
             }
           ]
         }
-      ]
+      ],
+      "previous_family": "MangaX Taviraj"
     },
     {
-      "family": "MangaX Thasadith",
+      "family": "Thasadith",
       "original_family": "Thasadith",
       "source_id": "thasadith",
       "group": "dialogue",
@@ -5893,10 +5924,10 @@
       "license": "licenses/thasadith-OFL.txt",
       "variants": [
         {
-          "file": "MangaX-thasadith-400-normal.ttf",
+          "file": "thasadith-400-normal.ttf",
           "weight": 400,
           "italic": false,
-          "sha256": "549256a0fb52784af14a339bc4d0f7dd772949a844ba4965d40f3df20520a66e",
+          "sha256": "cb58c00b3d6d2239744ee94cc90b9d2cef31ffac06e4120a9129c64a2d20cf9a",
           "sources": [
             {
               "file": "thasadith-thai-400-normal.woff2",
@@ -5913,10 +5944,10 @@
           ]
         },
         {
-          "file": "MangaX-thasadith-400-italic.ttf",
+          "file": "thasadith-400-italic.ttf",
           "weight": 400,
           "italic": true,
-          "sha256": "6cbbcb7d3bdfecaa0702387138552e8c2e69e1c1d5f916abb2368351c21196a0",
+          "sha256": "c770714b2ebcd8bd4510429bc4d581e92cf64f5972ff59a245467e4592350ebc",
           "sources": [
             {
               "file": "thasadith-thai-400-italic.woff2",
@@ -5933,10 +5964,10 @@
           ]
         },
         {
-          "file": "MangaX-thasadith-700-normal.ttf",
+          "file": "thasadith-700-normal.ttf",
           "weight": 700,
           "italic": false,
-          "sha256": "b396b3d623d73d021a0dd36b4f7bf86861e87f94029570c31578a12c1ca263b7",
+          "sha256": "48005304796aa39662238802619961bf8c25edb4a09b2eb7739ba6ad7d0bfbbe",
           "sources": [
             {
               "file": "thasadith-thai-700-normal.woff2",
@@ -5953,10 +5984,10 @@
           ]
         },
         {
-          "file": "MangaX-thasadith-700-italic.ttf",
+          "file": "thasadith-700-italic.ttf",
           "weight": 700,
           "italic": true,
-          "sha256": "d4fd37c2ac767770f513c11ccce82381703b7556e7c128828822dcc9619d9122",
+          "sha256": "14d5441fdcab125e94cdba8c4007677ab2bdc9e07491b95cb332ba5b5335e9c5",
           "sources": [
             {
               "file": "thasadith-thai-700-italic.woff2",
@@ -5972,10 +6003,11 @@
             }
           ]
         }
-      ]
+      ],
+      "previous_family": "MangaX Thasadith"
     },
     {
-      "family": "MangaX Trirong",
+      "family": "Trirong",
       "original_family": "Trirong",
       "source_id": "trirong",
       "group": "story",
@@ -5983,10 +6015,10 @@
       "license": "licenses/trirong-OFL.txt",
       "variants": [
         {
-          "file": "MangaX-trirong-100-normal.ttf",
+          "file": "trirong-100-normal.ttf",
           "weight": 100,
           "italic": false,
-          "sha256": "d08f83591720dac31afb57e62ba27468c72b119437458e92f8e74e37307951a3",
+          "sha256": "a7329e1e416d8ed9433cefaaa6dee26426766650e1214dfbc83519450af21e37",
           "sources": [
             {
               "file": "trirong-thai-100-normal.woff2",
@@ -6003,10 +6035,10 @@
           ]
         },
         {
-          "file": "MangaX-trirong-100-italic.ttf",
+          "file": "trirong-100-italic.ttf",
           "weight": 100,
           "italic": true,
-          "sha256": "77e00aa8028a848fa5a47cb7f9caddc406b6abd8851f06a05a1594c4d1277da6",
+          "sha256": "afdea721cff194b2c5afd696ffe21293b30d5b850135d8eeed323e4b885bf8f2",
           "sources": [
             {
               "file": "trirong-thai-100-italic.woff2",
@@ -6023,10 +6055,10 @@
           ]
         },
         {
-          "file": "MangaX-trirong-200-normal.ttf",
+          "file": "trirong-200-normal.ttf",
           "weight": 200,
           "italic": false,
-          "sha256": "616e89adccac369006120d2ba6915b77639c3db1d7b297f69471fea870c3cef8",
+          "sha256": "455e1c0e4e7b8331b24db1ba26af692350ed9be45f1683301321f28704300ca6",
           "sources": [
             {
               "file": "trirong-thai-200-normal.woff2",
@@ -6043,10 +6075,10 @@
           ]
         },
         {
-          "file": "MangaX-trirong-200-italic.ttf",
+          "file": "trirong-200-italic.ttf",
           "weight": 200,
           "italic": true,
-          "sha256": "97e24b804c7b109c97d14cbb66e99237884941fa064315a2ee0256da48447eae",
+          "sha256": "fe9e3cb3dd8cb126d4473e550ed8cf25cad7959d1175a089b531cbf164b80aeb",
           "sources": [
             {
               "file": "trirong-thai-200-italic.woff2",
@@ -6063,10 +6095,10 @@
           ]
         },
         {
-          "file": "MangaX-trirong-300-normal.ttf",
+          "file": "trirong-300-normal.ttf",
           "weight": 300,
           "italic": false,
-          "sha256": "9d51bc4c811e21b890a9ae80f98b7deef1f4510b4635f0f46b4b387d5e97e6a0",
+          "sha256": "57d3b2b1f96b76891c80a47cea40f6bc3353ffee69fc2504dc1e72f33a0ce786",
           "sources": [
             {
               "file": "trirong-thai-300-normal.woff2",
@@ -6083,10 +6115,10 @@
           ]
         },
         {
-          "file": "MangaX-trirong-300-italic.ttf",
+          "file": "trirong-300-italic.ttf",
           "weight": 300,
           "italic": true,
-          "sha256": "c047f47fadf00fadd56461d28d4ab632c9abccf3edc39d33a776282b6be1d25a",
+          "sha256": "f2923337c49784b1fc764125a66226b7e25442d560d82054f3ba0453db8ab0c0",
           "sources": [
             {
               "file": "trirong-thai-300-italic.woff2",
@@ -6103,10 +6135,10 @@
           ]
         },
         {
-          "file": "MangaX-trirong-400-normal.ttf",
+          "file": "trirong-400-normal.ttf",
           "weight": 400,
           "italic": false,
-          "sha256": "6f95462168957746bde8af0f2e3dec8a5fb006d60d768fb2944cb3910b2c26c9",
+          "sha256": "5b3212ec45765f86313e190e9b93ca1f668442912dfaa44fb702cf43b5ab473c",
           "sources": [
             {
               "file": "trirong-thai-400-normal.woff2",
@@ -6123,10 +6155,10 @@
           ]
         },
         {
-          "file": "MangaX-trirong-400-italic.ttf",
+          "file": "trirong-400-italic.ttf",
           "weight": 400,
           "italic": true,
-          "sha256": "5cf468fcf7573ef3f4dcdf6e25829bbabb878ac7acda0789cc8ddfdec8285c28",
+          "sha256": "5baa4f818e0d82f61e38ec35f8ee3ed00ab1988e4a53bba08dce5227903885bd",
           "sources": [
             {
               "file": "trirong-thai-400-italic.woff2",
@@ -6143,10 +6175,10 @@
           ]
         },
         {
-          "file": "MangaX-trirong-500-normal.ttf",
+          "file": "trirong-500-normal.ttf",
           "weight": 500,
           "italic": false,
-          "sha256": "161af1ab48481a0f1a8521b3b30325c709b45aa6c2ec7fc3839d957e35ee9e01",
+          "sha256": "d33d750ae2523892d2f274c655de9d8cf53519d87b95dd110a655b8404a6ce1e",
           "sources": [
             {
               "file": "trirong-thai-500-normal.woff2",
@@ -6163,10 +6195,10 @@
           ]
         },
         {
-          "file": "MangaX-trirong-500-italic.ttf",
+          "file": "trirong-500-italic.ttf",
           "weight": 500,
           "italic": true,
-          "sha256": "289a6100b8c5c98576b51b2217de6db6b11c60078dd91d8fce439f36ba2a7af7",
+          "sha256": "f50f560bcff8ea949d15f820bdcf4698be191e4cb023d59b3a84f2f6e0da0f03",
           "sources": [
             {
               "file": "trirong-thai-500-italic.woff2",
@@ -6183,10 +6215,10 @@
           ]
         },
         {
-          "file": "MangaX-trirong-600-normal.ttf",
+          "file": "trirong-600-normal.ttf",
           "weight": 600,
           "italic": false,
-          "sha256": "2919b3d893c9588e746278d1e81a17de3069ac589f9d6766da8bcbde277368a4",
+          "sha256": "b045b1f40843edd275ac779e49b956b376a91b7d86dce0f615dbf2032ef6a953",
           "sources": [
             {
               "file": "trirong-thai-600-normal.woff2",
@@ -6203,10 +6235,10 @@
           ]
         },
         {
-          "file": "MangaX-trirong-600-italic.ttf",
+          "file": "trirong-600-italic.ttf",
           "weight": 600,
           "italic": true,
-          "sha256": "f528034318667f72d655d9a9916226251b044897b46398791bc8a3b4b9113de8",
+          "sha256": "3fdad0c6f2d081c8091a20321945776918e536d384e4f28beba33d23775f73ff",
           "sources": [
             {
               "file": "trirong-thai-600-italic.woff2",
@@ -6223,10 +6255,10 @@
           ]
         },
         {
-          "file": "MangaX-trirong-700-normal.ttf",
+          "file": "trirong-700-normal.ttf",
           "weight": 700,
           "italic": false,
-          "sha256": "4a81141534afae746e3ebe987e7465e6daeae3c4bd25db656bfc4d00d61c2037",
+          "sha256": "532cba69b6c8b83d86c29c36ea93918de23f86cbd045e055bb4d14ed64f7e173",
           "sources": [
             {
               "file": "trirong-thai-700-normal.woff2",
@@ -6243,10 +6275,10 @@
           ]
         },
         {
-          "file": "MangaX-trirong-700-italic.ttf",
+          "file": "trirong-700-italic.ttf",
           "weight": 700,
           "italic": true,
-          "sha256": "c0a47afc0ad85a59d2af313bddb57e103c2830017f688b001cf49391bd4266ed",
+          "sha256": "efed4cb662d019f1f70bd45f727e9bc0bcb27236bb5cfc44da3b0436ef641c13",
           "sources": [
             {
               "file": "trirong-thai-700-italic.woff2",
@@ -6263,10 +6295,10 @@
           ]
         },
         {
-          "file": "MangaX-trirong-800-normal.ttf",
+          "file": "trirong-800-normal.ttf",
           "weight": 800,
           "italic": false,
-          "sha256": "7ec613c6f0a2dc82b10cc1fe0bfda2410564f92818e275ddc07674193351188f",
+          "sha256": "410c69b47e1268b6116df3a7c723c0832fffb12ca49d8713f6332edb79fcf01f",
           "sources": [
             {
               "file": "trirong-thai-800-normal.woff2",
@@ -6283,10 +6315,10 @@
           ]
         },
         {
-          "file": "MangaX-trirong-800-italic.ttf",
+          "file": "trirong-800-italic.ttf",
           "weight": 800,
           "italic": true,
-          "sha256": "aee68538ce2c46fb837ad96189d6e8d88c1f278c9f6638523683ade5dd8fe5f0",
+          "sha256": "7004388b27705ee27091bc87f345fc7a999a32c0904097ad6d02ccd0040830d2",
           "sources": [
             {
               "file": "trirong-thai-800-italic.woff2",
@@ -6303,10 +6335,10 @@
           ]
         },
         {
-          "file": "MangaX-trirong-900-normal.ttf",
+          "file": "trirong-900-normal.ttf",
           "weight": 900,
           "italic": false,
-          "sha256": "0ad7107edb6f28786fdda55175455d759fcacc3408bc559d3500d6043fabe95e",
+          "sha256": "719c702c1a6cc7815f2154e65f3a5a4073b96fde2d460a0c136c487bfd810881",
           "sources": [
             {
               "file": "trirong-thai-900-normal.woff2",
@@ -6323,10 +6355,10 @@
           ]
         },
         {
-          "file": "MangaX-trirong-900-italic.ttf",
+          "file": "trirong-900-italic.ttf",
           "weight": 900,
           "italic": true,
-          "sha256": "7bbc587e5bc0c0a2e15dc60f9bf8611022bfdc984aa256fe17fcc8b1e2407aef",
+          "sha256": "6732d0d84fcc4b4280012d1119bab30367d8d07ab76e2e5479f265c611d9e0a9",
           "sources": [
             {
               "file": "trirong-thai-900-italic.woff2",
@@ -6342,7 +6374,500 @@
             }
           ]
         }
+      ],
+      "previous_family": "MangaX Trirong"
+    },
+    {
+      "family": "Garuda",
+      "original_family": "Garuda",
+      "source_id": "garuda",
+      "group": "dialogue",
+      "note": "ไม่มีเชิง อ่านง่าย",
+      "license": "licenses/tlwg-COPYING.txt",
+      "unmodified_from": "https://github.com/tlwg/fonts-tlwg/releases/tag/v0.7.4 (ttf-tlwg-0.7.4.zip)",
+      "variants": [
+        {
+          "file": "Garuda-Bold.ttf",
+          "weight": 700,
+          "italic": false,
+          "sha256": "3a87997f9ad8b187c49707c6992bf3eef3c2e0a877ca1d61a80786396a3ba38b"
+        },
+        {
+          "file": "Garuda-BoldOblique.ttf",
+          "weight": 700,
+          "italic": true,
+          "sha256": "233e9c10adebadf1db45ec9fc0cbb4a41c286d3d4c9eca7dde559f9458c200d0"
+        },
+        {
+          "file": "Garuda-Oblique.ttf",
+          "weight": 400,
+          "italic": true,
+          "sha256": "2cf4c806046d1556d35b5423a13591662055150751a7f4b644f498314a76bc7f"
+        },
+        {
+          "file": "Garuda.ttf",
+          "weight": 400,
+          "italic": false,
+          "sha256": "9635471eac8af604a54a4438d016d492d27090f889e9eaffb907d9b52bd68223"
+        }
+      ]
+    },
+    {
+      "family": "Kinnari",
+      "original_family": "Kinnari",
+      "source_id": "kinnari",
+      "group": "story",
+      "note": "มีเชิง",
+      "license": "licenses/tlwg-COPYING.txt",
+      "unmodified_from": "https://github.com/tlwg/fonts-tlwg/releases/tag/v0.7.4 (ttf-tlwg-0.7.4.zip)",
+      "variants": [
+        {
+          "file": "Kinnari-Bold.ttf",
+          "weight": 700,
+          "italic": false,
+          "sha256": "ba57b9dc489aca1968a5efbae02e3ca98024d437b2f72cade14333739e95901f"
+        },
+        {
+          "file": "Kinnari-BoldItalic.ttf",
+          "weight": 700,
+          "italic": true,
+          "sha256": "d9c7f041ed869e802fb5a1a319356e4a67714559d65fd7ddf293e09972391ddd"
+        },
+        {
+          "file": "Kinnari-BoldOblique.ttf",
+          "weight": 700,
+          "italic": true,
+          "sha256": "5af49863627b74e7354650898a5690c9605906aa56a25f31312889da1545964a"
+        },
+        {
+          "file": "Kinnari-Italic.ttf",
+          "weight": 400,
+          "italic": true,
+          "sha256": "dfaa4bdacc2d1c5ec32289181033d54c98b55544c7eae4cb6525ab5623e22774"
+        },
+        {
+          "file": "Kinnari-Oblique.ttf",
+          "weight": 400,
+          "italic": true,
+          "sha256": "eb411579da89326c34dc4181afb482b82bf5e9443f826c52377e4b390c5fc6f0"
+        },
+        {
+          "file": "Kinnari.ttf",
+          "weight": 400,
+          "italic": false,
+          "sha256": "5aefa8ef5de03363596c2262b03f41f686be016c0c79fb02df8356ce8fac9421"
+        }
+      ]
+    },
+    {
+      "family": "Laksaman",
+      "original_family": "Laksaman",
+      "source_id": "laksaman",
+      "group": "story",
+      "note": "แบบสารบรรณ",
+      "license": "licenses/tlwg-COPYING.txt",
+      "unmodified_from": "https://github.com/tlwg/fonts-tlwg/releases/tag/v0.7.4 (ttf-tlwg-0.7.4.zip)",
+      "variants": [
+        {
+          "file": "Laksaman-Bold.ttf",
+          "weight": 700,
+          "italic": false,
+          "sha256": "b1df0762ca6c14b29f1c90d3a6e2600da1f8cee2c263bca1f435e0f9bba88627"
+        },
+        {
+          "file": "Laksaman-BoldItalic.ttf",
+          "weight": 700,
+          "italic": true,
+          "sha256": "9b4de097897e38748338f5307bfbe2665d19630766f07d9ef71a0c2adfcb05ba"
+        },
+        {
+          "file": "Laksaman-Italic.ttf",
+          "weight": 400,
+          "italic": true,
+          "sha256": "cc2abd9dc1d09bcc7e44878f7daea7f73f78ef0a5008bb2887db2b3bc7ab533d"
+        },
+        {
+          "file": "Laksaman.ttf",
+          "weight": 400,
+          "italic": false,
+          "sha256": "41cd81b1c046c225491e5392f81d805ff7d19603bbf0f51978e9f226779c7e36"
+        }
+      ]
+    },
+    {
+      "family": "Loma",
+      "original_family": "Loma",
+      "source_id": "loma",
+      "group": "dialogue",
+      "note": "ไม่มีเชิง ตัวกว้าง",
+      "license": "licenses/tlwg-COPYING.txt",
+      "unmodified_from": "https://github.com/tlwg/fonts-tlwg/releases/tag/v0.7.4 (ttf-tlwg-0.7.4.zip)",
+      "variants": [
+        {
+          "file": "Loma-Bold.ttf",
+          "weight": 700,
+          "italic": false,
+          "sha256": "32f04548ff4d602673c1619cf865799896716c0bce57162c2e43b29f50ba2b4a"
+        },
+        {
+          "file": "Loma-BoldOblique.ttf",
+          "weight": 700,
+          "italic": true,
+          "sha256": "78861ef7054c409e77f9ec8901f03f4b1950ac4faa76adad243ad9c9ed1da24d"
+        },
+        {
+          "file": "Loma-Oblique.ttf",
+          "weight": 400,
+          "italic": true,
+          "sha256": "fb29cad448a3d7352ef53f7fd8ddf15f994827b08aa31867122ed68d6dc36a9e"
+        },
+        {
+          "file": "Loma.ttf",
+          "weight": 400,
+          "italic": false,
+          "sha256": "23ee99fcbdb1d7e57c55a90c606ebf684134215d8386773bae34f0c238f07dd7"
+        }
+      ]
+    },
+    {
+      "family": "Norasi",
+      "original_family": "Norasi",
+      "source_id": "norasi",
+      "group": "story",
+      "note": "มีเชิง",
+      "license": "licenses/tlwg-COPYING.txt",
+      "unmodified_from": "https://github.com/tlwg/fonts-tlwg/releases/tag/v0.7.4 (ttf-tlwg-0.7.4.zip)",
+      "variants": [
+        {
+          "file": "Norasi-Bold.ttf",
+          "weight": 700,
+          "italic": false,
+          "sha256": "cdbce4c80e378f04d863490bef3e31cd611eef96b687aa9976bc2844d112f8c8"
+        },
+        {
+          "file": "Norasi-BoldItalic.ttf",
+          "weight": 700,
+          "italic": true,
+          "sha256": "7edb3221053b0101b961e6afea569f6aa58f482dc7afa173cd636608da7980b3"
+        },
+        {
+          "file": "Norasi-BoldOblique.ttf",
+          "weight": 700,
+          "italic": true,
+          "sha256": "58a31fe62794a7b31cff86befa377d29fcfe2541d242fe86b55908ae2651071e"
+        },
+        {
+          "file": "Norasi-Italic.ttf",
+          "weight": 400,
+          "italic": true,
+          "sha256": "22f863f598eb76db0c662fbb9a76ce5257821a985a82b3ab791a2bc1fd0937e9"
+        },
+        {
+          "file": "Norasi-Oblique.ttf",
+          "weight": 400,
+          "italic": true,
+          "sha256": "722f540eccae75508ece3102394dcb407897b84cfd3726ac20356fccea7f64e8"
+        },
+        {
+          "file": "Norasi.ttf",
+          "weight": 400,
+          "italic": false,
+          "sha256": "7a0ac727cb27107a09855883e434e2c38d09f3f97a3a816e892f32b10ad6020b"
+        }
+      ]
+    },
+    {
+      "family": "Purisa",
+      "original_family": "Purisa",
+      "source_id": "purisa",
+      "group": "hand",
+      "note": "ลายมือ",
+      "license": "licenses/tlwg-COPYING.txt",
+      "unmodified_from": "https://github.com/tlwg/fonts-tlwg/releases/tag/v0.7.4 (ttf-tlwg-0.7.4.zip)",
+      "variants": [
+        {
+          "file": "Purisa-Bold.ttf",
+          "weight": 700,
+          "italic": false,
+          "sha256": "ca3cb353b438e4a5fca38f892599a5c14c68d3da1ecf1b5ad31e2ac1b70e4d6c"
+        },
+        {
+          "file": "Purisa-BoldOblique.ttf",
+          "weight": 700,
+          "italic": true,
+          "sha256": "4bb88b4ad0335381ba93d80c1620bced746e2e967411951f68e5678b544a47b1"
+        },
+        {
+          "file": "Purisa-Oblique.ttf",
+          "weight": 400,
+          "italic": true,
+          "sha256": "b03eb4656b8b283902d3852ddbf2b057244d9234b24cd7143b96ec829ae763c8"
+        },
+        {
+          "file": "Purisa.ttf",
+          "weight": 400,
+          "italic": false,
+          "sha256": "f3cafc7d1a4d2271a8f764d52616718a412a0469042e9eb276df2858c03cfcaf"
+        }
+      ]
+    },
+    {
+      "family": "Sawasdee",
+      "original_family": "Sawasdee",
+      "source_id": "sawasdee",
+      "group": "dialogue",
+      "note": "หัวกลม เป็นกันเอง",
+      "license": "licenses/tlwg-COPYING.txt",
+      "unmodified_from": "https://github.com/tlwg/fonts-tlwg/releases/tag/v0.7.4 (ttf-tlwg-0.7.4.zip)",
+      "variants": [
+        {
+          "file": "Sawasdee-Bold.ttf",
+          "weight": 700,
+          "italic": false,
+          "sha256": "54c9065be6c2c996ff474af29c60cbe196878c2431b0240d38f00c1da3fef75c"
+        },
+        {
+          "file": "Sawasdee-BoldOblique.ttf",
+          "weight": 700,
+          "italic": true,
+          "sha256": "5e01aa47ee6cab7fc15da3074cca62168be8045b1fa16b3da44e21a064cc5a29"
+        },
+        {
+          "file": "Sawasdee-Oblique.ttf",
+          "weight": 400,
+          "italic": true,
+          "sha256": "9bd39009eff30a18e79f4ea9357aa6034b406c0aa80bb945fae7b9ae5f59220e"
+        },
+        {
+          "file": "Sawasdee.ttf",
+          "weight": 400,
+          "italic": false,
+          "sha256": "83feec08181a755c5975ffa35ba671b15ea0e866c5a5072c0e9a2e6c8becc3f9"
+        }
+      ]
+    },
+    {
+      "family": "Tlwg Mono",
+      "original_family": "Tlwg Mono",
+      "source_id": "tlwg-mono",
+      "group": "other",
+      "note": "ความกว้างคงที่",
+      "license": "licenses/tlwg-COPYING.txt",
+      "unmodified_from": "https://github.com/tlwg/fonts-tlwg/releases/tag/v0.7.4 (ttf-tlwg-0.7.4.zip)",
+      "variants": [
+        {
+          "file": "TlwgMono-Bold.ttf",
+          "weight": 700,
+          "italic": false,
+          "sha256": "a79794392943dc495489e2d048dc1570b9778a66cf521d394484b6a15fd5ec86"
+        },
+        {
+          "file": "TlwgMono-BoldOblique.ttf",
+          "weight": 700,
+          "italic": true,
+          "sha256": "e9ab8398b809aedef05a3b23509ebdc043cf4d5c71d31a6d29fb0f7de41954b0"
+        },
+        {
+          "file": "TlwgMono-Oblique.ttf",
+          "weight": 400,
+          "italic": true,
+          "sha256": "db70a7e268d9cff1cdc45071a8ca0c8bf88d624817053383c16784ac5472a288"
+        },
+        {
+          "file": "TlwgMono.ttf",
+          "weight": 400,
+          "italic": false,
+          "sha256": "ff97af3da8f8e7a6f628ed297eb5f473b04223e0b8fe4ae51772b2041bdf4618"
+        }
+      ]
+    },
+    {
+      "family": "Tlwg Typewriter",
+      "original_family": "Tlwg Typewriter",
+      "source_id": "tlwg-typewriter",
+      "group": "other",
+      "note": "พิมพ์ดีด",
+      "license": "licenses/tlwg-COPYING.txt",
+      "unmodified_from": "https://github.com/tlwg/fonts-tlwg/releases/tag/v0.7.4 (ttf-tlwg-0.7.4.zip)",
+      "variants": [
+        {
+          "file": "TlwgTypewriter-Bold.ttf",
+          "weight": 700,
+          "italic": false,
+          "sha256": "edad909b9c7b3edc6b0dfafc772068e4c8af06b5759a9f65d03b60a22f9e8062"
+        },
+        {
+          "file": "TlwgTypewriter-BoldOblique.ttf",
+          "weight": 700,
+          "italic": true,
+          "sha256": "4e5e4ed2e5e3b4c4dfcfdeb3ec3f05d9f5101dcbac0597446077f0c9fa6e3b63"
+        },
+        {
+          "file": "TlwgTypewriter-Oblique.ttf",
+          "weight": 400,
+          "italic": true,
+          "sha256": "df523422fc2810e898d4ed3dd05f918a2dddd1bb63de8602901cd9d9854ff12b"
+        },
+        {
+          "file": "TlwgTypewriter.ttf",
+          "weight": 400,
+          "italic": false,
+          "sha256": "9dbc0e6915d66643270d5dcfccac1dd27294e5d7ca80cc6c910b4d23d8b18a26"
+        }
+      ]
+    },
+    {
+      "family": "Tlwg Typist",
+      "original_family": "Tlwg Typist",
+      "source_id": "tlwg-typist",
+      "group": "other",
+      "note": "พิมพ์ดีด",
+      "license": "licenses/tlwg-COPYING.txt",
+      "unmodified_from": "https://github.com/tlwg/fonts-tlwg/releases/tag/v0.7.4 (ttf-tlwg-0.7.4.zip)",
+      "variants": [
+        {
+          "file": "TlwgTypist-Bold.ttf",
+          "weight": 700,
+          "italic": false,
+          "sha256": "4a0536ade94fc7cd41e0b8ecbcc39b74cdc5d71b86110d2e9bdac3adc1fc4546"
+        },
+        {
+          "file": "TlwgTypist-BoldOblique.ttf",
+          "weight": 700,
+          "italic": true,
+          "sha256": "fcbca2eed7830f441529a8d5448d61507472406b26c1ad26f2e744e07c7342dc"
+        },
+        {
+          "file": "TlwgTypist-Oblique.ttf",
+          "weight": 400,
+          "italic": true,
+          "sha256": "0adf6a6f17166bc27200e853c362a2f118c7a593c9a79dd0ba7fc8186c9e729a"
+        },
+        {
+          "file": "TlwgTypist.ttf",
+          "weight": 400,
+          "italic": false,
+          "sha256": "7b1a1b0bf7f357c87c6f3a5c612ed62c299553bf95b6cee75960f6d6f20b041c"
+        }
+      ]
+    },
+    {
+      "family": "Tlwg Typo",
+      "original_family": "Tlwg Typo",
+      "source_id": "tlwg-typo",
+      "group": "other",
+      "note": "ความกว้างคงที่",
+      "license": "licenses/tlwg-COPYING.txt",
+      "unmodified_from": "https://github.com/tlwg/fonts-tlwg/releases/tag/v0.7.4 (ttf-tlwg-0.7.4.zip)",
+      "variants": [
+        {
+          "file": "TlwgTypo-Bold.ttf",
+          "weight": 700,
+          "italic": false,
+          "sha256": "bd6b4c3bc3ec5b24b17d45b574abf3dddaa48f59cc8a2a45a8cdd5a33f386c1a"
+        },
+        {
+          "file": "TlwgTypo-BoldOblique.ttf",
+          "weight": 700,
+          "italic": true,
+          "sha256": "36d0839464a104ed0b0e998a9c1b2dda80f12e02956c3344082c6d7f404e703d"
+        },
+        {
+          "file": "TlwgTypo-Oblique.ttf",
+          "weight": 400,
+          "italic": true,
+          "sha256": "103853f33eb53a4a19c706e33cf8641f55b31723eec6e56bb0387a2708cbb2ce"
+        },
+        {
+          "file": "TlwgTypo.ttf",
+          "weight": 400,
+          "italic": false,
+          "sha256": "37305189dee58a77ba121bfd6985260ec7d8bea60114c99a20b9a73f34bd8aaa"
+        }
+      ]
+    },
+    {
+      "family": "Umpush",
+      "original_family": "Umpush",
+      "source_id": "umpush",
+      "group": "dialogue",
+      "note": "ไม่มีเชิง มีตัวบาง",
+      "license": "licenses/tlwg-COPYING.txt",
+      "unmodified_from": "https://github.com/tlwg/fonts-tlwg/releases/tag/v0.7.4 (ttf-tlwg-0.7.4.zip)",
+      "variants": [
+        {
+          "file": "Umpush-Bold.ttf",
+          "weight": 700,
+          "italic": false,
+          "sha256": "29aa0cd72b0304d0f2d7dc80930eaa2ba5c03025a50ea722a81141ecd02defa3"
+        },
+        {
+          "file": "Umpush-BoldOblique.ttf",
+          "weight": 700,
+          "italic": true,
+          "sha256": "969caa816e29b4dc8e8ac97b2031cbbc1b2133efa8b72fca044be26726f17be3"
+        },
+        {
+          "file": "Umpush-Light.ttf",
+          "weight": 300,
+          "italic": false,
+          "sha256": "8fb05565fac9d603dd82d9fe19c32a53c22e147733625ad1f3c54f03d9e1ad57"
+        },
+        {
+          "file": "Umpush-LightOblique.ttf",
+          "weight": 300,
+          "italic": true,
+          "sha256": "48787da958193cbcfdc4a58a9091b633674c3a1e5617d3cb81dd3a42d352720f"
+        },
+        {
+          "file": "Umpush-Oblique.ttf",
+          "weight": 400,
+          "italic": true,
+          "sha256": "ad80d7ddeb191c486cbdce6fa0ec755399313fb93df96bab80f6dc85d802748e"
+        },
+        {
+          "file": "Umpush.ttf",
+          "weight": 400,
+          "italic": false,
+          "sha256": "eb5590442d4658ffa331f475827fa604b7f47833c6d55586d4b1c48af2285ce5"
+        }
+      ]
+    },
+    {
+      "family": "Waree",
+      "original_family": "Waree",
+      "source_id": "waree",
+      "group": "dialogue",
+      "note": "ไม่มีเชิง ตัวกว้าง",
+      "license": "licenses/tlwg-COPYING.txt",
+      "unmodified_from": "https://github.com/tlwg/fonts-tlwg/releases/tag/v0.7.4 (ttf-tlwg-0.7.4.zip)",
+      "variants": [
+        {
+          "file": "Waree-Bold.ttf",
+          "weight": 700,
+          "italic": false,
+          "sha256": "dc9e97b0bcd9638ff239143678855f5c2f088aab5c2391be3e4528eb00a4a38e"
+        },
+        {
+          "file": "Waree-BoldOblique.ttf",
+          "weight": 700,
+          "italic": true,
+          "sha256": "c549e83c5fc9c26d01273c88a6d59f26991c10b5d7ef15a45e0eaf815d8b09e0"
+        },
+        {
+          "file": "Waree-Oblique.ttf",
+          "weight": 400,
+          "italic": true,
+          "sha256": "0cb3f00145c7aa17ec13b2100dddce759032d686be32aeb9483651bfadbb168f"
+        },
+        {
+          "file": "Waree.ttf",
+          "weight": 400,
+          "italic": false,
+          "sha256": "f7678f57fe6bbbd6a2e33897910512b38c413b5ffd2e74d089a6255258eb46f4"
+        }
       ]
     }
-  ]
+  ],
+  "legacy_family_prefix": "MangaX"
 }

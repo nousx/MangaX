@@ -11,6 +11,7 @@ from .font_list import (
     FONT_COVERAGE_FULL,
     FONT_COVERAGE_NONE,
     _FontComboBoxMenu,
+    display_font_family,
     font_sample_line,
     font_text_coverage,
     fonts_directory,
@@ -20,7 +21,10 @@ from .font_list import (
 
 ALIASES = {'itim': 'ไอติม', 'mali': 'มะลิ', 'sriracha': 'ศรีราชา', 'sarabun': 'สารบรรณ',
            'kanit': 'คณิต', 'mitr': 'มิตร', 'pridi': 'ปรีดี', 'prompt': 'พร้อมท์',
-           'noto-sans-thai': 'โนโตะ ไทย', 'chonburi': 'ชลบุรี', 'pattaya': 'พัทยา'}
+           'noto-sans-thai': 'โนโตะ ไทย', 'chonburi': 'ชลบุรี', 'pattaya': 'พัทยา',
+           'purisa': 'ภูริษา', 'sawasdee': 'สวัสดี', 'garuda': 'ครุฑ', 'loma': 'โลมา',
+           'umpush': 'อัมพุช', 'waree': 'วารี', 'kinnari': 'กินรี', 'norasi': 'นรสีห์',
+           'laksaman': 'ลักษมัณ'}
 
 
 class ThaiFontMenu(_FontComboBoxMenu):
@@ -51,7 +55,10 @@ class ThaiFontMenu(_FontComboBoxMenu):
         self.sample_text = sample or ('สวัสดี! ไปผจญภัยกันเถอะ' if thai else "I'll protect you!")
         # Rows preview the caller's text. Combos without one keep name rows unless
         # the owner asked for sample rows (then the default sentence is shown).
-        super().__init__(families, placeholder, parent,
+        # Rows show the family without the bundled-font prefix; `family_entries`
+        # keeps the real family name, which is the key everywhere else.
+        rows = [(display_font_family(family), value, search) for family, value, search in families]
+        super().__init__(rows, placeholder, parent,
                          sample_text=self.sample_text if sample or sample_rows else '',
                          locale_code=locale_code or ('th_TH' if thai else 'en_US'))
         row = QHBoxLayout()

@@ -34,6 +34,7 @@ from ._fonts import (
     select_hyphenator,
     set_bold,
     set_font,
+    legacy_font_family,
     strip_qt_foundry_brackets,
     unregister_font_file,
 )

@@ -31,11 +31,11 @@ RESUMABLE = ('paused', 'failed', 'interrupted', 'cancelled')
 # Per-region keys owned by the assistant. They never influence pixels.
 METADATA_KEYS = ('speaker', 'listener', 'text_kind', 'locked', '_mangax_review')
 STYLE_KITS = {
-    'dialogue': {'font_family': 'MangaX Itim', 'line_spacing': 1.3, 'direction': 'h', 'alignment': 'center'},
-    'thought': {'font_family': 'MangaX Mali', 'line_spacing': 1.4, 'direction': 'h', 'alignment': 'center'},
-    'narration': {'font_family': 'MangaX Pridi', 'line_spacing': 1.4, 'direction': 'h', 'alignment': 'left'},
-    'shout': {'font_family': 'MangaX Kanit::Bold', 'line_spacing': 1.2, 'direction': 'h', 'alignment': 'center'},
-    'sfx': {'font_family': 'MangaX Chonburi', 'line_spacing': 1.1, 'direction': 'h', 'alignment': 'center'},
+    'dialogue': {'font_family': 'Itim', 'line_spacing': 1.3, 'direction': 'h', 'alignment': 'center'},
+    'thought': {'font_family': 'Mali', 'line_spacing': 1.4, 'direction': 'h', 'alignment': 'center'},
+    'narration': {'font_family': 'Pridi', 'line_spacing': 1.4, 'direction': 'h', 'alignment': 'left'},
+    'shout': {'font_family': 'Kanit::Bold', 'line_spacing': 1.2, 'direction': 'h', 'alignment': 'center'},
+    'sfx': {'font_family': 'Chonburi', 'line_spacing': 1.1, 'direction': 'h', 'alignment': 'center'},
 }
 
 
@@ -247,7 +247,8 @@ def _font_problem(value):
         # Legacy projects stored a font file path; the renderer maps it to that file's face.
         if not text_render._fonts._resolve_existing_font_path(str(value).strip()):
             problem = tr('Font not found: {font}', font=os.path.basename(str(value)))
-    elif family.casefold() not in (requested.casefold(), text_render.strip_qt_foundry_brackets(requested).casefold()):
+    elif family.casefold() not in (requested.casefold(), text_render.strip_qt_foundry_brackets(requested).casefold(),
+                                   text_render.legacy_font_family(requested).casefold() or None):
         problem = tr('Font not found: {font}', font=requested)
     elif requested_style and requested_style.casefold() not in {name.casefold() for name in QFontDatabase.styles(family)}:
         problem = tr('Font not found: {font}', font=f'{requested} ({requested_style})')
@@ -290,7 +291,7 @@ def quality_issues(path, regions, context, config):
         if not translation:
             continue
         try:
-            value = str(region.get('font_family') or config.render.font_family or 'MangaX Itim')
+            value = str(region.get('font_family') or config.render.font_family or 'Itim')
             problem, raw = _font_problem(value)
             if problem:
                 add(index, 'font', problem)
@@ -695,7 +696,7 @@ class ChapterStudio:
             regions = [jsonable(block.to_dict()) for block in blocks]
             for region in regions:
                 region['translation'] = region['translation_raw'] = ''
-                region['font_family'] = config.render.font_family or 'MangaX Itim'
+                region['font_family'] = config.render.font_family or 'Itim'
                 region['target_lang'] = config.translator.target_lang
                 region['direction'] = 'h' if config.translator.target_lang == 'THA' else region.get('direction', 'auto')
             data['regions'] = regions

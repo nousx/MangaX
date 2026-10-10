@@ -189,13 +189,60 @@ memory_profiles/
 dict/*
 !dict/system_prompt_hq_format.yaml
 fonts/*
-# Bundled Thai fonts imported from the local Kotoba catalog.
-!fonts/MangaX-*.ttf
+# Bundled Thai fonts imported from the local Kotoba catalog, one pattern per
+# family so fonts a user drops into this folder are never committed.
+!fonts/anuphan-[0-9]*.ttf
+!fonts/athiti-[0-9]*.ttf
+!fonts/bai-jamjuree-[0-9]*.ttf
+!fonts/chakra-petch-[0-9]*.ttf
+!fonts/charm-[0-9]*.ttf
+!fonts/charmonman-[0-9]*.ttf
+!fonts/chonburi-[0-9]*.ttf
+!fonts/fahkwang-[0-9]*.ttf
+!fonts/google-sans-[0-9]*.ttf
+!fonts/ibm-plex-sans-thai-[0-9]*.ttf
+!fonts/ibm-plex-sans-thai-looped-[0-9]*.ttf
+!fonts/itim-[0-9]*.ttf
+!fonts/k2d-[0-9]*.ttf
+!fonts/kanit-[0-9]*.ttf
+!fonts/kodchasan-[0-9]*.ttf
+!fonts/koho-[0-9]*.ttf
+!fonts/krub-[0-9]*.ttf
+!fonts/maitree-[0-9]*.ttf
+!fonts/mali-[0-9]*.ttf
+!fonts/mitr-[0-9]*.ttf
+!fonts/niramit-[0-9]*.ttf
+!fonts/noto-sans-thai-[0-9]*.ttf
+!fonts/noto-sans-thai-looped-[0-9]*.ttf
+!fonts/noto-serif-thai-[0-9]*.ttf
+!fonts/pattaya-[0-9]*.ttf
+!fonts/playpen-sans-thai-[0-9]*.ttf
+!fonts/pridi-[0-9]*.ttf
+!fonts/prompt-[0-9]*.ttf
+!fonts/sarabun-[0-9]*.ttf
+!fonts/sriracha-[0-9]*.ttf
+!fonts/srisakdi-[0-9]*.ttf
+!fonts/taviraj-[0-9]*.ttf
+!fonts/thasadith-[0-9]*.ttf
+!fonts/trirong-[0-9]*.ttf
 !fonts/thai-font-catalog.json
 !fonts/README_TH.md
 !fonts/licenses/
 fonts/licenses/*
 !fonts/licenses/*-OFL.txt
+# Unmodified TLWG Thai fonts (fonts-tlwg 0.7.4). Listed by name so fonts a
+# user drops into this folder under another license are never committed.
+!fonts/Garuda*.ttf
+!fonts/Kinnari*.ttf
+!fonts/Laksaman*.ttf
+!fonts/Loma*.ttf
+!fonts/Norasi*.ttf
+!fonts/Purisa*.ttf
+!fonts/Sawasdee*.ttf
+!fonts/Tlwg*.ttf
+!fonts/Umpush*.ttf
+!fonts/Waree*.ttf
+!fonts/licenses/tlwg-COPYING.txt
 
 # Ignore local wheels
 *.whl

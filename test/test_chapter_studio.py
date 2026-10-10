@@ -175,7 +175,7 @@ class ChapterTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_translating_or_restyling_after_clean_keeps_clean(self):
         def edit(regions):
-            regions[0].update(translation='สวัสดี', translation_raw='สวัสดี', font_family='MangaX Kanit::Bold',
+            regions[0].update(translation='สวัสดี', translation_raw='สวัสดี', font_family='Kanit::Bold',
                               font_size=31, font_color='#ff0000', line_spacing=1.4, alignment='left',
                               speaker='Yuna', text_kind='shout', locked=True)
             regions[0]['_mangax_review'] = review_stamp(regions[0])
@@ -217,7 +217,7 @@ class ChapterTests(unittest.IsolatedAsyncioTestCase):
                 await self.studio.run(job)
                 self.assertEqual(job['status'], 'completed', job['failures'])
             data = self.studio.read_page(self.path)
-            data['regions'][0].update(font_family='MangaX Mali', font_size=28)  # Restyle after inpainting.
+            data['regions'][0].update(font_family='Mali', font_size=28)  # Restyle after inpainting.
             self.studio.save_page(self.path, data)
             job = self.studio.enqueue([self.path], ['layout'], self.config)
             await self.studio.run(job)
@@ -403,19 +403,25 @@ class QualityTests(unittest.TestCase):
         return {issue['kind'] for issue in quality_issues('page.png', [region], {}, self.config)}
 
     def test_font_forms_used_by_the_editor_are_not_false_positives(self):
+        for value in ('Itim', 'Itim::Regular', 'itim', 'Kanit::Bold', 'fonts/itim-400-normal.ttf',
+                      'Purisa', 'Sawasdee::Bold'):
+            with self.subTest(font=value):
+                self.assertFalse(self.kinds(font_family=value) & {'font', 'glyph', 'geometry'})
+
+    def test_font_names_saved_by_earlier_versions_still_resolve(self):
         for value in ('MangaX Itim', 'MangaX Itim::Regular', 'mangax itim', 'MangaX Kanit::Bold',
                       'fonts/MangaX-itim-400-normal.ttf'):
             with self.subTest(font=value):
                 self.assertFalse(self.kinds(font_family=value) & {'font', 'glyph', 'geometry'})
 
     def test_unknown_font_style_and_file_are_reported(self):
-        for value in ('No Such Family 123', 'MangaX Itim::NoSuchStyle', 'fonts/no-such-file.ttf'):
+        for value in ('No Such Family 123', 'Itim::NoSuchStyle', 'MangaX No Such Family', 'fonts/no-such-file.ttf'):
             with self.subTest(font=value):
                 self.assertIn('font', self.kinds(font_family=value))
 
     def test_runs_on_a_worker_thread(self):
         result = []
-        worker = threading.Thread(target=lambda: result.append(self.kinds(font_family='MangaX Mali')))
+        worker = threading.Thread(target=lambda: result.append(self.kinds(font_family='Mali')))
         worker.start()
         worker.join(60)
         self.assertEqual(len(result), 1)

@@ -274,6 +274,19 @@ def _original_font_display_name(name: str) -> str:
     return _ORIGINAL_FONT_DISPLAY_NAMES.get(_search_key(name), name)
 
 
+# The converted Thai fonts carry this prefix in their family name. It stays in
+# the files and in saved settings, so existing projects keep working, but it
+# is not part of what the user reads in a font list.
+BUNDLED_FAMILY_PREFIX = "MangaX "
+
+
+def display_font_family(name: str) -> str:
+    """Family name as shown to the user, without the bundled-font prefix."""
+    if name.startswith(BUNDLED_FAMILY_PREFIX) and len(name) > len(BUNDLED_FAMILY_PREFIX):
+        return name[len(BUNDLED_FAMILY_PREFIX):]
+    return name
+
+
 @lru_cache(maxsize=None)
 def _font_name_records(family: str, style: str = "") -> tuple[tuple[int, str, str], ...]:
     """Return ``(name id, language tag, value)`` records from Qt's font face."""
@@ -427,7 +440,7 @@ def localized_font_family(
     """Return the localized display family and all searchable aliases."""
     records = _font_family_name_records(family, style)
     if not records:
-        return family, (family,)
+        return display_font_family(family), (family,)
 
     family_key = _search_key(family)
     matching_name_ids = {
@@ -436,7 +449,7 @@ def localized_font_family(
         if _search_key(value) == family_key
     }
     if not matching_name_ids:
-        return family, (family,)
+        return display_font_family(family), (family,)
     candidates = [
         record
         for record in records
@@ -460,7 +473,7 @@ def localized_font_family(
             ]
         )
     )
-    return _original_font_display_name(best[2]), aliases
+    return display_font_family(_original_font_display_name(best[2])), aliases
 
 
 @lru_cache(maxsize=None)

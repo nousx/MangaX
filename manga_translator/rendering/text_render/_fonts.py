@@ -99,6 +99,20 @@ def _ensure_qt_runtime():
         return app
 
 
+# The bundled Thai fonts were first shipped with this prefix in their family
+# and file names. Settings and projects saved by those versions still resolve.
+_LEGACY_FAMILY_PREFIX = 'MangaX '
+_LEGACY_FILE_PREFIX = 'MangaX-'
+
+
+def legacy_font_family(family: str) -> str:
+    """The current family name for a legacy prefixed one, or '' when it is not one."""
+    family = str(family or '')
+    if family.casefold().startswith(_LEGACY_FAMILY_PREFIX.casefold()):
+        return family[len(_LEGACY_FAMILY_PREFIX):]
+    return ''
+
+
 def _normalize_font_path(path: str) -> str:
     return path.replace('\\', '/')
 
@@ -113,6 +127,10 @@ def _resolve_existing_font_path(path: str) -> str:
             _normalize_font_path(os.path.join(BASE_PATH, 'fonts', os.path.basename(path))),
             _normalize_font_path(os.path.join(BASE_PATH, path)),
         ])
+    name = os.path.basename(path)
+    if name.casefold().startswith(_LEGACY_FILE_PREFIX.casefold()):
+        candidates.append(_normalize_font_path(
+            os.path.join(BASE_PATH, 'fonts', name[len(_LEGACY_FILE_PREFIX):])))
     return next((candidate for candidate in candidates if candidate and os.path.exists(candidate)), '')
 
 
@@ -469,6 +487,8 @@ def set_font(font: str):
     _register_project_fonts()
     requested_family, requested_style = _split_font_value(requested)
     family = _match_family(requested_family)
+    if family is None and legacy_font_family(requested_family):
+        family = _match_family(legacy_font_family(requested_family))
     if family is None and requested and _register_system_fonts():
         family = _match_family(requested_family)
     if family is not None and qt_family_is_ambiguous(family):
