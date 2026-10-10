@@ -11,6 +11,7 @@ from pathlib import Path
 from ..codex_account import codex_child_env, find_codex_cli
 from .common import CommonTranslator, InvalidServerResponse, VALID_LANGUAGES
 from .manga_context import bounded_context
+from ..utils.log_redaction import redact_secrets
 
 # The Claude CLI receives the style guide on the command line, which Windows
 # limits to about 32,000 characters in total; both translators share the cap.
@@ -91,7 +92,8 @@ class CodexCLITranslator(CommonTranslator):
             cleaned = " ".join(line.split())
             if cleaned and any(marker in cleaned.lower() for marker in _FAILURE_LINE_MARKERS):
                 picked.append(cleaned)
-        return " ".join(picked[-3:])[:_ERROR_DETAIL_LIMIT]
+        # CLI output can quote a token or an endpoint; it is shown to the user and logged.
+        return redact_secrets(" ".join(picked[-3:]))[:_ERROR_DETAIL_LIMIT]
 
     async def _translate(self, from_lang, to_lang, queries, ctx=None):
         executable = self.resolve_cli()

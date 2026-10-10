@@ -11,7 +11,7 @@ import time
 from ..claude_account import claude_child_env, find_claude_cli
 from .codex_cli import _ERROR_DETAIL_LIMIT, CodexCLITranslator
 from .common import InvalidServerResponse
-from .manga_context import bounded_context
+from ..utils.log_redaction import redact_secrets
 
 
 # A long unattended job should survive the account's usage window running
@@ -132,7 +132,8 @@ class ClaudeCLITranslator(CodexCLITranslator):
         except ValueError:
             pass
         detail = detail or stderr or stdout
-        return " ".join(detail.split())[:_ERROR_DETAIL_LIMIT]
+        # CLI output can quote a token or an endpoint; it is shown to the user and logged.
+        return redact_secrets(" ".join(detail.split()))[:_ERROR_DETAIL_LIMIT]
 
     @staticmethod
     def _is_usage_limit(payload, detail):

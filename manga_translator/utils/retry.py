@@ -2,6 +2,8 @@ import asyncio
 import re
 from typing import Any, Awaitable, Callable, Optional, TypeVar
 
+from .log_redaction import redact_secrets
+
 T = TypeVar("T")
 
 _HTTP_STATUS_RE = re.compile(r"(?:status|http)\s*(\d{3})", re.IGNORECASE)
@@ -92,6 +94,9 @@ def summarize_text(value: Any, limit: Optional[int] = None, empty_placeholder: s
     message = " ".join(str(value).split()) if value is not None else ""
     if not message:
         return empty_placeholder
+    # Summaries end up in logs and in error messages shown to the user. Redact
+    # before truncating: a cut-off key would no longer be recognized.
+    message = redact_secrets(message)
     if limit is None or len(message) <= limit:
         return message
     if limit <= 3:
