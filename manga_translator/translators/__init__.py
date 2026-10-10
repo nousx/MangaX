@@ -5,6 +5,7 @@ import py3langid as langid
 from ..config import Config, Translator, TranslatorChain, TranslatorConfig
 from ..utils import Context
 from .common import *
+from .claude_cli import ClaudeCLITranslator
 from .codex_cli import CodexCLITranslator
 from .gemini import GeminiTranslator
 from .gemini_hq import GeminiHighQualityTranslator
@@ -23,6 +24,7 @@ GPT_TRANSLATORS = {
 
 TRANSLATORS = {
     Translator.codex: CodexCLITranslator,
+    Translator.claude: ClaudeCLITranslator,
     Translator.none: NoneTranslator,
     Translator.original: OriginalTranslator,
     Translator.sakura: SakuraTranslator,

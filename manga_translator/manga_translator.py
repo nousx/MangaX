@@ -5179,9 +5179,14 @@ class MangaTranslator:
         if config.translator.translator == Translator.none:
             return ["" for _ in texts]
 
-        if config.translator.translator == Translator.codex:
-            from .translators.codex_cli import CodexCLITranslator
-            translator = CodexCLITranslator()
+        if config.translator.translator in (Translator.codex, Translator.claude):
+            # Both run a signed-in command line tool instead of an API client.
+            if config.translator.translator == Translator.claude:
+                from .translators.claude_cli import ClaudeCLITranslator
+                translator = ClaudeCLITranslator()
+            else:
+                from .translators.codex_cli import CodexCLITranslator
+                translator = CodexCLITranslator()
             translator.parse_args(config)
             translator.set_cancel_check_callback(self._cancel_check_callback)
             ctx.config = config

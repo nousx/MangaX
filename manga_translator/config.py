@@ -126,6 +126,7 @@ class Ocr(str, Enum):
 
 class Translator(str, Enum):
     codex = "codex"
+    claude = "claude"
     openai = "openai"
     openai_hq = "openai_hq"
     gemini = "gemini"
@@ -269,6 +270,10 @@ class TranslatorConfig(BaseModel):
     codex_model: str = ""
     codex_timeout: int = Field(default=300, ge=10, le=3600)
     codex_batch_size: int = Field(default=30, ge=1, le=100)
+    claude_cli_path: str = ""
+    claude_model: str = "sonnet"
+    claude_timeout: int = Field(default=300, ge=10, le=3600)
+    claude_batch_size: int = Field(default=30, ge=1, le=100)
     translator: Translator = Translator.openai_hq
     """Language translator to use"""
     target_lang: str = 'ENG' #todo: validate VALID_LANGUAGES #todo: convert to enum

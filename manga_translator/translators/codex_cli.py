@@ -15,6 +15,7 @@ from .manga_context import bounded_context
 
 class CodexCLITranslator(CommonTranslator):
     _LANGUAGE_CODE_MAP = VALID_LANGUAGES
+    _PROVIDER = "Codex"
 
     def __init__(self):
         super().__init__()
@@ -41,20 +42,20 @@ class CodexCLITranslator(CommonTranslator):
             return executable
         raise RuntimeError("Codex CLI was not found. Install Codex and run 'codex login', or set Codex CLI path.")
 
-    @staticmethod
-    def validate_response(payload, count):
+    @classmethod
+    def validate_response(cls, payload, count):
         """Match IDs explicitly so speech balloons cannot silently swap translations."""
         items = payload.get("translations") if isinstance(payload, dict) else None
         if not isinstance(items, list) or len(items) != count:
-            raise InvalidServerResponse("Codex returned an incomplete translation batch.")
+            raise InvalidServerResponse(f"{cls._PROVIDER} returned an incomplete translation batch.")
         results = {}
         for item in items:
             if not isinstance(item, dict):
-                raise InvalidServerResponse("Codex returned an invalid translation item.")
+                raise InvalidServerResponse(f"{cls._PROVIDER} returned an invalid translation item.")
             index, translation = item.get("id"), item.get("translation")
             if (type(index) is not int or not 0 <= index < count or index in results
                     or not isinstance(translation, str) or not translation.strip()):
-                raise InvalidServerResponse("Codex returned invalid, duplicate or empty translation IDs.")
+                raise InvalidServerResponse(f"{cls._PROVIDER} returned invalid, duplicate or empty translation IDs.")
             results[index] = translation.strip()
         return [results[index] for index in range(count)]
 

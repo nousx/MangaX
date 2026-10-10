@@ -1184,6 +1184,7 @@ class MainAppLogic(QObject):
                 },
                 "translator": {
                     "codex": self._t("translator_codex"),
+                    "claude": self._t("translator_claude"),
                     "openai": "OpenAI",
                     "openai_hq": self._t("translator_openai_hq"),
                     "gemini": "Google Gemini",
@@ -1228,6 +1229,10 @@ class MainAppLogic(QObject):
                     "codex_model": self._t("label_codex_model"),
                     "codex_timeout": self._t("label_codex_timeout"),
                     "codex_batch_size": self._t("label_codex_batch_size"),
+                    "claude_cli_path": self._t("label_claude_cli_path"),
+                    "claude_model": self._t("label_claude_model"),
+                    "claude_timeout": self._t("label_claude_timeout"),
+                    "claude_batch_size": self._t("label_claude_batch_size"),
                     "target_lang": self._t("label_target_lang"),
                     "keep_lang": self._t("label_keep_lang"),
                     "enable_streaming": self._t("label_enable_streaming"),

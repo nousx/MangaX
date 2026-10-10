@@ -724,7 +724,10 @@ class ChapterStudio:
                     region['_mangax_review'] = review_stamp(region)
                 else:
                     pending.append(index)
-            batch_size = max(1, min(30, config.translator.codex_batch_size))
+            cli_batch_size = (config.translator.claude_batch_size
+                              if str(config.translator.translator) == "claude"
+                              else config.translator.codex_batch_size)
+            batch_size = max(1, min(30, cli_batch_size))
             from manga_translator.config import Translator
             for start in range(0, len(pending), batch_size):
                 if self._halted():

@@ -165,13 +165,16 @@ def _add_api_section_panel(
                     list(SIMPLE_API_GROUP_SPECS[group_key]),
                     current_env_values,
                 )
-    elif empty_hint_key == "Codex CLI account hint":
+    elif empty_hint_key in ("Codex CLI account hint", "Claude CLI account hint"):
         from ui.widgets.codex_account_panel import CodexAccountPanel
 
         row = self.env_layout.rowCount()
+        provider = "Claude" if empty_hint_key.startswith("Claude") else "Codex"
+        path_setting = "claude_cli_path" if provider == "Claude" else "codex_cli_path"
         panel = CodexAccountPanel(
             self._t,
-            lambda: self.controller.config_service.get_config().translator.codex_cli_path,
+            lambda: getattr(self.controller.config_service.get_config().translator, path_setting),
+            provider=provider,
         )
         self.env_layout.addWidget(panel, row, 0, 1, 3)
         self.env_layout.setRowStretch(row, 1)
@@ -338,9 +341,10 @@ def _refresh_env_api_groups(self, *, force: bool = False):
         "translation",
         active_api_groups["translation"],
         current_env_values,
-        ("Codex CLI account hint" if _normalize_selected_value(
-            self.controller.config_service.get_config().translator.translator
-        ) == "codex" else "No translation API required"),
+        {"codex": "Codex CLI account hint", "claude": "Claude CLI account hint"}.get(
+            _normalize_selected_value(self.controller.config_service.get_config().translator.translator),
+            "No translation API required",
+        ),
     )
     self.env_group_container_layout.addStretch()
 
@@ -1284,9 +1288,10 @@ def _create_param_widgets(self, data, parent_layout, prefix=""):
             
             widget.currentTextChanged.connect(lambda text, k=full_key: self._on_upscale_ratio_changed(text, k))
         
-        elif full_key in {"translator.codex_timeout", "translator.codex_batch_size"}:
+        elif full_key in {"translator.codex_timeout", "translator.codex_batch_size",
+                          "translator.claude_timeout", "translator.claude_batch_size"}:
             widget = SpinBox()
-            widget.setRange(10, 3600) if key == "codex_timeout" else widget.setRange(1, 100)
+            widget.setRange(10, 3600) if key.endswith("_timeout") else widget.setRange(1, 100)
             widget.setValue(int(value))
             widget.valueChanged.connect(lambda number, k=full_key: self._on_setting_changed(number, k, None))
 

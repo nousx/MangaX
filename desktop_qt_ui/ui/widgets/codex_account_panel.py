@@ -1,6 +1,12 @@
-"""Shows whether the Codex CLI is installed and signed in, with a sign-in button."""
+"""Shows whether a signed-in CLI (Codex or Claude) is installed and signed in."""
 import threading
 
+from manga_translator.claude_account import (
+    CLAUDE_INSTALL_URL,
+    approve_claude_cli,
+    claude_status,
+    start_claude_login,
+)
 from manga_translator.codex_account import (
     CODEX_INSTALL_URL,
     STATE_ERROR,
@@ -17,6 +23,13 @@ from PyQt6.QtGui import QDesktopServices
 from PyQt6.QtWidgets import QHBoxLayout, QMessageBox, QSizePolicy, QVBoxLayout
 from qfluentwidgets import BodyLabel, PrimaryPushButton, PushButton, SimpleCardWidget, StrongBodyLabel
 
+# Per provider: install page, status check, sign-in starter, path approval.
+# Locale keys are the provider name followed by the same suffix for both.
+_PROVIDERS = {
+    "Codex": (CODEX_INSTALL_URL, codex_status, start_codex_login, approve_codex_cli),
+    "Claude": (CLAUDE_INSTALL_URL, claude_status, start_claude_login, approve_claude_cli),
+}
+
 # After the sign-in window opens, re-check until the account appears.
 _LOGIN_POLL_INTERVAL_MS = 3000
 _LOGIN_POLL_LIMIT = 100
@@ -25,9 +38,12 @@ _LOGIN_POLL_LIMIT = 100
 class CodexAccountPanel(SimpleCardWidget):
     _status_ready = pyqtSignal(object)
 
-    def __init__(self, t_func, cli_path_getter, parent=None):
+    def __init__(self, t_func, cli_path_getter, parent=None, provider="Codex"):
         super().__init__(parent)
-        self._t = t_func
+        self._provider = provider
+        self._install_url, self._status, self._start_login, self._approve = _PROVIDERS[provider]
+        # Translate "<provider> <suffix>", e.g. "Claude status signed in".
+        self._t = lambda key: t_func(f"{provider} {key}")
         self._cli_path_getter = cli_path_getter
         self._checking = False
         self._polls_left = 0
@@ -38,11 +54,11 @@ class CodexAccountPanel(SimpleCardWidget):
         layout.setContentsMargins(16, 16, 16, 16)
         layout.setSpacing(10)
 
-        hint = BodyLabel(self._t("Codex CLI account hint"))
+        hint = BodyLabel(self._t("CLI account hint"))
         hint.setWordWrap(True)
         layout.addWidget(hint)
 
-        self.status_label = StrongBodyLabel(self._t("Codex status checking"))
+        self.status_label = StrongBodyLabel(self._t("status checking"))
         self.status_label.setWordWrap(True)
         layout.addWidget(self.status_label)
 
@@ -54,13 +70,13 @@ class CodexAccountPanel(SimpleCardWidget):
 
         buttons = QHBoxLayout()
         buttons.setSpacing(8)
-        self.login_button = PrimaryPushButton(self._t("Codex sign in"))
+        self.login_button = PrimaryPushButton(self._t("sign in"))
         self.login_button.clicked.connect(self._on_login)
-        self.install_button = PrimaryPushButton(self._t("Codex get CLI"))
-        self.install_button.clicked.connect(lambda: QDesktopServices.openUrl(QUrl(CODEX_INSTALL_URL)))
-        self.approve_button = PrimaryPushButton(self._t("Codex approve path"))
+        self.install_button = PrimaryPushButton(self._t("get CLI"))
+        self.install_button.clicked.connect(lambda: QDesktopServices.openUrl(QUrl(self._install_url)))
+        self.approve_button = PrimaryPushButton(self._t("approve path"))
         self.approve_button.clicked.connect(self._on_approve)
-        self.refresh_button = PushButton(self._t("Codex check again"))
+        self.refresh_button = PushButton(self._t("check again"))
         self.refresh_button.clicked.connect(self.refresh)
         for button in (self.login_button, self.install_button, self.approve_button, self.refresh_button):
             buttons.addWidget(button)
@@ -94,14 +110,14 @@ class CodexAccountPanel(SimpleCardWidget):
         cli_path = self._cli_path()
 
         def work():
-            status = codex_status(cli_path)
+            status = self._status(cli_path)
             try:
                 self._status_ready.emit(status)
             except RuntimeError:
                 # The settings page was rebuilt while the check was running.
                 pass
 
-        threading.Thread(target=work, name="codex-status", daemon=True).start()
+        threading.Thread(target=work, name="cli-account-status", daemon=True).start()
 
     def _show_status(self, status: CodexStatus):
         self._checking = False
@@ -113,7 +129,7 @@ class CodexAccountPanel(SimpleCardWidget):
         self.approve_button.setVisible(needs_approval)
         if needs_approval:
             self._poll_timer.stop()
-            self.status_label.setText(self._t("Codex status custom path"))
+            self.status_label.setText(self._t("status custom path"))
             self.detail_label.setText(status.detail)
             self.detail_label.show()
             self.install_button.hide()
@@ -121,13 +137,13 @@ class CodexAccountPanel(SimpleCardWidget):
             return
         if signed_in:
             self._poll_timer.stop()
-            text = self._t("Codex status signed in")
+            text = self._t("status signed in")
         elif missing:
-            text = self._t("Codex status missing")
+            text = self._t("status missing")
         elif status.state == STATE_ERROR:
-            text = self._t("Codex status error")
+            text = self._t("status error")
         else:
-            text = self._t("Codex status signed out")
+            text = self._t("status signed out")
         self.status_label.setText(text)
         self.detail_label.setText(status.detail)
         self.detail_label.setVisible(bool(status.detail))
@@ -139,8 +155,8 @@ class CodexAccountPanel(SimpleCardWidget):
         path = self.status.detail if self.status else ""
         answer = QMessageBox.question(
             self.window(),
-            self._t("Codex approve path"),
-            self._t("Codex approve path question") + "\n\n" + path,
+            self._t("approve path"),
+            self._t("approve path question") + "\n\n" + path,
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             QMessageBox.StandardButton.No,
         )
@@ -149,19 +165,19 @@ class CodexAccountPanel(SimpleCardWidget):
         try:
             # Approve exactly the file the dialog showed, not whatever the
             # settings contain by now.
-            approve_codex_cli(path)
+            self._approve(path)
         except OSError as exc:
-            self.status_label.setText(self._t("Codex status error"))
+            self.status_label.setText(self._t("status error"))
             self.detail_label.setText(str(exc))
             self.detail_label.show()
             return
         self.refresh()
 
     def _on_login(self):
-        if not start_codex_login(self._cli_path()):
-            self.status_label.setText(self._t("Codex status error"))
+        if not self._start_login(self._cli_path()):
+            self.status_label.setText(self._t("status error"))
             return
-        self.status_label.setText(self._t("Codex login opened"))
+        self.status_label.setText(self._t("login opened"))
         self._polls_left = _LOGIN_POLL_LIMIT
         self._poll_timer.start()
 
