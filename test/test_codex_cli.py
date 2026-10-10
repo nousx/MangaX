@@ -52,6 +52,9 @@ class CodexProcessTests(unittest.IsolatedAsyncioTestCase):
                 "assert 'こんにちは' in data\n"
                 + ("time.sleep(30)\n" if mode == "slow" else "")
                 + ("sys.exit(9)\n" if mode == "failed" else "")
+                + ("sys.stderr.buffer.write(('user: ' + data + chr(10)"
+                   " + 'ERROR: You have hit your usage limit. Try again at 12:15 PM.' + chr(10)).encode('utf-8'))\n"
+                   "sys.exit(1)\n" if mode == "limit" else "")
                 + "out=Path(sys.argv[sys.argv.index('--output-last-message')+1])\n"
                 + ("out.write_text('bad json',encoding='utf-8')\n" if mode == "invalid" else
                    "out.write_text(json.dumps({'translations':[{'id':0,'translation':'สวัสดี'}]},ensure_ascii=False),encoding='utf-8')\n"),
@@ -100,6 +103,45 @@ class CodexProcessTests(unittest.IsolatedAsyncioTestCase):
         translator.set_cancel_check_callback(lambda: True)
         with self.assertRaises(asyncio.CancelledError):
             await self.run_fake_cli("slow", translator)
+
+    async def test_should_tell_the_user_why_codex_failed(self):
+        with self.assertRaises(RuntimeError) as raised:
+            await self.run_fake_cli("limit", CodexCLITranslator())
+
+        message = str(raised.exception)
+        self.assertIn("usage limit", message)
+        self.assertIn("12:15 PM", message)
+        self.assertNotIn("こんにちは", message, "the request text must not be echoed into the error")
+
+
+class CodexStyleGuideTests(unittest.TestCase):
+    def test_should_send_the_prompt_file_style_guide(self):
+        translator = CodexCLITranslator()
+        translator._style_guide = CodexCLITranslator.style_guide(
+            {"custom_prompt_json": {"system_prompt": "Write natural {{{target_lang}}}."}}, "Thai")
+
+        prompt = translator._build_prompt("English", "Thai", ["HELLO"])
+
+        self.assertIn("Write natural Thai.", prompt)
+        self.assertLess(prompt.index("Write natural Thai."), prompt.index('"items"'))
+
+    def test_should_send_no_style_guide_when_the_prompt_file_has_none(self):
+        translator = CodexCLITranslator()
+        translator._style_guide = CodexCLITranslator.style_guide({"custom_prompt_json": {"glossary": {}}}, "Thai")
+
+        self.assertNotIn("Style guide chosen by the user", translator._build_prompt("English", "Thai", ["HELLO"]))
+
+    def test_should_cap_the_style_guide_length(self):
+        guide = CodexCLITranslator.style_guide({"custom_prompt_json": {"system_prompt": "x" * 20000}}, "Thai")
+
+        self.assertEqual(len(guide), 8000)
+
+    def test_should_pick_only_diagnostic_lines_from_cli_output(self):
+        output = "\n".join(["user: secret manga line", "thinking...", "ERROR: quota exceeded", ""]).encode("utf-8")
+
+        self.assertEqual(CodexCLITranslator.failure_lines(output), "ERROR: quota exceeded")
+        self.assertEqual(CodexCLITranslator.failure_lines(b""), "")
+        self.assertEqual(CodexCLITranslator.failure_lines(None), "")
 
 
 if __name__ == "__main__":

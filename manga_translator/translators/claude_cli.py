@@ -9,14 +9,10 @@ import tempfile
 import time
 
 from ..claude_account import claude_child_env, find_claude_cli
-from .codex_cli import CodexCLITranslator
+from .codex_cli import _ERROR_DETAIL_LIMIT, CodexCLITranslator
 from .common import InvalidServerResponse
 from .manga_context import bounded_context
 
-# The style guide travels on the command line, which Windows limits to about
-# 32,000 characters in total.
-_STYLE_GUIDE_LIMIT = 8000
-_ERROR_DETAIL_LIMIT = 400
 
 # A long unattended job should survive the account's usage window running
 # out: try again every few minutes until the limit resets, up to a ceiling.
@@ -69,26 +65,6 @@ class ClaudeCLITranslator(CodexCLITranslator):
         raise RuntimeError(
             "Claude Code CLI was not found. Install Claude Code and sign in, or set Claude CLI path."
         )
-
-    @staticmethod
-    def style_guide(ctx, to_lang):
-        """The user's own system prompt from the selected prompt file, if any."""
-        prompt = ctx.get("custom_prompt_json") if isinstance(ctx, dict) else getattr(ctx, "custom_prompt_json", None)
-        text = prompt.get("system_prompt") if isinstance(prompt, dict) else None
-        if not isinstance(text, str) or not text.strip():
-            return ""
-        return text.replace("{{{target_lang}}}", str(to_lang)).strip()[:_STYLE_GUIDE_LIMIT]
-
-    async def _translate(self, from_lang, to_lang, queries, ctx=None):
-        executable = self.resolve_cli()
-        self._manga_context = bounded_context(ctx, queries)
-        self._style_guide = self.style_guide(ctx, to_lang)
-        result = []
-        for start in range(0, len(queries), self.batch_size):
-            self._check_cancelled()
-            batch = queries[start:start + self.batch_size]
-            result.extend(await self._translate_batch(executable, from_lang, to_lang, batch))
-        return result
 
     def _build_system_prompt(self, from_lang, to_lang):
         prompt = (
