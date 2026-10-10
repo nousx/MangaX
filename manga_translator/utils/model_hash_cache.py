@@ -29,6 +29,9 @@ from typing import Dict, Optional, Tuple
 CACHE_PATH_ENV = 'MANGA_TRANSLATOR_MODEL_HASH_CACHE'
 CACHE_VERSION = 1
 _HASH_CHUNK_SIZE = 1024 * 1024
+# Only these small text files may differ from the declared hash by line endings.
+_TEXT_SUFFIXES = ('.txt',)
+_TEXT_SIZE_LIMIT = 16 * 1024 * 1024
 
 _lock = threading.Lock()
 # In-process memo so the JSON file is read at most once per cache path.
@@ -99,9 +102,35 @@ def sha256_file(path: str) -> str:
     return digest.hexdigest()
 
 
+def _sha256_text_with_lf_endings(path: str) -> Optional[str]:
+    """
+    SHA-256 of a small text file as if it used LF line endings, or None when
+    the file is not a candidate.
+
+    Dictionary files are plain text, and archives or checkouts made on Windows
+    can store them with CRLF endings. The text is the same, so such a file is
+    accepted when its LF form matches the declared hash. Model weights are
+    never normalized.
+    """
+    if not path.lower().endswith(_TEXT_SUFFIXES):
+        return None
+    try:
+        if os.path.getsize(path) > _TEXT_SIZE_LIMIT:
+            return None
+        with open(path, 'rb') as f:
+            data = f.read()
+    except OSError:
+        return None
+    if b'\r\n' not in data:
+        return None
+    return hashlib.sha256(data.replace(b'\r\n', b'\n')).hexdigest()
+
+
 def verify_file(path: str, expected_sha256: str) -> Tuple[bool, Optional[str], bool]:
     """
     Check that `path` has the SHA-256 `expected_sha256`.
+
+    A text file that differs only by CRLF line endings also passes.
 
     Returns:
         (ok, actual_sha256, from_cache)
@@ -123,6 +152,8 @@ def verify_file(path: str, expected_sha256: str) -> Tuple[bool, Optional[str], b
         return True, None, True
 
     actual = sha256_file(path).lower()
+    if actual != expected and _sha256_text_with_lf_endings(path) == expected:
+        actual = expected
     stat_after = os.stat(path)
     unchanged_while_hashing = (
         stat_after.st_size == stat_before.st_size and stat_after.st_mtime_ns == stat_before.st_mtime_ns

@@ -114,6 +114,34 @@ class ModelHashVerificationTest(unittest.TestCase):
         self.assertFalse(second[0])
         self.assertFalse(second[2])
 
+    def test_should_accept_text_file_that_differs_only_by_crlf_endings(self):
+        lf_content = b'a\nb\nc\n'
+        dictionary = os.path.join(self.models_dir, 'dummy', 'dictionary.txt')
+        self._write(dictionary, lf_content.replace(b'\n', b'\r\n'))
+        expected = hashlib.sha256(lf_content).hexdigest()
+
+        first = model_hash_cache.verify_file(dictionary, expected)
+        second = model_hash_cache.verify_file(dictionary, expected)
+
+        self.assertEqual(first, (True, expected, False))
+        self.assertEqual(second, (True, None, True))
+
+    def test_should_reject_text_file_with_different_content(self):
+        dictionary = os.path.join(self.models_dir, 'dummy', 'dictionary.txt')
+        self._write(dictionary, b'a\r\nx\r\nc\r\n')
+
+        ok, _, _ = model_hash_cache.verify_file(dictionary, hashlib.sha256(b'a\nb\nc\n').hexdigest())
+
+        self.assertFalse(ok)
+
+    def test_should_not_normalize_line_endings_of_model_weights(self):
+        lf_content = b'a\nb\nc\n'
+        self._write(self.weights, lf_content.replace(b'\n', b'\r\n'))
+
+        ok, _, _ = model_hash_cache.verify_file(self.weights, hashlib.sha256(lf_content).hexdigest())
+
+        self.assertFalse(ok)
+
     def test_should_survive_corrupt_cache_file(self):
         os.makedirs(os.path.dirname(self.cache_path))
         self._write(self.cache_path, b'{not json')
