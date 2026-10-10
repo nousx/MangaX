@@ -769,27 +769,36 @@ def _layout_horizontal_eng(
 # 统一的布局调度函数
 # ---------------------------------------------------------------------------
 
+def _normalize_lang(lang: str) -> str:
+    """Lower-case a language code or name and use '_' as the only separator.
+
+    Callers pass project codes ('THA'), locale tags ('th-TH', 'th_TH') and plain
+    names ('Thai'); every check below must treat them alike.
+    """
+    return str(lang or '').strip().lower().replace('-', '_')
+
+
 def _is_cjk_lang(lang: str) -> bool:
-    lang = (lang or '').lower().replace('-', '_')
+    lang = _normalize_lang(lang)
     return (
         any(lang.startswith(p) for p in ('zh', 'ja', 'ko'))
-        or lang in ('chs', 'cht', 'jpn', 'zho', 'chi', 'japanese', 'chinese')
+        or lang in ('chs', 'cht', 'jpn', 'zho', 'chi', 'kor', 'japanese', 'chinese', 'korean')
     )
 
 def _is_chinese_lang(lang: str) -> bool:
-    lang = (lang or '').lower().replace('-', '_')
+    lang = _normalize_lang(lang)
     return (
         lang.startswith('zh_')
         or lang in ('zh', 'zh_cn', 'zh_tw', 'zh_hans', 'zh_hant', 'chs', 'cht', 'zho', 'chi', 'chinese')
     )
 
 def _is_korean_lang(lang: str) -> bool:
-    lang = (lang or '').lower().replace('-', '_')
+    lang = _normalize_lang(lang)
     return lang in ('kor', 'ko', 'ko_kr', 'korean') or lang.startswith('ko_')
 
 def _is_thai_lang(lang: str) -> bool:
-    lang = (lang or '').lower()
-    return lang in ('th', 'tha', 'th_th')
+    lang = _normalize_lang(lang)
+    return lang in ('th', 'tha', 'thai') or lang.startswith('th_')
 
 def _measure_horizontal_line_width(font_size: int, line_text: str, letter_spacing: float = 1.0) -> int:
     if not line_text:

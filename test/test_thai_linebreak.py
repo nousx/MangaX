@@ -66,3 +66,21 @@ def test_should_leave_text_unbroken_when_it_is_a_single_word(monkeypatch):
 
 def test_should_still_split_other_languages_by_character():
     assert _insert_br_by_pixel_budget("ABCDEF", 2, 40, True, target_lang="JPN").count("[BR]") == 1
+
+
+@pytest.mark.parametrize("language", ["THA", "tha", "th", "th_TH", "th-TH", "Thai", " thai "])
+def test_should_recognize_every_spelling_of_thai(language):
+    assert auto_linebreak._is_thai_lang(language)
+
+
+@pytest.mark.parametrize("language", ["", None, "ENG", "en_US", "KOR", "JPN", "CHS", "tr_TR"])
+def test_should_not_treat_other_languages_as_thai(language):
+    assert not auto_linebreak._is_thai_lang(language)
+
+
+def test_should_wrap_thai_by_word_when_the_language_is_given_as_a_name():
+    lines, _ = auto_linebreak._calc_horizontal_layout(40, SENTENCE, 40 * 22, "Thai", True)
+
+    assert "".join(lines).replace(" ", "") == SENTENCE.replace(" ", "")
+    assert not any(COMBINING_MARK_AT_START.match(line) for line in lines)
+    assert all(line.replace(" ", "") != "" for line in lines)
