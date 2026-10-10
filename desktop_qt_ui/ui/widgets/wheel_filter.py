@@ -25,14 +25,17 @@ def _stop_popup_animation(menu: QWidget) -> None:
     if manager is None:
         return
 
-    animation = getattr(manager, "aniGroup", None) or getattr(manager, "ani", None)
-    if animation is None:
-        return
-
     # On Windows a WA_DeleteOnClose popup can be destroyed on mouse press,
     # before the combo box receives the matching mouse release.  The manager
-    # then still holds a Python wrapper whose underlying animation is gone.
+    # then still holds a Python wrapper whose underlying animation is gone,
+    # and any use of it raises, including a truth test (`a or b`), which Qt
+    # answers by asking the deleted object for its length.
     try:
+        animation = getattr(manager, "aniGroup", None)
+        if animation is None:
+            animation = getattr(manager, "ani", None)
+        if animation is None:
+            return
         if animation.state() != QAbstractAnimation.State.Stopped:
             animation.stop()
     except RuntimeError:
@@ -71,7 +74,11 @@ class TopLevelComboBox(ComboBox):
         finally:
             # Always let the base implementation clear a stale dropMenu
             # reference, otherwise every later click is treated as a close.
-            super()._closeComboMenu()
+            try:
+                super()._closeComboMenu()
+            except RuntimeError:
+                # The popup itself was already destroyed.
+                self.dropMenu = None
 
 
 class NoWheelComboBox(TopLevelComboBox):
