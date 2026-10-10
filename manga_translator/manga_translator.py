@@ -700,7 +700,8 @@ class MangaTranslator:
                 )
             
             # 导出可编辑PSD（如果启用）
-            if success and config and hasattr(config, 'cli') and hasattr(config.cli, 'export_editable_psd') and config.cli.export_editable_psd:
+            from .utils.photoshop_export import psd_export_requested
+            if success and psd_export_requested(config):
                 try:
                     from .utils.photoshop_export import (
                         get_psd_output_path,

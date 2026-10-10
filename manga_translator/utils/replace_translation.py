@@ -628,7 +628,8 @@ async def translate_batch_replace_translation(translator, images_with_configs: L
                             logger.info("  -> [Direct paste mode] Skipping JSON and inpainted image saving")
                         
                         # 导出可编辑PSD（如果启用）
-                        if hasattr(config, 'cli') and hasattr(config.cli, 'export_editable_psd') and config.cli.export_editable_psd:
+                        from .photoshop_export import psd_export_requested
+                        if psd_export_requested(config):
                             # 直接粘贴模式下也不导出 PSD（因为没有文本区域数据）
                             if not config.render.enable_template_alignment:
                                 try:

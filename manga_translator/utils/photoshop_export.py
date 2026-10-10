@@ -18,6 +18,16 @@ from ..rendering.rich_text import plain_text_of
 logger = logging.getLogger(__name__)
 
 
+def psd_export_requested(config) -> bool:
+    """True when the settings ask for a PSD file or for its Photoshop script alone.
+
+    'Script only' is a complete request by itself: it must not also need the
+    'export editable PSD' switch, which is what starts Photoshop.
+    """
+    cli = getattr(config, 'cli', None)
+    return bool(getattr(cli, 'export_editable_psd', False) or getattr(cli, 'psd_script_only', False))
+
+
 def resolve_photoshop_font(config) -> str | None:
     """获取 PSD 文本层使用的渲染字体。"""
     render_cfg = getattr(config, 'render', None)

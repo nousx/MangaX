@@ -18,6 +18,7 @@ import numpy as np
 from manga_translator.image_formats import resolve_pil_image_format
 from manga_translator.rendering.rich_text import is_redundant_plain_document
 from manga_translator.utils import open_pil_image, save_pil_image
+from manga_translator.utils.photoshop_export import psd_export_requested
 from manga_translator.utils.path_manager import (
     find_json_path,
     get_inpainted_path,
@@ -983,7 +984,7 @@ class ExportService:
                 result_image = self._take_context_result(ctx)
                 if result_image is None:
                     raise RuntimeError("translator returned no rendered image")
-                if cfg.cli.export_editable_psd:
+                if psd_export_requested(cfg):
                     if export_kind == "backend_inpaint":
                         ctx.img_inpainted = generated_inpainted
                     elif export_kind == "paired":
@@ -991,7 +992,7 @@ class ExportService:
                     else:
                         ctx.img_inpainted = image_like_to_rgb_array(image, copy=True)
                 # 导出可编辑PSD（如果启用）
-                if cfg.cli.export_editable_psd:
+                if psd_export_requested(cfg):
                     try:
                         from manga_translator.utils.photoshop_export import (
                             get_psd_output_path,
