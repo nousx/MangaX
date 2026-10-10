@@ -999,6 +999,91 @@ def _insert_br_by_word_pixel_budget(
     return '[BR]'.join(part for part in parts if part)
 
 
+_THAI_LETTER_RE = re.compile(r'[ก-ฺเ-๎]')
+# Marks that belong to the word before them and must never start a line.
+_THAI_TRAILING_MARKS = ('ๆ', 'ฯ')
+_OPENING_PUNCTUATION = frozenset('([{“‘「『')
+_STRAIGHT_QUOTES = frozenset('"\'')
+
+
+def _thai_break_units(text: str) -> List[str]:
+    """Split Thai text into pieces a line may end after: whole words with their trailing marks."""
+    units: List[str] = []
+    opener = ''
+    open_straight_quotes: set[str] = set()
+    for token in _tokenize_thai_words(text):
+        if not token:
+            continue
+        if token in _STRAIGHT_QUOTES:
+            opens = token not in open_straight_quotes
+            open_straight_quotes.symmetric_difference_update({token})
+        else:
+            opens = token in _OPENING_PUNCTUATION
+        if opens:
+            # An opening quote or bracket travels with the word after it.
+            opener += token
+        elif token.startswith(_THAI_TRAILING_MARKS) or not (token[0].isalnum() or _THAI_LETTER_RE.match(token)):
+            # Spaces, punctuation and repetition marks stay with the word before them.
+            if units and not opener:
+                units[-1] += token
+            else:
+                units.append(opener + token)
+                opener = ''
+        else:
+            units.append(opener + token)
+            opener = ''
+    if opener:
+        if units:
+            units[-1] += opener
+        else:
+            units.append(opener)
+    return units
+
+
+def _insert_br_by_thai_word_pixel_budget(
+    text: str,
+    n_segments: int,
+    font_size: int,
+    letter_spacing: float = 1.0,
+) -> Optional[str]:
+    """Spread Thai text over n_segments lines, breaking only between words."""
+    units = _thai_break_units(text or '')
+    if len(units) <= 1:
+        return None
+
+    n_segments = max(1, min(int(n_segments), len(units)))
+    if n_segments <= 1:
+        return None
+
+    prefix: List[int] = []
+    total = 0
+    for unit in units:
+        total += max(0, get_string_width(font_size, unit, letter_spacing=letter_spacing))
+        prefix.append(total)
+    if total <= 0:
+        return None
+
+    parts: List[str] = []
+    start = 0
+    for k in range(1, n_segments):
+        target = total * (k / n_segments)
+        min_pos = start + 1
+        max_pos = len(units) - (n_segments - k)
+        if min_pos > max_pos:
+            break
+        idx = bisect_left(prefix, target)
+        candidates = [pos for pos in (idx, idx + 1) if min_pos <= pos <= max_pos]
+        if candidates:
+            pos = min(candidates, key=lambda p: abs(prefix[p - 1] - target))
+        else:
+            pos = min(max(idx + 1, min_pos), max_pos)
+        parts.append(''.join(units[start:pos]).strip())
+        start = pos
+    parts.append(''.join(units[start:]).strip())
+    parts = [part for part in parts if part]
+    return '[BR]'.join(parts) if len(parts) > 1 else None
+
+
 def _insert_br_by_pixel_budget(
     text: str,
     n_segments: int,
@@ -1014,6 +1099,11 @@ def _insert_br_by_pixel_budget(
         word_wrapped = _insert_br_by_word_pixel_budget(text, n_segments, font_size, letter_spacing)
         if word_wrapped:
             return word_wrapped
+
+    if horizontal and _is_thai_lang(target_lang):
+        # Thai has no spaces between words, so the per-character split below would
+        # cut words apart and strand vowels and tone marks on the next line.
+        return _insert_br_by_thai_word_pixel_budget(text, n_segments, font_size, letter_spacing) or text
 
     text_len = len(text)
     if text_len <= 1:
