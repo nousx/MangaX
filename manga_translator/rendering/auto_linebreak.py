@@ -796,6 +796,9 @@ def _is_korean_lang(lang: str) -> bool:
     lang = _normalize_lang(lang)
     return lang in ('kor', 'ko', 'ko_kr', 'korean') or lang.startswith('ko_')
 
+_THAI_LETTER_RE = re.compile(r'[ก-ฺเ-๎]')
+
+
 def _is_thai_lang(lang: str) -> bool:
     lang = _normalize_lang(lang)
     return lang in ('th', 'tha', 'thai') or lang.startswith('th_')
@@ -807,9 +810,51 @@ def _measure_horizontal_line_width(font_size: int, line_text: str, letter_spacin
         return text_render._measure_horizontal_text_width(line_text, font_size, letter_spacing=letter_spacing)
     return get_string_width(font_size, line_text, letter_spacing=letter_spacing)
 
+_thai_protected_words: frozenset = frozenset()
+_thai_protected_trie = None
+
+
+def set_thai_protected_words(words) -> None:
+    """Register names and terms that must stay on one line in Thai text.
+
+    The word segmenter only knows dictionary words, so a transliterated name
+    such as a Korean given name is cut into syllables and a line may end in
+    the middle of it. Glossary translations are passed here to prevent that.
+    """
+    global _thai_protected_words, _thai_protected_trie
+    cleaned = frozenset(
+        word.strip() for word in (words or ())
+        if isinstance(word, str) and _THAI_LETTER_RE.search(word) and 1 < len(word.strip()) <= 60
+    )
+    if cleaned != _thai_protected_words:
+        _thai_protected_words = cleaned
+        _thai_protected_trie = None
+
+
+def _thai_custom_dictionary():
+    """Dictionary with the protected words added, built on first use."""
+    global _thai_protected_trie
+    if _thai_protected_trie is None:
+        from pythainlp.corpus.common import thai_words
+        from pythainlp.util import dict_trie
+
+        _thai_protected_trie = dict_trie(set(thai_words()) | _thai_protected_words)
+    return _thai_protected_trie
+
+
 def _tokenize_thai_words(text: str) -> List[str]:
     if not text:
         return []
+
+    if HAS_PYTHAINLP and _thai_protected_words:
+        try:
+            tokens = thai_word_tokenize(
+                text, engine='newmm', keep_whitespace=True, custom_dict=_thai_custom_dictionary()
+            )
+            if tokens:
+                return tokens
+        except Exception as error:
+            logger.debug(f"Thai segmentation with protected words failed, using the plain dictionary: {error}")
 
     if HAS_PYTHAINLP:
         try:
@@ -1008,7 +1053,6 @@ def _insert_br_by_word_pixel_budget(
     return '[BR]'.join(part for part in parts if part)
 
 
-_THAI_LETTER_RE = re.compile(r'[ก-ฺเ-๎]')
 # Marks that belong to the word before them and must never start a line.
 _THAI_TRAILING_MARKS = ('ๆ', 'ฯ')
 _OPENING_PUNCTUATION = frozenset('([{“‘「『')

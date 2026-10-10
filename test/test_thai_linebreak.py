@@ -84,3 +84,43 @@ def test_should_wrap_thai_by_word_when_the_language_is_given_as_a_name():
     assert "".join(lines).replace(" ", "") == SENTENCE.replace(" ", "")
     assert not any(COMBINING_MARK_AT_START.match(line) for line in lines)
     assert all(line.replace(" ", "") != "" for line in lines)
+
+
+class TestProtectedWords:
+    """Glossary names must stay whole. These use the real segmenter."""
+
+    NAME_SENTENCE = "ชเว จงฮยอกไปหาโค จองซุกที่ร้านโอเด้ง"
+
+    @pytest.fixture(autouse=True)
+    def real_tokenizer(self, monkeypatch):
+        if not auto_linebreak.HAS_PYTHAINLP:
+            pytest.skip("pythainlp is not installed")
+        monkeypatch.undo()
+        yield
+        auto_linebreak.set_thai_protected_words(())
+
+    def test_should_split_an_unknown_name_without_protection(self):
+        auto_linebreak.set_thai_protected_words(())
+
+        assert "จงฮยอก" not in auto_linebreak._tokenize_thai_words(self.NAME_SENTENCE)
+
+    def test_should_keep_registered_names_whole(self):
+        auto_linebreak.set_thai_protected_words(["จงฮยอก", "จองซุก", "โอเด้ง"])
+
+        tokens = auto_linebreak._tokenize_thai_words(self.NAME_SENTENCE)
+
+        assert {"จงฮยอก", "จองซุก", "โอเด้ง"} <= set(tokens)
+        assert "".join(tokens) == self.NAME_SENTENCE
+
+    def test_should_never_break_a_line_inside_a_registered_name(self):
+        auto_linebreak.set_thai_protected_words(["จงฮยอก", "จองซุก", "โอเด้ง"])
+
+        for segments in range(2, 7):
+            lines = _insert_br_by_pixel_budget(self.NAME_SENTENCE, segments, 40, True, target_lang="THA").split("[BR]")
+            joined = "\n".join(lines)
+            assert all(name in joined for name in ("จงฮยอก", "จองซุก", "โอเด้ง")), lines
+
+    def test_should_ignore_entries_that_are_not_thai_words(self):
+        auto_linebreak.set_thai_protected_words(["OK", "", None, 42, "ก", "จงฮยอก"])
+
+        assert auto_linebreak._thai_protected_words == frozenset({"จงฮยอก"})

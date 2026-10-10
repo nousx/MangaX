@@ -3177,6 +3177,12 @@ class MangaTranslator:
                     # Log the parsed content for user verification
                     from .translators.common import _flatten_prompt_data
                     _flatten_prompt_data(ctx.custom_prompt_json)
+                    from .rendering.auto_linebreak import set_thai_protected_words
+                    from .translators.manga_context import glossary_entries
+                    set_thai_protected_words(
+                        entry.get('translation') for entry in glossary_entries(ctx.custom_prompt_json)
+                        if isinstance(entry, dict)
+                    )
                     # logger.info(f"--- Parsed Custom Prompt Content ---\n{parsed_content}\n------------------------------------")
                 else:
                     logger.warning(f"Custom HQ prompt file not found or invalid: {prompt_path}")
