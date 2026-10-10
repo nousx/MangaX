@@ -74,7 +74,7 @@ _CAMEL_BOUNDARY_RE = re.compile(r"(?<=[a-z0-9])(?=[A-Z])")
 _SEPARATED_VALUE_RE = re.compile(
     r"(\s{0,64}[\"']?\s{0,64}[:=]\s{0,64})"
     # A quoted value is taken whole, spaces included; a bare one up to the next delimiter.
-    r"(?:\"(?P<double>[^\"\r\n]{1,512})|'(?P<single>[^'\r\n]{1,512})|(?P<bare>[^\s\"',;&}]{4,}))"
+    r"(?:\"(?P<double>[^\"\r\n]{1,512})|'(?P<single>[^'\r\n]{1,512})|(?P<bare>[^\s\"',;&}]{1,}))"
 )
 # After a name: a space then a value. Only redacted when it looks like a
 # credential, so that prose such as "token expired" is left alone.
@@ -83,13 +83,10 @@ _SPACED_VALUE_RE = re.compile(r"(\s{1,64})(?P<spaced>[A-Za-z0-9._~+/=-]{12,})")
 _COOKIE_HEADER_RE = re.compile(r"(?i)\b((?:set-)?cookie)(\s{0,64}[\"']?\s{0,64}[:=]\s{0,64}[\"']?)[^\r\n]+")
 _SCHEME_TOKEN_RE = re.compile(r"(?i)\b(bearer|basic|digest)\s{1,64}[A-Za-z0-9._~+/=-]{8,}")
 _PREFIX_RES = tuple(re.compile(pattern) for pattern in SECRET_PREFIX_PATTERNS.values())
-_URL_IN_TEXT_RE = re.compile(r"\b[a-zA-Z][a-zA-Z0-9+.-]{1,15}://[^\s\"'<>)\]}]+")
+_URL_IN_TEXT_RE = re.compile(r"\b[a-zA-Z][a-zA-Z0-9+.-]{1,15}://\S+")
+# Punctuation that usually closes a sentence or a bracket around a URL.
+_URL_TRAILING_PUNCTUATION = ")]}>\"'.,;"
 _HOST_LABEL_TOKEN_RE = re.compile(r"^[a-z0-9-]{20,}$", re.IGNORECASE)
-# Cheap test for whether a log message needs the full treatment.
-_TRIGGER_RE = re.compile(
-    r"(?i)://|bearer|basic |digest |" + "|".join(SECRET_NAME_WORDS) + "|"
-    + "|".join(re.escape(prefix) for prefix in SECRET_PREFIX_PATTERNS) + r"|[A-Za-z0-9_-]{24,}"
-)
 # An unnamed credential: a run this long that mixes upper case, lower case and digits.
 _RANDOM_TOKEN_MIN_LENGTH = 24
 # Known secrets shorter than this are not searched for: they would match ordinary text.
@@ -210,6 +207,12 @@ def _redact_named_and_random(text: str) -> str:
     return "".join(pieces)
 
 
+def _redact_url_match(match) -> str:
+    raw = match.group(0)
+    core = raw.rstrip(_URL_TRAILING_PUNCTUATION)
+    return safe_url_for_log(core) + raw[len(core):]
+
+
 def _known_secret_forms(secret: str):
     """The secret as written, and as it appears inside a URL."""
     return {secret, quote(secret, safe=""), quote_plus(secret)}
@@ -225,7 +228,7 @@ def redact_secrets(text, known_secrets=()) -> str:
         if isinstance(secret, str) and len(secret) >= _MIN_KNOWN_SECRET_LENGTH:
             for form in _known_secret_forms(secret):
                 result = result.replace(form, REDACTED)
-    result = _URL_IN_TEXT_RE.sub(lambda match: safe_url_for_log(match.group(0)), result)
+    result = _URL_IN_TEXT_RE.sub(_redact_url_match, result)
     result = _COOKIE_HEADER_RE.sub(lambda match: f"{match.group(1)}{match.group(2)}{REDACTED}", result)
     result = _SCHEME_TOKEN_RE.sub(lambda match: f"{match.group(1)} {REDACTED}", result)
     for pattern in _PREFIX_RES:
@@ -238,12 +241,13 @@ def redact_secrets(text, known_secrets=()) -> str:
 
 
 def _redact_record(record: logging.LogRecord) -> None:
+    # Every record is checked. A cheaper test deciding which records to check
+    # would be a second set of rules that can disagree with the real one.
     message = record.getMessage()
-    if _TRIGGER_RE.search(message):
-        cleaned = redact_secrets(message)
-        if cleaned != message:
-            record.msg = cleaned
-            record.args = None
+    cleaned = redact_secrets(message)
+    if cleaned != message:
+        record.msg = cleaned
+        record.args = None
     # The traceback and the stack are formatted by the handler, after this
     # point. Format them here so the handler writes the redacted text.
     if record.exc_info and not record.exc_text:

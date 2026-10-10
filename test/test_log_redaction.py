@@ -346,15 +346,6 @@ class TestCallSites:
         assert_clean(detail)
         assert "API error" in detail
 
-    def test_trigger_should_fire_for_every_registry_entry(self):
-        """The cheap pre-check must never skip a message the full redaction would change."""
-        for name in (*SECRET_NAME_WORDS, *COMPOUND_NAMES):
-            assert log_redaction._TRIGGER_RE.search(f"{name}={SHORT}"), name
-        for sample in PREFIXED.values():
-            assert log_redaction._TRIGGER_RE.search(f"value {sample}"), sample
-        assert log_redaction._TRIGGER_RE.search(f"see https://h.example/{SHORT}")
-        assert log_redaction._TRIGGER_RE.search(f"bad credential {OPAQUE}")
-
 
 class TestTracebacksAndStacks:
     """The handler formats tracebacks after the record is created; they must be redacted too."""
@@ -525,3 +516,50 @@ class TestCoverageKeptByTheLinearRewrite:
 
     def test_should_drop_a_cookie_value_that_contains_quotes(self):
         assert_clean(redact_secrets(f'Cookie: a="{SHORT}"; b={OPAQUE}'))
+
+
+class TestOneSetOfRules:
+    """No second, cheaper judge may decide what the redaction gets to see."""
+
+    @pytest.fixture
+    def installed(self):
+        previous = logging.getLogRecordFactory()
+        install_log_redaction()
+        yield
+        logging.setLogRecordFactory(previous)
+
+    def test_should_have_no_pre_check(self):
+        assert not hasattr(log_redaction, "_TRIGGER_RE")
+
+    @pytest.mark.parametrize("message", [
+        f"Basic\t{SHORT}value",
+        f"BEARER\n{SHORT}value",
+        f"pwd\t=\t{SHORT}",
+        f"dbPwd {OPAQUE}",
+        f"x {OPAQUE[:23]}",
+    ])
+    def test_a_logged_record_should_match_direct_redaction(self, installed, caplog, message):
+        logger = logging.getLogger("test-one-set-of-rules")
+        with caplog.at_level(logging.INFO):
+            logger.info(message)
+
+        assert caplog.records[0].getMessage() == redact_secrets(message)
+
+    @pytest.mark.parametrize("password", ["pa)ss" + SHORT, 'pa"ss' + SHORT, "pa'ss" + SHORT, "pa]ss}" + SHORT, "pa<ss>" + SHORT])
+    def test_should_redact_a_url_whose_password_contains_punctuation(self, password):
+        redacted = redact_secrets(f"GET https://user:{password}@proxy.example.com/v1/models failed")
+
+        assert SHORT not in redacted
+        assert "ss" + SHORT[:3] not in redacted
+        assert redacted.endswith(" failed")
+
+    @pytest.mark.parametrize("wrapped", ["({url})", "[{url}]", "<{url}>", '"{url}"', "see {url}.", "{url}, then"])
+    def test_should_keep_punctuation_around_a_url(self, wrapped):
+        text = wrapped.format(url="https://api.example.com/v1/models")
+
+        assert redact_secrets(text) == text
+
+    @pytest.mark.parametrize("value", ["1", "ab", "abc"])
+    def test_should_redact_a_short_bare_value_like_a_quoted_one(self, value):
+        assert redact_secrets(f"password={value}") == f"password={REDACTED}"
+        assert redact_secrets(f'password="{value}"') == f'password="{REDACTED}"'
