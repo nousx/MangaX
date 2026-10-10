@@ -1666,5 +1666,15 @@
   "Codex check again": "다시 확인",
   "Codex status custom path": "설정에 Codex 경로가 직접 지정되어 있지만 아직 승인하지 않았습니다. 승인하기 전에는 이 파일을 실행하지 않습니다.",
   "Codex approve path": "이 경로 승인",
-  "Codex approve path question": "MangaX가 이 프로그램을 Codex로 실행하도록 허용할까요? 직접 설치한 파일만 승인하세요. 다른 사람에게서 받은 설정은 해로운 프로그램을 가리킬 수 있습니다."
+  "Codex approve path question": "MangaX가 이 프로그램을 Codex로 실행하도록 허용할까요? 직접 설치한 파일만 승인하세요. 다른 사람에게서 받은 설정은 해로운 프로그램을 가리킬 수 있습니다.",
+  "eta_processing": "처리 중",
+  "eta_skipped": "건너뜀 {count}장",
+  "eta_failed": "실패 {count}장",
+  "eta_nothing_to_process": "처리할 이미지가 없습니다",
+  "eta_waiting_for_first": "첫 이미지가 끝나면 남은 시간을 계산합니다",
+  "eta_average": "평균 {seconds}초/장",
+  "eta_remaining": "약 {duration} 남음",
+  "eta_duration_hours_minutes": "{hours}시간 {minutes}분",
+  "eta_duration_minutes_seconds": "{minutes}분 {seconds}초",
+  "eta_duration_seconds": "{seconds}초"
 }

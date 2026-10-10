@@ -1676,5 +1676,15 @@
   "Codex check again": "Check again",
   "Codex status custom path": "A custom Codex path is set in the settings but you have not approved it yet. The app will not run it until you do.",
   "Codex approve path": "Approve this path",
-  "Codex approve path question": "Allow MangaX to run this program as Codex? Only approve a file you installed yourself. Settings imported from someone else can point to a harmful program."
+  "Codex approve path question": "Allow MangaX to run this program as Codex? Only approve a file you installed yourself. Settings imported from someone else can point to a harmful program.",
+  "eta_processing": "Processing",
+  "eta_skipped": "Skipped {count}",
+  "eta_failed": "Failed {count}",
+  "eta_nothing_to_process": "Nothing to process",
+  "eta_waiting_for_first": "Time left is estimated after the first image",
+  "eta_average": "Avg {seconds} s/image",
+  "eta_remaining": "About {duration} left",
+  "eta_duration_hours_minutes": "{hours} h {minutes} min",
+  "eta_duration_minutes_seconds": "{minutes} min {seconds} s",
+  "eta_duration_seconds": "{seconds} s"
 }

@@ -1668,5 +1668,15 @@
   "Codex check again": "重新檢查",
   "Codex status custom path": "設定中手動指定了 Codex 路徑，但你尚未核准。核准之前程式不會執行該檔案。",
   "Codex approve path": "核准此路徑",
-  "Codex approve path question": "允許 MangaX 將此程式作為 Codex 執行嗎？請只核准你自己安裝的檔案。從他人處匯入的設定可能指向有害程式。"
+  "Codex approve path question": "允許 MangaX 將此程式作為 Codex 執行嗎？請只核准你自己安裝的檔案。從他人處匯入的設定可能指向有害程式。",
+  "eta_processing": "處理中",
+  "eta_skipped": "已跳過 {count} 張",
+  "eta_failed": "已失敗 {count} 張",
+  "eta_nothing_to_process": "無需處理",
+  "eta_waiting_for_first": "等待首張完成後估算剩餘時間",
+  "eta_average": "均速 {seconds} 秒/張",
+  "eta_remaining": "預計剩餘 {duration}",
+  "eta_duration_hours_minutes": "{hours}小時{minutes}分",
+  "eta_duration_minutes_seconds": "{minutes}分{seconds}秒",
+  "eta_duration_seconds": "{seconds}秒"
 }

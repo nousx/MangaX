@@ -1666,5 +1666,15 @@
   "Codex check again": "Comprobar de nuevo",
   "Codex status custom path": "Hay una ruta de Codex personalizada en los ajustes, pero aún no la has aprobado. La aplicación no la ejecutará hasta entonces.",
   "Codex approve path": "Aprobar esta ruta",
-  "Codex approve path question": "¿Permitir que MangaX ejecute este programa como Codex? Aprueba solo un archivo que hayas instalado tú. Unos ajustes importados de otra persona pueden apuntar a un programa dañino."
+  "Codex approve path question": "¿Permitir que MangaX ejecute este programa como Codex? Aprueba solo un archivo que hayas instalado tú. Unos ajustes importados de otra persona pueden apuntar a un programa dañino.",
+  "eta_processing": "Procesando",
+  "eta_skipped": "Omitidas: {count}",
+  "eta_failed": "Fallidas: {count}",
+  "eta_nothing_to_process": "No hay nada que procesar",
+  "eta_waiting_for_first": "El tiempo restante se calcula tras la primera imagen",
+  "eta_average": "Media: {seconds} s/imagen",
+  "eta_remaining": "Quedan unos {duration}",
+  "eta_duration_hours_minutes": "{hours} h {minutes} min",
+  "eta_duration_minutes_seconds": "{minutes} min {seconds} s",
+  "eta_duration_seconds": "{seconds} s"
 }

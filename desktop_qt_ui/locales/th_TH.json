@@ -1676,5 +1676,15 @@
   "Codex check again": "ตรวจอีกครั้ง",
   "Codex status custom path": "มีการตั้งตำแหน่งโปรแกรม Codex เองไว้ในการตั้งค่า แต่คุณยังไม่ได้อนุมัติ โปรแกรมจะไม่เรียกไฟล์นี้จนกว่าจะอนุมัติ",
   "Codex approve path": "อนุมัติตำแหน่งนี้",
-  "Codex approve path question": "อนุญาตให้ MangaX เรียกโปรแกรมนี้เป็น Codex หรือไม่ อนุมัติเฉพาะไฟล์ที่คุณติดตั้งเอง การตั้งค่าที่รับมาจากคนอื่นอาจชี้ไปที่โปรแกรมอันตราย"
+  "Codex approve path question": "อนุญาตให้ MangaX เรียกโปรแกรมนี้เป็น Codex หรือไม่ อนุมัติเฉพาะไฟล์ที่คุณติดตั้งเอง การตั้งค่าที่รับมาจากคนอื่นอาจชี้ไปที่โปรแกรมอันตราย",
+  "eta_processing": "กำลังประมวลผล",
+  "eta_skipped": "ข้าม {count} ภาพ",
+  "eta_failed": "ไม่สำเร็จ {count} ภาพ",
+  "eta_nothing_to_process": "ไม่มีภาพที่ต้องประมวลผล",
+  "eta_waiting_for_first": "จะประมาณเวลาที่เหลือหลังภาพแรกเสร็จ",
+  "eta_average": "เฉลี่ย {seconds} วินาที/ภาพ",
+  "eta_remaining": "เหลือประมาณ {duration}",
+  "eta_duration_hours_minutes": "{hours} ชม. {minutes} นาที",
+  "eta_duration_minutes_seconds": "{minutes} นาที {seconds} วินาที",
+  "eta_duration_seconds": "{seconds} วินาที"
 }

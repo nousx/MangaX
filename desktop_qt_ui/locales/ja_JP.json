@@ -1666,5 +1666,15 @@
   "Codex check again": "再確認",
   "Codex status custom path": "設定に Codex のパスが手動で指定されていますが、まだ承認されていません。承認するまでこのファイルは実行されません。",
   "Codex approve path": "このパスを承認",
-  "Codex approve path question": "MangaX がこのプログラムを Codex として実行することを許可しますか？ご自身でインストールしたファイルのみ承認してください。他の人から受け取った設定は有害なプログラムを指している可能性があります。"
+  "Codex approve path question": "MangaX がこのプログラムを Codex として実行することを許可しますか？ご自身でインストールしたファイルのみ承認してください。他の人から受け取った設定は有害なプログラムを指している可能性があります。",
+  "eta_processing": "処理中",
+  "eta_skipped": "スキップ {count} 枚",
+  "eta_failed": "失敗 {count} 枚",
+  "eta_nothing_to_process": "処理する画像はありません",
+  "eta_waiting_for_first": "最初の1枚の完了後に残り時間を見積もります",
+  "eta_average": "平均 {seconds} 秒/枚",
+  "eta_remaining": "残り約 {duration}",
+  "eta_duration_hours_minutes": "{hours}時間{minutes}分",
+  "eta_duration_minutes_seconds": "{minutes}分{seconds}秒",
+  "eta_duration_seconds": "{seconds}秒"
 }

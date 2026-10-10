@@ -201,3 +201,55 @@ def test_feature_error_classification_uses_feature_specific_messages(monkeypatch
     message = app_logic.TranslationWorker._build_friendly_error_message(error_message, "")
 
     assert expected in message
+
+
+def test_model_hash_mismatch_is_not_reported_as_a_rate_limit(monkeypatch):
+    manager = _manager("en_US")
+    monkeypatch.setattr(app_logic, "get_i18n_manager", lambda: manager)
+
+    message = app_logic.TranslationWorker._build_friendly_error_message(
+        'OCR failed: [Model48pxOCR->dict] Model file "alphabet-all-v7.txt" does not match the '
+        "expected SHA-256 (expected f5722368146aa0fbcc9f4726866e4efc3203318ebb66c811d8cbbe915576538a, "
+        "got 17413a30f6872c06e26cc4ff2ef2e367177b29845f55ba429a5c7ecc243e5e79).",
+        "",
+    )
+
+    assert "HTTP 429" not in message
+    assert "does not match the expected SHA-256" in message
+
+
+def test_rate_limit_status_code_is_still_recognised(monkeypatch):
+    manager = _manager("en_US")
+    monkeypatch.setattr(app_logic, "get_i18n_manager", lambda: manager)
+
+    message = app_logic.TranslationWorker._build_friendly_error_message(
+        "API request failed with status 429: quota exceeded",
+        "",
+    )
+
+    assert "HTTP 429" in message
+
+
+@pytest.mark.parametrize(
+    ("locale", "expected"),
+    [
+        ("en_US", "Processing | Avg 5.0 s/image | About 2 min 5 s left | Failed 2"),
+        ("th_TH", "กำลังประมวลผล | เฉลี่ย 5.0 วินาที/ภาพ | เหลือประมาณ 2 นาที 5 วินาที | ไม่สำเร็จ 2 ภาพ"),
+        ("zh_CN", "处理中 | 均速 5.0 秒/张 | 预计剩余 2分5秒 | 已失败 2 张"),
+    ],
+)
+def test_batch_progress_message_uses_current_locale(locale, expected):
+    manager = _manager(locale)
+    worker = SimpleNamespace(_t=manager.translate)
+    worker._format_eta_duration = lambda seconds: app_logic.TranslationWorker._format_eta_duration(worker, seconds)
+
+    message = app_logic.TranslationWorker._build_eta_progress_message(
+        worker,
+        completed_count=2,
+        remaining_count=25,
+        elapsed_seconds=10.0,
+        failed_count=2,
+        detail=manager.translate("eta_processing"),
+    )
+
+    assert message == expected

@@ -2402,16 +2402,15 @@ class TranslationWorker(QObject):
             lines.append(f"- {remaining} more images failed; see the per-image logs above for details")
         return "\n".join(lines)
 
-    @staticmethod
-    def _format_eta_duration(seconds: float) -> str:
+    def _format_eta_duration(self, seconds: float) -> str:
         total_seconds = max(0, int(round(seconds)))
         hours, remainder = divmod(total_seconds, 3600)
         minutes, secs = divmod(remainder, 60)
         if hours > 0:
-            return f"{hours}小时{minutes}分"
+            return self._t("eta_duration_hours_minutes", hours=hours, minutes=minutes)
         if minutes > 0:
-            return f"{minutes}分{secs}秒"
-        return f"{secs}秒"
+            return self._t("eta_duration_minutes_seconds", minutes=minutes, seconds=secs)
+        return self._t("eta_duration_seconds", seconds=secs)
 
     def _build_eta_progress_message(
         self,
@@ -2425,22 +2424,23 @@ class TranslationWorker(QObject):
         parts = [detail] if detail else []
         if completed_count <= 0:
             if skipped_count > 0:
-                parts.append(f"已跳过 {skipped_count} 张")
+                parts.append(self._t("eta_skipped", count=skipped_count))
             if failed_count > 0:
-                parts.append(f"已失败 {failed_count} 张")
+                parts.append(self._t("eta_failed", count=failed_count))
             if remaining_count <= 0:
-                parts.append("无需处理")
+                parts.append(self._t("eta_nothing_to_process"))
                 return " | ".join(parts)
-            parts.append("等待首张完成后估算剩余时间")
+            parts.append(self._t("eta_waiting_for_first"))
             return " | ".join(parts)
 
         average_seconds = elapsed_seconds / max(completed_count, 1)
-        parts.append(f"均速 {average_seconds:.1f} 秒/张")
-        parts.append(f"预计剩余 {self._format_eta_duration(average_seconds * max(remaining_count, 0))}")
+        parts.append(self._t("eta_average", seconds=f"{average_seconds:.1f}"))
+        remaining = self._format_eta_duration(average_seconds * max(remaining_count, 0))
+        parts.append(self._t("eta_remaining", duration=remaining))
         if skipped_count > 0:
-            parts.append(f"已跳过 {skipped_count} 张")
+            parts.append(self._t("eta_skipped", count=skipped_count))
         if failed_count > 0:
-            parts.append(f"已失败 {failed_count} 张")
+            parts.append(self._t("eta_failed", count=failed_count))
         return " | ".join(parts)
     
     def _calculate_output_path(self, image_path: str, save_info: dict) -> str:
@@ -2580,6 +2580,11 @@ class TranslationWorker(QObject):
             lower_error,
         ))
 
+        def _has_status_code(code: str) -> bool:
+            # A bare substring test also matches digits inside hashes, sizes
+            # and request IDs, so require the code to stand on its own.
+            return bool(re.search(rf"(?<![0-9a-z]){code}(?![0-9a-z])", lower_error))
+
         def _is_image_output_unsupported_error(*section_markers: str) -> bool:
             if not any(marker in lower_error for marker in section_markers):
                 return False
@@ -2711,7 +2716,7 @@ class TranslationWorker(QObject):
             "api key" in real_error.lower()
             or "authentication" in real_error.lower()
             or "unauthorized" in real_error.lower()
-            or "401" in real_error
+            or _has_status_code("401")
             or "no available api candidates" in real_error.lower()
             or "exhausting api candidates" in real_error.lower()
             or "api candidates" in real_error.lower()
@@ -2743,25 +2748,25 @@ class TranslationWorker(QObject):
             friendly_msg = _translate("friendly_error_network")
         
         # 检查是否是速率限制错误
-        elif "rate limit" in real_error.lower() or "429" in real_error or "too many requests" in real_error.lower():
+        elif "rate limit" in real_error.lower() or _has_status_code("429") or "too many requests" in real_error.lower():
             friendly_msg = _translate("friendly_error_http_429")
         
         # 检查是否是403禁止访问错误
-        elif "403" in real_error or "forbidden" in real_error.lower():
+        elif _has_status_code("403") or "forbidden" in real_error.lower():
             friendly_msg = _translate("friendly_error_http_403")
 
         # 检查是否是500服务器错误
-        elif "500" in real_error or "internal server error" in real_error.lower():
+        elif _has_status_code("500") or "internal server error" in real_error.lower():
             friendly_msg = _translate("friendly_error_http_500")
         
         # 检查是否是502/503/504网关错误
-        elif any(code in real_error for code in ["502", "503", "504"]) or "bad gateway" in real_error.lower() or "service unavailable" in real_error.lower() or "gateway timeout" in real_error.lower():
+        elif any(_has_status_code(code) for code in ["502", "503", "504"]) or "bad gateway" in real_error.lower() or "service unavailable" in real_error.lower() or "gateway timeout" in real_error.lower():
             error_code = "502/503/504"
-            if "502" in real_error:
+            if _has_status_code("502"):
                 error_code = "502"
-            elif "503" in real_error:
+            elif _has_status_code("503"):
                 error_code = "503"
-            elif "504" in real_error:
+            elif _has_status_code("504"):
                 error_code = "504"
             
             friendly_msg = _translate("friendly_error_http_gateway", code=error_code)
@@ -2861,7 +2866,7 @@ class TranslationWorker(QObject):
             progress_context = {
                 "skipped_count": 0,
                 "processing_started_at": None,
-                "detail": "处理中",
+                "detail": self._t("eta_processing"),
                 "failed_count": 0,
             }
 
@@ -3020,7 +3025,7 @@ class TranslationWorker(QObject):
                 # TXT导入JSON的预处理已经统一到翻译器入口（manga_translator.py），这里不再需要
 
             total_images = len(self.files)
-            progress_context["detail"] = "处理中"
+            progress_context["detail"] = self._t("eta_processing")
             progress_context["failed_count"] = 0
             self._log_info(f"--- Starting batch processing ({'high-quality mode' if is_hq else 'batch mode'})")
             self._log_info(
@@ -3031,7 +3036,7 @@ class TranslationWorker(QObject):
             if workflow_tip:
                 self._log_info(workflow_tip)
             self._log_info('🚀 Starting translation...')
-            emit_eta_progress(0, total_images, "处理中")
+            emit_eta_progress(0, total_images, self._t("eta_processing"))
             if total_images > 0:
                 progress_context["processing_started_at"] = time.perf_counter()
                 images_with_configs = [(file_path, config) for file_path in self.files]
