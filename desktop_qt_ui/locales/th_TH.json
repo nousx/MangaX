@@ -560,6 +560,8 @@
   "Clear List": "ล้างรายการ",
   "Drag and drop files or folders here\nor click the buttons above to add": "ลากไฟล์หรือโฟลเดอร์มาวางที่นี่\nหรือกดปุ่มด้านบนเพื่อเพิ่ม",
   "Start Translation": "เริ่มแปล",
+  "Continue Unfinished": "แปลต่อจากที่ค้าง",
+  "resume_button_tooltip": "เริ่มงานโดยข้ามทุกหน้าที่มีไฟล์ผลลัพธ์อยู่แล้ว ใช้สำหรับทำคิวที่หยุดกลางคันต่อ ไม่เปลี่ยนค่าตัวเลือก \"เขียนทับไฟล์ที่มีอยู่\"",
   "Stop Translation": "หยุดแปล",
   "Stopping...": "กำลังหยุด...",
   "Export Translation": "ส่งออกคำแปล",

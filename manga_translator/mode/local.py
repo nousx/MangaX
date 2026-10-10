@@ -63,6 +63,8 @@ def parse_args():
                         help='配置文件路径（默认：config/config.json）')
     parser.add_argument('-v', '--verbose', action='store_true',
                         help='显示详细日志')
+    parser.add_argument('--skip-existing', action='store_true',
+                        help='Skip pages whose output already exists (continue an unfinished run)')
     parser.add_argument('--overwrite', action='store_true',
                         help='覆盖已存在的文件')
     
@@ -167,7 +169,10 @@ async def translate_files(input_paths, output_dir, config_service, verbose=False
         verbose = cli_config.get('verbose', False)
     
     # overwrite: 命令行参数优先，否则使用配置文件
-    if overwrite:
+    if getattr(args, 'skip_existing', False):
+        overwrite = False
+        cli_config['overwrite'] = False
+    elif overwrite:
         cli_config['overwrite'] = True
     else:
         overwrite = cli_config.get('overwrite', False)

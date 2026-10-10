@@ -560,6 +560,8 @@
   "Clear List": "清除清單",
   "Drag and drop files or folders here\nor click the buttons above to add": "拖曳檔案或檔案夹到此处\n或点击上方按钮新增",
   "Start Translation": "開始翻譯",
+  "Continue Unfinished": "繼續未完成的任務",
+  "resume_button_tooltip": "開始任務，但略過所有已有譯圖的頁面。用於繼續被中斷的佇列，不會變更「覆寫現有檔案」設定。",
   "Stop Translation": "停止翻譯",
   "Stopping...": "停止中...",
   "Export Translation": "匯出翻譯",

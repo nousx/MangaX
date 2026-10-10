@@ -560,6 +560,8 @@
   "Clear List": "Clear List",
   "Drag and drop files or folders here\nor click the buttons above to add": "Drag and drop files or folders here\nor click the buttons above to add",
   "Start Translation": "Start Translation",
+  "Continue Unfinished": "Continue Unfinished",
+  "resume_button_tooltip": "Start the task but skip every page that already has a translated output. Use it to continue a queue that was stopped. The \"overwrite existing files\" setting is not changed.",
   "Stop Translation": "Stop Translation",
   "Stopping...": "Stopping...",
   "Export Translation": "Export Translation",

@@ -104,7 +104,11 @@ def create_translation_page(self) -> QWidget:
     )
     self.workflow_mode_hint_label.setWordWrap(False)
     self.workflow_mode_hint_label.setToolTip(self.workflow_mode_hint_label.text())
-    task_layout.addWidget(self.workflow_mode_hint_label, 2, 3, 1, 2)
+    task_layout.addWidget(self.workflow_mode_hint_label, 2, 3)
+    self.resume_button = PushButton(self._t("Continue Unfinished"))
+    self.resume_button.setFixedHeight(36)
+    self.resume_button.setToolTip(self._t("resume_button_tooltip"))
+    task_layout.addWidget(self.resume_button, 2, 4)
     self.start_button = PrimaryPushButton(self._t("Start Translation"))
     self.start_button.setFixedHeight(36)
     task_layout.addWidget(self.start_button, 2, 5)
@@ -132,6 +136,7 @@ def create_translation_page(self) -> QWidget:
     self.browse_button.clicked.connect(self.controller.select_output_folder)
     self.open_button.clicked.connect(self.controller.open_output_folder)
     self.start_button.clicked.connect(self.controller.start_backend_task)
+    self.resume_button.clicked.connect(lambda _checked=False: self.controller.resume_backend_task())
     self.workflow_mode_combo.currentIndexChanged.connect(self._on_workflow_mode_changed)
 
     return page

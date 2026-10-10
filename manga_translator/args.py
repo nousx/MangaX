@@ -64,6 +64,8 @@ def create_parser():
                              help='配置文件路径（默认：config/config.json）')
     local_parser.add_argument('-v', '--verbose', action='store_true',
                              help='显示详细日志')
+    local_parser.add_argument('--skip-existing', action='store_true',
+                              help='Skip pages whose output already exists (continue an unfinished run)')
     local_parser.add_argument('--overwrite', action='store_true',
                              help='覆盖已存在的文件')
     local_parser.add_argument('--use-gpu', action='store_true', default=None,

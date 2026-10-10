@@ -110,6 +110,7 @@ def on_translation_state_changed(self, is_translating: bool):
         "add_files_button",
         "add_folder_button",
         "clear_list_button",
+        "resume_button",
         "env_page",
     ):
         widget = getattr(self, name, None)

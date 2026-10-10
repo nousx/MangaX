@@ -560,6 +560,8 @@
   "Clear List": "リストをクリア",
   "Drag and drop files or folders here\nor click the buttons above to add": "ファイルまたはフォルダをここにドラッグ＆ドロップ\nまたは上のボタンをクリックして追加",
   "Start Translation": "翻訳を開始",
+  "Continue Unfinished": "未完了分を続行",
+  "resume_button_tooltip": "翻訳済みの出力があるページをすべてスキップしてタスクを開始します。中断したキューの続きに使います。「既存ファイルを上書き」の設定は変更しません。",
   "Stop Translation": "翻訳を停止",
   "Stopping...": "停止中...",
   "Export Translation": "翻訳をエクスポート",

@@ -560,6 +560,8 @@
   "Clear List": "목록 지우기",
   "Drag and drop files or folders here\nor click the buttons above to add": "파일 또는 폴더를 여기에 드래그 앤 드롭\n또는 위의 버튼을 클릭하여 추가",
   "Start Translation": "번역 시작",
+  "Continue Unfinished": "미완료분 이어서 번역",
+  "resume_button_tooltip": "번역 결과가 이미 있는 페이지는 모두 건너뛰고 작업을 시작합니다. 중단된 대기열을 이어서 처리할 때 사용하며, \"기존 파일 덮어쓰기\" 설정은 바꾸지 않습니다.",
   "Stop Translation": "번역 중지",
   "Stopping...": "중지 중...",
   "Export Translation": "번역 내보내기",

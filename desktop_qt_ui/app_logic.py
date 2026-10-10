@@ -152,6 +152,8 @@ class MainAppLogic(QObject):
         self.current_worker = None  # 当前运行的worker
         self._shutdown_started = False
         self._stop_requested = False
+        # Set by resume_backend_task for the next run only; the saved setting is untouched.
+        self._skip_existing_once = False
         self.current_task_id = 0  # 任务ID，用于区分不同的翻译任务
         self.saved_files_count = 0
         self.completed_output_sources: Dict[str, str] = {}
@@ -1916,10 +1918,22 @@ class MainAppLogic(QObject):
         self.state_manager.set_translating(True)
         self.state_manager.set_status_message("正在翻译...")
 
+    def resume_backend_task(self):
+        """Start the task, skipping every page whose output already exists.
+
+        Same as starting with 'overwrite existing files' off, without changing
+        that setting: an interrupted queue continues where it stopped.
+        """
+        self._skip_existing_once = True
+        self.start_backend_task()
+
     def start_backend_task(self):
         """
         Resolves input paths and uses a 'Worker-to-Thread' model to start the translation task.
         """
+        # Read and clear the request first, so a refused start cannot leak it into the next one.
+        skip_existing = self._skip_existing_once
+        self._skip_existing_once = False
         # 检查是否有任务在运行
         assistant = getattr(self, 'chapter_assistant', None)
         if assistant is not None and assistant.busy():
@@ -1988,7 +2002,11 @@ class MainAppLogic(QObject):
             return
 
         # 启动后台文件扫描
-        self.start_file_scanning(config.model_dump())
+        task_config = config.model_dump()
+        if skip_existing:
+            task_config.setdefault('cli', {})['overwrite'] = False
+            self._ui_log("Continuing an unfinished task: pages that already have output are skipped.")
+        self.start_file_scanning(task_config)
 
     def on_task_finished(self, results, task_id):
         """处理后端已经保存完成的任务结果。"""

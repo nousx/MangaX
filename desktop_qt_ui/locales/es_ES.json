@@ -560,6 +560,8 @@
   "Clear List": "Limpiar lista",
   "Drag and drop files or folders here\nor click the buttons above to add": "Arrastre y suelte archivos o carpetas aquí\no haga clic en los botones de arriba para agregar",
   "Start Translation": "Iniciar traducción",
+  "Continue Unfinished": "Continuar lo pendiente",
+  "resume_button_tooltip": "Inicia la tarea omitiendo las páginas que ya tienen una imagen traducida. Sirve para continuar una cola interrumpida. No cambia el ajuste \"sobrescribir archivos existentes\".",
   "Stop Translation": "Detener traducción",
   "Stopping...": "Deteniendo...",
   "Export Translation": "Exportar Traducción",

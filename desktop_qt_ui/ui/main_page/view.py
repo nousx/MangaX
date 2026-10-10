@@ -393,6 +393,9 @@ class MainView(QObject):
             self.translation_task_title.setText(self._t("Translation Task"))
         if hasattr(self, "add_files_button"):
             self.add_files_button.setText(self._t("Add Files"))
+        if hasattr(self, "resume_button"):
+            self.resume_button.setText(self._t("Continue Unfinished"))
+            self.resume_button.setToolTip(self._t("resume_button_tooltip"))
         if hasattr(self, "add_folder_button"):
             self.add_folder_button.setText(self._t("Add Folder"))
         if hasattr(self, "select_all_button"):
