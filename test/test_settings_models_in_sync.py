@@ -1,6 +1,7 @@
 """The desktop settings models and the backend ones describe the same settings twice.
 
-Until they are merged, this test stops them drifting apart unnoticed: a field
+The settings that are identical live once in the shared *Fields classes. For the
+rest, this test stops the two sides drifting apart unnoticed: a field
 added to one side only, or a default changed on one side only, fails here and
 has to be either mirrored or recorded below as intended.
 """
@@ -89,3 +90,20 @@ def test_translator_switches_should_exist_on_both_sides(field):
 def test_render_switches_should_exist_on_both_sides():
     assert "recompute_line_breaks" in desktop.RenderSettings.model_fields
     assert "recompute_line_breaks" in backend.RenderConfig.model_fields
+
+
+@pytest.mark.parametrize("name", sorted(PAIRS))
+def test_a_setting_that_is_the_same_on_both_sides_should_be_declared_once(name):
+    """Identical settings belong in the shared *Fields base, not in both models."""
+    desktop_model, backend_model = _models(name)
+    base = getattr(backend, PAIRS[name].replace("Config", "Fields"))
+    assert issubclass(desktop_model, base) and issubclass(backend_model, base)
+
+    declared_twice = [
+        field for field in sorted(set(desktop_model.__annotations__) & set(backend_model.__annotations__))
+        if desktop_model.model_fields[field].annotation == backend_model.model_fields[field].annotation
+        and _default(desktop_model.model_fields[field]) == _default(backend_model.model_fields[field])
+        and repr(desktop_model.model_fields[field].metadata) == repr(backend_model.model_fields[field].metadata)
+    ]
+
+    assert declared_twice == []

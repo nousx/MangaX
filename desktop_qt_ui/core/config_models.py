@@ -1,180 +1,83 @@
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional
 
+from manga_translator.config import (
+    VALID_LAYOUT_MODES,  # noqa: F401 - kept importable from here
+    CliFields,
+    ColorizerFields,
+    DetectorFields,
+    InpainterFields,
+    OcrFields,
+    RenderFields,
+    TranslatorFields,
+    UpscaleFields,
+)
 from manga_translator.custom_api_params import migrate_legacy_custom_api_params_config
 from pydantic import BaseModel, Field, model_validator
 
 from theme_registry import VALID_THEME_PREFERENCES as REGISTERED_THEME_PREFERENCES
 from theme_registry import VALID_THEMES as REGISTERED_THEMES
 
-VALID_LAYOUT_MODES = {"smart_scaling", "strict", "balloon_fill"}
+# The settings shared with the backend are declared once, in the *Fields
+# classes of manga_translator.config. Each class below adds what differs for
+# the desktop app: plain strings where the backend uses an enum, the defaults
+# a new installation starts with, and the switches only the desktop has.
 
 
-class TranslatorSettings(BaseModel):
-    codex_cli_path: str = ""
-    codex_model: str = ""
-    codex_timeout: int = Field(default=300, ge=10, le=3600)
-    codex_batch_size: int = Field(default=30, ge=1, le=100)
-    claude_cli_path: str = ""
-    claude_model: str = "sonnet"
-    claude_timeout: int = Field(default=300, ge=10, le=3600)
-    claude_batch_size: int = Field(default=30, ge=1, le=100)
+class TranslatorSettings(TranslatorFields):
     translator: str = "openai_hq"
     target_lang: str = "CHS"
-    keep_lang: str = "none"
-    enable_streaming: bool = True
-    no_text_lang_skip: bool = False
     # 相对路径，后端会用 BASE_PATH 拼接（打包后=app.exe 同级，开发时=项目根目录）
     high_quality_prompt_path: Optional[str] = "dict/prompt_example.yaml"
-    extract_glossary: bool = False
-    max_requests_per_minute: int = 0
-    remove_trailing_period: bool = False
-    normalize_thai_punctuation: bool = False
-    convert_to_traditional: bool = False
-    convert_to_simplified: bool = False
 
 
-class OcrSettings(BaseModel):
+class OcrSettings(OcrFields):
     ocr: str = "48px"
     use_hybrid_ocr: bool = True
     secondary_ocr: str = "mocr"
-    min_text_length: int = 0
-    ignore_bubble: float = 0.0
-    use_model_bubble_filter: bool = False
-    model_bubble_overlap_threshold: float = 0.1
-    use_model_bubble_repair_intersection: bool = False
-    limit_mask_dilation_to_bubble_mask: bool = False
     prob: float = 0.1
-    merge_gamma: float = 0.8
-    merge_sigma: float = 2.5
-    merge_edge_ratio_threshold: float = 0.0
-    merge_special_require_full_wrap: bool = True
-    ocr_vl_language_hint: str = "auto"
-    ocr_vl_custom_prompt: Optional[str] = None
-    ai_ocr_concurrency: int = 1
-    ai_ocr_custom_prompt: Optional[str] = None
 
 
-class DetectorSettings(BaseModel):
+class DetectorSettings(DetectorFields):
     detector: str = "default"
-    detection_size: int = 2048
-    det_rearrange_min_effective_short_side: int = 341
-    text_threshold: float = 0.5
     box_threshold: float = 0.5
     unclip_ratio: float = 2.5
-    import_yolo_labels: bool = False
-    use_yolo_obb: bool = False
-    use_sfx_filter: bool = False
-    sfx_filter_include_bubble_text: bool = False
-    yolo_obb_conf: float = 0.4
-    yolo_obb_overlap_threshold: float = 0.1
-    min_box_area_ratio: float = (
-        0.0009  # 最小检测框面积占比（相对图片总像素），默认0.09%
-    )
 
 
-class InpainterSettings(BaseModel):
+class InpainterSettings(InpainterFields):
     inpainter: str = "lama_mpe"
-    inpainting_size: int = 2048
     inpainting_precision: str = "fp32"
-    force_use_torch_inpainting: bool = False
-    solid_fill_pure_bubbles: bool = False
-    per_block_inpainting: bool = False
 
 
-class RenderSettings(BaseModel):
+class RenderSettings(RenderFields):
     renderer: str = "default"
     alignment: str = "auto"
-    disable_font_border: bool = False
     disable_auto_wrap: bool = True
-    font_size_offset: int = 0
     font_size_minimum: int = 0
     direction: str = "auto"
-    uppercase: bool = False
-    lowercase: bool = False
     font_family: str = ""
     disable_system_fonts: bool = False
-    no_hyphenation: bool = False
-    bubble_layout_english: bool = False
-    font_color: Optional[str] = None
     line_spacing: Optional[float] = 1.0  # 行间距倍率，默认1.0
     letter_spacing: Optional[float] = 1.0  # 字间距倍率，默认1.0
-    font_size: Optional[int] = None
-    rtl: bool = True
-    layout_mode: str = "smart_scaling"
-    balloon_fill_mask_layout: bool = False
-    max_font_size: int = 0
-    font_scale_ratio: float = 1.0
-    center_text_in_bubble: bool = False
-    optimize_line_breaks: bool = False
-    semantic_linebreak: bool = False
-    remove_linebreak_punctuation: bool = False
-    recompute_line_breaks: bool = False
-    check_br_and_retry: bool = False
-    strict_smart_scaling: bool = False
-    stroke_width: float = 0.07
-    enable_template_alignment: bool = (
-        False  # 启用模板匹配对齐（替换翻译模式）- 直接提取翻译图文字
-    )
-    paste_mask_dilation_pixels: int = 10  # 粘贴模式蒙版膨胀大小（像素），设为0禁用膨胀
-    ai_renderer_concurrency: int = 1
-
-    @model_validator(mode="after")
-    def _validate_layout_mode(self):
-        if self.layout_mode not in VALID_LAYOUT_MODES:
-            raise ValueError(
-                f"Invalid render.layout_mode: {self.layout_mode!r}. "
-                f"Supported values: {', '.join(sorted(VALID_LAYOUT_MODES))}"
-            )
-        return self
 
 
-class UpscaleSettings(BaseModel):
+class UpscaleSettings(UpscaleFields):
     upscaler: str = "esrgan"
-    upscale_ratio: Optional[Union[int, str]] = (
-        None  # 可以是数字或字符串(mangajanai: x2, x4, DAT2 x4)
-    )
-    realcugan_model: Optional[str] = None
-    tile_size: Optional[int] = None
-    revert_upscaling: bool = False
 
 
-class ColorizerSettings(BaseModel):
-    colorization_size: int = 576
-    denoise_sigma: int = 30
+class ColorizerSettings(ColorizerFields):
     colorizer: str = "none"
-    ai_colorizer_history_pages: int = 0
 
 
-class CliSettings(BaseModel):
-    verbose: bool = False  # 默认关闭详细日志
-    attempts: int = -1
-    ignore_errors: bool = False
-    use_gpu: bool = True
-    disable_onnx_gpu: bool = False  # 禁用 ONNX Runtime GPU 加速（强制 ONNX 走 CPU）
-    context_size: int = 3
+class CliSettings(CliFields):
     format: str = "不指定"
     overwrite: bool = True
-    skip_no_text: bool = False
     save_text: bool = True
-    export_from_local_json: bool = False
     load_text: bool = False
-    translate_json_only: bool = False
     template: bool = False
-    save_quality: int = 100
-    batch_size: int = 1
-    batch_concurrent: bool = False
     generate_and_export: bool = False
     colorize_only: bool = False
     upscale_only: bool = False  # 仅超分模式
     inpaint_only: bool = False  # 仅输出修复图片模式
-    save_to_source_dir: bool = (
-        False  # 输出到原图目录的 manga_translator_work/result 子目录
-    )
-    export_editable_psd: bool = False  # 导出可编辑的PSD文件（需要Photoshop）
-    psd_script_only: bool = False  # 仅生成JSX脚本而不执行Photoshop
-    replace_translation: bool = (
-        False  # 替换翻译模式：将一张图的翻译应用到另一张生肉图上
-    )
 
 
 _LEGACY_THEME_MIGRATIONS = {

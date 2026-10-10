@@ -153,20 +153,12 @@ class Upscaler(str, Enum):
     realcugan = "realcugan"
     mangajanai = "mangajanai"
 
-class RenderConfig(BaseModel):
-    renderer: Renderer = Renderer.default
-    """Rendering engine selection."""
-    force_strict_layout: bool = False
-    """Force renderer to strictly adhere to the bounding box, like in --load-text mode."""
-    alignment: Alignment = Alignment.auto
-    """Align rendered text"""
+class RenderFields(BaseModel):
+    """Render settings that the desktop app and the backend declare once."""
     disable_font_border: bool = False
     """Disable font border"""
-    disable_auto_wrap: bool = False
     font_size_offset: int = 0
     """Adjust the base font size once after automatic layout, before the scale ratio."""
-    font_size_minimum: int = -1
-    """Minimum base font size after layout. Non-positive values disable this limit."""
     max_font_size: int = 0
     """Maximum base font size after layout. 0 means no limit. Local rich-text sizes take precedence."""
     font_scale_ratio: float = 1.0
@@ -180,13 +172,10 @@ class RenderConfig(BaseModel):
     remove_linebreak_punctuation: bool = False
     recompute_line_breaks: bool = False
     """Ignore line breaks stored by an earlier automatic layout and wrap the text again."""
-    """Remove comma/period punctuation immediately before or after line break markers."""
     check_br_and_retry: bool = False
     """Check if translation contains [BR] markers when AI line breaking is enabled (regions≥2). Retry if missing."""
     strict_smart_scaling: bool = False
     """In smart_scaling mode, prevent text box expansion by skipping combinations without line breaks"""
-    direction: Direction = Direction.auto
-    """Force text to be rendered horizontally/vertically/none"""
     uppercase: bool = False
     """Change text to uppercase"""
     lowercase: bool = False
@@ -195,14 +184,8 @@ class RenderConfig(BaseModel):
     """If renderer should be splitting up words using a hyphen character (-)"""
     bubble_layout_english: bool = False
     """Enable bubble-based English typesetting (balloon mask line breaking) and force horizontal rendering."""
-    font_family: Optional[str] = None
-    """Qt font family, optionally suffixed with ``::style``, used for rendering."""
     font_color: Optional[str] = None
     """Overwrite the text fg/bg color detected by the OCR model. Use hex string without the "#" such as FFFFFF for a white foreground or FFFFFF:000000 to also have a black background around the text."""
-    line_spacing: Optional[float] = None
-    """Line spacing multiplier. Default is 1.0. Actual spacing = font_size * base_spacing * multiplier (base: 0.01 for horizontal, 0.2 for vertical)."""
-    letter_spacing: Optional[float] = None
-    """Letter spacing multiplier. Default is 1.0. Actual glyph advance = font advance * multiplier."""
     font_size: Optional[int] = None
     """Override the automatic base font size before offset, ratio, and min/max limits."""
     rtl: bool = True
@@ -219,8 +202,6 @@ class RenderConfig(BaseModel):
     """Mask dilation size in pixels for paste mode. Default is 10. Set to 0 to disable dilation. Actual dilation = pixels // 3 iterations with 3x3 kernel."""
     ai_renderer_concurrency: int = 1
     """Maximum concurrent API requests for OpenAI/Gemini/Vertex renderers."""
-    _font_color_fg = None
-    _font_color_bg = None
 
     @model_validator(mode="after")
     def _validate_layout_mode(self):
@@ -230,6 +211,30 @@ class RenderConfig(BaseModel):
                 f"Supported values: {', '.join(sorted(VALID_LAYOUT_MODES))}"
             )
         return self
+
+
+class RenderConfig(RenderFields):
+    renderer: Renderer = Renderer.default
+    """Rendering engine selection."""
+    force_strict_layout: bool = False
+    """Force renderer to strictly adhere to the bounding box, like in --load-text mode."""
+    alignment: Alignment = Alignment.auto
+    """Align rendered text"""
+    disable_auto_wrap: bool = False
+    font_size_minimum: int = -1
+    """Minimum base font size after layout. Non-positive values disable this limit."""
+    """Remove comma/period punctuation immediately before or after line break markers."""
+    direction: Direction = Direction.auto
+    """Force text to be rendered horizontally/vertically/none"""
+    font_family: Optional[str] = None
+    """Qt font family, optionally suffixed with ``::style``, used for rendering."""
+    line_spacing: Optional[float] = None
+    """Line spacing multiplier. Default is 1.0. Actual spacing = font_size * base_spacing * multiplier (base: 0.01 for horizontal, 0.2 for vertical)."""
+    letter_spacing: Optional[float] = None
+    """Letter spacing multiplier. Default is 1.0. Actual glyph advance = font advance * multiplier."""
+    _font_color_fg = None
+    _font_color_bg = None
+
 
     @property
     def font_color_fg(self):
@@ -255,9 +260,8 @@ class RenderConfig(BaseModel):
                     f'Invalid --font-color value: {self.font_color}. Use a hex value such as FF0000')
         return self._font_color_bg
 
-class UpscaleConfig(BaseModel):
-    upscaler: Upscaler = Upscaler.esrgan
-    """Upscaler to use. --upscale-ratio has to be set for it to take effect"""
+class UpscaleFields(BaseModel):
+    """Upscale settings that the desktop app and the backend declare once."""
     revert_upscaling: bool = False
     """Downscales the previously upscaled image after translation back to original size (Use with --upscale-ratio)."""
     upscale_ratio: Optional[Union[int, str]] = None
@@ -267,7 +271,13 @@ class UpscaleConfig(BaseModel):
     tile_size: Optional[int] = None
     """Tile size for Real-CUGAN upscaling (default: 400, 0 = process full image without tiling)"""
 
-class TranslatorConfig(BaseModel):
+
+class UpscaleConfig(UpscaleFields):
+    upscaler: Upscaler = Upscaler.esrgan
+    """Upscaler to use. --upscale-ratio has to be set for it to take effect"""
+
+class TranslatorFields(BaseModel):
+    """Translator settings that the desktop app and the backend declare once."""
     codex_cli_path: str = ""
     codex_model: str = ""
     codex_timeout: int = Field(default=300, ge=10, le=3600)
@@ -276,26 +286,35 @@ class TranslatorConfig(BaseModel):
     claude_model: str = "sonnet"
     claude_timeout: int = Field(default=300, ge=10, le=3600)
     claude_batch_size: int = Field(default=30, ge=1, le=100)
-    translator: Translator = Translator.openai_hq
-    """Language translator to use"""
-    target_lang: str = 'ENG' #todo: validate VALID_LANGUAGES #todo: convert to enum
-    """Destination language"""
     keep_lang: str = 'none'
     """After text merging, keep only regions detected as this source language for later processing. Filtered regions remain unchanged. Use 'none' to disable."""
     enable_streaming: bool = True
     """Enable unified streaming transport for supported AI translators."""
     no_text_lang_skip: bool = False
     """Dont skip text that is seemingly already in the target language."""
-    skip_lang: Optional[str] = None
-    """Skip translation if source image is one of the provide languages, use comma to separate multiple languages. Example: JPN,ENG"""
-    high_quality_prompt_path: Optional[str] = None
-    """Path to a JSON file containing custom prompts for high-quality translation."""
     extract_glossary: bool = False
     """Automatically extract new terms to glossary (requires high_quality_prompt_path)"""
     remove_trailing_period: bool = False
     """Remove a sentence-final period from the translation when the source text has no terminal punctuation."""
     normalize_thai_punctuation: bool = False
     """For Thai output, keep one ending mark and drop a question mark after a question word."""
+    max_requests_per_minute: int = 0
+    """Maximum API requests per minute. 0 means no limit."""
+    convert_to_traditional: bool = False
+    """Convert simplified Chinese to traditional Chinese after translation (using OpenCC s2twp)"""
+    convert_to_simplified: bool = False
+    """Convert traditional Chinese to simplified Chinese after translation (using OpenCC t2s)"""
+
+
+class TranslatorConfig(TranslatorFields):
+    translator: Translator = Translator.openai_hq
+    """Language translator to use"""
+    target_lang: str = 'ENG' #todo: validate VALID_LANGUAGES #todo: convert to enum
+    """Destination language"""
+    skip_lang: Optional[str] = None
+    """Skip translation if source image is one of the provide languages, use comma to separate multiple languages. Example: JPN,ENG"""
+    high_quality_prompt_path: Optional[str] = None
+    """Path to a JSON file containing custom prompts for high-quality translation."""
     translator_chain: Optional[str] = None
     """Output of one translator goes in another. Example: --translator-chain "openai:JPN;gemini:ENG"."""    
     selective_translation: Optional[str] = None
@@ -309,18 +328,8 @@ class TranslatorConfig(BaseModel):
     """User-provided API base URL (overrides environment variable)"""
     user_api_model: Optional[str] = None
     """User-provided model name (overrides environment variable)"""
-    
-    # API请求频率限制配置
-    max_requests_per_minute: int = 0
-    """Maximum API requests per minute. 0 means no limit."""
-    
-    # 简繁体转换（翻译后处理）
-    convert_to_traditional: bool = False
-    """Convert simplified Chinese to traditional Chinese after translation (using OpenCC s2twp)"""
-    convert_to_simplified: bool = False
-    """Convert traditional Chinese to simplified Chinese after translation (using OpenCC t2s)"""
 
-    # 译后检查配置项
+    # Checks run on a translation after it comes back.
     enable_post_translation_check: bool = False
     """Enable post-translation validation check"""
     post_check_max_retry_attempts: int = 3
@@ -350,10 +359,8 @@ class TranslatorConfig(BaseModel):
         return self._translator_gen
 
 
-class DetectorConfig(BaseModel):
-    """"""
-    detector: Detector =Detector.default
-    """"Text detector used for creating a text mask from an image, DO NOT use craft for manga, it\'s not designed for it"""
+class DetectorFields(BaseModel):
+    """Detector settings that the desktop app and the backend declare once."""
     detection_size: int = 2048
     """Size of image used for detection"""
     det_rearrange_min_effective_short_side: int = 341
@@ -372,20 +379,23 @@ class DetectorConfig(BaseModel):
     """Confidence threshold for YOLO OBB detector"""
     yolo_obb_overlap_threshold: float = 0.1
     """Overlap ratio threshold for removing YOLO boxes (0.0-1.0). YOLO boxes with overlap >= threshold will be removed if they don't meet replacement criteria. Set to 1.0 to keep all overlapping boxes."""
+    min_box_area_ratio: float = 0.0009
+    """Minimum detection box area ratio relative to total image pixels (default 0.0009 = 0.09%)"""
+
+
+class DetectorConfig(DetectorFields):
+    """"""
+    detector: Detector =Detector.default
+    """"Text detector used for creating a text mask from an image, DO NOT use craft for manga, it\'s not designed for it"""
     box_threshold: float = 0.7
     """Threshold for bbox generation"""
     unclip_ratio: float = 2.3
     """How much to extend text skeleton to form bounding box"""
-    min_box_area_ratio: float = 0.0009
-    """Minimum detection box area ratio relative to total image pixels (default 0.0009 = 0.09%)"""
 
-class InpainterConfig(BaseModel):
-    inpainter: Inpainter = Inpainter.lama_large
-    """Inpainting model to use"""
+class InpainterFields(BaseModel):
+    """Inpainter settings that the desktop app and the backend declare once."""
     inpainting_size: int = 2048
     """Size of image used for inpainting (too large will result in OOM)"""
-    inpainting_precision: InpaintPrecision = InpaintPrecision.bf16
-    """Inpainting precision for lama, use bf16 while you can."""
     force_use_torch_inpainting: bool = False
     """Force use PyTorch for inpainting instead of ONNX (useful if ONNX has memory issues)"""
     solid_fill_pure_bubbles: bool = False
@@ -393,18 +403,29 @@ class InpainterConfig(BaseModel):
     per_block_inpainting: bool = False
     """Inpaint each isolated refined-mask component in a 2x crop instead of feeding the whole page to the model"""
 
-class ColorizerConfig(BaseModel):
+
+class InpainterConfig(InpainterFields):
+    inpainter: Inpainter = Inpainter.lama_large
+    """Inpainting model to use"""
+    inpainting_precision: InpaintPrecision = InpaintPrecision.bf16
+    """Inpainting precision for lama, use bf16 while you can."""
+
+class ColorizerFields(BaseModel):
+    """Colorizer settings that the desktop app and the backend declare once."""
     colorization_size: int = 576
     """Size of image used for colorization. Set to -1 to use full image size"""
     denoise_sigma: int = 30
     """Used by colorizer and affects color strength, range from 0 to 255 (default 30). -1 turns it off."""
-    colorizer: Colorizer = Colorizer.none
-    """Colorization model to use."""
     ai_colorizer_history_pages: int = 0
     """How many previously colorized pages to attach as image-only context for AI colorizers."""
 
-class CliConfig(BaseModel):
-    """CLI-specific configuration options"""
+
+class ColorizerConfig(ColorizerFields):
+    colorizer: Colorizer = Colorizer.none
+    """Colorization model to use."""
+
+class CliFields(BaseModel):
+    """Cli settings that the desktop app and the backend declare once."""
     attempts: int = -1
     """Number of retry attempts for translation. -1 means unlimited retries"""
     verbose: bool = False
@@ -419,16 +440,10 @@ class CliConfig(BaseModel):
     """Batch size for processing"""
     batch_concurrent: bool = False
     """Enable concurrent pipeline (Detection, OCR, Inpainting, Translation in parallel)"""
-    format: Optional[str] = None
-    """Output format"""
     save_quality: int = 100
     """Save quality for output images"""
-    overwrite: bool = False
-    """Overwrite existing files"""
     skip_no_text: bool = False
     """Skip images with no text"""
-    save_text: bool = False
-    """Save extracted text"""
     export_from_local_json: bool = False
     """Export original/translated sidecars from existing local project JSON without processing images."""
     ignore_errors: bool = False
@@ -444,13 +459,18 @@ class CliConfig(BaseModel):
     translate_json_only: bool = False
     """Translate existing JSON only: read original text from JSON, translate, and write back JSON"""
 
-class OcrConfig(BaseModel):
-    ocr: Ocr = Ocr.ocr48px
-    """Optical character recognition (OCR) model to use"""
-    use_hybrid_ocr: bool = False
-    """Enable hybrid OCR mode, using a secondary OCR engine if the primary one fails."""
-    secondary_ocr: Ocr = Ocr.ocr48px
-    """Secondary OCR to use in hybrid mode."""
+
+class CliConfig(CliFields):
+    """CLI-specific configuration options"""
+    format: Optional[str] = None
+    """Output format"""
+    overwrite: bool = False
+    """Overwrite existing files"""
+    save_text: bool = False
+    """Save extracted text"""
+
+class OcrFields(BaseModel):
+    """Ocr settings that the desktop app and the backend declare once."""
     min_text_length: int = 0
     """Minimum text length of a text region"""
     ignore_bubble: float = 0.0
@@ -463,8 +483,6 @@ class OcrConfig(BaseModel):
     """After mask refinement, keep only model bubble-mask connected components that intersect the refined mask."""
     limit_mask_dilation_to_bubble_mask: bool = False
     """Clip refined-mask connected components by model bubble mask: intersecting components keep only intersection; non-intersecting components are preserved."""
-    prob: float | None = None
-    """Minimum probability of a text region to be considered valid. If None, uses the model default."""
     merge_gamma: float = 0.8
     """Textline merge distance tolerance, higher is more tolerant."""
     merge_sigma: float = 2.5
@@ -480,6 +498,17 @@ class OcrConfig(BaseModel):
     """Maximum concurrent API requests for OpenAI OCR and Gemini OCR."""
     ai_ocr_custom_prompt: Optional[str] = None
     """Custom prompt for API OCR backends such as OpenAI OCR and Gemini OCR."""
+
+
+class OcrConfig(OcrFields):
+    ocr: Ocr = Ocr.ocr48px
+    """Optical character recognition (OCR) model to use"""
+    use_hybrid_ocr: bool = False
+    """Enable hybrid OCR mode, using a secondary OCR engine if the primary one fails."""
+    secondary_ocr: Ocr = Ocr.ocr48px
+    """Secondary OCR to use in hybrid mode."""
+    prob: float | None = None
+    """Minimum probability of a text region to be considered valid. If None, uses the model default."""
 
 class Config(BaseModel):
     # General
