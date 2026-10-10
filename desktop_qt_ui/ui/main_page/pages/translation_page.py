@@ -44,12 +44,15 @@ def create_translation_page(self) -> QWidget:
     file_toolbar.setSpacing(6)
     self.add_files_button = PushButton(self._t("Add Files"))
     self.add_folder_button = PushButton(self._t("Add Folder"))
+    self.select_all_button = PushButton(self._t("Select All"))
     self.clear_list_button = PushButton(self._t("Clear List"))
     self.add_files_button.setIcon(FIF.ADD)
     self.add_folder_button.setIcon(FIF.FOLDER_ADD)
+    self.select_all_button.setIcon(FIF.CHECKBOX)
     self.clear_list_button.setIcon(FIF.BROOM)
     file_toolbar.addWidget(self.add_files_button)
     file_toolbar.addWidget(self.add_folder_button)
+    file_toolbar.addWidget(self.select_all_button)
     file_toolbar.addWidget(self.clear_list_button)
     file_toolbar.addStretch(1)
     input_layout.addLayout(file_toolbar)
@@ -110,6 +113,7 @@ def create_translation_page(self) -> QWidget:
 
     self.add_files_button.clicked.connect(self._trigger_add_files)
     self.add_folder_button.clicked.connect(self.controller.add_folder)
+    self.select_all_button.clicked.connect(self.file_workspace.select_all_action)
     self.clear_list_button.clicked.connect(self.file_workspace.clear_action)
     self.file_workspace.selected_remove_requested.connect(
         lambda paths: [self.controller.remove_file(path) for path in paths]
@@ -118,6 +122,11 @@ def create_translation_page(self) -> QWidget:
     self.file_workspace.selection_count_changed.connect(
         lambda count: self.clear_list_button.setText(
             self._t("Clear Selected") if count else self._t("Clear List")
+        )
+    )
+    self.file_workspace.selection_count_changed.connect(
+        lambda _count: self.select_all_button.setText(
+            self._t("Deselect All") if self.file_workspace.all_selected() else self._t("Select All")
         )
     )
     self.browse_button.clicked.connect(self.controller.select_output_folder)

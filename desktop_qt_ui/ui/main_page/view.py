@@ -395,6 +395,11 @@ class MainView(QObject):
             self.add_files_button.setText(self._t("Add Files"))
         if hasattr(self, "add_folder_button"):
             self.add_folder_button.setText(self._t("Add Folder"))
+        if hasattr(self, "select_all_button"):
+            workspace = getattr(self, "file_workspace", None)
+            self.select_all_button.setText(
+                self._t("Deselect All") if workspace and workspace.all_selected() else self._t("Select All")
+            )
         if hasattr(self, "clear_list_button"):
             workspace = getattr(self, "file_workspace", None)
             selected = bool(workspace and workspace.selected_paths())

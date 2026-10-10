@@ -2056,13 +2056,14 @@ class MainAppLogic(QObject):
                 )
                 self.warning_dialog_requested.emit(all_skipped_message)
             elif failed_count > 0:
-                self.state_manager.set_status_message(f"任务完成，成功处理 {self.saved_files_count} 个文件，失败 {failed_count} 个文件。")
+                self.state_manager.set_status_message(self._t(
+                    "task_done_status_with_failed", count=self.saved_files_count, failed=failed_count))
             elif skipped_count > 0:
-                self.state_manager.set_status_message(
-                    f"任务完成，成功处理 {self.saved_files_count} 个文件，已跳过 {skipped_count} 个文件。"
-                )
+                self.state_manager.set_status_message(self._t(
+                    "task_done_status_with_skipped", count=self.saved_files_count, skipped=skipped_count))
             else:
-                self.state_manager.set_status_message(f"任务完成，成功处理 {self.saved_files_count} 个文件。")
+                self.state_manager.set_status_message(self._t(
+                    "task_done_status", count=self.saved_files_count))
             
             # 重置主视图的进度条
             if hasattr(self, 'main_view') and self.main_view:

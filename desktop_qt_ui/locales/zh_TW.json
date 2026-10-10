@@ -1700,5 +1700,9 @@
   "Claude check again": "重新檢查",
   "Claude status custom path": "設定中指定了自訂 Claude 路徑，但你尚未核准。在核准之前，程式不會執行它。",
   "Claude approve path": "核准此路徑",
-  "Claude approve path question": "允許 MangaX 將此程式作為 Claude 執行嗎？只核准你自己安裝的檔案。從他人匯入的設定可能指向有害程式。"
+  "Claude approve path question": "允許 MangaX 將此程式作為 Claude 執行嗎？只核准你自己安裝的檔案。從他人匯入的設定可能指向有害程式。",
+  "file_list_folder_count": "{count} 個檔案",
+  "task_done_status": "任務完成，成功處理 {count} 個檔案。",
+  "task_done_status_with_failed": "任務完成，成功處理 {count} 個檔案，失敗 {failed} 個檔案。",
+  "task_done_status_with_skipped": "任務完成，成功處理 {count} 個檔案，已跳過 {skipped} 個檔案。"
 }

@@ -1698,5 +1698,9 @@
   "Claude check again": "再確認",
   "Claude status custom path": "設定に Claude のパスが手動で指定されていますが、まだ承認されていません。承認するまでアプリは実行しません。",
   "Claude approve path": "このパスを承認",
-  "Claude approve path question": "MangaX がこのプログラムを Claude として実行することを許可しますか？ご自身でインストールしたファイルのみ承認してください。他人から取り込んだ設定は有害なプログラムを指している可能性があります。"
+  "Claude approve path question": "MangaX がこのプログラムを Claude として実行することを許可しますか？ご自身でインストールしたファイルのみ承認してください。他人から取り込んだ設定は有害なプログラムを指している可能性があります。",
+  "file_list_folder_count": "{count} ファイル",
+  "task_done_status": "タスク完了：{count} ファイルを処理しました。",
+  "task_done_status_with_failed": "タスク完了：{count} ファイルを処理、{failed} ファイルが失敗しました。",
+  "task_done_status_with_skipped": "タスク完了：{count} ファイルを処理、{skipped} ファイルをスキップしました。"
 }

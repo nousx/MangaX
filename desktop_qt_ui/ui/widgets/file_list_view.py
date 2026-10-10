@@ -160,6 +160,18 @@ class _CatalogItem:
         return canonical_path_key(self.path), self.mtime_ns, self.size
 
 
+def _translate(key: str, **kwargs) -> str:
+    try:
+        from services import get_i18n_manager
+
+        manager = get_i18n_manager()
+        if manager is not None:
+            return manager.translate(key, **kwargs)
+    except Exception:
+        pass
+    return key
+
+
 class FileCatalogModel(QAbstractItemModel):
     """纯内存树模型；reset、导航和删除均不访问磁盘。"""
 
@@ -202,7 +214,9 @@ class FileCatalogModel(QAbstractItemModel):
         item: _CatalogItem = index.internalPointer()
         if role == int(Qt.ItemDataRole.DisplayRole):
             name = os.path.basename(item.path) or item.path
-            return f"{name} ({item.file_count}个文件)" if item.kind == KIND_FOLDER else name
+            if item.kind != KIND_FOLDER:
+                return name
+            return f"{name} ({_translate('file_list_folder_count', count=item.file_count)})"
         if role == int(Qt.ItemDataRole.ToolTipRole):
             return item.path
         if role == PATH_ROLE:

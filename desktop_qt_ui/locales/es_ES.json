@@ -1698,5 +1698,9 @@
   "Claude check again": "Comprobar de nuevo",
   "Claude status custom path": "Hay una ruta de Claude personalizada en la configuración, pero aún no la has aprobado. La aplicación no la ejecutará hasta que lo hagas.",
   "Claude approve path": "Aprobar esta ruta",
-  "Claude approve path question": "¿Permitir que MangaX ejecute este programa como Claude? Aprueba solo un archivo que hayas instalado tú. Una configuración importada de otra persona puede apuntar a un programa dañino."
+  "Claude approve path question": "¿Permitir que MangaX ejecute este programa como Claude? Aprueba solo un archivo que hayas instalado tú. Una configuración importada de otra persona puede apuntar a un programa dañino.",
+  "file_list_folder_count": "{count} archivos",
+  "task_done_status": "Tarea terminada: {count} archivos procesados.",
+  "task_done_status_with_failed": "Tarea terminada: {count} archivos procesados, {failed} con error.",
+  "task_done_status_with_skipped": "Tarea terminada: {count} archivos procesados, {skipped} omitidos."
 }

@@ -420,6 +420,19 @@ class FileWorkspace(QWidget):
     def _update_selection_count(self, *_args):
         self.selection_count_changed.emit(len(self.selected_paths()))
 
+    def all_selected(self):
+        """Whether every visible row is selected (false for an empty list)."""
+        rows = self.view.model().rowCount()
+        return rows > 0 and len(self.view.selectionModel().selectedRows()) >= rows
+
+    def select_all_action(self):
+        """Select every row, or clear the selection when all are selected already."""
+        if self.all_selected():
+            self.view.clearSelection()
+        else:
+            self.view.selectAll()
+        self._update_selection_count()
+
     def clear_action(self):
         if not self._remove_enabled:
             return

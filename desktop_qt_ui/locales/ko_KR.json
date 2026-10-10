@@ -1698,5 +1698,9 @@
   "Claude check again": "다시 확인",
   "Claude status custom path": "설정에 Claude 경로가 직접 지정되어 있지만 아직 승인하지 않았습니다. 승인하기 전에는 앱이 실행하지 않습니다.",
   "Claude approve path": "이 경로 승인",
-  "Claude approve path question": "MangaX가 이 프로그램을 Claude로 실행하도록 허용할까요? 직접 설치한 파일만 승인하세요. 다른 사람에게서 가져온 설정은 해로운 프로그램을 가리킬 수 있습니다."
+  "Claude approve path question": "MangaX가 이 프로그램을 Claude로 실행하도록 허용할까요? 직접 설치한 파일만 승인하세요. 다른 사람에게서 가져온 설정은 해로운 프로그램을 가리킬 수 있습니다.",
+  "file_list_folder_count": "파일 {count}개",
+  "task_done_status": "작업 완료: 파일 {count}개를 처리했습니다.",
+  "task_done_status_with_failed": "작업 완료: 파일 {count}개 처리, {failed}개 실패.",
+  "task_done_status_with_skipped": "작업 완료: 파일 {count}개 처리, {skipped}개 건너뜀."
 }
