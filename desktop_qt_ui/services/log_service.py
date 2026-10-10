@@ -555,5 +555,8 @@ def get_log_service() -> LogService:
 def setup_logging(log_dir: str = "logs", app_name: str = "MangaTranslatorUI"):
     """设置全局日志"""
     global _log_service
+    # Before any handler receives a record: no credential may reach a log file. Idempotent.
+    from manga_translator.utils.log_redaction import install_log_redaction
+    install_log_redaction()
     _log_service = LogService(log_dir, app_name)
     return _log_service

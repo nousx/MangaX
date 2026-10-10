@@ -37,6 +37,9 @@ _initialized = False
 
 def init_logging():
     global _initialized
+    # Before anything is logged: no credential may reach a log file. Idempotent.
+    from .log_redaction import install_log_redaction
+    install_log_redaction()
     if _initialized:
         return
     _initialized = True

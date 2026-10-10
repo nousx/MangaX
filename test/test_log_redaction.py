@@ -1,11 +1,25 @@
-"""Credentials must never reach a log file or an error message."""
+"""Credentials must never reach a log file or an error message.
+
+Most cases are generated from the registries in log_redaction, so a name or a
+prefix added there is tested without anyone remembering to add a case.
+"""
 import inspect
 import logging
 import re
 
 import pytest
 
-from manga_translator.utils.log_redaction import REDACTED, redact_secrets, safe_url_for_log
+from manga_translator.utils import log_redaction
+from manga_translator.utils.log_redaction import (
+    MODEL_METHODS,
+    REDACTED,
+    SAFE_PATH_SEGMENTS,
+    SECRET_NAME_WORDS,
+    SECRET_PREFIX_PATTERNS,
+    install_log_redaction,
+    redact_secrets,
+    safe_url_for_log,
+)
 from manga_translator.utils.retry import (
     is_retryable_api_error,
     summarize_exception_message,
@@ -13,18 +27,70 @@ from manga_translator.utils.retry import (
     summarize_text,
 )
 
-# Made-up values in the shapes real credentials have. None of them is a real key.
-FAKE_OPENAI_KEY = "sk-" + "testonly" * 4
-FAKE_GOOGLE_KEY = "AIza" + "TestOnlyValue" * 3
-FAKE_GATEWAY_KEY = "gateway-key-0123456789"
-FAKE_ACCOUNT_ID = "0123456789abcdef0123456789abcdef"
-FAKE_JWT = "eyJ" + "a" * 20 + "." + "b" * 20 + "." + "c" * 20
-ALL_FAKES = (FAKE_OPENAI_KEY, FAKE_GOOGLE_KEY, FAKE_GATEWAY_KEY, FAKE_ACCOUNT_ID, FAKE_JWT)
+# Made-up values. None of them is a real credential.
+OPAQUE = "Zx9Kq7Lm2Np4Rt6Vw8Yb0Cd1"            # no name, no known prefix
+SHORT = "hunter2pass"                           # too short and plain for the shape rule
+HEX_ID = "0123456789abcdef0123456789abcdef"
+PREFIXED = {
+    "sk-": "sk-" + "testonly" * 4,
+    "AIza": "AIza" + "TestOnlyValue" * 3,
+    "ghp_": "ghp_" + "TestOnly1" * 4,
+    "gho_": "gho_" + "TestOnly2" * 4,
+    "xoxb-": "xoxb-" + "testonly-123" * 2,
+    "eyJ": "eyJ" + "a" * 20 + "." + "b" * 20 + "." + "c" * 20,
+}
+ALL_FAKES = (OPAQUE, SHORT, HEX_ID, *PREFIXED.values())
+# Names as they appear in real headers and payloads, beyond the bare registry words.
+COMPOUND_NAMES = (
+    "x-goog-api-key", "x-api-key", "api_key", "api-key", "apikey", "access_token", "refresh_token",
+    "id_token", "client_secret", "private_key", "secret_key", "proxy-authorization", "set-cookie",
+    "sessionid", "session_id", "auth_token", "db_password", "X-Auth-Token", "OPENAI_API_KEY",
+)
 
 
 def assert_clean(text):
     for secret in ALL_FAKES:
         assert secret not in text, f"leaked {secret!r} in {text!r}"
+        assert secret.lower() not in text.lower(), f"leaked {secret!r} (case changed) in {text!r}"
+
+
+class TestRegistryCoverage:
+    """One case per registry entry, so an entry that does nothing cannot hide."""
+
+    @pytest.mark.parametrize("prefix", sorted(SECRET_PREFIX_PATTERNS))
+    def test_every_prefix_has_a_sample(self, prefix):
+        assert prefix in PREFIXED, f"add a made-up sample for the new prefix {prefix!r}"
+
+    @pytest.mark.parametrize("prefix", sorted(SECRET_PREFIX_PATTERNS))
+    def test_every_prefix_is_redacted_in_prose(self, prefix):
+        assert_clean(redact_secrets(f"the value {PREFIXED[prefix]} was rejected"))
+
+    @pytest.mark.parametrize("name", [*SECRET_NAME_WORDS, *COMPOUND_NAMES])
+    @pytest.mark.parametrize("form", [
+        "{name}: {value}", "{name}:{value}", "{name}={value}", '"{name}": "{value}"',
+        "'{name}': '{value}'", "{name} = {value}", "{upper}: {value}", "{name} {value}",
+    ])
+    def test_every_name_is_redacted_in_every_form(self, name, form):
+        text = "prefix " + form.format(name=name, upper=name.upper(), value=OPAQUE) + " suffix"
+
+        redacted = redact_secrets(text)
+
+        assert_clean(redacted)
+        assert redacted.startswith("prefix ")
+
+    @pytest.mark.parametrize("name", [*SECRET_NAME_WORDS, *COMPOUND_NAMES])
+    def test_every_name_redacts_a_short_value_after_a_separator(self, name):
+        assert_clean(redact_secrets(f"{name}={SHORT}"))
+
+    @pytest.mark.parametrize("segment", sorted(SAFE_PATH_SEGMENTS))
+    def test_every_allowed_path_word_is_kept(self, segment):
+        assert safe_url_for_log(f"https://api.example.com/{segment}") == f"https://api.example.com/{segment}"
+
+    @pytest.mark.parametrize("method", sorted(MODEL_METHODS))
+    def test_every_model_method_is_kept_without_the_model_name(self, method):
+        logged = safe_url_for_log(f"https://api.example.com/v1beta/models/{OPAQUE}:{method}")
+
+        assert logged == f"https://api.example.com/v1beta/models/{REDACTED}:{method}"
 
 
 class TestUrls:
@@ -33,51 +99,50 @@ class TestUrls:
         "https://api.example.com:8443/v1/models",
         "http://127.0.0.1:11434/v1/models",
         "https://[::1]:8080/v1/models",
-        "https://generativelanguage.example.com/v1beta/models/gemini-2.5-pro:generateContent",
-        "https://api.example.com/v1/models/gpt-4o-mini",
     ])
     def test_should_keep_plain_endpoint_urls_readable(self, url):
         assert safe_url_for_log(url) == url
 
     def test_should_drop_a_password_embedded_in_the_url(self):
-        logged = safe_url_for_log(f"https://user:{FAKE_GATEWAY_KEY}@proxy.example.com/v1/models")
+        assert safe_url_for_log(f"https://user:{OPAQUE}@proxy.example.com/v1/models") == "https://proxy.example.com/v1/models"
 
-        assert logged == "https://proxy.example.com/v1/models"
-
-    def test_should_drop_the_query_string(self):
-        logged = safe_url_for_log(f"https://host.example.com/v1beta/models?key={FAKE_GOOGLE_KEY}&alt=sse")
+    def test_should_drop_the_query_string_and_fragment(self):
+        logged = safe_url_for_log(f"https://host.example.com/v1beta/models?key={OPAQUE}&alt=sse#{SHORT}")
 
         assert logged == f"https://host.example.com/v1beta/models?{REDACTED}"
 
-    def test_should_drop_the_fragment(self):
-        assert_clean(safe_url_for_log(f"https://host.example.com/v1/models#{FAKE_GATEWAY_KEY}"))
-
-    @pytest.mark.parametrize("url", [
-        f"https://gateway.example.com/v1/{FAKE_ACCOUNT_ID}/my-gateway/openai/chat/completions",
-        f"https://proxy.example.com/{FAKE_GATEWAY_KEY}/v1/chat/completions",
-        f"https://proxy.example.com/key/{FAKE_OPENAI_KEY}/v1/models",
-        f"https://proxy.example.com/v1/models/{FAKE_OPENAI_KEY}",
-        f"https://proxy.example.com/v1/models/{FAKE_GOOGLE_KEY}:generateContent",
-        f"https://proxy.example.com/v1/models/gemini:{FAKE_GATEWAY_KEY}",
+    @pytest.mark.parametrize("secret", ALL_FAKES)
+    @pytest.mark.parametrize("template", [
+        "https://gateway.example.com/v1/{s}/my-gateway/openai/chat/completions",
+        "https://proxy.example.com/{s}/v1/chat/completions",
+        "https://proxy.example.com/key/{s}/v1/models",
+        "https://proxy.example.com/v1/models/{s}",
+        "https://proxy.example.com/v1/models/{s}:generateContent",
+        "https://proxy.example.com/v1/models/gemini:{s}",
+        "https://proxy.example.com/v1/models/{s}/versions",
     ])
-    def test_should_replace_path_segments_that_are_not_endpoint_words(self, url):
-        logged = safe_url_for_log(url)
+    def test_should_replace_every_path_segment_that_is_not_an_endpoint_word(self, secret, template):
+        logged = safe_url_for_log(template.format(s=secret))
 
         assert_clean(logged)
         assert REDACTED in logged
-        assert logged.startswith("https://")
 
-    def test_should_keep_the_endpoint_after_a_redacted_base_path(self):
-        logged = safe_url_for_log(f"https://proxy.example.com/{FAKE_GATEWAY_KEY}/v1/chat/completions")
+    def test_should_not_keep_a_model_name_because_it_cannot_be_told_from_a_token(self):
+        logged = safe_url_for_log("https://api.example.com/v1/models/some-model-name")
 
-        assert logged == f"https://proxy.example.com/{REDACTED}/v1/chat/completions"
+        assert logged == f"https://api.example.com/v1/models/{REDACTED}"
 
-    @pytest.mark.parametrize("value", ["not a url", "//missing-scheme/path", f"key={FAKE_GATEWAY_KEY}", "https://"])
+    def test_should_replace_a_host_label_that_looks_like_a_token(self):
+        logged = safe_url_for_log(f"https://{HEX_ID}.gateway.example.com/v1/models")
+
+        assert logged == f"https://{REDACTED}.gateway.example.com/v1/models"
+
+    @pytest.mark.parametrize("value", ["not a url", "//missing-scheme/path", f"key={OPAQUE}", "https://"])
     def test_should_not_echo_text_that_is_not_a_plain_url(self, value):
         assert safe_url_for_log(value) == REDACTED
 
     def test_should_not_echo_a_url_with_an_invalid_port(self):
-        assert safe_url_for_log(f"https://host.example.com:notaport/{FAKE_GATEWAY_KEY}") == REDACTED
+        assert safe_url_for_log(f"https://host.example.com:notaport/{OPAQUE}") == REDACTED
 
     @pytest.mark.parametrize("value", ["", None])
     def test_should_return_empty_text_for_a_missing_url(self, value):
@@ -86,31 +151,32 @@ class TestUrls:
 
 class TestText:
     def test_should_remove_the_configured_key_wherever_it_appears(self):
-        body = f'{{"error": "Incorrect API key provided: {FAKE_GATEWAY_KEY}."}}'
+        assert_clean(redact_secrets(f'{{"error": "Incorrect API key provided: {SHORT}."}}', (SHORT,)))
 
-        assert_clean(redact_secrets(body, (FAKE_GATEWAY_KEY,)))
+    def test_should_remove_the_configured_key_in_its_url_encoded_form(self):
+        secret = "p@ss/word 1+x"
 
-    @pytest.mark.parametrize("body", [
-        f"Incorrect API key provided: {FAKE_OPENAI_KEY}",
-        f"API key not valid: {FAKE_GOOGLE_KEY}",
-        f"Authorization: Bearer {FAKE_GATEWAY_KEY}",
-        f'{{"api_key": "{FAKE_GATEWAY_KEY}"}}',
-        f"x-goog-api-key: {FAKE_GATEWAY_KEY}",
-        f"access_token={FAKE_GATEWAY_KEY}&x=1",
-        f"password: {FAKE_GATEWAY_KEY}",
-        f"session token {FAKE_JWT} expired",
-    ])
-    def test_should_remove_credential_shaped_values_without_knowing_them(self, body):
-        redacted = redact_secrets(body)
+        redacted = redact_secrets("got p%40ss%2Fword%201%2Bx and p%40ss%2Fword+1%2Bx back", (secret,))
+
+        assert "p%40ss" not in redacted
+
+    def test_should_drop_every_pair_of_a_cookie_header(self):
+        redacted = redact_secrets(f"Cookie: a=first{SHORT}; b=second{SHORT}; c={OPAQUE}")
 
         assert_clean(redacted)
-        assert REDACTED in redacted
+        assert redacted == f"Cookie: {REDACTED}"
+
+    @pytest.mark.parametrize("scheme", ["Bearer", "Basic", "Digest", "bearer"])
+    def test_should_drop_the_value_of_an_authorization_scheme(self, scheme):
+        assert_clean(redact_secrets(f"Authorization: {scheme} {SHORT}value"))
+
+    def test_should_redact_an_unnamed_random_looking_value(self):
+        assert_clean(redact_secrets(f'{{"error":"bad credential {OPAQUE}"}}'))
+        assert_clean(redact_secrets(f"connect to proxy.example/{OPAQUE}/v1/chat failed"))
 
     def test_should_make_urls_inside_a_message_safe(self):
-        message = (
-            f"Failed to connect to https://user:{FAKE_GATEWAY_KEY}@proxy.example.com/"
-            f"{FAKE_ACCOUNT_ID}/v1/chat/completions?key={FAKE_GOOGLE_KEY} after 3 tries"
-        )
+        message = (f"Failed to connect to https://user:{SHORT}@proxy.example.com/{HEX_ID}"
+                   f"/v1/chat/completions?key={OPAQUE} after 3 tries")
 
         redacted = redact_secrets(message)
 
@@ -118,16 +184,18 @@ class TestText:
         assert "proxy.example.com" in redacted
         assert redacted.endswith("after 3 tries")
 
-    def test_should_keep_the_rest_of_the_message_readable(self):
-        redacted = redact_secrets(f"Rate limit exceeded for model x. Authorization: Bearer {FAKE_GATEWAY_KEY}")
-
-        assert redacted.startswith("Rate limit exceeded for model x.")
-
     @pytest.mark.parametrize("text", [
         "Text translator returned empty queries",
         "Output file already exists: 003.webp",
         "HTTP 429 Too Many Requests",
         "status 401 unauthorized",
+        "invalid api key",
+        "token expired, please sign in again",
+        "The session was closed by the server",
+        "Processing rolling batch 88/504 (images 436-440)",
+        "sha256 f0e1d2c3b4a5968778695a4b3c2d1e0ff0e1d2c3b4a5968778695a4b3c2d1e0f",
+        "Saved successfully: 003.webp",
+        "Detection resolution: 760x16088",
     ])
     def test_should_leave_ordinary_messages_untouched(self, text):
         assert redact_secrets(text) == text
@@ -144,53 +212,93 @@ class TestText:
 class TestSharedSummarizer:
     """Every error path builds its message with these helpers, so they must redact."""
 
-    BODY = f'{{"error": {{"message": "Incorrect API key provided: {FAKE_OPENAI_KEY}"}}}}'
-
     @pytest.mark.parametrize("summarize", [summarize_text, summarize_response_text])
     def test_should_redact_response_bodies(self, summarize):
-        assert_clean(summarize(self.BODY))
+        assert_clean(summarize(f'{{"error": {{"message": "Incorrect API key provided: {PREFIXED["sk-"]}"}}}}'))
 
     def test_should_redact_exception_messages(self):
-        error = RuntimeError(f"POST https://proxy.example.com/{FAKE_GATEWAY_KEY}/v1/models?key={FAKE_GOOGLE_KEY} failed")
+        error = RuntimeError(f"POST https://proxy.example.com/{OPAQUE}/v1/models?key={SHORT} failed")
 
         assert_clean(summarize_exception_message(error))
 
     def test_should_redact_before_truncating(self):
         """A key cut in half by the length limit would no longer be recognized."""
-        text = "x" * 30 + f" Authorization: Bearer {FAKE_GATEWAY_KEY}"
+        summary = summarize_text("x" * 30 + f" Authorization: Bearer {OPAQUE}", limit=60)
 
-        summary = summarize_text(text, limit=60)
-
-        assert FAKE_GATEWAY_KEY[:8] not in summary
+        assert OPAQUE[:8] not in summary
 
     def test_should_still_classify_errors_after_redaction(self):
-        assert is_retryable_api_error(RuntimeError(f"HTTP 429 for key {FAKE_OPENAI_KEY}")) is True
-        assert is_retryable_api_error(RuntimeError(f"HTTP 401 invalid api key {FAKE_OPENAI_KEY}")) is False
+        assert is_retryable_api_error(RuntimeError(f"HTTP 429 for key {PREFIXED['sk-']}")) is True
+        assert is_retryable_api_error(RuntimeError(f"HTTP 401 invalid api key {PREFIXED['sk-']}")) is False
 
     def test_should_keep_the_placeholder_for_empty_text(self):
         assert summarize_response_text("", empty_placeholder="(empty response)") == "(empty response)"
 
 
-class TestCallSites:
-    def test_api_client_error_logs_should_not_contain_credentials(self, caplog):
-        """The log lines the API clients write on a failed request, built the same way."""
-        from manga_translator.translators import common
+class TestProcessWideSafetyNet:
+    """A call site that forgot to redact must still not reach the log."""
 
-        url = (f"https://user:{FAKE_GATEWAY_KEY}@proxy.example.com/{FAKE_ACCOUNT_ID}"
-               f"/v1/chat/completions?key={FAKE_GOOGLE_KEY}")
-        body = f'{{"error": {{"message": "Incorrect API key provided: {FAKE_OPENAI_KEY}"}}}}'
+    @pytest.fixture
+    def installed(self):
+        previous = logging.getLogRecordFactory()
+        install_log_redaction()
+        yield
+        logging.setLogRecordFactory(previous)
 
-        with caplog.at_level(logging.ERROR):
-            common._http_logger.error(f"[AsyncOpenAICurlCffi] Error - URL: {safe_url_for_log(url)}")
-            common._http_logger.error(
-                f"[AsyncOpenAICurlCffi] Error - Response: "
-                f"{redact_secrets(summarize_response_text(body), (FAKE_OPENAI_KEY,))}"
-            )
+    def test_should_redact_a_message_logged_without_any_helper(self, installed, caplog):
+        logger = logging.getLogger("test-unredacted-call-site")
+        with caplog.at_level(logging.DEBUG):
+            logger.error(f"request to https://user:{SHORT}@h.example/{OPAQUE}/v1/models?key={HEX_ID} failed")
+            logger.warning("retrying with %s=%s", "api_key", OPAQUE)
+            logger.info(f"upstream said: Authorization: Bearer {PREFIXED['sk-']}")
 
         logged = "\n".join(record.getMessage() for record in caplog.records)
+        assert len(caplog.records) == 3
         assert_clean(logged)
-        assert "proxy.example.com" in logged
 
+    def test_should_redact_an_exception_logged_as_an_argument(self, installed, caplog):
+        logger = logging.getLogger("test-unredacted-call-site")
+        with caplog.at_level(logging.ERROR):
+            logger.error("Error during batch translation stage: %s", RuntimeError(f"token {OPAQUE} rejected"))
+
+        assert_clean(caplog.records[0].getMessage())
+
+    def test_should_leave_ordinary_records_and_their_arguments_alone(self, installed, caplog):
+        logger = logging.getLogger("test-unredacted-call-site")
+        with caplog.at_level(logging.INFO):
+            logger.info("Processing rolling batch %d/%d", 88, 504)
+
+        record = caplog.records[0]
+        assert record.getMessage() == "Processing rolling batch 88/504"
+        assert record.args == (88, 504)
+
+    def test_should_not_raise_when_a_message_cannot_be_formatted(self, installed):
+        """A malformed log call is the handler's problem to report, not a reason to crash here."""
+        factory = logging.getLogRecordFactory()
+
+        record = factory("name", logging.INFO, __file__, 1, "value %d", ("not a number",), None)
+
+        assert record.msg == "value %d"
+        assert record.args == ("not a number",)
+
+    def test_should_install_only_once(self, installed):
+        first = logging.getLogRecordFactory()
+        install_log_redaction()
+
+        assert logging.getLogRecordFactory() is first
+
+    def test_backend_and_desktop_logging_should_install_it(self):
+        from manga_translator.utils import log as backend_log
+
+        assert "install_log_redaction()" in inspect.getsource(backend_log.init_logging)
+        desktop_source = (
+            __import__("pathlib").Path(__file__).resolve().parent.parent
+            / "desktop_qt_ui" / "services" / "log_service.py"
+        ).read_text(encoding="utf-8")
+        assert "install_log_redaction()" in desktop_source
+
+
+class TestCallSites:
     def test_api_clients_should_not_log_a_raw_url_or_response_body(self):
         """Every error log line of the API clients must go through the redaction helpers."""
         from manga_translator.translators import common
@@ -202,15 +310,14 @@ class TestCallSites:
         assert len(url_lines) == 4 and all("safe_url_for_log(url)" in line for line in url_lines)
         assert len(body_lines) == 4 and all("redact_secrets(" in line for line in body_lines)
 
-    def test_no_translator_code_should_put_a_raw_response_body_in_a_message(self):
+    def test_no_translator_code_should_format_a_raw_response_body(self):
         """A response body may only reach a message through the redacting summarizer."""
         from manga_translator.translators import common
         from manga_translator.utils import openai_image_interface
 
         for module in (common, openai_image_interface):
-            source = inspect.getsource(module)
             raw_uses = [
-                line.strip() for line in source.splitlines()
+                line.strip() for line in inspect.getsource(module).splitlines()
                 if re.search(r"\{(?:response|resp)\.text\}", line)
             ]
             assert raw_uses == [], f"{module.__name__} formats a raw response body: {raw_uses}"
@@ -220,9 +327,9 @@ class TestCallSites:
 
         stderr = (
             f"user: some manga line\n"
-            f"ERROR: request to https://proxy.example.com/{FAKE_GATEWAY_KEY}/v1/responses failed\n"
-            f"error: unauthorized, token {FAKE_JWT} rejected\n"
-            f"Authorization: Bearer {FAKE_OPENAI_KEY}\n"
+            f"ERROR: request to https://proxy.example.com/{OPAQUE}/v1/responses failed\n"
+            f"error: unauthorized, token {PREFIXED['eyJ']} rejected\n"
+            f"Authorization: Bearer {PREFIXED['sk-']}\n"
         ).encode("utf-8")
 
         detail = CodexCLITranslator.failure_lines(stderr)
@@ -234,8 +341,16 @@ class TestCallSites:
         from manga_translator.translators.claude_cli import ClaudeCLITranslator
 
         detail = ClaudeCLITranslator._failure_detail(
-            "", f"API error for https://api.example.com/v1/messages?key={FAKE_GOOGLE_KEY}: "
-                f"invalid x-api-key: {FAKE_OPENAI_KEY}")
+            "", f"API error for https://api.example.com/v1/messages?key={OPAQUE}: invalid x-api-key: {SHORT}")
 
         assert_clean(detail)
         assert "API error" in detail
+
+    def test_trigger_should_fire_for_every_registry_entry(self):
+        """The cheap pre-check must never skip a message the full redaction would change."""
+        for name in (*SECRET_NAME_WORDS, *COMPOUND_NAMES):
+            assert log_redaction._TRIGGER_RE.search(f"{name}={SHORT}"), name
+        for sample in PREFIXED.values():
+            assert log_redaction._TRIGGER_RE.search(f"value {sample}"), sample
+        assert log_redaction._TRIGGER_RE.search(f"see https://h.example/{SHORT}")
+        assert log_redaction._TRIGGER_RE.search(f"bad credential {OPAQUE}")
