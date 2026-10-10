@@ -95,7 +95,8 @@ async def translate_files(input_paths, output_dir, config_service, verbose=False
     import logging.handlers
 
     from desktop_qt_ui.services.file_service import FileService
-    from manga_translator import Config, MangaTranslator
+    from desktop_qt_ui.services.translation_setup import build_backend_config, build_save_info
+    from manga_translator import MangaTranslator
     from manga_translator.utils import (
         get_logger,
         init_logging,
@@ -280,14 +281,8 @@ async def translate_files(input_paths, output_dir, config_service, verbose=False
     translator = MangaTranslator(params=translator_params)
     print("✅ 翻译器初始化完成")
     
-    # 创建 Config 对象
-    explicit_keys = {'render', 'upscale', 'translator', 'detector', 'colorizer', 'inpainter', 'ocr'}
-    config_for_translate = {k: v for k, v in config_dict.items() if k in explicit_keys}
-    for key in ['kernel_size', 'mask_dilation_offset', 'force_simple_sort']:
-        if key in config_dict:
-            config_for_translate[key] = config_dict[key]
-    
-    manga_config = Config(**config_for_translate)
+    # Same configuration the desktop window builds, including the 'cli' section.
+    manga_config = build_backend_config(config_dict, str(ROOT_DIR), warn=logger.warning)
     
     # 准备批量数据（像 UI 一样）
     images_with_configs = []
@@ -315,17 +310,8 @@ async def translate_files(input_paths, output_dir, config_service, verbose=False
         print("没有需要翻译的图片")
         return
     
-    # 准备 save_info（像 UI 一样）
-    output_format = cli_config.get('format')
-    if not output_format or output_format == "不指定":
-        output_format = None
-    
-    save_info = {
-        'output_folder': final_output_dir,
-        'format': output_format,
-        'overwrite': overwrite,
-        'input_folders': input_folders  # 保持为 set，翻译器内部会处理
-    }
+    save_info = build_save_info(config_dict, final_output_dir, input_folders, overwrite=overwrite)
+    output_format = save_info['format']
     
     # 调试：检查输出目录是否存在
     if not os.path.exists(final_output_dir):

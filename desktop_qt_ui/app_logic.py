@@ -2840,17 +2840,8 @@ class TranslationWorker(QObject):
 
         results = []
         try:
-            from manga_translator.config import (
-                ColorizerConfig,
-                Config,
-                DetectorConfig,
-                InpainterConfig,
-                OcrConfig,
-                RenderConfig,
-                Translator,
-                TranslatorConfig,
-                UpscaleConfig,
-            )
+            from desktop_qt_ui.services.translation_setup import build_backend_config, build_save_info
+            from manga_translator.config import Translator
             from manga_translator.manga_translator import MangaTranslator
 
             self._log_info("--- Initializing translator...")
@@ -2919,83 +2910,21 @@ class TranslationWorker(QObject):
             
             translator.add_progress_hook(progress_hook)
 
-            explicit_keys = {'render', 'upscale', 'translator', 'detector', 'colorizer', 'inpainter', 'ocr'}
-            remaining_config = {
-                k: v for k, v in self.config_dict.items() 
-                if k in Config.model_fields and k not in explicit_keys
-            }
-
-            render_config_data = self.config_dict.get('render', {}).copy()
-
-            # 转换 direction 值：'h' -> 'horizontal', 'v' -> 'vertical'
-            if 'direction' in render_config_data:
-                direction_value = render_config_data['direction']
-                if direction_value == 'h':
-                    render_config_data['direction'] = 'horizontal'
-                elif direction_value == 'v':
-                    render_config_data['direction'] = 'vertical'
-
-            translator_config_data = self.config_dict.get('translator', {}).copy()
-            hq_prompt_path = translator_config_data.get('high_quality_prompt_path')
-            if hq_prompt_path and not os.path.isabs(hq_prompt_path):
-                full_prompt_path = os.path.join(self.root_dir, hq_prompt_path)
-                if os.path.exists(full_prompt_path):
-                    translator_config_data['high_quality_prompt_path'] = full_prompt_path
-                else:
-                    self._log_warning(f"--- WARNING: High quality prompt file not found at {full_prompt_path}")
-            
-            # 转换超分倍数：'不使用' -> None, '2'/'4' -> int
-            upscale_config_data = self.config_dict.get('upscale', {}).copy()
-            if 'upscale_ratio' in upscale_config_data:
-                ratio_value = upscale_config_data['upscale_ratio']
-                if ratio_value == '不使用' or ratio_value is None:
-                    upscale_config_data['upscale_ratio'] = None
-                elif isinstance(ratio_value, str) and ratio_value in ('x2', 'x4', 'DAT2 x4'):
-                    # mangajanai 的字符串选项，直接保留
-                    upscale_config_data['upscale_ratio'] = ratio_value
-                else:
-                    try:
-                        upscale_config_data['upscale_ratio'] = int(ratio_value)
-                    except (ValueError, TypeError):
-                        upscale_config_data['upscale_ratio'] = None
-
-            config = Config(
-                render=RenderConfig(**render_config_data),
-                upscale=UpscaleConfig(**upscale_config_data),
-                translator=TranslatorConfig(**translator_config_data),
-                detector=DetectorConfig(**self.config_dict.get('detector', {})),
-                colorizer=ColorizerConfig(**self.config_dict.get('colorizer', {})),
-                inpainter=InpainterConfig(**self.config_dict.get('inpainter', {})),
-                ocr=OcrConfig(**self.config_dict.get('ocr', {})),
-                **remaining_config
-            )
+            config = build_backend_config(self.config_dict, self.root_dir, warn=self._log_warning)
             self._log_info("--- Configuration object created")
 
             translator_type = config.translator.translator
             is_hq = translator_type in [Translator.openai_hq, Translator.gemini_hq]
             batch_size = self.config_dict.get('cli', {}).get('batch_size', 1)
 
-            # 准备save_info（所有模式都需要）
-            output_format = self.config_dict.get('cli', {}).get('format')
-            if not output_format or output_format == "不指定":
-                output_format = None # Set to None to preserve original extension
+            save_info = build_save_info(
+                self.config_dict,
+                self.output_folder,
+                (self.file_to_folder_map.get(file_path) for file_path in self.files),
+            )
+            output_format = save_info['format']
+            input_folders = save_info['input_folders']
 
-            # 收集输入文件夹列表（从file_to_folder_map中获取）
-            input_folders = set()
-            for file_path in self.files:
-                folder = self.file_to_folder_map.get(file_path)
-                if folder:
-                    input_folders.add(os.path.normpath(folder))
-
-            save_info = {
-                'output_folder': self.output_folder,
-                'format': output_format,
-                'overwrite': self.config_dict.get('cli', {}).get('overwrite', True),
-                'input_folders': input_folders,
-                'save_to_source_dir': self.config_dict.get('cli', {}).get('save_to_source_dir', False)
-            }
-
-            
             # 确定翻译流程模式
             workflow_mode = 'Normal Translation'
             workflow_tip = ""
