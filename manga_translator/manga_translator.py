@@ -3934,7 +3934,11 @@ class MangaTranslator:
 
                                 if ctx.mask_raw is None and ctx.mask is None:
                                     mask = np.zeros_like(ctx.img_rgb[:, :, 0])
-                                    polygons = [p.reshape((-1, 1, 2)) for r in ctx.text_regions for p in r.lines]
+                                    # fillPoly only accepts integer points; saved outlines are floats.
+                                    polygons = [
+                                        np.round(p).astype(np.int32).reshape((-1, 1, 2))
+                                        for r in ctx.text_regions for p in r.lines
+                                    ]
                                     cv2.fillPoly(mask, polygons, 255)
                                     ctx.mask_raw = mask
                             
