@@ -56,8 +56,13 @@ jobs:
         }
         $archive = Join-Path $env:RUNNER_TEMP 'manga-translator-ui-portable.7z'
         $extractDir = Join-Path $env:GITHUB_WORKSPACE 'portable'
-        gh release download portable --repo hgmzhn/manga-translator-ui --pattern manga-translator-ui-portable.7z --output $archive --clobber
+        # Build inputs are kept in this repository's own build-assets release
+        # and pinned by hash, so a build does not depend on another project.
+        gh release download build-assets-v1 --repo '${{ github.repository }}' --pattern manga-translator-ui-portable.7z --output $archive --clobber
         if ($LASTEXITCODE -ne 0) { throw 'Failed to download the portable reference package.' }
+        if ((Get-FileHash -LiteralPath $archive -Algorithm SHA256).Hash -ne '49125fc1080e0b4f6fae985d3ac04f1487ae6e6e017544c11113a1785eeb08f0') {
+          throw 'The portable reference package does not match its pinned SHA-256.'
+        }
         Remove-Item $extractDir -Recurse -Force -ErrorAction SilentlyContinue
         7z x $archive "-o$extractDir" -y
         if ($LASTEXITCODE -ne 0) { throw 'Failed to extract the portable reference package.' }
@@ -159,8 +164,11 @@ jobs:
         $modelArchive = Join-Path $env:RUNNER_TEMP 'models.7z'
         $portableDir = $env:PORTABLE_DIR
         try {
-          gh release download v1.7.9 --repo hgmzhn/manga-translator-ui --pattern models.7z --output $modelArchive --clobber
+          gh release download build-assets-v1 --repo '${{ github.repository }}' --pattern models.7z --output $modelArchive --clobber
           if ($LASTEXITCODE -ne 0) { throw 'Failed to download model files.' }
+          if ((Get-FileHash -LiteralPath $modelArchive -Algorithm SHA256).Hash -ne 'fb5c91c8171461c5b1efb7ed132c4391a44047cba1c6ad267c91603a47acdddb') {
+            throw 'The model archive does not match its pinned SHA-256.'
+          }
           Remove-Item (Join-Path $portableDir 'models') -Recurse -Force -ErrorAction SilentlyContinue
           7z x $modelArchive "-o$portableDir" -y
           if ($LASTEXITCODE -ne 0) { throw 'Failed to extract model files.' }
