@@ -167,6 +167,14 @@ def safe_url_for_log(url) -> str:
     return urlunsplit((parts.scheme, netloc, _safe_path(parts.path), "", "")) + suffix
 
 
+def safe_host_for_log(url) -> str:
+    """Return only the host and port of a URL, for log lines that name the failing service."""
+    safe = safe_url_for_log(url)
+    if not safe or safe == REDACTED:
+        return safe
+    return safe.split("://", 1)[1].split("/", 1)[0].split("?", 1)[0]
+
+
 def _is_secret_name(token: str) -> bool:
     if any(word in token.lower() for word in _SUBSTRING_WORDS):
         return True

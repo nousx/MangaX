@@ -21,7 +21,7 @@ from ..utils.curl_cffi_transport import (
 )
 from ..utils.image_modes import normalize_rgb_image
 from ..utils.log import get_logger
-from ..utils.log_redaction import redact_secrets, safe_url_for_log
+from ..utils.log_redaction import safe_host_for_log
 from ..utils.openai_compat import resolve_openai_compatible_api_key
 from ..utils.retry import (
     get_retry_attempts_from_config,
@@ -296,9 +296,8 @@ class AsyncOpenAICurlCffi:
             )
 
             if response.status_code != 200:
-                _http_logger.error(f"[AsyncOpenAICurlCffi] Error - URL: {safe_url_for_log(url)}")
-                _http_logger.error(f"[AsyncOpenAICurlCffi] Error - Status: {response.status_code}")
-                _http_logger.error(f"[AsyncOpenAICurlCffi] Error - Response: {redact_secrets(summarize_response_text(response.text), (self.parent.api_key,))}")
+                # Only the status and the host are logged: a URL or a response body can carry a credential.
+                _http_logger.error(f"[AsyncOpenAICurlCffi] Error - Status: {response.status_code} Host: {safe_host_for_log(url)}")
                 error_msg = (
                     f"API request failed with status {response.status_code}: "
                     f"{_extract_http_error_details(response)}"
@@ -386,9 +385,8 @@ class AsyncOpenAICurlCffi:
             )
 
             if response.status_code != 200:
-                _http_logger.error(f"[AsyncOpenAICurlCffi] List Error - URL: {safe_url_for_log(url)}")
-                _http_logger.error(f"[AsyncOpenAICurlCffi] List Error - Status: {response.status_code}")
-                _http_logger.error(f"[AsyncOpenAICurlCffi] List Error - Response: {redact_secrets(summarize_response_text(response.text), (self.parent.api_key,))}")
+                # Only the status and the host are logged: a URL or a response body can carry a credential.
+                _http_logger.error(f"[AsyncOpenAICurlCffi] List Error - Status: {response.status_code} Host: {safe_host_for_log(url)}")
                 error_msg = (
                     f"API request failed with status {response.status_code}: "
                     f"{_extract_http_error_details(response)}"
@@ -707,9 +705,8 @@ class AsyncGeminiCurlCffi:
             )
 
             if response.status_code != 200:
-                _http_logger.error(f"[AsyncGeminiCurlCffi] Error - URL: {safe_url_for_log(url)}")
-                _http_logger.error(f"[AsyncGeminiCurlCffi] Error - Status: {response.status_code}")
-                _http_logger.error(f"[AsyncGeminiCurlCffi] Error - Response: {redact_secrets(summarize_response_text(response.text), (self.parent.api_key,))}")
+                # Only the status and the host are logged: a URL or a response body can carry a credential.
+                _http_logger.error(f"[AsyncGeminiCurlCffi] Error - Status: {response.status_code} Host: {safe_host_for_log(url)}")
                 error_msg = f"Gemini API request failed with status {response.status_code}"
                 try:
                     error_data = response.json()
@@ -807,9 +804,8 @@ class AsyncGeminiCurlCffi:
             )
 
             if response.status_code != 200:
-                _http_logger.error(f"[AsyncGeminiCurlCffi] List Error - URL: {safe_url_for_log(url)}")
-                _http_logger.error(f"[AsyncGeminiCurlCffi] List Error - Status: {response.status_code}")
-                _http_logger.error(f"[AsyncGeminiCurlCffi] List Error - Response: {redact_secrets(summarize_response_text(response.text), (self.parent.api_key,))}")
+                # Only the status and the host are logged: a URL or a response body can carry a credential.
+                _http_logger.error(f"[AsyncGeminiCurlCffi] List Error - Status: {response.status_code} Host: {safe_host_for_log(url)}")
                 error_msg = f"Gemini API request failed with status {response.status_code}"
                 try:
                     error_data = response.json()

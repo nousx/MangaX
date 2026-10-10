@@ -299,16 +299,28 @@ class TestProcessWideSafetyNet:
 
 
 class TestCallSites:
-    def test_api_clients_should_not_log_a_raw_url_or_response_body(self):
-        """Every error log line of the API clients must go through the redaction helpers."""
+    def test_api_clients_should_log_only_the_status_and_the_host(self):
+        """The API clients must not log a URL or a response body at all."""
         from manga_translator.translators import common
 
         source = inspect.getsource(common)
-        url_lines = re.findall(r"_http_logger\.\w+\(.*Error - URL: .*", source)
-        body_lines = re.findall(r"_http_logger\.\w+\(.*Error - Response: .*", source)
+        error_lines = re.findall(r"_http_logger\.\w+\(.*Error - .*", source)
 
-        assert len(url_lines) == 4 and all("safe_url_for_log(url)" in line for line in url_lines)
-        assert len(body_lines) == 4 and all("redact_secrets(" in line for line in body_lines)
+        assert len(error_lines) == 4
+        assert all("Status: {response.status_code} Host: {safe_host_for_log(url)}" in line for line in error_lines)
+        assert not re.search(r"_http_logger\.\w+\(.*(response\.text|\{url\}|safe_url_for_log)", source)
+
+    @pytest.mark.parametrize("url, expected", [
+        ("https://api.example.com/v1/chat/completions", "api.example.com"),
+        (f"https://user:{OPAQUE}@proxy.example.com:8443/v1/{OPAQUE}?key={SHORT}#x", "proxy.example.com:8443"),
+        (f"https://{HEX_ID}.gateway.example.com/v1/models", f"{REDACTED}.gateway.example.com"),
+        ("http://[::1]:8080/v1", "[::1]:8080"),
+        ("https://host.example.com" + chr(92) + OPAQUE + "/v1", REDACTED),
+        ("not a url", REDACTED),
+        ("", ""),
+    ])
+    def test_safe_host_should_keep_only_host_and_port(self, url, expected):
+        assert log_redaction.safe_host_for_log(url) == expected
 
     def test_no_translator_code_should_format_a_raw_response_body(self):
         """A response body may only reach a message through the redacting summarizer."""
