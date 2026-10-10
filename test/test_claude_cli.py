@@ -180,7 +180,7 @@ class ClaudeProcessTests(unittest.IsolatedAsyncioTestCase):
         """Use a real child process to exercise stdin, UTF-8 and cleanup."""
         actual_popen = subprocess.Popen
         processes = []
-        translations = {"translations": [{"id": 0, "translation": "สวัสดี"}]}
+        translations = {"t": [{"i": 0, "s": "สวัสดี"}]}
         outputs = {
             "ok": {"is_error": False, "structured_output": translations},
             "limit": {"is_error": True, "result": "You've hit your usage limit. Try again later."},
@@ -265,6 +265,40 @@ class ClaudeProcessTests(unittest.IsolatedAsyncioTestCase):
         for mode in ("invalid", "missing"):
             with self.subTest(mode=mode), self.assertRaises(InvalidServerResponse):
                 await self.run_fake_cli(mode)
+
+
+class ClaudeShortKeyResponseTests(unittest.TestCase):
+    def test_should_ask_for_one_letter_keys(self):
+        schema = claude_cli._RESPONSE_SCHEMA
+
+        self.assertEqual(schema["required"], ["t"])
+        self.assertEqual(schema["properties"]["t"]["items"]["required"], ["i", "s"])
+
+    def test_should_restore_balloon_order_from_short_keys(self):
+        payload = {"t": [{"i": 1, "s": "สอง"}, {"i": 0, "s": "หนึ่ง"}]}
+
+        self.assertEqual(
+            ClaudeCLITranslator.validate_response(claude_cli._expand_response(payload), 2), ["หนึ่ง", "สอง"])
+
+    def test_should_reject_incomplete_or_malformed_short_key_responses(self):
+        for payload in (
+            None, {}, {"t": "text"}, {"t": []},
+            {"t": [{"i": 0, "s": "one"}]},
+            {"t": [{"i": 0, "s": "one"}, {"i": 0, "s": "two"}]},
+            {"t": [{"i": 0, "s": "one"}, "junk"]},
+            {"t": [{"i": 0, "s": "one"}, {"i": 1, "s": " "}]},
+            {"translations": [{"id": 0, "translation": "one"}, {"id": 1, "translation": "two"}], "t": None},
+        ):
+            with self.subTest(payload=payload), self.assertRaises(InvalidServerResponse):
+                ClaudeCLITranslator.validate_response(claude_cli._expand_response(payload), 2)
+
+    def test_should_explain_the_keys_to_the_model(self):
+        translator = ClaudeCLITranslator()
+
+        prompt = translator._build_system_prompt("English", "Thai")
+
+        self.assertIn('"i" is the input ID', prompt)
+        self.assertIn('"s" its translation', prompt)
 
 
 if __name__ == "__main__":
