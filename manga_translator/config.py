@@ -292,6 +292,8 @@ class TranslatorConfig(BaseModel):
     """Automatically extract new terms to glossary (requires high_quality_prompt_path)"""
     remove_trailing_period: bool = False
     """Remove a sentence-final period from the translation when the source text has no terminal punctuation."""
+    normalize_thai_punctuation: bool = False
+    """For Thai output, keep one ending mark and drop a question mark after a question word."""
     translator_chain: Optional[str] = None
     """Output of one translator goes in another. Example: --translator-chain "openai:JPN;gemini:ENG"."""    
     selective_translation: Optional[str] = None

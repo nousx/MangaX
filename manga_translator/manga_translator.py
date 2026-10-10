@@ -94,7 +94,11 @@ from .utils.path_manager import (
     get_original_txt_path,
     get_work_image_path,
 )
-from .utils.translation_text import remove_trailing_period_if_needed
+from .utils.translation_text import (
+    is_thai_language,
+    normalize_thai_punctuation,
+    remove_trailing_period_if_needed,
+)
 
 # Will be overwritten by __main__.py if module is being run directly (with python -m)
 logger = logging.getLogger('manga_translator')
@@ -5454,6 +5458,11 @@ class MangaTranslator:
                     region.text,
                     region.translation,
                     bool(getattr(config.translator, 'remove_trailing_period', False)),
+                )
+                region.translation = normalize_thai_punctuation(
+                    region.translation,
+                    bool(getattr(config.translator, 'normalize_thai_punctuation', False))
+                    and is_thai_language(getattr(config.translator, 'target_lang', '')),
                 )
         
         return ctx.text_regions

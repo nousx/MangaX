@@ -40,6 +40,7 @@
     "extract_glossary": false,
     "max_requests_per_minute": 0,
     "remove_trailing_period": true,
+    "normalize_thai_punctuation": false,
     "convert_to_traditional": false,
     "convert_to_simplified": false
   },

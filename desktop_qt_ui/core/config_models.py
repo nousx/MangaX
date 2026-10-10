@@ -28,6 +28,7 @@ class TranslatorSettings(BaseModel):
     extract_glossary: bool = False
     max_requests_per_minute: int = 0
     remove_trailing_period: bool = False
+    normalize_thai_punctuation: bool = False
     convert_to_traditional: bool = False
     convert_to_simplified: bool = False
 

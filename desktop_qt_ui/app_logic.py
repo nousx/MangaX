@@ -1241,6 +1241,7 @@ class MainAppLogic(QObject):
                     "high_quality_prompt_path": self._t("label_high_quality_prompt_path"),
                     "extract_glossary": self._t("label_extract_glossary"),
                     "remove_trailing_period": self._t("label_remove_trailing_period"),
+                    "normalize_thai_punctuation": self._t("label_normalize_thai_punctuation"),
                     "convert_to_traditional": self._t("label_convert_to_traditional"),
                     "convert_to_simplified": self._t("label_convert_to_simplified"),
                     "use_custom_api_params": self._t("label_use_custom_api_params"),

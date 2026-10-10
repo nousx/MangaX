@@ -92,6 +92,7 @@
         "translator.extract_glossary",
         "translator.max_requests_per_minute",
         "translator.remove_trailing_period",
+        "translator.normalize_thai_punctuation",
         "cli.context_size",
         "translator.convert_to_traditional",
         "translator.convert_to_simplified",
