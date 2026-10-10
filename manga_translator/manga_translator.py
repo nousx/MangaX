@@ -1709,6 +1709,10 @@ class MangaTranslator:
         if mask_raw is not None:
             logger.info(f"Loaded mask_raw from {text_file_path}")
 
+        if getattr(getattr(config, 'render', None), 'recompute_line_breaks', False):
+            # Saved files normally keep their stored layout. Recomputing line breaks
+            # needs the full layout step, which also refits the font size.
+            skip_font_scaling = False
         return regions, mask_raw, mask_is_refined, skip_font_scaling, skip_text_replacements, parse_failure_count
 
     def _load_text_and_regions_from_txt_file(self, image_path: str) -> Optional[List[TextBlock]]:

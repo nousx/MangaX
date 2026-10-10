@@ -75,3 +75,48 @@ def test_should_default_to_empty_for_files_saved_before_the_field_existed():
 
 def test_should_be_off_by_default():
     assert RenderConfig().recompute_line_breaks is False
+
+
+class TestSavedLayoutIsNotReusedWhenRecomputing:
+    """A saved page normally skips the layout step; recomputing must run it."""
+
+    @staticmethod
+    def _saved_page(tmp_path):
+        import json
+
+        from manga_translator.utils.path_manager import get_json_path
+
+        image = tmp_path / "001.png"
+        image.write_bytes(b"source")
+        region = {
+            "lines": [[[0, 0], [100, 0], [100, 40], [0, 40]]],
+            "texts": ["HELLO"],
+            "text": "HELLO",
+            "translation": "สวัส[BR]ดี",
+            "font_size": 30,
+        }
+        json_path = get_json_path(str(image), create_dir=True)
+        with open(json_path, "w", encoding="utf-8") as handle:
+            json.dump({str(image): {"regions": [region], "skip_font_scaling": True}}, handle, ensure_ascii=False)
+        return str(image)
+
+    @staticmethod
+    def _load(image, recompute):
+        from manga_translator.config import Config
+        from manga_translator.manga_translator import MangaTranslator
+
+        translator = MangaTranslator(params={"translator": "none", "use_gpu": False, "filter_text_enabled": False})
+        config = Config(render=RenderConfig(recompute_line_breaks=recompute))
+        return translator._load_text_and_regions_from_file(image, config)
+
+    def test_should_keep_the_saved_layout_by_default(self, tmp_path):
+        regions, _mask, _refined, skip_layout, *_ = self._load(self._saved_page(tmp_path), recompute=False)
+
+        assert len(regions) == 1
+        assert skip_layout is True
+
+    def test_should_run_the_layout_again_when_recomputing(self, tmp_path):
+        regions, _mask, _refined, skip_layout, *_ = self._load(self._saved_page(tmp_path), recompute=True)
+
+        assert len(regions) == 1
+        assert skip_layout is False
