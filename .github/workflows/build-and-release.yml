@@ -35,6 +35,11 @@ jobs:
           torch-index: https://pypi.org/simple
     steps:
     - uses: actions/checkout@v4
+      with:
+        # The package ships this .git folder so the app can update itself.
+        # A persisted job token would be shipped too, and once it expires
+        # every fetch from the installed copy is rejected.
+        persist-credentials: false
     - name: Prepare portable package from reference release
       env:
         GH_TOKEN: ${{ github.token }}
@@ -75,6 +80,11 @@ jobs:
           ForEach-Object { Copy-Item -LiteralPath $_.FullName -Destination $portableDir -Recurse -Force }
         Remove-Item (Join-Path $portableDir '.git') -Recurse -Force -ErrorAction SilentlyContinue
         Copy-Item -LiteralPath (Join-Path $env:GITHUB_WORKSPACE '.git') -Destination (Join-Path $portableDir '.git') -Recurse -Force
+        $shippedConfig = & git -C $portableDir config --local --list
+        if ($LASTEXITCODE -ne 0) { throw 'Failed to read the packaged Git configuration.' }
+        if ($shippedConfig -match '(?i)extraheader|authorization|credential|token') {
+          throw 'The packaged Git configuration contains credentials.'
+        }
         if (-not (Test-Path (Join-Path $portableDir 'packaging\python\python.exe'))) { throw 'Portable Python was not found in the reference package.' }
         if (-not (Test-Path (Join-Path $portableDir 'packaging\uv.exe'))) { throw 'Portable uv was not found in the reference package.' }
         Set-Content -LiteralPath (Join-Path $portableDir 'packaging\VERSION') -Value ('${{ github.ref_name }}' -replace '^v', '') -Encoding utf8
