@@ -354,3 +354,133 @@ class TestCallSites:
             assert log_redaction._TRIGGER_RE.search(f"value {sample}"), sample
         assert log_redaction._TRIGGER_RE.search(f"see https://h.example/{SHORT}")
         assert log_redaction._TRIGGER_RE.search(f"bad credential {OPAQUE}")
+
+
+class TestTracebacksAndStacks:
+    """The handler formats tracebacks after the record is created; they must be redacted too."""
+
+    @pytest.fixture
+    def installed(self):
+        previous = logging.getLogRecordFactory()
+        install_log_redaction()
+        yield
+        logging.setLogRecordFactory(previous)
+
+    @staticmethod
+    def _formatted(record):
+        return logging.Formatter("%(levelname)s %(message)s").format(record)
+
+    def test_should_redact_the_traceback_of_a_logged_exception(self, installed, caplog):
+        logger = logging.getLogger("test-traceback")
+        with caplog.at_level(logging.ERROR):
+            try:
+                raise RuntimeError(f"GET https://user:{SHORT}@h.example/{OPAQUE}/v1/models?key={HEX_ID} failed")
+            except RuntimeError:
+                logger.exception("Error pre-processing image")
+
+        output = self._formatted(caplog.records[0])
+        assert "Traceback (most recent call last)" in output
+        assert "RuntimeError" in output
+        assert_clean(output)
+
+    def test_should_redact_a_chained_exception(self, installed, caplog):
+        logger = logging.getLogger("test-traceback")
+        with caplog.at_level(logging.ERROR):
+            try:
+                try:
+                    raise ValueError(f"api_key={OPAQUE}")
+                except ValueError as inner:
+                    raise RuntimeError("request failed") from inner
+            except RuntimeError:
+                logger.error("Error during batch translation stage", exc_info=True)
+
+        output = self._formatted(caplog.records[0])
+        assert "request failed" in output and "ValueError" in output
+        assert_clean(output)
+
+    def test_should_redact_stack_information(self, installed, caplog):
+        logger = logging.getLogger("test-traceback")
+        with caplog.at_level(logging.INFO):
+            logger.info("checkpoint", stack_info=True)
+        record = caplog.records[0]
+        record.stack_info = f"Stack: token={OPAQUE}"
+        log_redaction._redact_record(record)
+
+        assert_clean(record.stack_info)
+
+    def test_should_withhold_a_record_that_cannot_be_checked(self, installed, monkeypatch):
+        def broken(text, known_secrets=()):
+            raise RuntimeError("redaction is broken")
+
+        monkeypatch.setattr(log_redaction, "redact_secrets", broken)
+        factory = logging.getLogRecordFactory()
+
+        record = factory("name", logging.ERROR, __file__, 1, f"api_key={OPAQUE}", None, None)
+
+        assert record.getMessage() == log_redaction.WITHHELD
+        assert record.exc_info is None and record.exc_text is None
+
+
+class TestBoundedCost:
+    """Response bodies are controlled by a remote server and can be very large."""
+
+    # Built inside the test: a 400,000-character parameter would become the test's name.
+    ADVERSARIAL = {
+        "one long run": lambda: "A" * 400_000,
+        "dashes": lambda: "a-" * 200_000,
+        "repeated secret word": lambda: "key" * 130_000,
+        "secret word then space": lambda: "token " * 60_000,
+        "compound name": lambda: "session_" * 50_000 + "x",
+        "name then spaces": lambda: ("api_key" + " " * 7) * 30_000,
+        "token prefix": lambda: "eyJ" * 130_000,
+        "url scheme": lambda: "https://" * 50_000,
+        "many random-looking runs": lambda: "x" * 23 + " " + ("Ab1" * 9 + " ") * 14_000,
+        "quotes and separators": lambda: '"' * 200_000 + ":" * 200_000,
+    }
+
+    @pytest.mark.parametrize("case", sorted(ADVERSARIAL))
+    def test_should_finish_quickly_on_adversarial_input(self, case):
+        import time
+
+        text = self.ADVERSARIAL[case]()
+        started = time.perf_counter()
+        redact_secrets(text)
+        summarize_text(text, limit=200)
+
+        assert time.perf_counter() - started < 2.0
+
+    def test_should_not_process_or_keep_text_beyond_the_cap(self):
+        text = "ordinary words " * 3000 + f" api_key={OPAQUE}"
+
+        redacted = redact_secrets(text)
+
+        assert len(text) > log_redaction.MAX_REDACTED_CHARS
+        assert len(redacted) < log_redaction.MAX_REDACTED_CHARS + 100
+        assert "more characters not logged" in redacted
+        assert_clean(redacted)
+
+    def test_should_not_leak_a_credential_split_by_the_cap(self):
+        head = "x " * ((log_redaction.MAX_REDACTED_CHARS - 20) // 2)
+        text = head + f"api_key={OPAQUE}{OPAQUE}"
+
+        redacted = redact_secrets(text)
+
+        assert OPAQUE[:6] not in redacted
+
+    def test_should_refuse_an_oversized_url(self):
+        assert safe_url_for_log("https://h.example/" + "a" * (log_redaction.MAX_REDACTED_CHARS + 1)) == REDACTED
+
+
+class TestShortNameWords:
+    """Short words are common inside ordinary words and must not trigger on them."""
+
+    @pytest.mark.parametrize("text", [
+        "monkey: banana-split", "author: someone", "design=flat-layout", "keyboard: layout-us",
+        "signal: interrupt", "hotkey=ctrl+s", "Translator: claude", "font_family: Sarabun",
+    ])
+    def test_should_not_redact_values_after_ordinary_words(self, text):
+        assert redact_secrets(text) == text
+
+    @pytest.mark.parametrize("name", ["key", "api_key", "x-api-key", "auth", "x-auth", "pwd", "db.pwd", "sig"])
+    def test_should_redact_when_the_short_word_is_a_whole_part_of_the_name(self, name):
+        assert_clean(redact_secrets(f"{name}={SHORT}"))

@@ -6,14 +6,24 @@ either may carry an API key, a password or a token.
 
 Two layers use this module. Call sites that know what they are logging use
 safe_url_for_log() and redact_secrets() directly. install_log_redaction() adds
-a process-wide safety net that runs redact_secrets() over every log record, so
-a call site that was missed, or one added later, is still covered.
+a process-wide safety net that runs redact_secrets() over every log record,
+including its traceback, so a call site that was missed, or one added later,
+is still covered.
+
+The text being redacted is often controlled by a remote server, so every
+step here runs in time proportional to the length of the text, and no more
+than MAX_REDACTED_CHARS are processed at all.
 """
 import logging
 import re
+import traceback
 from urllib.parse import quote, quote_plus, urlsplit, urlunsplit
 
 REDACTED = "[redacted]"
+# Longer text is cut: what follows is not logged at all, which is safe and
+# keeps the cost of redaction bounded.
+MAX_REDACTED_CHARS = 20000
+WITHHELD = "[log message withheld: it could not be checked for credentials]"
 
 # Path segments an API endpoint is normally made of. A base URL is set by the
 # user and some gateways carry an account ID or a token in the path, so a
@@ -27,12 +37,16 @@ SAFE_PATH_SEGMENTS = frozenset({
 MODEL_METHODS = frozenset({"generatecontent", "streamgeneratecontent", "counttokens", "embedcontent"})
 
 # A value is treated as a credential when the name in front of it contains one
-# of these words. Matching inside the name covers compound names such as
-# "client_secret", "x-goog-api-key" or "refresh_token" without listing each.
+# of these words, which covers compound names such as "client_secret" or
+# "refresh_token" without listing each.
 SECRET_NAME_WORDS = (
     "authorization", "credential", "passphrase", "signature", "password", "passwd", "session",
     "cookie", "secret", "token", "apikey", "auth", "key", "pwd", "sig",
 )
+# Short words also occur inside ordinary words ("monkey", "author", "design"),
+# so they must be a whole part of the name: "api_key", "x-auth-token", "sig".
+_WHOLE_PART_WORDS = frozenset(word for word in SECRET_NAME_WORDS if len(word) <= 4)
+_SUBSTRING_WORDS = tuple(word for word in SECRET_NAME_WORDS if len(word) > 4)
 # Prefixes that identify a credential wherever it appears.
 SECRET_PREFIX_PATTERNS = {
     "sk-": r"\bsk-[A-Za-z0-9_-]{8,}",
@@ -44,32 +58,28 @@ SECRET_PREFIX_PATTERNS = {
     "eyJ": r"\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}",
 }
 
-_NAME = r"[A-Za-z0-9_.-]*(?:" + "|".join(SECRET_NAME_WORDS) + r")[A-Za-z0-9_.-]*"
-# name: value, name=value, "name": "value". Any value of four characters or more.
-_NAMED_VALUE_RE = re.compile(r"(?i)(?<![A-Za-z0-9])(" + _NAME + r")(\s*[\"']?\s*[:=]\s*[\"']?)[^\s\"',;&}]{4,}")
-# name value. Only when the value looks like a credential, so that ordinary
-# prose such as "token expired" is left alone.
-_NAMED_SPACED_RE = re.compile(
-    r"(?i)(?<![A-Za-z0-9])(" + _NAME + r")(\s+)(?=[^\s]*[0-9])(?=[^\s]*[A-Za-z])[A-Za-z0-9._~+/=-]{12,}"
-)
+# Every pattern below consumes each character at most once per attempt and is
+# either anchored by the caller or starts on a literal, so matching is linear.
+_TOKEN_RE = re.compile(r"[A-Za-z0-9_.-]+")
+_PART_SPLIT_RE = re.compile(r"[_.-]")
+# After a name: separator then value (name: value, name=value, "name": "value").
+_SEPARATED_VALUE_RE = re.compile(r"(\s{0,8}[\"']?\s{0,8}[:=]\s{0,8}[\"']?)([^\s\"',;&}]{4,})")
+# After a name: a space then a value. Only redacted when it looks like a
+# credential, so that prose such as "token expired" is left alone.
+_SPACED_VALUE_RE = re.compile(r"(\s{1,8})([A-Za-z0-9._~+/=-]{12,})")
 # A Cookie header carries several name=value pairs; drop the whole value.
-_COOKIE_HEADER_RE = re.compile(r"(?i)\b((?:set-)?cookie)(\s*[\"']?\s*[:=]\s*[\"']?)[^\r\n\"']+")
-_SCHEME_TOKEN_RE = re.compile(r"(?i)\b(bearer|basic|digest)\s+[A-Za-z0-9._~+/=-]{8,}")
+_COOKIE_HEADER_RE = re.compile(r"(?i)\b((?:set-)?cookie)(\s{0,8}[\"']?\s{0,8}[:=]\s{0,8}[\"']?)[^\r\n\"']+")
+_SCHEME_TOKEN_RE = re.compile(r"(?i)\b(bearer|basic|digest)\s{1,8}[A-Za-z0-9._~+/=-]{8,}")
 _PREFIX_RES = tuple(re.compile(pattern) for pattern in SECRET_PREFIX_PATTERNS.values())
 _URL_IN_TEXT_RE = re.compile(r"\b[a-zA-Z][a-zA-Z0-9+.-]{1,15}://[^\s\"'<>)\]}]+")
-# Last resort for a credential with no name and no known prefix: a long run
-# that mixes upper case, lower case and digits. Hex digests and ordinary
-# words do not match.
-_RANDOM_TOKEN_RE = re.compile(
-    r"(?<![A-Za-z0-9_-])(?=[A-Za-z0-9_-]*[a-z])(?=[A-Za-z0-9_-]*[A-Z])(?=[A-Za-z0-9_-]*[0-9])"
-    r"[A-Za-z0-9_-]{24,}(?![A-Za-z0-9_-])"
-)
-_HOST_LABEL_TOKEN_RE = re.compile(r"^(?=.*[a-z])(?=.*[0-9])[a-z0-9-]{20,}$", re.IGNORECASE)
+_HOST_LABEL_TOKEN_RE = re.compile(r"^[a-z0-9-]{20,}$", re.IGNORECASE)
 # Cheap test for whether a log message needs the full treatment.
 _TRIGGER_RE = re.compile(
     r"(?i)://|bearer|basic |digest |" + "|".join(SECRET_NAME_WORDS) + "|"
     + "|".join(re.escape(prefix) for prefix in SECRET_PREFIX_PATTERNS) + r"|[A-Za-z0-9_-]{24,}"
 )
+# An unnamed credential: a run this long that mixes upper case, lower case and digits.
+_RANDOM_TOKEN_MIN_LENGTH = 24
 # Known secrets shorter than this are not searched for: they would match ordinary text.
 _MIN_KNOWN_SECRET_LENGTH = 6
 
@@ -78,7 +88,7 @@ def _safe_path(path: str) -> str:
     """Keep the endpoint words of a URL path and replace every other segment."""
     kept = []
     for segment in path.split("/"):
-        name, separator, method = segment.partition(":")
+        _name, separator, method = segment.partition(":")
         if segment == "" or segment.lower() in SAFE_PATH_SEGMENTS:
             kept.append(segment)
         elif separator and method.lower() in MODEL_METHODS:
@@ -88,11 +98,19 @@ def _safe_path(path: str) -> str:
     return "/".join(kept)
 
 
+def _looks_like_host_token(label: str) -> bool:
+    return bool(
+        _HOST_LABEL_TOKEN_RE.match(label)
+        and any(char.isdigit() for char in label)
+        and any(char.isalpha() for char in label)
+    )
+
+
 def _safe_host(hostname: str) -> str:
     """Replace host labels that look like a token used as a subdomain."""
     if ":" in hostname:
         return f"[{hostname}]"
-    return ".".join(REDACTED if _HOST_LABEL_TOKEN_RE.match(label) else label for label in hostname.split("."))
+    return ".".join(REDACTED if _looks_like_host_token(label) else label for label in hostname.split("."))
 
 
 def safe_url_for_log(url) -> str:
@@ -106,6 +124,8 @@ def safe_url_for_log(url) -> str:
     text = str(url or "")
     if not text:
         return ""
+    if len(text) > MAX_REDACTED_CHARS:
+        return REDACTED
     try:
         parts = urlsplit(text)
         port = parts.port
@@ -121,6 +141,55 @@ def safe_url_for_log(url) -> str:
     return urlunsplit((parts.scheme, netloc, _safe_path(parts.path), "", "")) + suffix
 
 
+def _is_secret_name(token: str) -> bool:
+    lowered = token.lower()
+    if any(word in lowered for word in _SUBSTRING_WORDS):
+        return True
+    return any(part in _WHOLE_PART_WORDS for part in _PART_SPLIT_RE.split(lowered))
+
+
+def _looks_random(token: str) -> bool:
+    for part in token.split("."):
+        if (
+            len(part) >= _RANDOM_TOKEN_MIN_LENGTH
+            and any(char.islower() for char in part)
+            and any(char.isupper() for char in part)
+            and any(char.isdigit() for char in part)
+        ):
+            return True
+    return False
+
+
+def _redact_named_and_random(text: str) -> str:
+    """One pass over the name-like tokens: redact values after secret names, and random-looking tokens."""
+    pieces = []
+    position = 0
+    for match in _TOKEN_RE.finditer(text):
+        if match.start() < position:
+            # Already consumed as the value of a name before it.
+            continue
+        token = match.group(0)
+        if _is_secret_name(token):
+            value = _SEPARATED_VALUE_RE.match(text, match.end())
+            if value is None:
+                value = _SPACED_VALUE_RE.match(text, match.end())
+                if value is not None:
+                    candidate = value.group(2)
+                    if not (any(c.isdigit() for c in candidate) and any(c.isalpha() for c in candidate)):
+                        value = None
+            if value is not None:
+                pieces.append(text[position:value.start(2)])
+                pieces.append(REDACTED)
+                position = value.end()
+                continue
+        if _looks_random(token):
+            pieces.append(text[position:match.start()])
+            pieces.append(REDACTED)
+            position = match.end()
+    pieces.append(text[position:])
+    return "".join(pieces)
+
+
 def _known_secret_forms(secret: str):
     """The secret as written, and as it appears inside a URL."""
     return {secret, quote(secret, safe=""), quote_plus(secret)}
@@ -129,6 +198,9 @@ def _known_secret_forms(secret: str):
 def redact_secrets(text, known_secrets=()) -> str:
     """Return the text with known secrets, URLs and credential-shaped values made safe."""
     result = str(text or "")
+    dropped = len(result) - MAX_REDACTED_CHARS
+    if dropped > 0:
+        result = result[:MAX_REDACTED_CHARS]
     for secret in known_secrets or ():
         if isinstance(secret, str) and len(secret) >= _MIN_KNOWN_SECRET_LENGTH:
             for form in _known_secret_forms(secret):
@@ -138,25 +210,49 @@ def redact_secrets(text, known_secrets=()) -> str:
     result = _SCHEME_TOKEN_RE.sub(lambda match: f"{match.group(1)} {REDACTED}", result)
     for pattern in _PREFIX_RES:
         result = pattern.sub(REDACTED, result)
-    result = _NAMED_VALUE_RE.sub(lambda match: f"{match.group(1)}{match.group(2)}{REDACTED}", result)
-    result = _NAMED_SPACED_RE.sub(lambda match: f"{match.group(1)}{match.group(2)}{REDACTED}", result)
-    return _RANDOM_TOKEN_RE.sub(REDACTED, result)
+    result = _redact_named_and_random(result)
+    if dropped > 0:
+        # The cut may have split a credential, so the last stretch goes too.
+        result = result[:-64] + f" [{dropped + 64} more characters not logged]"
+    return result
+
+
+def _redact_record(record: logging.LogRecord) -> None:
+    message = record.getMessage()
+    if _TRIGGER_RE.search(message):
+        cleaned = redact_secrets(message)
+        if cleaned != message:
+            record.msg = cleaned
+            record.args = None
+    # The traceback and the stack are formatted by the handler, after this
+    # point. Format them here so the handler writes the redacted text.
+    if record.exc_info and not record.exc_text:
+        exc_info = record.exc_info
+        if isinstance(exc_info, tuple) and exc_info[0] is not None:
+            record.exc_text = redact_secrets("".join(traceback.format_exception(*exc_info)).rstrip("\n"))
+    elif record.exc_text:
+        record.exc_text = redact_secrets(record.exc_text)
+    if record.stack_info:
+        record.stack_info = redact_secrets(record.stack_info)
 
 
 def _redacting_factory(previous_factory):
     def factory(*args, **kwargs):
         record = previous_factory(*args, **kwargs)
         try:
-            message = record.getMessage()
-            if _TRIGGER_RE.search(message):
-                cleaned = redact_secrets(message)
-                if cleaned != message:
-                    record.msg = cleaned
-                    record.args = None
+            record.getMessage()
         except Exception:
-            # Logging must never fail because a message could not be formatted here;
-            # the handler reports formatting problems in its own way.
-            pass
+            # A malformed log call: the handler reports it, to stderr and not to the log file.
+            return record
+        try:
+            _redact_record(record)
+        except Exception:
+            # Fail closed: a record that could not be checked is not written as it is.
+            record.msg = WITHHELD
+            record.args = None
+            record.exc_info = None
+            record.exc_text = None
+            record.stack_info = None
         return record
 
     factory._manga_redaction_installed = True
