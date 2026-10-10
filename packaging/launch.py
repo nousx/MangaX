@@ -373,18 +373,18 @@ Exit code: {result.returncode}"""))
         # 解码输出
         try:
             stdout = stdout_bytes.decode('utf-8', errors='ignore')
-        except:
+        except Exception:
             try:
                 stdout = stdout_bytes.decode('gbk', errors='ignore')
-            except:
+            except Exception:
                 stdout = str(stdout_bytes)
         
         try:
             stderr = stderr_bytes.decode('utf-8', errors='ignore')
-        except:
+        except Exception:
             try:
                 stderr = stderr_bytes.decode('gbk', errors='ignore')
-            except:
+            except Exception:
                 stderr = str(stderr_bytes)
         
         if process.returncode != 0:
@@ -862,7 +862,7 @@ def detect_gpu(interactive=True):
                     cuda_version = cuda_match.group(1)
                     cuda_major = int(cuda_version.split('.')[0])
                     return cuda_major, cuda_version, driver_version
-            except:
+            except Exception:
                 pass
             
             # 如果无法获取CUDA版本，返回驱动版本
@@ -1099,7 +1099,7 @@ def detect_gpu(interactive=True):
             try:
                 output = subprocess.check_output("lspci | grep -i vga", shell=True, text=True, stderr=subprocess.DEVNULL, timeout=5, encoding='utf-8', errors='ignore')
                 all_gpus = parse_all_gpus(output)
-            except:
+            except Exception:
                 pass
             
             # 尝试使用 lshw (Linux only) 作为补充
@@ -1107,7 +1107,7 @@ def detect_gpu(interactive=True):
                 try:
                     output = subprocess.check_output("lshw -C display 2>/dev/null | grep 'product:'", shell=True, text=True, stderr=subprocess.DEVNULL, timeout=5, encoding='utf-8', errors='ignore')
                     all_gpus = parse_all_gpus(output)
-                except:
+                except Exception:
                     pass
             
             if all_gpus:
@@ -1667,7 +1667,7 @@ try:
         print(f"installed|{torch.version.hip}")
     else:
         print("not_amd|")
-except:
+except Exception:
     print("not_installed|")
 """
                 result = subprocess.run(
@@ -2090,7 +2090,7 @@ except:
         print(L('正在清理 pip 缓存...', 'Clearing the pip cache...'))
         try:
             run(f'"{python}" -m pip cache purge', L("清理缓存", "Clear cache"), L("无法清理缓存", "Could not clear the cache"))
-        except:
+        except Exception:
             pass
     
     # Windows AMD 需要先安装 Radeon ROCm SDK，再安装配套 PyTorch wheels。
