@@ -24,7 +24,8 @@ from manga_translator.codex_account import (
 )
 from manga_translator.config import Config, TranslatorConfig
 from manga_translator.translators import get_translator
-from manga_translator.translators.claude_cli import ClaudeCLITranslator
+from manga_translator.translators import claude_cli
+from manga_translator.translators.claude_cli import ClaudeCLITranslator, ClaudeUsageLimit
 from manga_translator.translators.common import InvalidServerResponse
 
 EXECUTABLE = "claude.exe" if os.name == "nt" else "claude"
@@ -215,11 +216,50 @@ class ClaudeProcessTests(unittest.IsolatedAsyncioTestCase):
     async def test_unicode_stdin_and_structured_result(self):
         self.assertEqual(await self.run_fake_cli("ok"), ["สวัสดี"])
 
-    async def test_usage_limit_message_reaches_the_user(self):
-        with self.assertRaises(RuntimeError) as raised:
+    async def test_usage_limit_message_reaches_the_user_when_waiting_is_over(self):
+        with patch.object(claude_cli, "_LIMIT_MAX_WAIT_SECONDS", 0), \
+                self.assertRaises(RuntimeError) as raised:
             await self.run_fake_cli("limit")
 
         self.assertIn("usage limit", str(raised.exception))
+
+    async def test_should_resume_after_the_usage_limit_resets(self):
+        translator = ClaudeCLITranslator()
+        outcomes = [ClaudeUsageLimit("Claude usage limit reached: resets soon."), ["สวัสดี"]]
+
+        async def request(*_args):
+            outcome = outcomes.pop(0)
+            if isinstance(outcome, Exception):
+                raise outcome
+            return outcome
+
+        with patch.object(translator, "_request_batch", side_effect=request), \
+                patch.object(claude_cli, "_LIMIT_RETRY_SECONDS", 0.01), \
+                self.assertLogs(translator.logger, level="WARNING") as logs:
+            result = await translator._translate_batch("claude", "English", "Thai", ["Hello"])
+
+        self.assertEqual(result, ["สวัสดี"])
+        self.assertEqual(outcomes, [])
+        self.assertIn("Waiting for the limit to reset", logs.output[0])
+
+    async def test_should_stop_waiting_when_the_task_is_cancelled(self):
+        translator = ClaudeCLITranslator()
+
+        async def request(*_args):
+            raise ClaudeUsageLimit("Claude usage limit reached.")
+
+        with patch.object(translator, "_request_batch", side_effect=request), \
+                patch.object(translator, "_check_cancelled", side_effect=KeyboardInterrupt), \
+                self.assertRaises(KeyboardInterrupt):
+            await translator._translate_batch("claude", "English", "Thai", ["Hello"])
+
+    def test_should_recognise_usage_limit_failures_only(self):
+        limit = ClaudeCLITranslator._is_usage_limit
+        self.assertTrue(limit({"api_error_status": 429}, ""))
+        self.assertTrue(limit({}, "You've hit your usage limit. Resets at 3am."))
+        self.assertTrue(limit(None, "5-hour limit reached"))
+        self.assertFalse(limit({"api_error_status": 500}, "Internal server error"))
+        self.assertFalse(limit({}, "Not logged in"))
 
     async def test_invalid_or_unstructured_output_is_rejected(self):
         for mode in ("invalid", "missing"):

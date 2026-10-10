@@ -6,6 +6,7 @@ import json
 import os
 import subprocess
 import tempfile
+import time
 
 from ..claude_account import claude_child_env, find_claude_cli
 from .codex_cli import CodexCLITranslator
@@ -16,6 +17,17 @@ from .manga_context import bounded_context
 # 32,000 characters in total.
 _STYLE_GUIDE_LIMIT = 8000
 _ERROR_DETAIL_LIMIT = 400
+
+# A long unattended job should survive the account's usage window running
+# out: try again every few minutes until the limit resets, up to a ceiling.
+_LIMIT_RETRY_SECONDS = 600
+_LIMIT_MAX_WAIT_SECONDS = 6 * 3600
+_LIMIT_MARKERS = ("usage limit", "limit reached", "rate limit", "hit your limit",
+                  "session limit", "weekly limit", "too many requests")
+
+
+class ClaudeUsageLimit(RuntimeError):
+    """The Claude account cannot take more requests for now."""
 
 _RESPONSE_SCHEMA = {
     "type": "object", "additionalProperties": False,
@@ -131,7 +143,40 @@ class ClaudeCLITranslator(CodexCLITranslator):
         detail = detail or stderr or stdout
         return " ".join(detail.split())[:_ERROR_DETAIL_LIMIT]
 
+    @staticmethod
+    def _is_usage_limit(payload, detail):
+        if isinstance(payload, dict) and payload.get("api_error_status") == 429:
+            return True
+        lowered = detail.lower()
+        return any(marker in lowered for marker in _LIMIT_MARKERS)
+
     async def _translate_batch(self, executable, from_lang, to_lang, queries):
+        """Translate one batch, waiting for the usage limit to reset when it is hit."""
+        give_up_at = None
+        while True:
+            try:
+                return await self._request_batch(executable, from_lang, to_lang, queries)
+            except ClaudeUsageLimit as limit:
+                now = time.monotonic()
+                give_up_at = give_up_at or now + _LIMIT_MAX_WAIT_SECONDS
+                if now + _LIMIT_RETRY_SECONDS > give_up_at:
+                    raise RuntimeError(
+                        f"{limit} Stopped waiting after {_LIMIT_MAX_WAIT_SECONDS // 3600} hours."
+                    ) from limit
+                next_try = time.strftime("%H:%M", time.localtime(time.time() + _LIMIT_RETRY_SECONDS))
+                self.logger.warning(
+                    f"{limit} Waiting for the limit to reset; trying again at {next_try}. "
+                    "Finished pages are saved. Stop the task to cancel."
+                )
+                await self._wait(_LIMIT_RETRY_SECONDS)
+
+    async def _wait(self, seconds):
+        deadline = time.monotonic() + seconds
+        while time.monotonic() < deadline:
+            self._check_cancelled()
+            await asyncio.sleep(0.5)
+
+    async def _request_batch(self, executable, from_lang, to_lang, queries):
         prompt = self._build_prompt(from_lang, to_lang, queries)
         command = self._build_command(executable, from_lang, to_lang)
         flags = subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0
@@ -162,6 +207,8 @@ class ClaudeCLITranslator(CodexCLITranslator):
                 failed = process.returncode != 0 or (isinstance(payload, dict) and payload.get("is_error"))
                 if failed:
                     detail = self._failure_detail(stdout, stderr)
+                    if self._is_usage_limit(payload, detail):
+                        raise ClaudeUsageLimit(f"Claude usage limit reached: {detail or 'no details'}.")
                     raise RuntimeError(
                         f"Claude translation failed (exit {process.returncode})"
                         + (f": {detail}" if detail else "")

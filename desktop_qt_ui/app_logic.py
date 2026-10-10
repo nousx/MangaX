@@ -65,6 +65,7 @@ from services import (
 )
 from services.state_manager import AppStateKey
 from utils.asyncio_cleanup import shutdown_event_loop
+from utils.keep_awake import keep_system_awake
 from utils.font_list import fonts_directory
 
 
@@ -3200,7 +3201,10 @@ class TranslationWorker(QObject):
             asyncio.set_event_loop(loop)
             
             self._current_task = loop.create_task(self._do_processing())
-            loop.run_until_complete(self._current_task)
+            # A queue of chapters can run for hours; Windows must not put the
+            # computer to sleep in the middle of it.
+            with keep_system_awake():
+                loop.run_until_complete(self._current_task)
             # 任务处理完成，不输出日志
 
         except asyncio.CancelledError:
