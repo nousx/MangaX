@@ -20,6 +20,7 @@ from ..utils.curl_cffi_transport import (
     validate_api_key_for_http_header,
 )
 from ..utils.image_modes import normalize_rgb_image
+from ..utils.log import get_logger
 from ..utils.openai_compat import resolve_openai_compatible_api_key
 from ..utils.retry import (
     get_retry_attempts_from_config,
@@ -28,6 +29,8 @@ from ..utils.retry import (
     summarize_response_text,
 )
 from ..utils.system_proxy import system_proxy_request_kwargs
+
+_http_logger = get_logger('translator')
 
 
 try:
@@ -292,9 +295,9 @@ class AsyncOpenAICurlCffi:
             )
 
             if response.status_code != 200:
-                print(f"[AsyncOpenAICurlCffi] Error - URL: {url}")
-                print(f"[AsyncOpenAICurlCffi] Error - Status: {response.status_code}")
-                print(f"[AsyncOpenAICurlCffi] Error - Response: {summarize_response_text(response.text)}")
+                _http_logger.error(f"[AsyncOpenAICurlCffi] Error - URL: {url}")
+                _http_logger.error(f"[AsyncOpenAICurlCffi] Error - Status: {response.status_code}")
+                _http_logger.error(f"[AsyncOpenAICurlCffi] Error - Response: {summarize_response_text(response.text)}")
                 error_msg = (
                     f"API request failed with status {response.status_code}: "
                     f"{_extract_http_error_details(response)}"
@@ -382,9 +385,9 @@ class AsyncOpenAICurlCffi:
             )
 
             if response.status_code != 200:
-                print(f"[AsyncOpenAICurlCffi] List Error - URL: {url}")
-                print(f"[AsyncOpenAICurlCffi] List Error - Status: {response.status_code}")
-                print(f"[AsyncOpenAICurlCffi] List Error - Response: {summarize_response_text(response.text)}")
+                _http_logger.error(f"[AsyncOpenAICurlCffi] List Error - URL: {url}")
+                _http_logger.error(f"[AsyncOpenAICurlCffi] List Error - Status: {response.status_code}")
+                _http_logger.error(f"[AsyncOpenAICurlCffi] List Error - Response: {summarize_response_text(response.text)}")
                 error_msg = (
                     f"API request failed with status {response.status_code}: "
                     f"{_extract_http_error_details(response)}"
@@ -703,9 +706,9 @@ class AsyncGeminiCurlCffi:
             )
 
             if response.status_code != 200:
-                print(f"[AsyncGeminiCurlCffi] Error - URL: {url}")
-                print(f"[AsyncGeminiCurlCffi] Error - Status: {response.status_code}")
-                print(f"[AsyncGeminiCurlCffi] Error - Response: {summarize_response_text(response.text)}")
+                _http_logger.error(f"[AsyncGeminiCurlCffi] Error - URL: {url}")
+                _http_logger.error(f"[AsyncGeminiCurlCffi] Error - Status: {response.status_code}")
+                _http_logger.error(f"[AsyncGeminiCurlCffi] Error - Response: {summarize_response_text(response.text)}")
                 error_msg = f"Gemini API request failed with status {response.status_code}"
                 try:
                     error_data = response.json()
@@ -803,9 +806,9 @@ class AsyncGeminiCurlCffi:
             )
 
             if response.status_code != 200:
-                print(f"[AsyncGeminiCurlCffi] List Error - URL: {url}")
-                print(f"[AsyncGeminiCurlCffi] List Error - Status: {response.status_code}")
-                print(f"[AsyncGeminiCurlCffi] List Error - Response: {summarize_response_text(response.text)}")
+                _http_logger.error(f"[AsyncGeminiCurlCffi] List Error - URL: {url}")
+                _http_logger.error(f"[AsyncGeminiCurlCffi] List Error - Status: {response.status_code}")
+                _http_logger.error(f"[AsyncGeminiCurlCffi] List Error - Response: {summarize_response_text(response.text)}")
                 error_msg = f"Gemini API request failed with status {response.status_code}"
                 try:
                     error_data = response.json()
@@ -3512,7 +3515,7 @@ def merge_glossary_to_file(file_path: str, new_terms: List[Dict[str, Any]]) -> b
             return True
             
     except Exception as e:
-        print(f"Error merging glossary: {e}")
+        _http_logger.error(f"Error merging glossary: {e}")
         return False
     
     return False

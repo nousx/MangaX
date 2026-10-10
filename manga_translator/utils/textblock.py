@@ -509,7 +509,7 @@ class TextBlock(object):
                 textheight = int(norm_h)
         
         if norm_v <= 0 or norm_h <= 0:
-            print('invalid textpolygon to target img')
+            logger.warning('Invalid text polygon: cannot map it onto the target image')
             return np.zeros((textheight, textheight, 3), dtype=np.uint8)
         ratio = norm_v / norm_h
 
@@ -519,7 +519,7 @@ class TextBlock(object):
             dst_pts = np.array([[0, 0], [w - 1, 0], [w - 1, h - 1], [0, h - 1]]).astype(np.float32)
             M, _ = cv2.findHomography(src_pts, dst_pts, cv2.RANSAC, 5.0)
             if M is None:
-                print('invalid textpolygon to target img')
+                logger.warning('Invalid text polygon: cannot map it onto the target image')
                 return np.zeros((textheight, textheight, 3), dtype=np.uint8)
             region = cv2.warpPerspective(img_croped, M, (w, h))
         elif direction == 'v' :
@@ -528,7 +528,7 @@ class TextBlock(object):
             dst_pts = np.array([[0, 0], [w - 1, 0], [w - 1, h - 1], [0, h - 1]]).astype(np.float32)
             M, _ = cv2.findHomography(src_pts, dst_pts, cv2.RANSAC, 5.0)
             if M is None:
-                print('invalid textpolygon to target img')
+                logger.warning('Invalid text polygon: cannot map it onto the target image')
                 return np.zeros((textheight, textheight, 3), dtype=np.uint8)
             region = cv2.warpPerspective(img_croped, M, (w, h))
             region = cv2.rotate(region, cv2.ROTATE_90_COUNTERCLOCKWISE)

@@ -157,38 +157,38 @@ class ModelWrapper(ABC):
         for i, current_url in enumerate(urls):
             try:
                 if i > 0:
-                    print(f' -- Trying fallback URL {i}: "{current_url}"')
+                    self._model_logger().info(f'Trying fallback URL {i}: "{current_url}"')
                     # 切换到备用链接时，清除之前下载的残留文件
                     if os.path.exists(path):
-                        print(f' -- Removing incomplete download: "{path}"')
+                        self._model_logger().info(f'Removing incomplete download: "{path}"')
                         os.remove(path)
                     if os.path.exists(path + '.part'):
-                        print(f' -- Removing incomplete download: "{path}.part"')
+                        self._model_logger().info(f'Removing incomplete download: "{path}.part"')
                         os.remove(path + '.part')
                 else:
-                    print(f' -- Downloading: "{current_url}"')
+                    self._model_logger().info(f'Downloading: "{current_url}"')
                 download_url_with_progressbar(current_url, path)
                 return  # Success, exit
             except Exception as e:
                 if i < len(urls) - 1:
-                    print(f' -- Download failed: {e}')
-                    print(' -- Switching to fallback URL...')
+                    self._model_logger().warning(f'Download failed: {e}')
+                    self._model_logger().info('Switching to fallback URL...')
                 else:
                     # Last URL failed, re-raise exception
                     raise
 
     async def _verify_file(self, sha256_pre_calculated: str, path: str):
-        print(f' -- Verifying: "{path}"')
+        self._model_logger().info(f'Verifying: "{path}"')
         sha256_calculated = get_digest(path).lower()
         sha256_pre_calculated = sha256_pre_calculated.lower()
 
         if sha256_calculated != sha256_pre_calculated:
             self._on_verify_failure(sha256_calculated, sha256_pre_calculated)
         else:
-            print(' -- Verifying: OK!')
+            self._model_logger().info('Verifying: OK')
 
     def _on_verify_failure(self, sha256_calculated: str, sha256_pre_calculated: str):
-        print(f' -- Mismatch between downloaded and created hash: "{sha256_calculated}" <-> "{sha256_pre_calculated}"')
+        self._model_logger().error(f'Mismatch between downloaded and expected hash: "{sha256_calculated}" <-> "{sha256_pre_calculated}"')
         raise ModelVerificationException()
 
     @cached_property
@@ -217,10 +217,10 @@ class ModelWrapper(ABC):
         Downloads models as defined in `_MODEL_MAPPING`. Can be overwritten (together
         with `_check_downloaded`) to implement unconventional download logic.
         '''
-        print(f'\nDownloading models into {self.model_dir}\n')
+        self._model_logger().info(f'Downloading models into {self.model_dir}')
         for map_key, mapping in self._MODEL_MAPPING.items():
             if self._check_downloaded_map(map_key):
-                print(f' -- Skipping {map_key} as it\'s already downloaded')
+                self._model_logger().info(f'Skipping {map_key}: already downloaded')
                 continue
 
             is_archive = 'archive' in mapping
@@ -241,11 +241,11 @@ class ModelWrapper(ABC):
                 downloaded = False
                 if os.path.isfile(download_path):
                     try:
-                        print(' -- Found existing file')
+                        self._model_logger().info('Found existing file')
                         await self._verify_file(mapping['hash'], download_path)
                         downloaded = True
                     except ModelVerificationException:
-                        print(' -- Resuming interrupted download')
+                        self._model_logger().info('Resuming interrupted download')
                 if not downloaded:
                     await self._download_file(mapping['url'], download_path)
                     await self._verify_file(mapping['hash'], download_path)
@@ -259,7 +259,7 @@ class ModelWrapper(ABC):
 
             if is_archive:
                 extracted_path = os.path.join(os.path.dirname(download_path), 'extracted')
-                print(' -- Extracting files')
+                self._model_logger().info('Extracting files')
                 
                 try:
                     # 处理 .7z 格式
@@ -275,8 +275,8 @@ class ModelWrapper(ABC):
                     else:
                         shutil.unpack_archive(download_path, extracted_path)
                 except Exception as e:
-                    print(f' -- 无法解压文件 "{download_path}": {e}')
-                    print(' -- 跳过此文件并继续')
+                    self._model_logger().error(f'Could not extract "{download_path}": {e}')
+                    self._model_logger().warning('Skipping this file and continuing')
                     # 清理临时文件
                     try:
                         if os.path.exists(download_path):

@@ -4,12 +4,15 @@ import cv2
 import numpy as np
 
 from ..config import Inpainter, InpainterConfig
+from ..utils.log import get_logger
 from .common import CommonInpainter, OfflineInpainter
 from .inpainting_aot import AotInpainter
 from .inpainting_flux import Flux2KleinInpainter
 from .inpainting_lama_mpe import LamaLargeInpainter, LamaMPEInpainter
 from .none import NoneInpainter
 from .original import OriginalInpainter
+
+logger = get_logger('inpainting')
 
 _SD_IMPORT_ERROR = None
 try:
@@ -176,9 +179,9 @@ async def _dispatch_with_split(
     num_splits = len(split_ranges)
 
     if verbose:
-        print(f"[Inpainting Split] image={w}x{h}, aspect_ratio={max(w / h, h / w):.2f}")
-        print(f"[Inpainting Split] splitting into {num_splits} tiles along {'height' if is_vertical else 'width'}")
-        print(f"[Inpainting Split] tile_size={tile_size}, overlap={overlap}")
+        logger.debug(f"[Inpainting Split] image={w}x{h}, aspect_ratio={max(w / h, h / w):.2f}")
+        logger.debug(f"[Inpainting Split] splitting into {num_splits} tiles along {'height' if is_vertical else 'width'}")
+        logger.debug(f"[Inpainting Split] tile_size={tile_size}, overlap={overlap}")
 
     tiles = []
     for ii, (start, end) in enumerate(split_ranges):
@@ -192,7 +195,7 @@ async def _dispatch_with_split(
 
         if verbose:
             axis_label = "rows" if is_vertical else "cols"
-            print(f"[Inpainting Split] processing tile {ii + 1}/{num_splits}: {axis_label} {start}-{end}")
+            logger.debug(f"[Inpainting Split] processing tile {ii + 1}/{num_splits}: {axis_label} {start}-{end}")
 
         tile_inpainted = await inpainter.inpaint(tile_img, tile_mask, config, inpainting_size, verbose)
         tiles.append({
@@ -275,6 +278,6 @@ async def _dispatch_with_split(
                         result[:, idx, :] = alpha * tile_img[:, tile_idx, :] + (1 - alpha) * result[:, idx, :]
 
     if verbose:
-        print("[Inpainting Split] tiles merged successfully")
+        logger.debug("[Inpainting Split] tiles merged successfully")
 
     return result
