@@ -43,9 +43,16 @@ SECRET_NAME_WORDS = (
     "authorization", "credential", "passphrase", "signature", "password", "passwd", "session",
     "cookie", "secret", "token", "apikey", "auth", "key", "pwd", "sig",
 )
-# Short words also occur inside ordinary words ("monkey", "author", "design"),
-# so they must be a whole part of the name: "api_key", "x-auth-token", "sig".
+# Short words also occur inside ordinary words. They count when they are a
+# whole part of the name ("api_key", "sig"), or when a part ends with "key" or
+# "pwd" or starts with "auth" or "key" ("accessKey", "privatekey", "authkey",
+# "keyid"), unless that part is one of the ordinary words below.
 _WHOLE_PART_WORDS = frozenset(word for word in SECRET_NAME_WORDS if len(word) <= 4)
+_ORDINARY_PARTS = frozenset({
+    "monkey", "hotkey", "hotkeys", "turkey", "donkey", "hockey", "jockey", "whiskey",
+    "author", "authors", "authored", "keyboard", "keyboards", "keyword", "keywords",
+    "keyframe", "keyframes", "keynote",
+})
 _SUBSTRING_WORDS = tuple(word for word in SECRET_NAME_WORDS if len(word) > 4)
 # Prefixes that identify a credential wherever it appears.
 SECRET_PREFIX_PATTERNS = {
@@ -62,14 +69,19 @@ SECRET_PREFIX_PATTERNS = {
 # either anchored by the caller or starts on a literal, so matching is linear.
 _TOKEN_RE = re.compile(r"[A-Za-z0-9_.-]+")
 _PART_SPLIT_RE = re.compile(r"[_.-]")
+_CAMEL_BOUNDARY_RE = re.compile(r"(?<=[a-z0-9])(?=[A-Z])")
 # After a name: separator then value (name: value, name=value, "name": "value").
-_SEPARATED_VALUE_RE = re.compile(r"(\s{0,8}[\"']?\s{0,8}[:=]\s{0,8}[\"']?)([^\s\"',;&}]{4,})")
+_SEPARATED_VALUE_RE = re.compile(
+    r"(\s{0,64}[\"']?\s{0,64}[:=]\s{0,64})"
+    # A quoted value is taken whole, spaces included; a bare one up to the next delimiter.
+    r"(?:\"(?P<double>[^\"\r\n]{1,512})|'(?P<single>[^'\r\n]{1,512})|(?P<bare>[^\s\"',;&}]{4,}))"
+)
 # After a name: a space then a value. Only redacted when it looks like a
 # credential, so that prose such as "token expired" is left alone.
-_SPACED_VALUE_RE = re.compile(r"(\s{1,8})([A-Za-z0-9._~+/=-]{12,})")
+_SPACED_VALUE_RE = re.compile(r"(\s{1,64})(?P<spaced>[A-Za-z0-9._~+/=-]{12,})")
 # A Cookie header carries several name=value pairs; drop the whole value.
-_COOKIE_HEADER_RE = re.compile(r"(?i)\b((?:set-)?cookie)(\s{0,8}[\"']?\s{0,8}[:=]\s{0,8}[\"']?)[^\r\n\"']+")
-_SCHEME_TOKEN_RE = re.compile(r"(?i)\b(bearer|basic|digest)\s{1,8}[A-Za-z0-9._~+/=-]{8,}")
+_COOKIE_HEADER_RE = re.compile(r"(?i)\b((?:set-)?cookie)(\s{0,64}[\"']?\s{0,64}[:=]\s{0,64}[\"']?)[^\r\n]+")
+_SCHEME_TOKEN_RE = re.compile(r"(?i)\b(bearer|basic|digest)\s{1,64}[A-Za-z0-9._~+/=-]{8,}")
 _PREFIX_RES = tuple(re.compile(pattern) for pattern in SECRET_PREFIX_PATTERNS.values())
 _URL_IN_TEXT_RE = re.compile(r"\b[a-zA-Z][a-zA-Z0-9+.-]{1,15}://[^\s\"'<>)\]}]+")
 _HOST_LABEL_TOKEN_RE = re.compile(r"^[a-z0-9-]{20,}$", re.IGNORECASE)
@@ -142,10 +154,16 @@ def safe_url_for_log(url) -> str:
 
 
 def _is_secret_name(token: str) -> bool:
-    lowered = token.lower()
-    if any(word in lowered for word in _SUBSTRING_WORDS):
+    if any(word in token.lower() for word in _SUBSTRING_WORDS):
         return True
-    return any(part in _WHOLE_PART_WORDS for part in _PART_SPLIT_RE.split(lowered))
+    for part in _PART_SPLIT_RE.split(_CAMEL_BOUNDARY_RE.sub("_", token).lower()):
+        if part in _WHOLE_PART_WORDS:
+            return True
+        if part in _ORDINARY_PARTS:
+            continue
+        if part.endswith(("key", "keys", "pwd")) or part.startswith(("auth", "key")):
+            return True
+    return False
 
 
 def _looks_random(token: str) -> bool:
@@ -174,13 +192,15 @@ def _redact_named_and_random(text: str) -> str:
             if value is None:
                 value = _SPACED_VALUE_RE.match(text, match.end())
                 if value is not None:
-                    candidate = value.group(2)
+                    candidate = value.group("spaced")
                     if not (any(c.isdigit() for c in candidate) and any(c.isalpha() for c in candidate)):
                         value = None
             if value is not None:
-                pieces.append(text[position:value.start(2)])
+                # The named group that matched: a quoted, bare or spaced value.
+                group = value.lastgroup
+                pieces.append(text[position:value.start(group)])
                 pieces.append(REDACTED)
-                position = value.end()
+                position = value.end(group)
                 continue
         if _looks_random(token):
             pieces.append(text[position:match.start()])

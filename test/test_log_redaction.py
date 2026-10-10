@@ -484,3 +484,44 @@ class TestShortNameWords:
     @pytest.mark.parametrize("name", ["key", "api_key", "x-api-key", "auth", "x-auth", "pwd", "db.pwd", "sig"])
     def test_should_redact_when_the_short_word_is_a_whole_part_of_the_name(self, name):
         assert_clean(redact_secrets(f"{name}={SHORT}"))
+
+
+class TestCoverageKeptByTheLinearRewrite:
+    """Cases the first linear version let through, which the version before it had caught."""
+
+    @pytest.mark.parametrize("name", [
+        "accessKey", "privateKey", "apiKey", "secretAccessKey", "authKey", "accesskey", "privatekey",
+        "authkey", "appkey", "passkey", "keyid", "key_id", "sshkeys", "dbpwd", "authz", "oauth_token",
+        "X-Amz-Signature", "sig",
+    ])
+    @pytest.mark.parametrize("form", ["{name}={value}", "{name}: {value}", '"{name}": "{value}"'])
+    def test_should_redact_joined_and_camel_case_names(self, name, form):
+        assert_clean(redact_secrets(form.format(name=name, value=OPAQUE)))
+        assert_clean(redact_secrets(form.format(name=name, value=SHORT)))
+
+    @pytest.mark.parametrize("gap", [0, 1, 8, 9, 20, 60])
+    def test_should_redact_whatever_the_spacing_around_the_separator(self, gap):
+        spaces = " " * gap
+
+        assert_clean(redact_secrets(f"api_key{spaces}:{spaces}{SHORT}"))
+        assert_clean(redact_secrets(f"api_key{spaces}={spaces}{SHORT}"))
+        assert_clean(redact_secrets(f"Authorization: Bearer{' ' * max(gap, 1)}{SHORT}"))
+        assert_clean(redact_secrets(f"token{' ' * max(gap, 1)}{OPAQUE}"))
+
+    @pytest.mark.parametrize("text,leaked", [
+        ('"password": "my pass phrase 12"', "pass phrase"),
+        ("password: 'two words here'", "words"),
+        ('{"client_secret": "a b"}', "a b"),
+        ('secret="x y z"', "x y z"),
+    ])
+    def test_should_redact_a_quoted_value_that_contains_spaces(self, text, leaked):
+        redacted = redact_secrets(text)
+
+        assert leaked not in redacted
+        assert REDACTED in redacted
+
+    def test_should_keep_text_after_a_quoted_value(self):
+        assert redact_secrets('{"api_key": "abc def", "model": "x"}') == f'{{"api_key": "{REDACTED}", "model": "x"}}'
+
+    def test_should_drop_a_cookie_value_that_contains_quotes(self):
+        assert_clean(redact_secrets(f'Cookie: a="{SHORT}"; b={OPAQUE}'))
