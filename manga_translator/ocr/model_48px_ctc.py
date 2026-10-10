@@ -94,7 +94,7 @@ class Model48pxCTCOCR(OfflineOCR):
                 if ignore_bubble > 0 or use_model_bubble_filter:
                     textline = quadrilaterals[idx][0]
                     if self._should_ignore_region(region_imgs[idx], ignore_bubble, image, textline, config, bubble_mask=bubble_mask):
-                        self.logger.info(f'[FILTERED] Region {ix} ignored - Non-bubble area detected (ignore_bubble={ignore_bubble}, model_filter={use_model_bubble_filter})')
+                        self.logger.debug(f'[FILTERED] Region {ix} ignored - Non-bubble area detected (ignore_bubble={ignore_bubble}, model_filter={use_model_bubble_filter})')
                         ix += 1
                         continue
                 valid_indices.append(idx)
@@ -152,7 +152,7 @@ class Model48pxCTCOCR(OfflineOCR):
                 prob = np.exp(total_logprob())
                 txt = ''.join(cur_texts)
                 if prob < threshold:
-                    self.logger.info(f'[FILTERED] prob: {prob:.4f} < threshold: {threshold} - Text: "{txt}"')
+                    self.logger.debug(f'[FILTERED] prob: {prob:.4f} < threshold: {threshold} - Text: "{txt}"')
                     # Keep the textline with empty text for hybrid OCR to retry
                     cur_region = quadrilaterals[valid_indices[i]][0]
                     if isinstance(cur_region, Quadrilateral):
@@ -175,7 +175,7 @@ class Model48pxCTCOCR(OfflineOCR):
                 br = int(total_br())
                 bg = int(total_bg())
                 bb = int(total_bb())
-                self.logger.info(f'prob: {prob} {txt} fg: ({fr}, {fg}, {fb}) bg: ({br}, {bg}, {bb})')
+                self.logger.debug(f'prob: {prob} {txt} fg: ({fr}, {fg}, {fb}) bg: ({br}, {bg}, {bb})')
                 cur_region = quadrilaterals[valid_indices[i]][0]
                 if isinstance(cur_region, Quadrilateral):
                     cur_region.text = txt

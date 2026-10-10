@@ -78,7 +78,7 @@ class CommonOCR(InfererModule):
                 overlap_threshold = max(0.0, min(1.0, overlap_threshold))
                 overlap_ratio = calc_bbox_mask_overlap_ratio(text_bbox, bubble_mask)
                 if overlap_ratio < overlap_threshold:
-                    self.logger.info(
+                    self.logger.debug(
                         f"Model bubble filter: overlap={overlap_ratio:.3f} < threshold={overlap_threshold:.3f}, filtering region"
                     )
                     return True

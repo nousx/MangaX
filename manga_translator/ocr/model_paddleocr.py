@@ -348,7 +348,7 @@ class ModelPaddleOCR(OfflineOCR):
                     resized_w = int(math.ceil(48 * ratio))
                     region_48px = cv2.resize(region, (resized_w, 48))
                     if self._should_ignore_region(region_48px, ignore_bubble, image, textline, config, bubble_mask=bubble_mask):
-                        self.logger.info(f'[FILTERED] Region {i} ignored - Non-bubble area detected (ignore_bubble={ignore_bubble}, model_filter={use_model_bubble_filter})')
+                        self.logger.debug(f'[FILTERED] Region {i} ignored - Non-bubble area detected (ignore_bubble={ignore_bubble}, model_filter={use_model_bubble_filter})')
                         continue
 
                 # Save debug image if verbose
@@ -406,7 +406,7 @@ class ModelPaddleOCR(OfflineOCR):
                         textline = textlines[idx]
                         
                         if confidence < threshold:
-                            self.logger.info(f"[FILTERED] prob: {confidence:.3f} < threshold: {threshold} - Text: \"{text}\"")
+                            self.logger.debug(f"[FILTERED] prob: {confidence:.3f} < threshold: {threshold} - Text: \"{text}\"")
                             # Keep the textline with empty text for hybrid OCR to retry
                             textline.text = ''  # Empty text for hybrid OCR
                             textline.prob = confidence
@@ -435,7 +435,7 @@ class ModelPaddleOCR(OfflineOCR):
                             textline.fg_r = textline.fg_g = textline.fg_b = 0
                             textline.bg_r = textline.bg_g = textline.bg_b = 255
 
-                        self.logger.info(f'prob: {confidence:.3f} {text} fg: ({textline.fg_r}, {textline.fg_g}, {textline.fg_b}) bg: ({textline.bg_r}, {textline.bg_g}, {textline.bg_b})')
+                        self.logger.debug(f'prob: {confidence:.3f} {text} fg: ({textline.fg_r}, {textline.fg_g}, {textline.fg_b}) bg: ({textline.bg_r}, {textline.bg_g}, {textline.bg_b})')
 
             except Exception as e:
                 self.logger.error(f"Inference failed: {e}")

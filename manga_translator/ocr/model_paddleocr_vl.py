@@ -527,7 +527,7 @@ class ModelPaddleOCRVL(OfflineOCR):
                 should_ignore = self._should_ignore_region(filter_region, ignore_bubble, image, q, config, bubble_mask=bubble_mask)
                 self._cleanup_ocr_memory(filter_region)
                 if should_ignore:
-                    self.logger.info(f'[FILTERED] Region {idx} ignored - Non-bubble area detected (ignore_bubble={ignore_bubble}, model_filter={use_model_bubble_filter})')
+                    self.logger.debug(f'[FILTERED] Region {idx} ignored - Non-bubble area detected (ignore_bubble={ignore_bubble}, model_filter={use_model_bubble_filter})')
                     self._cleanup_ocr_memory(region_img)
                     continue
 

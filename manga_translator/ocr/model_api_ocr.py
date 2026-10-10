@@ -382,7 +382,7 @@ class BaseAPIOCR(OfflineOCR):
 
             if ignore_bubble > 0 or use_model_bubble_filter:
                 if self._should_ignore_region(region_img, ignore_bubble, image, q, config, bubble_mask=bubble_mask):
-                    self.logger.info(
+                    self.logger.debug(
                         f"[FILTERED] Region {idx} ignored - Non-bubble area detected "
                         f"(ignore_bubble={ignore_bubble}, model_filter={use_model_bubble_filter})"
                     )
