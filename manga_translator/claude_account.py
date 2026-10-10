@@ -29,21 +29,6 @@ CLAUDE_INSTALL_URL = "https://claude.com/claude-code"
 _EXECUTABLE_NAMES = ("claude.exe",) if os.name == "nt" else ("claude",)
 _APPROVAL_FILE = "approved_claude_cli.txt"
 
-# These decide which account, endpoint and credential store the CLI uses. The
-# app loads a shareable .env file into its own environment, so each one is
-# taken from the account's real environment instead, or dropped.
-_ACCOUNT_ENV = (
-    "ANTHROPIC_API_KEY",
-    "ANTHROPIC_AUTH_TOKEN",
-    "ANTHROPIC_BASE_URL",
-    "CLAUDE_CODE_OAUTH_TOKEN",
-    "CLAUDE_CODE_USE_BEDROCK",
-    "CLAUDE_CODE_USE_VERTEX",
-    "CLAUDE_CODE_USE_FOUNDRY",
-    "CLAUDE_CONFIG_DIR",
-)
-
-
 def _approval_file() -> Path | None:
     return codex_account._approval_file(_APPROVAL_FILE)
 
@@ -78,14 +63,13 @@ def find_claude_cli(cli_path: str = "") -> str | None:
 
 
 def claude_child_env() -> dict[str, str]:
-    """Environment for Claude child processes, with account settings the app cannot override."""
-    env = os.environ.copy()
-    trusted = codex_account._trusted_environment()
-    for name in _ACCOUNT_ENV:
-        env.pop(name, None)
-        if name in trusted:
-            env[name] = trusted[name]
-    return env
+    """Environment for Claude child processes: the account's own, never the app's.
+
+    Which account, endpoint, proxy, certificates and configuration folder the
+    CLI uses is decided by the Windows account, so nothing loaded from the
+    app's shareable .env file can redirect it or make its runtime load code.
+    """
+    return codex_account.trusted_child_env()
 
 
 def claude_status(cli_path: str = "", timeout: float = 20.0) -> CodexStatus:

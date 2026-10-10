@@ -107,6 +107,28 @@ class ClaudeAccountTests(unittest.TestCase):
         self.assertNotIn("ANTHROPIC_BASE_URL", env)
         self.assertEqual(env["CLAUDE_CONFIG_DIR"], "C:/real")
 
+    def test_should_not_pass_app_environment_to_the_cli(self):
+        planted = {"NODE_OPTIONS": "--require planted.js", "HTTPS_PROXY": "http://planted.invalid:1",
+                   "NODE_EXTRA_CA_CERTS": "C:/planted.pem", "PATH": "C:/planted"}
+        trusted = {"PATH": "C:/real", "USERPROFILE": "C:/Users/real"}
+        with patch.dict(os.environ, planted), \
+                patch.object(codex_account, "_trusted_environment", return_value=trusted):
+            self.assertEqual(claude_child_env(), trusted)
+            self.assertEqual(codex_account.codex_child_env(), trusted)
+
+    def test_should_not_start_the_cli_when_the_account_environment_is_unknown(self):
+        with patch.object(codex_account, "_trusted_environment", return_value={}), \
+                patch.object(claude_account, "find_claude_cli", return_value="claude-bin"), \
+                patch.object(claude_account.subprocess, "run") as run, \
+                patch.object(claude_account.subprocess, "Popen") as popen:
+            with self.assertRaises(OSError):
+                claude_child_env()
+            self.assertEqual(claude_status().state, codex_account.STATE_ERROR)
+            self.assertFalse(start_claude_login())
+
+        run.assert_not_called()
+        popen.assert_not_called()
+
     def test_should_start_login_with_the_resolved_executable(self):
         with patch.object(claude_account, "find_claude_cli", return_value="claude-bin"), \
                 patch.object(claude_account.subprocess, "Popen") as popen:

@@ -62,9 +62,16 @@ def _trusted_environment() -> dict[str, str]:
     if os.name != "nt":
         import pwd
 
-        home = pwd.getpwuid(os.getuid()).pw_dir
+        account = pwd.getpwuid(os.getuid())
+        home = account.pw_dir
         folders = ["/usr/local/bin", "/usr/bin", "/bin", "/opt/homebrew/bin", f"{home}/.local/bin"]
-        return {"PATH": os.pathsep.join(folders), "LOCALAPPDATA": f"{home}/.config"}
+        return {
+            "PATH": os.pathsep.join(folders),
+            "LOCALAPPDATA": f"{home}/.config",
+            "HOME": home,
+            "USER": account.pw_name,
+            "LOGNAME": account.pw_name,
+        }
 
     import ctypes
     from ctypes import wintypes
@@ -216,9 +223,25 @@ def find_codex_cli(cli_path: str = "") -> str | None:
     return None
 
 
+def trusted_child_env() -> dict[str, str]:
+    """Environment for a signed-in CLI child process.
+
+    Built from the account's own environment and nothing else. The process
+    environment also holds whatever the shareable .env file set, and a
+    command line tool reads far more variables than can be listed and
+    removed: proxy and certificate settings, runtime options that load code,
+    the location of its configuration and credentials. A proxy or other
+    setting the user needs has to be set for the Windows account itself.
+    """
+    env = dict(_trusted_environment())
+    if not env:
+        raise OSError("The account environment could not be read, so the command line tool was not started.")
+    return env
+
+
 def codex_child_env() -> dict[str, str]:
     """Environment for Codex child processes, without API overrides."""
-    env = os.environ.copy()
+    env = trusted_child_env()
     for name in _OVERRIDING_ENV:
         env.pop(name, None)
     return env
