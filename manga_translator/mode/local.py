@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-命令行翻译工具 - 直接使用 UI 层的翻译逻辑
-支持子进程模式进行内存管理和断点续传
+Command-line translation tool - uses the same translation logic as the desktop window
+Supports a subprocess mode for memory management and resuming
 """
 import argparse
 import asyncio
@@ -11,7 +11,7 @@ import os
 import sys
 from pathlib import Path
 
-# 添加项目根目录到 Python 路径
+# Put the project root on the Python path
 ROOT_DIR = (
     Path(sys.executable).resolve().parent
     if getattr(sys, 'frozen', False)
@@ -20,69 +20,69 @@ ROOT_DIR = (
 sys.path.insert(0, str(ROOT_DIR))
 sys.path.insert(0, str(ROOT_DIR / 'desktop_qt_ui'))
 
-# 内存管理默认值
-DEFAULT_MEMORY_THRESHOLD_MB = 8000  # 默认8GB
-DEFAULT_BATCH_SIZE_PER_RESTART = 50  # 每处理N张图片后检查
+# Memory management defaults
+DEFAULT_MEMORY_THRESHOLD_MB = 8000  # 8 GB by default
+DEFAULT_BATCH_SIZE_PER_RESTART = 50  # check after this many images
 
 
 def parse_args():
-    """解析命令行参数"""
+    """Parse the command-line arguments."""
     parser = argparse.ArgumentParser(
-        description='漫画翻译命令行工具 - 使用与 UI 相同的翻译逻辑',
+        description='Manga translation command-line tool - same translation logic as the desktop window',
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
-示例:
-  # 翻译单个图片
+Examples:
+  # Translate one image
   python -m manga_translator local -i manga.jpg
   
-  # 翻译文件夹
+  # Translate a folder
   python -m manga_translator local -i ./manga_folder/ -o ./output/
   
-  # 使用自定义配置
+  # Use a custom settings file
   python -m manga_translator local -i manga.jpg --config my_config.json
   
-  # 启用子进程模式（支持内存管理，每50张图片重启子进程释放内存）
+  # Subprocess mode (restarts the worker every 50 images to release memory)
   python -m manga_translator local -i ./manga_folder/ --subprocess
   
-  # 自定义内存管理参数（每20张图片重启）
+  # Custom memory management (restart every 20 images)
   python -m manga_translator local -i ./manga_folder/ --subprocess --batch-per-restart 20
   
-  # 从断点继续（需要配合 --subprocess）
+  # Continue from where the last run stopped (needs --subprocess)
   python -m manga_translator local -i ./manga_folder/ --subprocess --resume
   
-  # 详细日志
+  # Detailed logs
   python -m manga_translator local -i manga.jpg -v
         """
     )
     
     parser.add_argument('-i', '--input', required=True, nargs='+',
-                        help='输入图片或文件夹路径')
+                        help='Input image or folder paths')
     parser.add_argument('-o', '--output', default=None,
-                        help='输出目录（默认：同目录加 -translated 后缀）')
+                        help='Output folder (default: the input folder name with a -translated suffix)')
     parser.add_argument('--config', default=None,
-                        help='配置文件路径（默认：config/config.json）')
+                        help='Settings file path (default: config/config.json)')
     parser.add_argument('-v', '--verbose', action='store_true',
-                        help='显示详细日志')
+                        help='Show detailed logs')
     parser.add_argument('--skip-existing', action='store_true',
                         help='Skip pages whose output already exists (continue an unfinished run)')
     parser.add_argument('--overwrite', action='store_true',
-                        help='覆盖已存在的文件')
+                        help='Overwrite existing files')
     
-    # 内存管理参数
+    # Memory management
     parser.add_argument('--subprocess', action='store_true',
-                        help='启用子进程模式（支持内存管理和断点续传）')
+                        help='Run in subprocess mode (adds memory management and resuming)')
     parser.add_argument('--memory-limit', type=int, default=DEFAULT_MEMORY_THRESHOLD_MB,
-                        help=f'绝对内存限制（MB），超过后自动重启子进程（默认：{DEFAULT_MEMORY_THRESHOLD_MB}，0表示不限制）')
+                        help=f'Memory limit in MB; the worker restarts when it is exceeded (default: {DEFAULT_MEMORY_THRESHOLD_MB}, 0 means no limit)')
     parser.add_argument('--memory-percent', type=int, default=80,
-                        help='内存百分比限制，超过系统总内存的这个百分比时重启（默认：80）')
+                        help='Memory limit as a percentage of system memory; the worker restarts when it is exceeded (default: 80)')
     parser.add_argument('--batch-per-restart', type=int, default=DEFAULT_BATCH_SIZE_PER_RESTART,
-                        help=f'每处理N张图片后重启子进程释放内存（默认：{DEFAULT_BATCH_SIZE_PER_RESTART}）')
+                        help=f'Restart the worker after this many images to release memory (default: {DEFAULT_BATCH_SIZE_PER_RESTART})')
     parser.add_argument('--resume', action='store_true',
-                        help='从上次中断的位置继续（需要配合 --subprocess 使用）')
+                        help='Continue from where the last run stopped (needs --subprocess)')
     
-    # 并发模式参数
+    # Concurrent mode
     parser.add_argument('--concurrent', action='store_true',
-                        help='启用并发流水线模式（检测、OCR、翻译、渲染并行处理）')
+                        help='Run detection, OCR, translation and rendering as a concurrent pipeline')
     
     return parser.parse_args()
 
@@ -90,9 +90,9 @@ def parse_args():
 
 
 async def translate_files(input_paths, output_dir, config_service, verbose=False, overwrite=False, args=None):
-    """翻译文件（使用 UI 层的逻辑）"""
+    """Translate files with the same logic as the desktop window."""
     
-    # 延迟导入，避免 --help 时加载所有模块
+    # Imported late so --help does not load every module
     import logging
     import logging.handlers
 
@@ -102,7 +102,6 @@ async def translate_files(input_paths, output_dir, config_service, verbose=False
     from manga_translator.utils import (
         get_logger,
         init_logging,
-        open_pil_image,
         set_log_level,
     )
     
@@ -112,11 +111,11 @@ async def translate_files(input_paths, output_dir, config_service, verbose=False
     else:
         set_log_level(logging.INFO)
     
-    # 确保 manga_translator 的日志也输出到控制台
+    # Send manga_translator logs to the console as well
     manga_logger = logging.getLogger('manga_translator')
     manga_logger.setLevel(logging.DEBUG if verbose else logging.INFO)
     
-    # 添加控制台 handler（如果还没有）
+    # Add a console handler if there is none yet
     if not any(isinstance(h, logging.StreamHandler) for h in manga_logger.handlers):
         console_handler = logging.StreamHandler()
         console_handler.setLevel(logging.DEBUG if verbose else logging.INFO)
@@ -124,17 +123,17 @@ async def translate_files(input_paths, output_dir, config_service, verbose=False
         console_handler.setFormatter(formatter)
         manga_logger.addHandler(console_handler)
     
-    # 添加文件日志（与 Qt UI 相同位置和格式）
+    # Add a log file (same place and format as the desktop window)
     from datetime import datetime
     
     log_dir = ROOT_DIR / 'result'
     log_dir.mkdir(exist_ok=True)
     
-    # 生成带时间戳的日志文件名（与 Qt UI 格式一致）
+    # Time-stamped log file name (same format as the desktop window)
     timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
     log_file = log_dir / f'log_{timestamp}.txt'
     
-    # 检查是否已添加文件 handler
+    # Check whether a file handler was already added
     has_file_handler = any(
         isinstance(h, logging.FileHandler)
         for h in logging.root.handlers
@@ -151,24 +150,24 @@ async def translate_files(input_paths, output_dir, config_service, verbose=False
         )
         file_handler.setFormatter(file_formatter)
         logging.root.addHandler(file_handler)
-        print(f"📝 日志文件: {log_file}")
+        print(f"📝 Log file: {log_file}")
     
     logger = get_logger('local')
     
-    # 获取配置
+    # Read the settings
     config = config_service.get_config()
     config_dict = config.model_dump()
     
-    # 从配置文件读取 CLI 设置，命令行参数可以覆盖
+    # CLI settings come from the settings file; command-line arguments override them
     cli_config = config_dict.get('cli', {})
     
-    # 应用命令行参数（如果提供了命令行参数，则覆盖配置文件）
+    # Apply command-line arguments (they override the settings file)
     if verbose:
         cli_config['verbose'] = True
     else:
         verbose = cli_config.get('verbose', False)
     
-    # overwrite: 命令行参数优先，否则使用配置文件
+    # overwrite: the command line wins, otherwise the settings file
     if getattr(args, 'skip_existing', False):
         overwrite = False
         cli_config['overwrite'] = False
@@ -177,51 +176,51 @@ async def translate_files(input_paths, output_dir, config_service, verbose=False
     else:
         overwrite = cli_config.get('overwrite', False)
     
-    # use_gpu: 命令行参数优先
+    # use_gpu: the command line wins
     if hasattr(args, 'use_gpu') and args.use_gpu is not None:
         cli_config['use_gpu'] = args.use_gpu
 
-    # disable_onnx_gpu: 命令行参数优先
+    # disable_onnx_gpu: the command line wins
     if hasattr(args, 'disable_onnx_gpu') and args.disable_onnx_gpu is not None:
         cli_config['disable_onnx_gpu'] = args.disable_onnx_gpu
     
-    # format: 命令行参数优先
+    # format: the command line wins
     if hasattr(args, 'format') and args.format is not None:
         cli_config['format'] = args.format
     
-    # batch_size: 命令行参数优先
+    # batch_size: the command line wins
     if hasattr(args, 'batch_size') and args.batch_size is not None:
         cli_config['batch_size'] = args.batch_size
     
-    # attempts: 命令行参数优先
+    # attempts: the command line wins
     if hasattr(args, 'attempts') and args.attempts is not None:
         cli_config['attempts'] = args.attempts
     
-    # concurrent: 命令行参数优先，否则使用配置文件中的值
+    # concurrent: the command line wins, otherwise the settings file
     if hasattr(args, 'concurrent') and args.concurrent:
         cli_config['batch_concurrent'] = True
-    # 如果命令行没有指定，保留配置文件中的 batch_concurrent 值（已在 cli_config 中）
+    # Not given on the command line: keep batch_concurrent from the settings file (already in cli_config)
     
     config_dict['cli'] = cli_config
     
     
     print(f"\n{'='*60}")
-    print(f"翻译器: {config_dict['translator']['translator']}")
-    print(f"目标语言: {config_dict['translator']['target_lang']}")
-    print(f"使用 GPU: {cli_config.get('use_gpu', True)}")
-    print(f"禁用 ONNX GPU: {cli_config.get('disable_onnx_gpu', False)}")
-    print(f"批量大小: {cli_config.get('batch_size', 1)}")
-    print(f"并发模式: {'启用' if cli_config.get('batch_concurrent', False) else '禁用'}")
-    print(f"覆盖已存在文件: {overwrite}")
-    print(f"输出格式: {cli_config.get('format') or '保持原格式'}")
-    print(f"保存质量: {cli_config.get('save_quality', 95)}")
+    print(f"Translator: {config_dict['translator']['translator']}")
+    print(f"Target language: {config_dict['translator']['target_lang']}")
+    print(f"Use GPU: {cli_config.get('use_gpu', True)}")
+    print(f"ONNX GPU disabled: {cli_config.get('disable_onnx_gpu', False)}")
+    print(f"Batch size: {cli_config.get('batch_size', 1)}")
+    print(f"Concurrent mode: {'on' if cli_config.get('batch_concurrent', False) else 'off'}")
+    print(f"Overwrite existing files: {overwrite}")
+    print(f"Output format: {cli_config.get('format') or 'keep original'}")
+    print(f"Save quality: {cli_config.get('save_quality', 95)}")
     print(f"{'='*60}\n")
     
-    # 收集所有图片文件
+    # Collect every image file
     file_service = FileService()
     all_files = []
     
-    # 分离文件和文件夹
+    # Separate files from folders
     folders = []
     individual_files = []
     
@@ -232,34 +231,34 @@ async def translate_files(input_paths, output_dir, config_service, verbose=False
         elif os.path.isdir(input_path):
             folders.append(input_path)
     
-    # 对文件夹进行自然排序（与UI模式保持一致）
+    # Natural-sort the folders (same as the desktop window)
     folders.sort(key=file_service._natural_sort_key)
     
-    # 按文件夹分组处理
+    # Handle the files folder by folder
     for folder in folders:
-        # 递归获取文件夹中的所有图片（已经使用自然排序）
+        # Every image in the folder, recursively (already natural-sorted)
         folder_files = file_service.get_image_files_from_folder(folder, recursive=True)
         all_files.extend(folder_files)
     
-    # 处理单独添加的文件（使用自然排序）
+    # Files given one by one (natural-sorted)
     individual_files.sort(key=file_service._natural_sort_key)
     all_files.extend(individual_files)
     
     if not all_files:
-        print("❌ 未找到图片文件")
+        print("❌ No image files found")
         return
     
-    print(f"📁 找到 {len(all_files)} 个图片文件\n")
+    print(f"📁 Found {len(all_files)} image files\n")
     
-    # 确定输出目录
+    # Decide the output folder
     if output_dir:
         final_output_dir = os.path.abspath(output_dir)
     else:
-        # 使用配置文件中的输出目录，或默认规则
+        # Use the output folder from the settings file, or the default rule
         if config_dict.get('app', {}).get('last_output_path'):
             final_output_dir = config_dict['app']['last_output_path']
         else:
-            # 默认：在第一个输入路径旁边创建 -translated 文件夹
+            # Default: a -translated folder beside the first input path
             first_input = input_paths[0]
             if os.path.isdir(first_input):
                 final_output_dir = first_input.rstrip('/\\') + '-translated'
@@ -267,82 +266,79 @@ async def translate_files(input_paths, output_dir, config_service, verbose=False
                 final_output_dir = os.path.dirname(first_input)
     
     os.makedirs(final_output_dir, exist_ok=True)
-    print(f"📤 输出目录: {final_output_dir}\n")
+    print(f"📤 Output folder: {final_output_dir}\n")
     
-    # 准备翻译参数（像 UI 一样）
+    # Prepare translation parameters (as the desktop window does)
     translator_params = config_dict.get('cli', {}).copy()
-    # 保存 cli 中的关键参数，避免被覆盖
+    # Keep key cli values so they are not overwritten
     cli_attempts = translator_params.get('attempts', -1)
     translator_params.update(config_dict)
-    # 恢复 cli 参数（如果 config_dict 中没有 attempts）
+    # Restore the cli value (when config_dict has no attempts)
     if 'attempts' not in config_dict:
         translator_params['attempts'] = cli_attempts
     
     font_family = config_dict.get('render', {}).get('font_family')
     if font_family:
         translator_params['font_family'] = font_family
-    # 创建翻译器
-    print("🔧 初始化翻译器...")
+    # Create the translator
+    print("🔧 Starting the translator...")
     translator = MangaTranslator(params=translator_params)
-    print("✅ 翻译器初始化完成")
+    print("✅ Translator ready")
     
     # Same configuration the desktop window builds, including the 'cli' section.
     manga_config = build_backend_config(config_dict, str(ROOT_DIR), warn=logger.warning)
     
-    # 准备批量数据（像 UI 一样）
-    images_with_configs = []
-    
-    # 收集输入文件夹（用于保持目录结构）
+    # Input folders, used to keep the folder structure
     input_folders = set()
     for input_path in input_paths:
         if os.path.isdir(input_path):
             input_folders.add(os.path.normpath(os.path.abspath(input_path)))
     
-    print("\n📁 准备图片列表...")
-    # ✅ 只保存文件路径，不加载图片数据
+    print("\n📁 Preparing the image list...")
+    # Only paths are kept; image data is not loaded here
     file_paths_with_configs = []
     for file_path in all_files:
-        # 只验证文件可读性，不加载图片数据
+        # Only check the file can be read; do not load it
         try:
             if os.path.exists(file_path) and os.path.isfile(file_path):
                 file_paths_with_configs.append((file_path, manga_config))
             else:
-                print(f"❌ 文件不存在: {os.path.basename(file_path)}")
+                print(f"❌ File does not exist: {os.path.basename(file_path)}")
         except Exception as e:
-            print(f"❌ 无法访问: {os.path.basename(file_path)} - {e}")
+            print(f"❌ Cannot access: {os.path.basename(file_path)} - {e}")
     
     if not file_paths_with_configs:
-        print("没有需要翻译的图片")
+        print("No images to translate")
         return
     
     save_info = build_save_info(config_dict, final_output_dir, input_folders, overwrite=overwrite)
     output_format = save_info['format']
     
-    # 调试：检查输出目录是否存在
+    # Make sure the output folder exists
     if not os.path.exists(final_output_dir):
         os.makedirs(final_output_dir, exist_ok=True)
-        print(f"✅ 创建输出目录: {final_output_dir}")
+        print(f"✅ Created output folder: {final_output_dir}")
     
 
     batch_size = cli_config.get('batch_size', 3)
     total_images = len(file_paths_with_configs)
     total_batches = (total_images + batch_size - 1) // batch_size if batch_size > 0 else 1
     
-    print(f"\n📊 批量处理模式：共 {total_images} 张图片，分 {total_batches} 个批次处理")
-    print("📋 保存配置:")
-    print(f"   输出目录: {final_output_dir}")
-    print(f"   输出格式: {output_format or '保持原格式'}")
-    print(f"   覆盖模式: {overwrite}")
-    print(f"   保存质量: {cli_config.get('save_quality', 95)}")
-    print(f"   批量大小: {batch_size} 张/批")
+    print(f"\n📊 Batch mode: {total_images} images in {total_batches} batches")
+    print("📋 Save settings:")
+    print(f"   Output folder: {final_output_dir}")
+    print(f"   Output format: {output_format or 'keep original'}")
+    print(f"   Overwrite: {overwrite}")
+    print(f"   Save quality: {cli_config.get('save_quality', 95)}")
+    print(f"   Batch size: {batch_size} images per batch")
     if verbose and input_folders:
-        print("   输入文件夹:")
+        print("   Input folders:")
         for folder in input_folders:
             print(f"      - {folder}")
     print()
     
     try:
-        print("🚀 开始翻译...")
+        print("🚀 Translating...")
         contexts = await translator.translate_batch(
             file_paths_with_configs,
             save_info=save_info,
@@ -351,41 +347,41 @@ async def translate_files(input_paths, output_dir, config_service, verbose=False
         success_count = 0
         skipped_count = 0
         failed_count = 0
-        print("\n📊 翻译完成，检查结果...\n")
+        print("\n📊 Translation finished, checking results...\n")
         logger.info(f"Received {len(contexts)} translation results")
 
         for ctx in contexts:
             if not ctx:
                 failed_count += 1
-                print("❌ 翻译失败: 未知图片")
+                print("❌ Translation failed: unknown image")
                 continue
 
             image_name = getattr(ctx, 'image_name', '') or ''
-            file_name = os.path.basename(image_name) or '未知图片'
+            file_name = os.path.basename(image_name) or 'unknown image'
             if getattr(ctx, 'skipped', False):
                 skipped_count += 1
-                reason = getattr(ctx, 'skip_message', None) or '后端已跳过该文件'
-                print(f"⏭️  跳过: {file_name} - {reason}")
+                reason = getattr(ctx, 'skip_message', None) or 'The backend skipped this file'
+                print(f"⏭️  Skipped: {file_name} - {reason}")
             elif getattr(ctx, 'translation_error', None):
                 failed_count += 1
-                print(f"❌ 翻译失败: {file_name}")
+                print(f"❌ Translation failed: {file_name}")
                 if verbose:
-                    print(f"   错误: {ctx.translation_error}")
+                    print(f"   Error: {ctx.translation_error}")
             elif getattr(ctx, 'success', False) or getattr(ctx, 'result', None):
                 success_count += 1
                 output_path = getattr(ctx, 'output_path', None)
-                print(f"✅ 完成: {file_name}" + (f" -> {output_path}" if output_path else ""))
+                print(f"✅ Done: {file_name}" + (f" -> {output_path}" if output_path else ""))
             else:
                 failed_count += 1
-                print(f"❌ 翻译失败: {file_name} - 翻译结果为空")
+                print(f"❌ Translation failed: {file_name} - the result is empty")
 
         print(
-            f"\n📊 批量处理完成：成功 {success_count}，"
-            f"跳过 {skipped_count}，失败 {failed_count}。"
+            f"\n📊 Batch finished: {success_count} succeeded, "
+            f"{skipped_count} skipped, {failed_count} failed."
         )
-        print(f"💾 文件已保存到：{final_output_dir}")
+        print(f"💾 Files saved to: {final_output_dir}")
     except Exception as e:
-        print(f"\n❌ 批量翻译错误: {e}")
+        print(f"\n❌ Batch translation error: {e}")
         if verbose:
             import traceback
             traceback.print_exc()
@@ -394,55 +390,55 @@ async def translate_files(input_paths, output_dir, config_service, verbose=False
         failed_count = total_images
 
     print(f"\n{'='*60}")
-    print(f"✅ 成功: {success_count}")
-    print(f"⏭️  跳过: {skipped_count}")
-    print(f"❌ 失败: {failed_count}")
-    print(f"📊 总计: {len(all_files)}")
+    print(f"✅ Succeeded: {success_count}")
+    print(f"⏭️  Skipped: {skipped_count}")
+    print(f"❌ Failed: {failed_count}")
+    print(f"📊 Total: {len(all_files)}")
     print(f"{'='*60}")
     
-    # 检查输出目录
+    # Check the output folder
     if os.path.exists(final_output_dir):
         output_files = [f for f in os.listdir(final_output_dir) if os.path.isfile(os.path.join(final_output_dir, f))]
-        print(f"\n📁 输出目录: {final_output_dir}")
-        print(f"   包含 {len(output_files)} 个文件")
+        print(f"\n📁 Output folder: {final_output_dir}")
+        print(f"   Contains {len(output_files)} files")
         if verbose and output_files:
-            for f in output_files[:10]:  # 只显示前10个
+            for f in output_files[:10]:  # show the first 10 only
                 file_path = os.path.join(final_output_dir, f)
                 file_size = os.path.getsize(file_path) / 1024
                 print(f"   - {f} ({file_size:.1f} KB)")
             if len(output_files) > 10:
-                print(f"   ... 还有 {len(output_files) - 10} 个文件")
+                print(f"   ... and {len(output_files) - 10} more files")
     else:
-        print(f"\n⚠️  输出目录不存在: {final_output_dir}")
+        print(f"\n⚠️  Output folder does not exist: {final_output_dir}")
     print()
 
 
 async def run_local_mode(args):
-    """运行 local 模式的入口函数"""
-    # 延迟导入配置服务
+    """Entry point of local mode."""
+    # Import the settings service late
     from desktop_qt_ui.services.config_service import ConfigService
     from desktop_qt_ui.services.file_service import FileService
     
-    # 初始化配置服务
+    # Create the settings service
     config_service = ConfigService(str(ROOT_DIR))
     
-    # 如果指定了配置文件，加载它
+    # Load the settings file when one is given
     config_path = getattr(args, 'config', None)
     if config_path:
         if not config_service.load_config_file(config_path):
-            print(f"❌ 无法加载配置文件: {config_path}")
+            print(f"❌ Could not load the settings file: {config_path}")
             sys.exit(1)
     
-    # 检查是否使用子进程模式
+    # Is subprocess mode requested?
     use_subprocess = getattr(args, 'subprocess', False)
     verbose = getattr(args, 'verbose', False)
     overwrite = getattr(args, 'overwrite', False)
     
     if use_subprocess:
-        # 子进程模式
-        print("\n🔧 启用子进程模式（支持内存管理）")
+        # Subprocess mode
+        print("\n🔧 Subprocess mode on (with memory management)")
         
-        # 收集文件
+        # Collect the files
         file_service = FileService()
         all_files = []
         input_paths = args.input
@@ -466,12 +462,12 @@ async def run_local_mode(args):
         all_files.extend(individual_files)
         
         if not all_files:
-            print("❌ 未找到图片文件")
+            print("❌ No image files found")
             sys.exit(1)
         
-        print(f"📁 找到 {len(all_files)} 个图片文件")
+        print(f"📁 Found {len(all_files)} image files")
         
-        # 确定输出目录
+        # Decide the output folder
         output_dir = getattr(args, 'output', None)
         if not output_dir:
             config = config_service.get_config()
@@ -486,10 +482,10 @@ async def run_local_mode(args):
         
         output_dir = os.path.abspath(output_dir)
         os.makedirs(output_dir, exist_ok=True)
-        print(f"📤 输出目录: {output_dir}")
+        print(f"📤 Output folder: {output_dir}")
         
 
-        # 导入子进程管理器
+        # Import the subprocess manager
         from .subprocess_manager import translate_with_subprocess
         
         try:
@@ -513,24 +509,24 @@ async def run_local_mode(args):
             )
             
             print(f"\n{'='*60}")
-            print(f"✅ 成功: {success_count}")
-            print(f"⏭️  跳过: {skipped_count}")
-            print(f"❌ 失败: {failed_count}")
-            print(f"📊 总计: {len(all_files)}")
-            print(f"💾 输出目录: {output_dir}")
+            print(f"✅ Succeeded: {success_count}")
+            print(f"⏭️  Skipped: {skipped_count}")
+            print(f"❌ Failed: {failed_count}")
+            print(f"📊 Total: {len(all_files)}")
+            print(f"💾 Output folder: {output_dir}")
             print(f"{'='*60}")
             
         except KeyboardInterrupt:
-            print("\n\n⚠️  用户取消")
+            print("\n\n⚠️  Cancelled by the user")
             sys.exit(0)
         except Exception as e:
-            print(f"\n❌ 错误: {e}")
+            print(f"\n❌ Error: {e}")
             if verbose:
                 import traceback
                 traceback.print_exc()
             sys.exit(1)
     else:
-        # 原有的直接模式
+        # Direct mode
         try:
             await translate_files(
                 args.input,
@@ -541,10 +537,10 @@ async def run_local_mode(args):
                 args=args
             )
         except KeyboardInterrupt:
-            print("\n\n⚠️  用户取消")
+            print("\n\n⚠️  Cancelled by the user")
             sys.exit(0)
         except Exception as e:
-            print(f"\n❌ 错误: {e}")
+            print(f"\n❌ Error: {e}")
             if verbose:
                 import traceback
                 traceback.print_exc()
@@ -552,8 +548,8 @@ async def run_local_mode(args):
 
 
 def main():
-    """主函数（用于直接运行）"""
-    # Windows 下需要这个来支持子进程
+    """Entry point when run directly."""
+    # Needed on Windows for child processes
     multiprocessing.freeze_support()
     
     args = parse_args()
