@@ -51,8 +51,37 @@ class NoBrLayoutResult:
     required_height: float
 
 
+_BR_SEARCH_RE = re.compile(r"\[BR\]|<br>|\u3010BR\u3011", re.IGNORECASE)
+_BR_SPLIT_RE = re.compile(r"\s*(?:\[BR\]|<br>|\u3010BR\u3011)\s*", re.IGNORECASE)
+
+
 def _normalize_no_br_text(text: str, horizontal: bool = False) -> str:
     return re.sub(r"\s*(\[BR\]|<br>|【BR】)\s*", "", text or "", flags=re.IGNORECASE)
+
+
+def _without_breaks_or_spaces(text: str) -> str:
+    return re.sub(r"\s+", "", _normalize_no_br_text(text))
+
+
+def unwrapped_translation(translation: str, stored_unwrapped: str = "", target_lang: str = "") -> str:
+    """Return the translation without the line breaks an earlier layout put into it.
+
+    The text saved before wrapping is exact, so it is used when it still says the
+    same thing as the current translation. If the translation was edited since,
+    the breaks are removed from the current text instead: languages written
+    without spaces are joined directly, others get a space at each break.
+    """
+    if not isinstance(translation, str) or not _BR_SEARCH_RE.search(translation):
+        return translation
+    if (
+        isinstance(stored_unwrapped, str)
+        and stored_unwrapped
+        and not _BR_SEARCH_RE.search(stored_unwrapped)
+        and _without_breaks_or_spaces(stored_unwrapped) == _without_breaks_or_spaces(translation)
+    ):
+        return stored_unwrapped
+    joiner = "" if (_is_thai_lang(target_lang) or _is_cjk_lang(target_lang)) and not _is_korean_lang(target_lang) else " "
+    return _BR_SPLIT_RE.sub(joiner, translation).strip()
 
 
 def _compact_debug_text(text: str, limit: int = 120) -> str:

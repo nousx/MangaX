@@ -39,6 +39,7 @@ from .chinese_linebreak import (
     download_chinese_linebreak_models_if_enabled,
 )
 from .text_replacement_layout import prepare_text_replacements_for_layout, sync_translation_raw_from_layout
+from .auto_linebreak import unwrapped_translation
 from .text_render_eng import apply_manga2eng_line_breaks
 from .rich_text import (
     ensure_rich_text_document,
@@ -1606,10 +1607,20 @@ def _layout_regions_to_font_size(
             render_horizontally = _resolve_region_render_horizontal(region)
             line_spacing_multiplier = _resolve_line_spacing_multiplier(region, config)
             letter_spacing_multiplier = _resolve_letter_spacing_multiplier(region, config)
+            if getattr(config.render, 'recompute_line_breaks', False):
+                # Drop the breaks an earlier layout stored so this layout decides them again.
+                region.translation = unwrapped_translation(
+                    region.translation,
+                    getattr(region, 'translation_unwrapped', ''),
+                    region.target_lang,
+                )
             no_br_source_text = region.translation
             # region.translation 恒为 str（TextBlock._translation 只经
             # _translation_plain_text 写入），无需 isinstance 防御
             has_br = bool(re.search(r'(\[BR\]|【BR】|<br>)', region.translation, flags=re.IGNORECASE))
+            if not has_br:
+                # Keep the text as it is before wrapping, so the breaks can be recomputed later.
+                region.translation_unwrapped = region.translation
 
             line_box_width, line_box_height = region.unrotated_size
             if not (isinstance(line_box_width, (int, float)) and np.isfinite(line_box_width) and line_box_width > 0):

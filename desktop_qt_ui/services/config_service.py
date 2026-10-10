@@ -527,6 +527,7 @@ class ConfigService(QObject):
                     "optimize_line_breaks": False,
                     "semantic_linebreak": False,
                     "remove_linebreak_punctuation": False,
+                    "recompute_line_breaks": False,
                     "check_br_and_retry": False,
                     "strict_smart_scaling": False,
                     "balloon_fill_mask_layout": False,

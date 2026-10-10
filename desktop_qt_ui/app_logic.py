@@ -1299,6 +1299,7 @@ class MainAppLogic(QObject):
                     "optimize_line_breaks": self._t("label_optimize_line_breaks"),
                     "semantic_linebreak": self._t("label_semantic_linebreak"),
                     "remove_linebreak_punctuation": self._t("label_remove_linebreak_punctuation"),
+                    "recompute_line_breaks": self._t("label_recompute_line_breaks"),
                     "check_br_and_retry": self._t("label_check_br_and_retry"),
                     "strict_smart_scaling": self._t("label_strict_smart_scaling"),
                     "balloon_fill_mask_layout": self._t("label_balloon_fill_mask_layout"),

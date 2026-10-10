@@ -114,6 +114,7 @@
     "optimize_line_breaks": false,
     "semantic_linebreak": false,
     "remove_linebreak_punctuation": false,
+    "recompute_line_breaks": false,
     "check_br_and_retry": false,
     "strict_smart_scaling": false,
     "stroke_width": 0.07,

@@ -108,6 +108,7 @@ class TextBlock(object):
                  angle: float = 0,
                  translation: Any = "",
                  translation_raw: str = "",
+                 translation_unwrapped: str = "",
                  translation_rich: Any = None,
                  fg_color: Tuple[float] = (0, 0, 0),
                  bg_color: Tuple[float] = (0, 0, 0),
@@ -186,6 +187,9 @@ class TextBlock(object):
         # 替换前译文(YAML 规则应用前的原始版本)。空时回填 translation,
         # 保证字段永不为空 — 编辑器和导出可放心读取。
         self.translation_raw = translation_raw if isinstance(translation_raw, str) and translation_raw else _translation_plain_text(self.translation)
+        # The translation as it was before automatic line breaking put [BR] into it.
+        # Empty for regions that were never wrapped automatically.
+        self.translation_unwrapped = translation_unwrapped if isinstance(translation_unwrapped, str) else ""
 
         # Handle color from UI (hex string) or backend (RGB tuple)
         font_color_hex = kwargs.get('font_color')
@@ -451,6 +455,7 @@ class TextBlock(object):
             'text': self.text,
             'translation': self.translation,
             'translation_raw': self.translation_raw,
+            'translation_unwrapped': self.translation_unwrapped,
             'angle': self.angle,
             'font_size': self.font_size,  # 保存最终渲染的字体大小
             'fg_colors': fg_out,

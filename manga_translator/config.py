@@ -178,6 +178,8 @@ class RenderConfig(BaseModel):
     semantic_linebreak: bool = False
     """Use local HanLP semantic line breaking for Chinese translations without explicit [BR] markers."""
     remove_linebreak_punctuation: bool = False
+    recompute_line_breaks: bool = False
+    """Ignore line breaks stored by an earlier automatic layout and wrap the text again."""
     """Remove comma/period punctuation immediately before or after line break markers."""
     check_br_and_retry: bool = False
     """Check if translation contains [BR] markers when AI line breaking is enabled (regions≥2). Retry if missing."""
