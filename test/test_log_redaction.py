@@ -563,3 +563,59 @@ class TestOneSetOfRules:
     def test_should_redact_a_short_bare_value_like_a_quoted_one(self, value):
         assert redact_secrets(f"password={value}") == f"password={REDACTED}"
         assert redact_secrets(f'password="{value}"') == f'password="{REDACTED}"'
+
+
+class TestNoTrustInOneParser:
+    """A URL or a name/value pair must be safe however a client or a decoder would read it."""
+
+    @pytest.mark.parametrize("url", [
+        "https://host.example.com\\" + OPAQUE + "/v1/models",
+        "https://host.example.com\\@" + SHORT + "/v1/models",
+        "https:\\\\host.example.com\\" + SHORT,
+        "https://host.example.com/v1\\..\\" + SHORT,
+        "https://host.example.com\t" + SHORT + "/v1/models",
+        "https://host_" + SHORT + ".example.com/v1/models",
+        "https://host.example.com%2F" + SHORT + "/v1/models",
+        "https://" + SHORT + "%40host.example.com/v1/models",
+    ])
+    def test_should_refuse_a_url_that_clients_read_differently(self, url):
+        assert_clean(safe_url_for_log(url))
+
+    @pytest.mark.parametrize("scheme", ["javascript", "data", "file", SHORT, "x" + SHORT[:10]])
+    def test_should_refuse_an_unknown_scheme(self, scheme):
+        assert safe_url_for_log(f"{scheme}://host.example.com/v1/models") == REDACTED
+
+    @pytest.mark.parametrize("scheme", sorted(log_redaction.SAFE_URL_SCHEMES))
+    def test_should_keep_every_known_scheme(self, scheme):
+        assert safe_url_for_log(f"{scheme}://proxy.example.com:8080/v1") == f"{scheme}://proxy.example.com:8080/v1"
+
+    @pytest.mark.parametrize("text", [
+        "proxy user:" + SHORT + "@proxy.example.com:8080 refused",
+        "http_proxy=user:" + SHORT + "@10.0.0.1:3128",
+        "//user:" + SHORT + "@host.example.com/path",
+        "connect user:" + OPAQUE + "@[::1]:8080",
+    ])
+    def test_should_redact_credentials_written_without_a_scheme(self, text):
+        redacted = redact_secrets(text)
+
+        assert_clean(redacted)
+        assert REDACTED + "@" in redacted
+
+    @pytest.mark.parametrize("text", ["at 10:30 see user@example.com", "ratio 16:9 on screen", "a: b"])
+    def test_should_leave_times_and_addresses_alone(self, text):
+        assert redact_secrets(text) == text
+
+    @pytest.mark.parametrize("text", [
+        '{"body": "{\\"api_key\\": \\"' + SHORT + '\\"}"}',
+        '{"body": "{\\"password\\":\\"' + SHORT + '\\"}"}',
+        "api_key\\\\\\\": \\\\\\\"" + SHORT,
+        "api_key%3D" + SHORT + "%26next%3D1",
+        "api_key%22%3A%22" + SHORT + "%22",
+        "password%3A%20" + SHORT,
+        "token%3d" + OPAQUE,
+    ])
+    def test_should_redact_values_in_escaped_or_encoded_text(self, text):
+        redacted = redact_secrets(text)
+
+        assert_clean(redacted)
+        assert REDACTED in redacted

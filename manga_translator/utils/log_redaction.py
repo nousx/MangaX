@@ -33,6 +33,8 @@ SAFE_PATH_SEGMENTS = frozenset({
     "api", "openai", "v1", "v1beta", "v1alpha", "v2", "v3", "chat", "completions", "responses",
     "models", "embeddings", "images", "generations", "edits", "audio", "files", "messages",
 })
+# Schemes whose name is worth keeping; anything else could be made up to carry data.
+SAFE_URL_SCHEMES = frozenset({"http", "https", "ws", "wss", "socks4", "socks4a", "socks5", "socks5h", "ftp"})
 # Google-style method suffix, as in "<model>:generateContent".
 MODEL_METHODS = frozenset({"generatecontent", "streamgeneratecontent", "counttokens", "embedcontent"})
 
@@ -71,8 +73,11 @@ _TOKEN_RE = re.compile(r"[A-Za-z0-9_.-]+")
 _PART_SPLIT_RE = re.compile(r"[_.-]")
 _CAMEL_BOUNDARY_RE = re.compile(r"(?<=[a-z0-9])(?=[A-Z])")
 # After a name: separator then value (name: value, name=value, "name": "value").
+# What may sit between a name, its separator and its value: whitespace, the
+# backslashes of escaped JSON, and URL-encoded spaces and quotes.
+_GAP = r"(?:[\s\\]|%2[027]){0,64}"
 _SEPARATED_VALUE_RE = re.compile(
-    r"(\s{0,64}[\"']?\s{0,64}[:=]\s{0,64})"
+    "(" + _GAP + r"[\"']?" + _GAP + r"(?:[:=]|%3[AaDd])" + _GAP + ")"
     # A quoted value is taken whole, spaces included; a bare one up to the next delimiter.
     r"(?:\"(?P<double>[^\"\r\n]{1,512})|'(?P<single>[^'\r\n]{1,512})|(?P<bare>[^\s\"',;&}]{1,}))"
 )
@@ -84,9 +89,13 @@ _COOKIE_HEADER_RE = re.compile(r"(?i)\b((?:set-)?cookie)(\s{0,64}[\"']?\s{0,64}[
 _SCHEME_TOKEN_RE = re.compile(r"(?i)\b(bearer|basic|digest)\s{1,64}[A-Za-z0-9._~+/=-]{8,}")
 _PREFIX_RES = tuple(re.compile(pattern) for pattern in SECRET_PREFIX_PATTERNS.values())
 _URL_IN_TEXT_RE = re.compile(r"\b[a-zA-Z][a-zA-Z0-9+.-]{1,15}://\S+")
+# "user:password@host" with no scheme in front, as in a proxy setting.
+_BARE_USERINFO_RE = re.compile(r"[^\s/@:\"'=]{1,128}:[^\s@]{1,256}@(?=[A-Za-z0-9\[])")
 # Punctuation that usually closes a sentence or a bracket around a URL.
 _URL_TRAILING_PUNCTUATION = ")]}>\"'.,;"
 _HOST_LABEL_TOKEN_RE = re.compile(r"^[a-z0-9-]{20,}$", re.IGNORECASE)
+_HOST_NAME_RE = re.compile(r"^(?:[A-Za-z0-9-]{1,63}\.){0,10}[A-Za-z0-9-]{1,63}$")
+_IPV6_RE = re.compile(r"^[0-9A-Fa-f:.]{2,45}$")
 # An unnamed credential: a run this long that mixes upper case, lower case and digits.
 _RANDOM_TOKEN_MIN_LENGTH = 24
 # Known secrets shorter than this are not searched for: they would match ordinary text.
@@ -142,6 +151,14 @@ def safe_url_for_log(url) -> str:
         return REDACTED
     if not parts.scheme or not parts.hostname:
         # Not a URL that can be taken apart safely.
+        return REDACTED
+    if parts.scheme.lower() not in SAFE_URL_SCHEMES:
+        return REDACTED
+    if "\\" in text or any(ord(char) < 0x21 or ord(char) == 0x7F for char in text):
+        # HTTP clients treat a backslash as a path separator and drop control
+        # characters; this parser does neither, so its reading cannot be trusted.
+        return REDACTED
+    if not (_HOST_NAME_RE.match(parts.hostname) or (":" in parts.hostname and _IPV6_RE.match(parts.hostname))):
         return REDACTED
     netloc = _safe_host(parts.hostname)
     if port:
@@ -229,6 +246,7 @@ def redact_secrets(text, known_secrets=()) -> str:
             for form in _known_secret_forms(secret):
                 result = result.replace(form, REDACTED)
     result = _URL_IN_TEXT_RE.sub(_redact_url_match, result)
+    result = _BARE_USERINFO_RE.sub(REDACTED + "@", result)
     result = _COOKIE_HEADER_RE.sub(lambda match: f"{match.group(1)}{match.group(2)}{REDACTED}", result)
     result = _SCHEME_TOKEN_RE.sub(lambda match: f"{match.group(1)} {REDACTED}", result)
     for pattern in _PREFIX_RES:
