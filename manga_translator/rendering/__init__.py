@@ -1377,6 +1377,893 @@ def resize_regions_to_font_size(
     return dst_points_list
 
 
+def _layout_region_with_fixed_font(
+    *,
+    anchor_modes,
+    config,
+    dst_points_list,
+    img,
+    region,
+    region_idx,
+    skip_anchor_mode,
+):
+    """Use the font size stored on the region and only work out where its text goes."""
+    anchor_modes[region_idx] = skip_anchor_mode
+    fixed_font_size = region.font_size if region.font_size > 0 else round((img.shape[0] + img.shape[1]) / 200)
+    logger.debug(f"[RESIZE] skip_font_scaling: region {region_idx} uses fixed font size {fixed_font_size}")
+
+    # 直接用固定字体大小计算文本框
+    # 需要考虑 direction 强制覆盖（和 render() 中的判断逻辑一致）
+    actual_horizontal = _resolve_region_render_horizontal(region)
+
+    line_spacing_multiplier = _resolve_line_spacing_multiplier(region, config)
+    letter_spacing_multiplier = _resolve_letter_spacing_multiplier(region, config)
+
+    dst_points = _calc_region_dst_points_for_font(
+        region=region,
+        font_size=fixed_font_size,
+        render_horizontally=actual_horizontal,
+        line_spacing_multiplier=line_spacing_multiplier,
+        letter_spacing_multiplier=letter_spacing_multiplier,
+        config=config,
+        anchor_mode=skip_anchor_mode,
+    )
+
+    if dst_points is None:
+        dst_points = region.min_rect
+
+    region.font_size = fixed_font_size
+    dst_points_list.append(dst_points)
+    return
+
+
+def _layout_rich_text_region(
+    *,
+    config,
+    dst_points_list,
+    layout_candidate_font_size,
+    layout_min_font_size,
+    letter_spacing_multiplier,
+    line_box_height,
+    line_box_width,
+    line_spacing_multiplier,
+    lines_fully_enclosed,
+    mode,
+    normal_anchor_mode,
+    original_img,
+    region,
+    region_bubble_mask,
+    region_idx,
+    render_horizontally,
+):
+    """Fit a rich-text region by shrinking its font; its line structure is never rearranged."""
+    # 富文本文档不可重排：不做断句优化/自动断行（会破坏结构化段落
+    # 与样式边界），但字号自适应必须生效——不再直接使用估算字号。
+    # 解析一次向下传实例，字号二分内不重复解析 dict。
+    rich_render_value = ensure_rich_text_document(_region_render_value(region))
+    # 1) 未旋转外接框内能容纳的最大字号，与估算字号取 min（只收缩）
+    box_fit_font_size = calc_font_from_box(
+        width=float(line_box_width),
+        height=float(line_box_height),
+        text=rich_render_value,
+        is_horizontal=render_horizontally,
+        line_spacing=line_spacing_multiplier,
+        config=config,
+        target_lang=region.target_lang,
+        letter_spacing=letter_spacing_multiplier,
+        stroke_width=_resolve_region_stroke_width(region, config),
+    )
+    layout_font_size = max(
+        min(layout_candidate_font_size, int(box_fit_font_size)),
+        layout_min_font_size,
+    )
+
+    # 2) balloon_fill：继续用气泡蒙版收缩（_calc_region_dst_points_for_font
+    #    内部已支持富文本正文锚定）；区域不完全在蒙版内时保持框收缩结果
+    if mode == 'balloon_fill' and original_img is not None:
+        try:
+            if (
+                region_bubble_mask is not None
+                and np.count_nonzero(region_bubble_mask) > 0
+                and lines_fully_enclosed
+            ):
+                best_font_size, _ = _binary_search_font_for_bubble_mask(
+                    region=region,
+                    start_font_size=layout_font_size,
+                    min_font_size=layout_min_font_size,
+                    render_horizontally=render_horizontally,
+                    line_spacing_multiplier=line_spacing_multiplier,
+                    letter_spacing_multiplier=letter_spacing_multiplier,
+                    config=config,
+                    bubble_mask=region_bubble_mask,
+                    anchor_mode=normal_anchor_mode,
+                )
+                if best_font_size is not None:
+                    layout_font_size = int(best_font_size)
+        except Exception as exc:
+            logger.warning(
+                f"balloon_fill rich-text mask shrink failed for region {region_idx}: {exc}"
+            )
+
+    final_font_size = layout_font_size
+    dst_points = _calc_region_dst_points_for_font(
+        region=region,
+        font_size=final_font_size,
+        render_horizontally=render_horizontally,
+        line_spacing_multiplier=line_spacing_multiplier,
+        letter_spacing_multiplier=letter_spacing_multiplier,
+        config=config,
+        anchor_mode=normal_anchor_mode,
+    )
+    if dst_points is None:
+        dst_points = region.min_rect
+
+    region.font_size = final_font_size
+    dst_points_list.append(dst_points)
+    return
+
+
+def _break_region_lines(
+    *,
+    bubble_layout_rect,
+    config,
+    has_br,
+    layout_box_height,
+    layout_box_width,
+    layout_candidate_font_size,
+    layout_min_font_size,
+    letter_spacing_multiplier,
+    line_box_height,
+    line_box_width,
+    line_spacing_multiplier,
+    lines_fully_enclosed,
+    no_br_source_text,
+    region,
+    region_bubble_mask,
+    region_layout_mode,
+    remove_linebreak_punctuation,
+    render_horizontally,
+):
+    """Decide the line breaks of a region. Returns (layout box width, layout box height, bubble layout rect)."""
+    if has_br:
+        if remove_linebreak_punctuation:
+            region.translation = strip_linebreak_edge_punctuation(region.translation)
+        if config.render.optimize_line_breaks and (region_layout_mode != 'strict' or config.render.disable_auto_wrap):
+            optimized_text, _ = optimize_line_breaks_for_region(
+                region,
+                config,
+                layout_candidate_font_size,
+                float(line_box_width),
+                float(line_box_height),
+            )
+            region.translation = optimized_text
+            if remove_linebreak_punctuation:
+                region.translation = strip_linebreak_edge_punctuation(region.translation)
+    else:
+        mask_layout_active = (
+            region_layout_mode == 'balloon_fill'
+            and _balloon_fill_mask_layout_enabled(config)
+        )
+        mask_layout_applied = False
+        if mask_layout_active and lines_fully_enclosed:
+            _mask_x, _mask_y, layout_width, layout_height = find_largest_inscribed_rect(
+                region_bubble_mask
+            )
+            bubble_layout_rect = (
+                int(_mask_x), int(_mask_y), int(layout_width), int(layout_height)
+            )
+
+            if layout_width > 0 and layout_height > 0:
+                layout_box_width = float(layout_width)
+                layout_box_height = float(layout_height)
+                line_layout_max_font_size = int(
+                    max(layout_candidate_font_size, layout_box_width, layout_box_height, layout_min_font_size)
+                )
+                region.translation = _solve_unified_no_br_layout(
+                    text=no_br_source_text,
+                    render_horizontally=render_horizontally,
+                    target_font_size=layout_candidate_font_size,
+                    bubble_width=layout_box_width,
+                    bubble_height=layout_box_height,
+                    layout_min_font_size=layout_min_font_size,
+                    line_spacing_multiplier=line_spacing_multiplier,
+                    letter_spacing_multiplier=letter_spacing_multiplier,
+                    config=config,
+                    target_lang=region.target_lang,
+                    max_font_size=line_layout_max_font_size,
+                )
+                mask_layout_applied = True
+
+        # No usable bubble rectangle: keep automatic line breaking
+        # against the OCR box, including text outside detected bubbles.
+        if not mask_layout_applied:
+            layout_box_width = float(line_box_width)
+            layout_box_height = float(line_box_height)
+            line_layout_max_font_size = int(
+                max(layout_candidate_font_size, layout_box_width, layout_box_height, layout_min_font_size)
+            )
+
+            region.translation = _solve_unified_no_br_layout(
+                text=region.translation,
+                render_horizontally=render_horizontally,
+                target_font_size=layout_candidate_font_size,
+                bubble_width=layout_box_width,
+                bubble_height=layout_box_height,
+                layout_min_font_size=layout_min_font_size,
+                line_spacing_multiplier=line_spacing_multiplier,
+                letter_spacing_multiplier=letter_spacing_multiplier,
+                config=config,
+                target_lang=region.target_lang,
+                max_font_size=line_layout_max_font_size,
+            )
+    return layout_box_width, layout_box_height, bubble_layout_rect
+
+
+def _layout_region_balloon_fill(
+    *,
+    anchor_modes,
+    box_fit_font_size,
+    bubble_layout_rect,
+    candidate_n,
+    candidate_required_height,
+    candidate_required_width,
+    config,
+    debug_img,
+    dst_points_list,
+    has_br,
+    layout_candidate_font_size,
+    layout_min_font_size,
+    letter_spacing_multiplier,
+    line_box_height,
+    line_box_width,
+    line_spacing_multiplier,
+    lines_fully_enclosed,
+    no_br_source_text,
+    normal_anchor_mode,
+    original_img,
+    original_region_font_size,
+    placed_regions,
+    region,
+    region_bubble_mask,
+    region_idx,
+    render_horizontally,
+    target_font_size,
+):
+    """balloon_fill: fit the text of a region to the speech bubble that encloses it."""
+    semantic_linebreak_debug = (
+        bool(getattr(config.render, 'semantic_linebreak', False))
+        and _is_chinese_lang(getattr(region, 'target_lang', '') or '')
+    )
+    if not semantic_linebreak_debug:
+        logger.debug(f"=== balloon_fill mode activated for region {region_idx} ===")
+        logger.debug(f"OCR box (xywh): {region.xywh}")
+    min_font_size = layout_min_font_size
+
+    if original_img is None:
+        logger.warning("balloon_fill mode requires original_img, fallback to strict layout")
+        fallback_font_size = _resolve_strict_layout_font_size(
+            region=region,
+            config=config,
+            layout_candidate_font_size=layout_candidate_font_size,
+            box_fit_font_size=box_fit_font_size,
+        )
+        fallback_dst_points = _calc_region_dst_points_for_font(
+            region=region,
+            font_size=fallback_font_size,
+            render_horizontally=_resolve_region_render_horizontal(region),
+            line_spacing_multiplier=_resolve_line_spacing_multiplier(region, config),
+            letter_spacing_multiplier=_resolve_letter_spacing_multiplier(region, config),
+            config=config,
+            anchor_mode=normal_anchor_mode,
+        )
+        if fallback_dst_points is None:
+            fallback_dst_points = region.min_rect
+        region.font_size = fallback_font_size
+        dst_points_list.append(fallback_dst_points)
+        return
+
+    try:
+        chosen_dst_points = None
+        chosen_font_size = int(max(target_font_size, layout_min_font_size))
+        overflow_candidate_dst_points = None
+        bubble_w = 0
+        bubble_h = 0
+        line_budget = 0.0
+        search_bubble_width = 0
+        search_bubble_height = 0
+
+        if not lines_fully_enclosed:
+            # 气泡蒙版无效或区域未被气泡完整包裹：降级 strict 布局。
+            chosen_font_size = _resolve_balloon_fill_fallback_font_size(
+                region=region,
+                config=config,
+                layout_candidate_font_size=layout_candidate_font_size,
+                box_fit_font_size=box_fit_font_size,
+                original_region_font_size=original_region_font_size,
+                lines_fully_enclosed=lines_fully_enclosed,
+            )
+            if not semantic_linebreak_debug:
+                logger.debug(f"balloon_fill region {region_idx}: not fully enclosed, fallback to strict")
+        else:
+            if (
+                bool(getattr(config.render, 'semantic_linebreak', False))
+                and _is_chinese_lang(getattr(region, 'target_lang', '') or '')
+                and np.count_nonzero(region_bubble_mask) > 0
+            ):
+                _bubble_x, _bubble_y, bubble_w, bubble_h = find_largest_inscribed_rect(region_bubble_mask)
+                line_budget = float(bubble_w if render_horizontally else bubble_h)
+            if _balloon_fill_mask_layout_enabled(config) and has_br:
+                _bubble_x, _bubble_y, search_bubble_width, search_bubble_height = cv2.boundingRect(
+                    region_bubble_mask
+                )
+                normal_anchor_mode = 'center'
+                anchor_modes[region_idx] = normal_anchor_mode
+
+
+            if has_br:
+                if not semantic_linebreak_debug:
+                    logger.debug(
+                        f"balloon_fill region {region_idx}: keep explicit breaks, "
+                        f"candidate font={layout_candidate_font_size}, "
+                        f"required={candidate_required_width:.1f}x{candidate_required_height:.1f}"
+                    )
+            else:
+                if not semantic_linebreak_debug:
+                    logger.debug(
+                        f"balloon_fill region {region_idx}: unified no_br layout, "
+                        f"result_segments={candidate_n}, font={layout_candidate_font_size}, "
+                        f"required={candidate_required_width:.1f}x{candidate_required_height:.1f}"
+                    )
+
+            preferred_font_size = int(max(layout_candidate_font_size, layout_min_font_size))
+
+            # 调试用途：记录“超出范围候选框”（较大字号候选但不满足蒙版约束）
+            preferred_fits = False
+            preferred_dst_points = _calc_region_dst_points_for_font(
+                region=region,
+                font_size=preferred_font_size,
+                render_horizontally=render_horizontally,
+                line_spacing_multiplier=line_spacing_multiplier,
+                letter_spacing_multiplier=letter_spacing_multiplier,
+                config=config,
+                anchor_mode=normal_anchor_mode,
+            )
+            if preferred_dst_points is not None and preferred_dst_points.size > 0:
+                preferred_fits = _polygon_fully_inside_mask(np.asarray(preferred_dst_points[0]), region_bubble_mask)
+                if not preferred_fits:
+                    overflow_candidate_dst_points = preferred_dst_points
+
+            if (
+                semantic_linebreak_debug
+                and not has_br
+                and bubble_w > 0
+                and bubble_h > 0
+                and line_budget > 0
+            ):
+                single_width, single_height, _, _ = calc_box_from_font(
+                    preferred_font_size,
+                    no_br_source_text,
+                    render_horizontally,
+                    line_spacing_multiplier,
+                    config,
+                    region.target_lang,
+                    center=None,
+                    angle=0,
+                    letter_spacing=letter_spacing_multiplier,
+                    stroke_width=_resolve_region_stroke_width(region, config),
+                )
+                total_budget = float(single_width if render_horizontally else single_height)
+                linebreak_snapshot = build_chinese_linebreak_debug_snapshot(
+                    no_br_source_text,
+                    font_size=preferred_font_size,
+                    target_segments=candidate_n,
+                    total_budget=total_budget,
+                    line_budget=line_budget,
+                    horizontal=render_horizontally,
+                    letter_spacing=letter_spacing_multiplier,
+                )
+
+                original_candidate_text = region.translation
+
+                def evaluate_chinese_candidate(candidate_text: str) -> Optional[BubbleLinebreakEvaluation]:
+                    region.translation = candidate_text
+                    req_w, req_h, req_n, _ = calc_box_from_font(
+                        preferred_font_size,
+                        candidate_text,
+                        render_horizontally,
+                        line_spacing_multiplier,
+                        config,
+                        region.target_lang,
+                        center=None,
+                        angle=0,
+                        letter_spacing=letter_spacing_multiplier,
+                        stroke_width=_resolve_region_stroke_width(region, config),
+                    )
+                    candidate_dst_points = _calc_region_dst_points_for_font(
+                        region=region,
+                        font_size=preferred_font_size,
+                        render_horizontally=render_horizontally,
+                        line_spacing_multiplier=line_spacing_multiplier,
+                        letter_spacing_multiplier=letter_spacing_multiplier,
+                        config=config,
+                        anchor_mode=normal_anchor_mode,
+                    )
+                    if candidate_dst_points is None or candidate_dst_points.size == 0:
+                        return None
+                    return BubbleLinebreakEvaluation(
+                        text_with_br=candidate_text,
+                        required_width=float(req_w),
+                        required_height=float(req_h),
+                        n_segments=int(req_n),
+                        dst_points=candidate_dst_points,
+                        overflow_pixels=bubble_mask_overflow_pixels(candidate_dst_points, region_bubble_mask),
+                    )
+
+                try:
+                    semantic_choice = choose_chinese_bubble_linebreak_with_trace(
+                        source_text=no_br_source_text,
+                        current_text=region.translation,
+                        font_size=preferred_font_size,
+                        target_segments=candidate_n,
+                        total_budget=total_budget,
+                        line_budget=line_budget,
+                        horizontal=render_horizontally,
+                        letter_spacing=letter_spacing_multiplier,
+                        evaluate=evaluate_chinese_candidate,
+                    )
+                finally:
+                    region.translation = original_candidate_text
+
+                if semantic_choice is not None and semantic_choice.selected is not None:
+                    chosen_semantic_candidate = semantic_choice.selected
+                    expected_candidate_n = candidate_n
+                    region.translation = chosen_semantic_candidate.text_with_br
+                    layout_candidate_font_size = preferred_font_size
+                    candidate_required_width = chosen_semantic_candidate.required_width
+                    candidate_required_height = chosen_semantic_candidate.required_height
+                    candidate_n = chosen_semantic_candidate.n_segments
+                    preferred_dst_points = chosen_semantic_candidate.dst_points
+                    preferred_fits = chosen_semantic_candidate.fits
+                    overflow_candidate_dst_points = None if preferred_fits else chosen_semantic_candidate.dst_points
+                    append_chinese_linebreak_debug_record(
+                        config,
+                        {
+                            "stage": "bubble_mask_choice",
+                            "region_index": region_idx,
+                            "input": no_br_source_text,
+                            "current_candidate": original_candidate_text,
+                            "direction": "h" if render_horizontally else "v",
+                            "font_size": preferred_font_size,
+                            "target_segments": expected_candidate_n,
+                            "ocr_box_xywh": np.asarray(region.xywh).tolist() if getattr(region, "xywh", None) is not None else None,
+                            "ocr_box_size": {"width": float(line_box_width), "height": float(line_box_height)},
+                            "bubble_inscribed_rect": {
+                                "width": float(bubble_w),
+                                "height": float(bubble_h),
+                                "line_budget": float(line_budget),
+                            },
+                            "single_line_required": {"width": float(single_width), "height": float(single_height)},
+                            "total_budget": float(total_budget),
+                            "mask": {
+                                "encoding": "png_base64",
+                                "width": int(region_bubble_mask.shape[1]) if region_bubble_mask is not None else 0,
+                                "height": int(region_bubble_mask.shape[0]) if region_bubble_mask is not None else 0,
+                                "nonzero_pixels": int(np.count_nonzero(region_bubble_mask)) if region_bubble_mask is not None else 0,
+                                "data": _encode_mask_png_base64(region_bubble_mask),
+                            },
+                            "linebreak_snapshot": linebreak_snapshot,
+                            "selected": {
+                                "text_with_br": chosen_semantic_candidate.text_with_br,
+                                "segments": int(chosen_semantic_candidate.n_segments),
+                                "required": {
+                                    "width": float(chosen_semantic_candidate.required_width),
+                                    "height": float(chosen_semantic_candidate.required_height),
+                                },
+                                "fits": bool(chosen_semantic_candidate.fits),
+                                "overflow_pixels": int(chosen_semantic_candidate.overflow_pixels),
+                                "dst_points": np.asarray(chosen_semantic_candidate.dst_points).tolist()
+                                if chosen_semantic_candidate.dst_points is not None
+                                else None,
+                            },
+                            "candidate_evaluations": semantic_choice.evaluations,
+                            "candidates": [
+                                {
+                                    "rank": rank,
+                                    "score": list(score),
+                                    "selected": candidate.text_with_br == chosen_semantic_candidate.text_with_br,
+                                    "text_with_br": candidate.text_with_br,
+                                    "segments": int(candidate.n_segments),
+                                    "semantic_penalty": int(score[1]),
+                                    "required": {
+                                        "width": float(candidate.required_width),
+                                        "height": float(candidate.required_height),
+                                    },
+                                    "fits": bool(candidate.fits),
+                                    "overflow_pixels": int(candidate.overflow_pixels),
+                                    "dst_points": np.asarray(candidate.dst_points).tolist()
+                                    if candidate.dst_points is not None
+                                    else None,
+                                }
+                                for rank, (score, candidate) in enumerate(semantic_choice.candidates, start=1)
+                            ],
+                        },
+                    )
+                else:
+                    append_chinese_linebreak_debug_record(
+                        config,
+                        {
+                            "stage": "bubble_mask_choice",
+                            "region_index": region_idx,
+                            "input": no_br_source_text,
+                            "current_candidate": original_candidate_text,
+                            "direction": "h" if render_horizontally else "v",
+                            "font_size": preferred_font_size,
+                            "target_segments": candidate_n,
+                            "ocr_box_xywh": np.asarray(region.xywh).tolist() if getattr(region, "xywh", None) is not None else None,
+                            "bubble_inscribed_rect": {
+                                "width": float(bubble_w),
+                                "height": float(bubble_h),
+                                "line_budget": float(line_budget),
+                            },
+                            "single_line_required": {"width": float(single_width), "height": float(single_height)},
+                            "total_budget": float(total_budget),
+                            "mask": {
+                                "encoding": "png_base64",
+                                "width": int(region_bubble_mask.shape[1]) if region_bubble_mask is not None else 0,
+                                "height": int(region_bubble_mask.shape[0]) if region_bubble_mask is not None else 0,
+                                "nonzero_pixels": int(np.count_nonzero(region_bubble_mask)) if region_bubble_mask is not None else 0,
+                                "data": _encode_mask_png_base64(region_bubble_mask),
+                            },
+                            "linebreak_snapshot": linebreak_snapshot,
+                            "selected": None,
+                            "candidate_evaluations": semantic_choice.evaluations if semantic_choice is not None else [],
+                            "candidates": [],
+                        },
+                    )
+
+            best_font_size, best_dst_points = _binary_search_font_for_bubble_mask(
+                region=region,
+                start_font_size=(
+                    _resolve_balloon_fill_search_font_size(
+                        preferred_font_size=preferred_font_size,
+                        target_font_size=target_font_size,
+                        line_box_width=line_box_width,
+                        line_box_height=line_box_height,
+                        bubble_width=search_bubble_width,
+                        bubble_height=search_bubble_height,
+                    )
+                    if _balloon_fill_mask_layout_enabled(config) and has_br
+                    else preferred_font_size
+                ),
+                min_font_size=min_font_size,
+                render_horizontally=render_horizontally,
+                line_spacing_multiplier=line_spacing_multiplier,
+                letter_spacing_multiplier=letter_spacing_multiplier,
+                config=config,
+                bubble_mask=region_bubble_mask,
+                anchor_mode=normal_anchor_mode,
+            )
+            if best_font_size is not None and best_dst_points is not None:
+                chosen_font_size = int(best_font_size)
+                chosen_dst_points = best_dst_points
+                if not semantic_linebreak_debug:
+                    logger.debug(
+                        f"balloon_fill region {region_idx}: enclosed lines, binary-search font {preferred_font_size}->{chosen_font_size}"
+                    )
+            else:
+                chosen_font_size = int(max(min_font_size, 1))
+                chosen_dst_points = _calc_region_dst_points_for_font(
+                    region=region,
+                    font_size=chosen_font_size,
+                    render_horizontally=render_horizontally,
+                    line_spacing_multiplier=line_spacing_multiplier,
+                    letter_spacing_multiplier=letter_spacing_multiplier,
+                    config=config,
+                    anchor_mode=normal_anchor_mode,
+                )
+                if chosen_dst_points is None:
+                    chosen_font_size = preferred_font_size
+                    chosen_dst_points = preferred_dst_points
+                if not semantic_linebreak_debug:
+                    logger.debug(
+                        f"balloon_fill region {region_idx}: no mask-safe layout found, shrink to font={chosen_font_size}"
+                    )
+
+        if chosen_dst_points is None:
+            chosen_dst_points = region.min_rect
+
+        final_font_size = chosen_font_size
+        final_dst_points = _calc_region_dst_points_for_font(
+            region=region,
+            font_size=final_font_size,
+            render_horizontally=render_horizontally,
+            line_spacing_multiplier=line_spacing_multiplier,
+            letter_spacing_multiplier=letter_spacing_multiplier,
+            config=config,
+            anchor_mode=normal_anchor_mode,
+        )
+        if final_dst_points is None:
+            final_dst_points = chosen_dst_points
+
+        if _balloon_fill_mask_layout_enabled(config) and placed_regions:
+            collision_font_size, collision_dst_points = _shrink_font_for_layout_collisions(
+                region=region,
+                start_font_size=final_font_size,
+                min_font_size=layout_min_font_size,
+                render_horizontally=render_horizontally,
+                line_spacing_multiplier=line_spacing_multiplier,
+                letter_spacing_multiplier=letter_spacing_multiplier,
+                config=config,
+                anchor_mode=normal_anchor_mode,
+                bubble_mask=region_bubble_mask,
+                placed_regions=placed_regions,
+            )
+            if collision_font_size is not None and collision_dst_points is not None:
+                if collision_font_size < final_font_size:
+                    logger.debug(
+                        f"balloon_fill region {region_idx}: collision guard "
+                        f"shrinks font {final_font_size}->{collision_font_size}"
+                    )
+                final_font_size = collision_font_size
+                final_dst_points = collision_dst_points
+
+        region.font_size = final_font_size
+        chosen_dst_points = final_dst_points
+        dst_points_list.append(chosen_dst_points)
+        if _balloon_fill_mask_layout_enabled(config):
+            placed_regions.append((chosen_dst_points, region_bubble_mask))
+
+        if debug_img is not None:
+            ocr_x1, ocr_y1, ocr_w, ocr_h = map(int, region.xywh)
+            cv2.rectangle(debug_img, (ocr_x1, ocr_y1), (ocr_x1 + ocr_w, ocr_y1 + ocr_h), (0, 0, 255), 2)
+            if bubble_layout_rect is not None:
+                bx, by, bw, bh = bubble_layout_rect
+                cv2.rectangle(
+                    debug_img,
+                    (bx, by),
+                    (bx + bw - 1, by + bh - 1),
+                    (255, 0, 255),
+                    2,
+                )
+                cv2.putText(
+                    debug_img,
+                    f"B{region_idx}:MASK {bw}x{bh}",
+                    (bx, max(12, by - 4)),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    0.45,
+                    (255, 0, 255),
+                    1,
+                )
+
+            if np.count_nonzero(region_bubble_mask) > 0:
+                component_contours, _ = cv2.findContours(region_bubble_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+                if component_contours:
+                    cv2.drawContours(debug_img, component_contours, -1, (0, 255, 255), 1)
+
+            if overflow_candidate_dst_points is not None:
+                overflow_poly = np.asarray(overflow_candidate_dst_points).reshape(-1, 2).astype(np.int32)
+                if overflow_poly.shape[0] >= 4:
+                    # BGR 橙色：表示候选框超出蒙版范围，最终被收缩/放弃
+                    cv2.polylines(debug_img, [overflow_poly], True, (0, 165, 255), 2)
+                    cv2.putText(
+                        debug_img,
+                        f'B{region_idx}:OVR',
+                        tuple(overflow_poly[0]),
+                        cv2.FONT_HERSHEY_SIMPLEX,
+                        0.45,
+                        (0, 165, 255),
+                        1,
+                    )
+    except Exception as e:
+        logger.exception(f"Error in balloon_fill layout for region {region_idx}: {e}")
+        dst_points_list.append(region.min_rect)
+        region.font_size = target_font_size
+
+    return
+
+
+def _layout_region_strict(
+    *,
+    box_fit_font_size,
+    config,
+    dst_points_list,
+    layout_candidate_font_size,
+    letter_spacing_multiplier,
+    line_spacing_multiplier,
+    normal_anchor_mode,
+    region,
+    render_horizontally,
+):
+    """strict: keep the text of a region inside its detected box."""
+    # 有 BR 与无 BR 同一规则：最终文本按 OCR 框适配的字号作布局上限。
+    layout_font_size = _resolve_strict_layout_font_size(
+        region=region,
+        config=config,
+        layout_candidate_font_size=layout_candidate_font_size,
+        box_fit_font_size=box_fit_font_size,
+    )
+    final_font_size = layout_font_size
+    dst_points = _calc_region_dst_points_for_font(
+        region=region,
+        font_size=final_font_size,
+        render_horizontally=render_horizontally,
+        line_spacing_multiplier=line_spacing_multiplier,
+        letter_spacing_multiplier=letter_spacing_multiplier,
+        config=config,
+        anchor_mode=normal_anchor_mode,
+    )
+    if dst_points is None:
+        dst_points = region.min_rect
+
+    region.font_size = final_font_size
+    dst_points_list.append(dst_points)
+    return
+
+
+def _layout_region_smart_scaling(
+    *,
+    candidate_n,
+    candidate_required_height,
+    candidate_required_width,
+    config,
+    dst_points_list,
+    has_br,
+    layout_candidate_font_size,
+    layout_min_font_size,
+    letter_spacing_multiplier,
+    line_box_height,
+    line_box_width,
+    line_spacing_multiplier,
+    mode,
+    normal_anchor_mode,
+    region,
+    region_idx,
+    render_horizontally,
+    target_font_size,
+):
+    """smart_scaling: let the box of a region grow when its text does not fit."""
+    # 添加诊断日志
+    logger.debug(f"[SMART_SCALING] Region {region_idx}: mode={mode}, has_br={has_br}")
+
+    try:
+        bubble_width = float(line_box_width)
+        bubble_height = float(line_box_height)
+        required_width = float(candidate_required_width)
+        required_height = float(candidate_required_height)
+        n = max(1, int(candidate_n))
+        target_font_size = int(max(layout_candidate_font_size, layout_min_font_size))
+
+        # Create base polygon for scaling
+        try:
+            unrotated_base_poly = Polygon(region.unrotated_min_rect[0])
+        except Exception as ignored_error:
+            note_ignored_error(ignored_error, "manga_translator/rendering/__init__.py:_layout_regions_to_font_size")
+            unrotated_base_poly = Polygon([(0, 0), (bubble_width, 0), (bubble_width, bubble_height), (0, bubble_height)])
+
+        logger.debug(
+            f"[SMART_SCALING] Region {region_idx}: candidate n={n}, "
+            f"font={target_font_size}, required={required_width:.1f}x{required_height:.1f}"
+        )
+
+        # Check for overflow in either dimension
+        width_overflow = max(0, required_width - bubble_width)
+        height_overflow = max(0, required_height - bubble_height)
+
+        dst_points = region.min_rect
+
+        if width_overflow > 0 or height_overflow > 0:
+            # 独立缩放宽度和高度（单列/单行和多列/多行都使用相同逻辑）
+            width_scale_factor = 1.0
+            height_scale_factor = 1.0
+
+            if width_overflow > 0:
+                width_scale_needed = required_width / bubble_width if bubble_width > 0 else 1.0
+                diff_ratio_w = width_scale_needed - 1.0
+                box_expansion_ratio_w = diff_ratio_w / 2
+                width_scale_factor = 1 + min(box_expansion_ratio_w, 1.0)
+
+            if height_overflow > 0:
+                height_scale_needed = required_height / bubble_height if bubble_height > 0 else 1.0
+                diff_ratio_h = height_scale_needed - 1.0
+                box_expansion_ratio_h = diff_ratio_h / 2
+                height_scale_factor = 1 + min(box_expansion_ratio_h, 1.0)
+
+            try:
+                scaled_unrotated_poly = affinity.scale(unrotated_base_poly, xfact=width_scale_factor, yfact=height_scale_factor, origin='center')
+                scaled_unrotated_points = np.array(scaled_unrotated_poly.exterior.coords[:4])
+                dst_points = rotate_polygons(region.center, scaled_unrotated_points.reshape(1, -1), -region.angle, to_int=False).reshape(-1, 4, 2)
+            except Exception as e:
+                logger.warning(f"Failed to apply independent scaling: {e}")
+
+            # 字体缩放基于最大的溢出维度
+            scale_needed = max(required_width / bubble_width if bubble_width > 0 else 1.0,
+                             required_height / bubble_height if bubble_height > 0 else 1.0)
+            diff_ratio = scale_needed - 1.0
+            font_shrink_ratio = diff_ratio / 2 / (1 + diff_ratio)
+            font_scale_factor = 1 - min(font_shrink_ratio, 0.5)
+            target_font_size = int(target_font_size * font_scale_factor)
+
+            # 用取整后的字体重新算required
+            if render_horizontally:
+                final_total_width = text_render.get_string_width(
+                    target_font_size,
+                    region.translation,
+                    letter_spacing=letter_spacing_multiplier,
+                )
+                final_spacing_y = text_render.calc_horizontal_line_spacing_px(
+                    target_font_size,
+                    line_spacing_multiplier,
+                )
+                required_width = final_total_width / n if n > 0 else final_total_width
+                required_height = n * target_font_size + max(0, n - 1) * final_spacing_y
+            else:
+                required_width, required_height, n, _ = calc_box_from_font(
+                    target_font_size,
+                    region.translation,
+                    False,
+                    line_spacing_multiplier,
+                    config,
+                    region.target_lang,
+                    center=None,
+                    angle=0,
+                    letter_spacing=letter_spacing_multiplier,
+                    stroke_width=_resolve_region_stroke_width(region, config),
+                )
+
+            # 用新的required重新计算框扩大
+            width_scale_factor = required_width / bubble_width if bubble_width > 0 and required_width > bubble_width else 1.0
+            height_scale_factor = required_height / bubble_height if bubble_height > 0 and required_height > bubble_height else 1.0
+
+            try:
+                scaled_unrotated_poly = affinity.scale(unrotated_base_poly, xfact=width_scale_factor, yfact=height_scale_factor, origin='center')
+                scaled_unrotated_points = np.array(scaled_unrotated_poly.exterior.coords[:4])
+                dst_points = rotate_polygons(region.center, scaled_unrotated_points.reshape(1, -1), -region.angle, to_int=False).reshape(-1, 4, 2)
+            except Exception as e:
+                logger.warning(f"Failed to apply final scaling: {e}")
+        else:
+            # No overflow, can enlarge font to fit better
+            if required_width > 0 and required_height > 0:
+                width_scale_factor = bubble_width / required_width
+                height_scale_factor = bubble_height / required_height
+                font_scale_factor = min(width_scale_factor, height_scale_factor)
+                target_font_size = int(target_font_size * font_scale_factor)
+
+            try:
+                unrotated_points = np.array(unrotated_base_poly.exterior.coords[:4])
+                dst_points = rotate_polygons(region.center, unrotated_points.reshape(1, -1), -region.angle, to_int=False).reshape(-1, 4, 2)
+            except Exception as e:
+                logger.warning(f"Failed to use base polygon: {e}")
+
+    except Exception as e:
+        logger.exception(f"Error in smart_scaling layout for region {region_idx}: {e}")
+        # Fallback to a safe state
+        target_font_size = getattr(region, 'layout_base_font_size', target_font_size)
+        dst_points = region.min_rect
+
+    final_font_size = target_font_size
+
+    # 用辅助函数直接计算 dst_points（包含矩形构建和旋转）
+    line_spacing_multiplier = _resolve_line_spacing_multiplier(region, config)
+    letter_spacing_multiplier = _resolve_letter_spacing_multiplier(region, config)
+    dst_points = _calc_region_dst_points_for_font(
+        region=region,
+        font_size=final_font_size,
+        render_horizontally=render_horizontally,
+        line_spacing_multiplier=line_spacing_multiplier,
+        letter_spacing_multiplier=letter_spacing_multiplier,
+        config=config,
+        anchor_mode=normal_anchor_mode,
+    )
+
+    # 如果计算失败，使用原始检测框
+    if dst_points is None:
+        dst_points = region.min_rect
+
+    region.font_size = final_font_size
+    dst_points_list.append(dst_points)
+    return
+
+
 def _layout_regions_to_font_size(
     img: np.ndarray,
     text_regions: List['TextBlock'],
@@ -1536,32 +2423,15 @@ def _layout_regions_to_font_size(
             # skip_font_scaling模式：使用region.font_size作为最终字体，完全跳过排版缩放
             # 编辑器导出时用户设多少字号就渲染多少，不做任何缩放
             if skip_font_scaling:
-                anchor_modes[region_idx] = skip_anchor_mode
-                fixed_font_size = region.font_size if region.font_size > 0 else round((img.shape[0] + img.shape[1]) / 200)
-                logger.debug(f"[RESIZE] skip_font_scaling: region {region_idx} uses fixed font size {fixed_font_size}")
-
-                # 直接用固定字体大小计算文本框
-                # 需要考虑 direction 强制覆盖（和 render() 中的判断逻辑一致）
-                actual_horizontal = _resolve_region_render_horizontal(region)
-
-                line_spacing_multiplier = _resolve_line_spacing_multiplier(region, config)
-                letter_spacing_multiplier = _resolve_letter_spacing_multiplier(region, config)
-
-                dst_points = _calc_region_dst_points_for_font(
-                    region=region,
-                    font_size=fixed_font_size,
-                    render_horizontally=actual_horizontal,
-                    line_spacing_multiplier=line_spacing_multiplier,
-                    letter_spacing_multiplier=letter_spacing_multiplier,
+                _layout_region_with_fixed_font(
+                    anchor_modes=anchor_modes,
                     config=config,
-                    anchor_mode=skip_anchor_mode,
+                    dst_points_list=dst_points_list,
+                    img=img,
+                    region=region,
+                    region_idx=region_idx,
+                    skip_anchor_mode=skip_anchor_mode,
                 )
-
-                if dst_points is None:
-                    dst_points = region.min_rect
-
-                region.font_size = fixed_font_size
-                dst_points_list.append(dst_points)
                 continue
             else:
                 original_region_font_size = region.font_size if region.font_size > 0 else round((img.shape[0] + img.shape[1]) / 200)
@@ -1661,145 +2531,49 @@ def _layout_regions_to_font_size(
                 # and box-fit font rules as an explicitly selected strict mode.
                 region_layout_mode = 'strict'
             if is_rich_text_document(_region_render_value(region)):
-                # 富文本文档不可重排：不做断句优化/自动断行（会破坏结构化段落
-                # 与样式边界），但字号自适应必须生效——不再直接使用估算字号。
-                # 解析一次向下传实例，字号二分内不重复解析 dict。
-                rich_render_value = ensure_rich_text_document(_region_render_value(region))
-                # 1) 未旋转外接框内能容纳的最大字号，与估算字号取 min（只收缩）
-                box_fit_font_size = calc_font_from_box(
-                    width=float(line_box_width),
-                    height=float(line_box_height),
-                    text=rich_render_value,
-                    is_horizontal=render_horizontally,
-                    line_spacing=line_spacing_multiplier,
+                _layout_rich_text_region(
                     config=config,
-                    target_lang=region.target_lang,
-                    letter_spacing=letter_spacing_multiplier,
-                    stroke_width=_resolve_region_stroke_width(region, config),
-                )
-                layout_font_size = max(
-                    min(layout_candidate_font_size, int(box_fit_font_size)),
-                    layout_min_font_size,
-                )
-
-                # 2) balloon_fill：继续用气泡蒙版收缩（_calc_region_dst_points_for_font
-                #    内部已支持富文本正文锚定）；区域不完全在蒙版内时保持框收缩结果
-                if mode == 'balloon_fill' and original_img is not None:
-                    try:
-                        if (
-                            region_bubble_mask is not None
-                            and np.count_nonzero(region_bubble_mask) > 0
-                            and lines_fully_enclosed
-                        ):
-                            best_font_size, _ = _binary_search_font_for_bubble_mask(
-                                region=region,
-                                start_font_size=layout_font_size,
-                                min_font_size=layout_min_font_size,
-                                render_horizontally=render_horizontally,
-                                line_spacing_multiplier=line_spacing_multiplier,
-                                letter_spacing_multiplier=letter_spacing_multiplier,
-                                config=config,
-                                bubble_mask=region_bubble_mask,
-                                anchor_mode=normal_anchor_mode,
-                            )
-                            if best_font_size is not None:
-                                layout_font_size = int(best_font_size)
-                    except Exception as exc:
-                        logger.warning(
-                            f"balloon_fill rich-text mask shrink failed for region {region_idx}: {exc}"
-                        )
-
-                final_font_size = layout_font_size
-                dst_points = _calc_region_dst_points_for_font(
-                    region=region,
-                    font_size=final_font_size,
-                    render_horizontally=render_horizontally,
-                    line_spacing_multiplier=line_spacing_multiplier,
+                    dst_points_list=dst_points_list,
+                    layout_candidate_font_size=layout_candidate_font_size,
+                    layout_min_font_size=layout_min_font_size,
                     letter_spacing_multiplier=letter_spacing_multiplier,
-                    config=config,
-                    anchor_mode=normal_anchor_mode,
+                    line_box_height=line_box_height,
+                    line_box_width=line_box_width,
+                    line_spacing_multiplier=line_spacing_multiplier,
+                    lines_fully_enclosed=lines_fully_enclosed,
+                    mode=mode,
+                    normal_anchor_mode=normal_anchor_mode,
+                    original_img=original_img,
+                    region=region,
+                    region_bubble_mask=region_bubble_mask,
+                    region_idx=region_idx,
+                    render_horizontally=render_horizontally,
                 )
-                if dst_points is None:
-                    dst_points = region.min_rect
-
-                region.font_size = final_font_size
-                dst_points_list.append(dst_points)
                 continue
 
             # 入口 BR 分支：显式 BR 保留；无 BR 统一在此处自动断句。
             # balloon_fill + balloon_fill_mask_layout 使用气泡内接矩形，
             # 不再先按 OCR 框断句、再在后面的 balloon_fill 分支重复断句。
-            if has_br:
-                if remove_linebreak_punctuation:
-                    region.translation = strip_linebreak_edge_punctuation(region.translation)
-                if config.render.optimize_line_breaks and (region_layout_mode != 'strict' or config.render.disable_auto_wrap):
-                    optimized_text, _ = optimize_line_breaks_for_region(
-                        region,
-                        config,
-                        layout_candidate_font_size,
-                        float(line_box_width),
-                        float(line_box_height),
-                    )
-                    region.translation = optimized_text
-                    if remove_linebreak_punctuation:
-                        region.translation = strip_linebreak_edge_punctuation(region.translation)
-            else:
-                mask_layout_active = (
-                    region_layout_mode == 'balloon_fill'
-                    and _balloon_fill_mask_layout_enabled(config)
-                )
-                mask_layout_applied = False
-                if mask_layout_active and lines_fully_enclosed:
-                    _mask_x, _mask_y, layout_width, layout_height = find_largest_inscribed_rect(
-                        region_bubble_mask
-                    )
-                    bubble_layout_rect = (
-                        int(_mask_x), int(_mask_y), int(layout_width), int(layout_height)
-                    )
-
-                    if layout_width > 0 and layout_height > 0:
-                        layout_box_width = float(layout_width)
-                        layout_box_height = float(layout_height)
-                        line_layout_max_font_size = int(
-                            max(layout_candidate_font_size, layout_box_width, layout_box_height, layout_min_font_size)
-                        )
-                        region.translation = _solve_unified_no_br_layout(
-                            text=no_br_source_text,
-                            render_horizontally=render_horizontally,
-                            target_font_size=layout_candidate_font_size,
-                            bubble_width=layout_box_width,
-                            bubble_height=layout_box_height,
-                            layout_min_font_size=layout_min_font_size,
-                            line_spacing_multiplier=line_spacing_multiplier,
-                            letter_spacing_multiplier=letter_spacing_multiplier,
-                            config=config,
-                            target_lang=region.target_lang,
-                            max_font_size=line_layout_max_font_size,
-                        )
-                        mask_layout_applied = True
-
-                # No usable bubble rectangle: keep automatic line breaking
-                # against the OCR box, including text outside detected bubbles.
-                if not mask_layout_applied:
-                    layout_box_width = float(line_box_width)
-                    layout_box_height = float(line_box_height)
-                    line_layout_max_font_size = int(
-                        max(layout_candidate_font_size, layout_box_width, layout_box_height, layout_min_font_size)
-                    )
-
-                    region.translation = _solve_unified_no_br_layout(
-                        text=region.translation,
-                        render_horizontally=render_horizontally,
-                        target_font_size=layout_candidate_font_size,
-                        bubble_width=layout_box_width,
-                        bubble_height=layout_box_height,
-                        layout_min_font_size=layout_min_font_size,
-                        line_spacing_multiplier=line_spacing_multiplier,
-                        letter_spacing_multiplier=letter_spacing_multiplier,
-                        config=config,
-                        target_lang=region.target_lang,
-                        max_font_size=line_layout_max_font_size,
-                    )
+            layout_box_width, layout_box_height, bubble_layout_rect = _break_region_lines(
+                bubble_layout_rect=bubble_layout_rect,
+                config=config,
+                has_br=has_br,
+                layout_box_height=layout_box_height,
+                layout_box_width=layout_box_width,
+                layout_candidate_font_size=layout_candidate_font_size,
+                layout_min_font_size=layout_min_font_size,
+                letter_spacing_multiplier=letter_spacing_multiplier,
+                line_box_height=line_box_height,
+                line_box_width=line_box_width,
+                line_spacing_multiplier=line_spacing_multiplier,
+                lines_fully_enclosed=lines_fully_enclosed,
+                no_br_source_text=no_br_source_text,
+                region=region,
+                region_bubble_mask=region_bubble_mask,
+                region_layout_mode=region_layout_mode,
+                remove_linebreak_punctuation=remove_linebreak_punctuation,
+                render_horizontally=render_horizontally,
+            )
 
 
 
@@ -1834,604 +2608,74 @@ def _layout_regions_to_font_size(
 
             # --- Mode 5: balloon_fill (MUST BE FIRST to override other modes) ---
             if region_layout_mode == 'balloon_fill':
-                semantic_linebreak_debug = (
-                    bool(getattr(config.render, 'semantic_linebreak', False))
-                    and _is_chinese_lang(getattr(region, 'target_lang', '') or '')
+                _layout_region_balloon_fill(
+                    anchor_modes=anchor_modes,
+                    box_fit_font_size=box_fit_font_size,
+                    bubble_layout_rect=bubble_layout_rect,
+                    candidate_n=candidate_n,
+                    candidate_required_height=candidate_required_height,
+                    candidate_required_width=candidate_required_width,
+                    config=config,
+                    debug_img=debug_img,
+                    dst_points_list=dst_points_list,
+                    has_br=has_br,
+                    layout_candidate_font_size=layout_candidate_font_size,
+                    layout_min_font_size=layout_min_font_size,
+                    letter_spacing_multiplier=letter_spacing_multiplier,
+                    line_box_height=line_box_height,
+                    line_box_width=line_box_width,
+                    line_spacing_multiplier=line_spacing_multiplier,
+                    lines_fully_enclosed=lines_fully_enclosed,
+                    no_br_source_text=no_br_source_text,
+                    normal_anchor_mode=normal_anchor_mode,
+                    original_img=original_img,
+                    original_region_font_size=original_region_font_size,
+                    placed_regions=placed_regions,
+                    region=region,
+                    region_bubble_mask=region_bubble_mask,
+                    region_idx=region_idx,
+                    render_horizontally=render_horizontally,
+                    target_font_size=target_font_size,
                 )
-                if not semantic_linebreak_debug:
-                    logger.debug(f"=== balloon_fill mode activated for region {region_idx} ===")
-                    logger.debug(f"OCR box (xywh): {region.xywh}")
-                min_font_size = layout_min_font_size
-
-                if original_img is None:
-                    logger.warning("balloon_fill mode requires original_img, fallback to strict layout")
-                    fallback_font_size = _resolve_strict_layout_font_size(
-                        region=region,
-                        config=config,
-                        layout_candidate_font_size=layout_candidate_font_size,
-                        box_fit_font_size=box_fit_font_size,
-                    )
-                    fallback_dst_points = _calc_region_dst_points_for_font(
-                        region=region,
-                        font_size=fallback_font_size,
-                        render_horizontally=_resolve_region_render_horizontal(region),
-                        line_spacing_multiplier=_resolve_line_spacing_multiplier(region, config),
-                        letter_spacing_multiplier=_resolve_letter_spacing_multiplier(region, config),
-                        config=config,
-                        anchor_mode=normal_anchor_mode,
-                    )
-                    if fallback_dst_points is None:
-                        fallback_dst_points = region.min_rect
-                    region.font_size = fallback_font_size
-                    dst_points_list.append(fallback_dst_points)
-                    continue
-
-                try:
-                    chosen_dst_points = None
-                    chosen_font_size = int(max(target_font_size, layout_min_font_size))
-                    overflow_candidate_dst_points = None
-                    bubble_w = 0
-                    bubble_h = 0
-                    line_budget = 0.0
-                    search_bubble_width = 0
-                    search_bubble_height = 0
-
-                    if not lines_fully_enclosed:
-                        # 气泡蒙版无效或区域未被气泡完整包裹：降级 strict 布局。
-                        chosen_font_size = _resolve_balloon_fill_fallback_font_size(
-                            region=region,
-                            config=config,
-                            layout_candidate_font_size=layout_candidate_font_size,
-                            box_fit_font_size=box_fit_font_size,
-                            original_region_font_size=original_region_font_size,
-                            lines_fully_enclosed=lines_fully_enclosed,
-                        )
-                        if not semantic_linebreak_debug:
-                            logger.debug(f"balloon_fill region {region_idx}: not fully enclosed, fallback to strict")
-                    else:
-                        if (
-                            bool(getattr(config.render, 'semantic_linebreak', False))
-                            and _is_chinese_lang(getattr(region, 'target_lang', '') or '')
-                            and np.count_nonzero(region_bubble_mask) > 0
-                        ):
-                            _bubble_x, _bubble_y, bubble_w, bubble_h = find_largest_inscribed_rect(region_bubble_mask)
-                            line_budget = float(bubble_w if render_horizontally else bubble_h)
-                        if _balloon_fill_mask_layout_enabled(config) and has_br:
-                            _bubble_x, _bubble_y, search_bubble_width, search_bubble_height = cv2.boundingRect(
-                                region_bubble_mask
-                            )
-                            normal_anchor_mode = 'center'
-                            anchor_modes[region_idx] = normal_anchor_mode
-
-
-                        if has_br:
-                            if not semantic_linebreak_debug:
-                                logger.debug(
-                                    f"balloon_fill region {region_idx}: keep explicit breaks, "
-                                    f"candidate font={layout_candidate_font_size}, "
-                                    f"required={candidate_required_width:.1f}x{candidate_required_height:.1f}"
-                                )
-                        else:
-                            if not semantic_linebreak_debug:
-                                logger.debug(
-                                    f"balloon_fill region {region_idx}: unified no_br layout, "
-                                    f"result_segments={candidate_n}, font={layout_candidate_font_size}, "
-                                    f"required={candidate_required_width:.1f}x{candidate_required_height:.1f}"
-                                )
-
-                        preferred_font_size = int(max(layout_candidate_font_size, layout_min_font_size))
-
-                        # 调试用途：记录“超出范围候选框”（较大字号候选但不满足蒙版约束）
-                        preferred_fits = False
-                        preferred_dst_points = _calc_region_dst_points_for_font(
-                            region=region,
-                            font_size=preferred_font_size,
-                            render_horizontally=render_horizontally,
-                            line_spacing_multiplier=line_spacing_multiplier,
-                            letter_spacing_multiplier=letter_spacing_multiplier,
-                            config=config,
-                            anchor_mode=normal_anchor_mode,
-                        )
-                        if preferred_dst_points is not None and preferred_dst_points.size > 0:
-                            preferred_fits = _polygon_fully_inside_mask(np.asarray(preferred_dst_points[0]), region_bubble_mask)
-                            if not preferred_fits:
-                                overflow_candidate_dst_points = preferred_dst_points
-
-                        if (
-                            semantic_linebreak_debug
-                            and not has_br
-                            and bubble_w > 0
-                            and bubble_h > 0
-                            and line_budget > 0
-                        ):
-                            single_width, single_height, _, _ = calc_box_from_font(
-                                preferred_font_size,
-                                no_br_source_text,
-                                render_horizontally,
-                                line_spacing_multiplier,
-                                config,
-                                region.target_lang,
-                                center=None,
-                                angle=0,
-                                letter_spacing=letter_spacing_multiplier,
-                                stroke_width=_resolve_region_stroke_width(region, config),
-                            )
-                            total_budget = float(single_width if render_horizontally else single_height)
-                            linebreak_snapshot = build_chinese_linebreak_debug_snapshot(
-                                no_br_source_text,
-                                font_size=preferred_font_size,
-                                target_segments=candidate_n,
-                                total_budget=total_budget,
-                                line_budget=line_budget,
-                                horizontal=render_horizontally,
-                                letter_spacing=letter_spacing_multiplier,
-                            )
-
-                            original_candidate_text = region.translation
-
-                            def evaluate_chinese_candidate(candidate_text: str) -> Optional[BubbleLinebreakEvaluation]:
-                                region.translation = candidate_text
-                                req_w, req_h, req_n, _ = calc_box_from_font(
-                                    preferred_font_size,
-                                    candidate_text,
-                                    render_horizontally,
-                                    line_spacing_multiplier,
-                                    config,
-                                    region.target_lang,
-                                    center=None,
-                                    angle=0,
-                                    letter_spacing=letter_spacing_multiplier,
-                                    stroke_width=_resolve_region_stroke_width(region, config),
-                                )
-                                candidate_dst_points = _calc_region_dst_points_for_font(
-                                    region=region,
-                                    font_size=preferred_font_size,
-                                    render_horizontally=render_horizontally,
-                                    line_spacing_multiplier=line_spacing_multiplier,
-                                    letter_spacing_multiplier=letter_spacing_multiplier,
-                                    config=config,
-                                    anchor_mode=normal_anchor_mode,
-                                )
-                                if candidate_dst_points is None or candidate_dst_points.size == 0:
-                                    return None
-                                return BubbleLinebreakEvaluation(
-                                    text_with_br=candidate_text,
-                                    required_width=float(req_w),
-                                    required_height=float(req_h),
-                                    n_segments=int(req_n),
-                                    dst_points=candidate_dst_points,
-                                    overflow_pixels=bubble_mask_overflow_pixels(candidate_dst_points, region_bubble_mask),
-                                )
-
-                            try:
-                                semantic_choice = choose_chinese_bubble_linebreak_with_trace(
-                                    source_text=no_br_source_text,
-                                    current_text=region.translation,
-                                    font_size=preferred_font_size,
-                                    target_segments=candidate_n,
-                                    total_budget=total_budget,
-                                    line_budget=line_budget,
-                                    horizontal=render_horizontally,
-                                    letter_spacing=letter_spacing_multiplier,
-                                    evaluate=evaluate_chinese_candidate,
-                                )
-                            finally:
-                                region.translation = original_candidate_text
-
-                            if semantic_choice is not None and semantic_choice.selected is not None:
-                                chosen_semantic_candidate = semantic_choice.selected
-                                expected_candidate_n = candidate_n
-                                region.translation = chosen_semantic_candidate.text_with_br
-                                layout_candidate_font_size = preferred_font_size
-                                candidate_required_width = chosen_semantic_candidate.required_width
-                                candidate_required_height = chosen_semantic_candidate.required_height
-                                candidate_n = chosen_semantic_candidate.n_segments
-                                preferred_dst_points = chosen_semantic_candidate.dst_points
-                                preferred_fits = chosen_semantic_candidate.fits
-                                overflow_candidate_dst_points = None if preferred_fits else chosen_semantic_candidate.dst_points
-                                append_chinese_linebreak_debug_record(
-                                    config,
-                                    {
-                                        "stage": "bubble_mask_choice",
-                                        "region_index": region_idx,
-                                        "input": no_br_source_text,
-                                        "current_candidate": original_candidate_text,
-                                        "direction": "h" if render_horizontally else "v",
-                                        "font_size": preferred_font_size,
-                                        "target_segments": expected_candidate_n,
-                                        "ocr_box_xywh": np.asarray(region.xywh).tolist() if getattr(region, "xywh", None) is not None else None,
-                                        "ocr_box_size": {"width": float(line_box_width), "height": float(line_box_height)},
-                                        "bubble_inscribed_rect": {
-                                            "width": float(bubble_w),
-                                            "height": float(bubble_h),
-                                            "line_budget": float(line_budget),
-                                        },
-                                        "single_line_required": {"width": float(single_width), "height": float(single_height)},
-                                        "total_budget": float(total_budget),
-                                        "mask": {
-                                            "encoding": "png_base64",
-                                            "width": int(region_bubble_mask.shape[1]) if region_bubble_mask is not None else 0,
-                                            "height": int(region_bubble_mask.shape[0]) if region_bubble_mask is not None else 0,
-                                            "nonzero_pixels": int(np.count_nonzero(region_bubble_mask)) if region_bubble_mask is not None else 0,
-                                            "data": _encode_mask_png_base64(region_bubble_mask),
-                                        },
-                                        "linebreak_snapshot": linebreak_snapshot,
-                                        "selected": {
-                                            "text_with_br": chosen_semantic_candidate.text_with_br,
-                                            "segments": int(chosen_semantic_candidate.n_segments),
-                                            "required": {
-                                                "width": float(chosen_semantic_candidate.required_width),
-                                                "height": float(chosen_semantic_candidate.required_height),
-                                            },
-                                            "fits": bool(chosen_semantic_candidate.fits),
-                                            "overflow_pixels": int(chosen_semantic_candidate.overflow_pixels),
-                                            "dst_points": np.asarray(chosen_semantic_candidate.dst_points).tolist()
-                                            if chosen_semantic_candidate.dst_points is not None
-                                            else None,
-                                        },
-                                        "candidate_evaluations": semantic_choice.evaluations,
-                                        "candidates": [
-                                            {
-                                                "rank": rank,
-                                                "score": list(score),
-                                                "selected": candidate.text_with_br == chosen_semantic_candidate.text_with_br,
-                                                "text_with_br": candidate.text_with_br,
-                                                "segments": int(candidate.n_segments),
-                                                "semantic_penalty": int(score[1]),
-                                                "required": {
-                                                    "width": float(candidate.required_width),
-                                                    "height": float(candidate.required_height),
-                                                },
-                                                "fits": bool(candidate.fits),
-                                                "overflow_pixels": int(candidate.overflow_pixels),
-                                                "dst_points": np.asarray(candidate.dst_points).tolist()
-                                                if candidate.dst_points is not None
-                                                else None,
-                                            }
-                                            for rank, (score, candidate) in enumerate(semantic_choice.candidates, start=1)
-                                        ],
-                                    },
-                                )
-                            else:
-                                append_chinese_linebreak_debug_record(
-                                    config,
-                                    {
-                                        "stage": "bubble_mask_choice",
-                                        "region_index": region_idx,
-                                        "input": no_br_source_text,
-                                        "current_candidate": original_candidate_text,
-                                        "direction": "h" if render_horizontally else "v",
-                                        "font_size": preferred_font_size,
-                                        "target_segments": candidate_n,
-                                        "ocr_box_xywh": np.asarray(region.xywh).tolist() if getattr(region, "xywh", None) is not None else None,
-                                        "bubble_inscribed_rect": {
-                                            "width": float(bubble_w),
-                                            "height": float(bubble_h),
-                                            "line_budget": float(line_budget),
-                                        },
-                                        "single_line_required": {"width": float(single_width), "height": float(single_height)},
-                                        "total_budget": float(total_budget),
-                                        "mask": {
-                                            "encoding": "png_base64",
-                                            "width": int(region_bubble_mask.shape[1]) if region_bubble_mask is not None else 0,
-                                            "height": int(region_bubble_mask.shape[0]) if region_bubble_mask is not None else 0,
-                                            "nonzero_pixels": int(np.count_nonzero(region_bubble_mask)) if region_bubble_mask is not None else 0,
-                                            "data": _encode_mask_png_base64(region_bubble_mask),
-                                        },
-                                        "linebreak_snapshot": linebreak_snapshot,
-                                        "selected": None,
-                                        "candidate_evaluations": semantic_choice.evaluations if semantic_choice is not None else [],
-                                        "candidates": [],
-                                    },
-                                )
-
-                        best_font_size, best_dst_points = _binary_search_font_for_bubble_mask(
-                            region=region,
-                            start_font_size=(
-                                _resolve_balloon_fill_search_font_size(
-                                    preferred_font_size=preferred_font_size,
-                                    target_font_size=target_font_size,
-                                    line_box_width=line_box_width,
-                                    line_box_height=line_box_height,
-                                    bubble_width=search_bubble_width,
-                                    bubble_height=search_bubble_height,
-                                )
-                                if _balloon_fill_mask_layout_enabled(config) and has_br
-                                else preferred_font_size
-                            ),
-                            min_font_size=min_font_size,
-                            render_horizontally=render_horizontally,
-                            line_spacing_multiplier=line_spacing_multiplier,
-                            letter_spacing_multiplier=letter_spacing_multiplier,
-                            config=config,
-                            bubble_mask=region_bubble_mask,
-                            anchor_mode=normal_anchor_mode,
-                        )
-                        if best_font_size is not None and best_dst_points is not None:
-                            chosen_font_size = int(best_font_size)
-                            chosen_dst_points = best_dst_points
-                            if not semantic_linebreak_debug:
-                                logger.debug(
-                                    f"balloon_fill region {region_idx}: enclosed lines, binary-search font {preferred_font_size}->{chosen_font_size}"
-                                )
-                        else:
-                            chosen_font_size = int(max(min_font_size, 1))
-                            chosen_dst_points = _calc_region_dst_points_for_font(
-                                region=region,
-                                font_size=chosen_font_size,
-                                render_horizontally=render_horizontally,
-                                line_spacing_multiplier=line_spacing_multiplier,
-                                letter_spacing_multiplier=letter_spacing_multiplier,
-                                config=config,
-                                anchor_mode=normal_anchor_mode,
-                            )
-                            if chosen_dst_points is None:
-                                chosen_font_size = preferred_font_size
-                                chosen_dst_points = preferred_dst_points
-                            if not semantic_linebreak_debug:
-                                logger.debug(
-                                    f"balloon_fill region {region_idx}: no mask-safe layout found, shrink to font={chosen_font_size}"
-                                )
-
-                    if chosen_dst_points is None:
-                        chosen_dst_points = region.min_rect
-
-                    final_font_size = chosen_font_size
-                    final_dst_points = _calc_region_dst_points_for_font(
-                        region=region,
-                        font_size=final_font_size,
-                        render_horizontally=render_horizontally,
-                        line_spacing_multiplier=line_spacing_multiplier,
-                        letter_spacing_multiplier=letter_spacing_multiplier,
-                        config=config,
-                        anchor_mode=normal_anchor_mode,
-                    )
-                    if final_dst_points is None:
-                        final_dst_points = chosen_dst_points
-
-                    if _balloon_fill_mask_layout_enabled(config) and placed_regions:
-                        collision_font_size, collision_dst_points = _shrink_font_for_layout_collisions(
-                            region=region,
-                            start_font_size=final_font_size,
-                            min_font_size=layout_min_font_size,
-                            render_horizontally=render_horizontally,
-                            line_spacing_multiplier=line_spacing_multiplier,
-                            letter_spacing_multiplier=letter_spacing_multiplier,
-                            config=config,
-                            anchor_mode=normal_anchor_mode,
-                            bubble_mask=region_bubble_mask,
-                            placed_regions=placed_regions,
-                        )
-                        if collision_font_size is not None and collision_dst_points is not None:
-                            if collision_font_size < final_font_size:
-                                logger.debug(
-                                    f"balloon_fill region {region_idx}: collision guard "
-                                    f"shrinks font {final_font_size}->{collision_font_size}"
-                                )
-                            final_font_size = collision_font_size
-                            final_dst_points = collision_dst_points
-
-                    region.font_size = final_font_size
-                    chosen_dst_points = final_dst_points
-                    dst_points_list.append(chosen_dst_points)
-                    if _balloon_fill_mask_layout_enabled(config):
-                        placed_regions.append((chosen_dst_points, region_bubble_mask))
-
-                    if debug_img is not None:
-                        ocr_x1, ocr_y1, ocr_w, ocr_h = map(int, region.xywh)
-                        cv2.rectangle(debug_img, (ocr_x1, ocr_y1), (ocr_x1 + ocr_w, ocr_y1 + ocr_h), (0, 0, 255), 2)
-                        if bubble_layout_rect is not None:
-                            bx, by, bw, bh = bubble_layout_rect
-                            cv2.rectangle(
-                                debug_img,
-                                (bx, by),
-                                (bx + bw - 1, by + bh - 1),
-                                (255, 0, 255),
-                                2,
-                            )
-                            cv2.putText(
-                                debug_img,
-                                f"B{region_idx}:MASK {bw}x{bh}",
-                                (bx, max(12, by - 4)),
-                                cv2.FONT_HERSHEY_SIMPLEX,
-                                0.45,
-                                (255, 0, 255),
-                                1,
-                            )
-
-                        if np.count_nonzero(region_bubble_mask) > 0:
-                            component_contours, _ = cv2.findContours(region_bubble_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-                            if component_contours:
-                                cv2.drawContours(debug_img, component_contours, -1, (0, 255, 255), 1)
-
-                        if overflow_candidate_dst_points is not None:
-                            overflow_poly = np.asarray(overflow_candidate_dst_points).reshape(-1, 2).astype(np.int32)
-                            if overflow_poly.shape[0] >= 4:
-                                # BGR 橙色：表示候选框超出蒙版范围，最终被收缩/放弃
-                                cv2.polylines(debug_img, [overflow_poly], True, (0, 165, 255), 2)
-                                cv2.putText(
-                                    debug_img,
-                                    f'B{region_idx}:OVR',
-                                    tuple(overflow_poly[0]),
-                                    cv2.FONT_HERSHEY_SIMPLEX,
-                                    0.45,
-                                    (0, 165, 255),
-                                    1,
-                                )
-                except Exception as e:
-                    logger.exception(f"Error in balloon_fill layout for region {region_idx}: {e}")
-                    dst_points_list.append(region.min_rect)
-                    region.font_size = target_font_size
-
                 continue
 
             # --- Mode: strict ---
             if region_layout_mode == 'strict':
-                # 有 BR 与无 BR 同一规则：最终文本按 OCR 框适配的字号作布局上限。
-                layout_font_size = _resolve_strict_layout_font_size(
-                    region=region,
-                    config=config,
-                    layout_candidate_font_size=layout_candidate_font_size,
+                _layout_region_strict(
                     box_fit_font_size=box_fit_font_size,
-                )
-                final_font_size = layout_font_size
-                dst_points = _calc_region_dst_points_for_font(
-                    region=region,
-                    font_size=final_font_size,
-                    render_horizontally=render_horizontally,
-                    line_spacing_multiplier=line_spacing_multiplier,
-                    letter_spacing_multiplier=letter_spacing_multiplier,
                     config=config,
-                    anchor_mode=normal_anchor_mode,
+                    dst_points_list=dst_points_list,
+                    layout_candidate_font_size=layout_candidate_font_size,
+                    letter_spacing_multiplier=letter_spacing_multiplier,
+                    line_spacing_multiplier=line_spacing_multiplier,
+                    normal_anchor_mode=normal_anchor_mode,
+                    region=region,
+                    render_horizontally=render_horizontally,
                 )
-                if dst_points is None:
-                    dst_points = region.min_rect
-
-                region.font_size = final_font_size
-                dst_points_list.append(dst_points)
                 continue
 
             # --- Mode: smart_scaling ---
             elif mode == 'smart_scaling':
-                # 添加诊断日志
-                logger.debug(f"[SMART_SCALING] Region {region_idx}: mode={mode}, has_br={has_br}")
-
-                try:
-                    bubble_width = float(line_box_width)
-                    bubble_height = float(line_box_height)
-                    required_width = float(candidate_required_width)
-                    required_height = float(candidate_required_height)
-                    n = max(1, int(candidate_n))
-                    target_font_size = int(max(layout_candidate_font_size, layout_min_font_size))
-
-                    # Create base polygon for scaling
-                    try:
-                        unrotated_base_poly = Polygon(region.unrotated_min_rect[0])
-                    except Exception as ignored_error:
-                        note_ignored_error(ignored_error, "manga_translator/rendering/__init__.py:_layout_regions_to_font_size")
-                        unrotated_base_poly = Polygon([(0, 0), (bubble_width, 0), (bubble_width, bubble_height), (0, bubble_height)])
-
-                    logger.debug(
-                        f"[SMART_SCALING] Region {region_idx}: candidate n={n}, "
-                        f"font={target_font_size}, required={required_width:.1f}x{required_height:.1f}"
-                    )
-
-                    # Check for overflow in either dimension
-                    width_overflow = max(0, required_width - bubble_width)
-                    height_overflow = max(0, required_height - bubble_height)
-
-                    dst_points = region.min_rect
-
-                    if width_overflow > 0 or height_overflow > 0:
-                        # 独立缩放宽度和高度（单列/单行和多列/多行都使用相同逻辑）
-                        width_scale_factor = 1.0
-                        height_scale_factor = 1.0
-
-                        if width_overflow > 0:
-                            width_scale_needed = required_width / bubble_width if bubble_width > 0 else 1.0
-                            diff_ratio_w = width_scale_needed - 1.0
-                            box_expansion_ratio_w = diff_ratio_w / 2
-                            width_scale_factor = 1 + min(box_expansion_ratio_w, 1.0)
-
-                        if height_overflow > 0:
-                            height_scale_needed = required_height / bubble_height if bubble_height > 0 else 1.0
-                            diff_ratio_h = height_scale_needed - 1.0
-                            box_expansion_ratio_h = diff_ratio_h / 2
-                            height_scale_factor = 1 + min(box_expansion_ratio_h, 1.0)
-
-                        try:
-                            scaled_unrotated_poly = affinity.scale(unrotated_base_poly, xfact=width_scale_factor, yfact=height_scale_factor, origin='center')
-                            scaled_unrotated_points = np.array(scaled_unrotated_poly.exterior.coords[:4])
-                            dst_points = rotate_polygons(region.center, scaled_unrotated_points.reshape(1, -1), -region.angle, to_int=False).reshape(-1, 4, 2)
-                        except Exception as e:
-                            logger.warning(f"Failed to apply independent scaling: {e}")
-
-                        # 字体缩放基于最大的溢出维度
-                        scale_needed = max(required_width / bubble_width if bubble_width > 0 else 1.0,
-                                         required_height / bubble_height if bubble_height > 0 else 1.0)
-                        diff_ratio = scale_needed - 1.0
-                        font_shrink_ratio = diff_ratio / 2 / (1 + diff_ratio)
-                        font_scale_factor = 1 - min(font_shrink_ratio, 0.5)
-                        target_font_size = int(target_font_size * font_scale_factor)
-
-                        # 用取整后的字体重新算required
-                        if render_horizontally:
-                            final_total_width = text_render.get_string_width(
-                                target_font_size,
-                                region.translation,
-                                letter_spacing=letter_spacing_multiplier,
-                            )
-                            final_spacing_y = text_render.calc_horizontal_line_spacing_px(
-                                target_font_size,
-                                line_spacing_multiplier,
-                            )
-                            required_width = final_total_width / n if n > 0 else final_total_width
-                            required_height = n * target_font_size + max(0, n - 1) * final_spacing_y
-                        else:
-                            required_width, required_height, n, _ = calc_box_from_font(
-                                target_font_size,
-                                region.translation,
-                                False,
-                                line_spacing_multiplier,
-                                config,
-                                region.target_lang,
-                                center=None,
-                                angle=0,
-                                letter_spacing=letter_spacing_multiplier,
-                                stroke_width=_resolve_region_stroke_width(region, config),
-                            )
-
-                        # 用新的required重新计算框扩大
-                        width_scale_factor = required_width / bubble_width if bubble_width > 0 and required_width > bubble_width else 1.0
-                        height_scale_factor = required_height / bubble_height if bubble_height > 0 and required_height > bubble_height else 1.0
-
-                        try:
-                            scaled_unrotated_poly = affinity.scale(unrotated_base_poly, xfact=width_scale_factor, yfact=height_scale_factor, origin='center')
-                            scaled_unrotated_points = np.array(scaled_unrotated_poly.exterior.coords[:4])
-                            dst_points = rotate_polygons(region.center, scaled_unrotated_points.reshape(1, -1), -region.angle, to_int=False).reshape(-1, 4, 2)
-                        except Exception as e:
-                            logger.warning(f"Failed to apply final scaling: {e}")
-                    else:
-                        # No overflow, can enlarge font to fit better
-                        if required_width > 0 and required_height > 0:
-                            width_scale_factor = bubble_width / required_width
-                            height_scale_factor = bubble_height / required_height
-                            font_scale_factor = min(width_scale_factor, height_scale_factor)
-                            target_font_size = int(target_font_size * font_scale_factor)
-
-                        try:
-                            unrotated_points = np.array(unrotated_base_poly.exterior.coords[:4])
-                            dst_points = rotate_polygons(region.center, unrotated_points.reshape(1, -1), -region.angle, to_int=False).reshape(-1, 4, 2)
-                        except Exception as e:
-                            logger.warning(f"Failed to use base polygon: {e}")
-
-                except Exception as e:
-                    logger.exception(f"Error in smart_scaling layout for region {region_idx}: {e}")
-                    # Fallback to a safe state
-                    target_font_size = getattr(region, 'layout_base_font_size', target_font_size)
-                    dst_points = region.min_rect
-
-                final_font_size = target_font_size
-
-                # 用辅助函数直接计算 dst_points（包含矩形构建和旋转）
-                line_spacing_multiplier = _resolve_line_spacing_multiplier(region, config)
-                letter_spacing_multiplier = _resolve_letter_spacing_multiplier(region, config)
-                dst_points = _calc_region_dst_points_for_font(
-                    region=region,
-                    font_size=final_font_size,
-                    render_horizontally=render_horizontally,
-                    line_spacing_multiplier=line_spacing_multiplier,
-                    letter_spacing_multiplier=letter_spacing_multiplier,
+                _layout_region_smart_scaling(
+                    candidate_n=candidate_n,
+                    candidate_required_height=candidate_required_height,
+                    candidate_required_width=candidate_required_width,
                     config=config,
-                    anchor_mode=normal_anchor_mode,
+                    dst_points_list=dst_points_list,
+                    has_br=has_br,
+                    layout_candidate_font_size=layout_candidate_font_size,
+                    layout_min_font_size=layout_min_font_size,
+                    letter_spacing_multiplier=letter_spacing_multiplier,
+                    line_box_height=line_box_height,
+                    line_box_width=line_box_width,
+                    line_spacing_multiplier=line_spacing_multiplier,
+                    mode=mode,
+                    normal_anchor_mode=normal_anchor_mode,
+                    region=region,
+                    region_idx=region_idx,
+                    render_horizontally=render_horizontally,
+                    target_font_size=target_font_size,
                 )
-
-                # 如果计算失败，使用原始检测框
-                if dst_points is None:
-                    dst_points = region.min_rect
-
-                region.font_size = final_font_size
-                dst_points_list.append(dst_points)
                 continue
 
             # --- Unsupported layout modes ---
