@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from PIL import Image
+from manga_translator.utils.swallowed import note_ignored_error
 
 
 def pil_image_has_alpha(image: Image.Image) -> bool:
@@ -10,7 +11,8 @@ def pil_image_has_alpha(image: Image.Image) -> bool:
 
     try:
         return any(band.upper() == "A" for band in image.getbands())
-    except Exception:
+    except Exception as ignored_error:
+        note_ignored_error(ignored_error, "manga_translator/utils/image_modes.py:pil_image_has_alpha")
         return image.mode in {"RGBA", "LA"}
 
 

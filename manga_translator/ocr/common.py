@@ -15,6 +15,7 @@ from ..utils import (
     TextBlock,
     calc_bbox_mask_overlap_ratio,
 )
+from manga_translator.utils.swallowed import note_ignored_error
 
 
 class CommonOCR(InfererModule):
@@ -147,7 +148,8 @@ class OfflineOCR(CommonOCR, ModelWrapper):
         for obj in objects:
             try:
                 del obj
-            except Exception:
+            except Exception as ignored_error:
+                note_ignored_error(ignored_error, "manga_translator/ocr/common.py:OfflineOCR._cleanup_ocr_memory")
                 pass
         
         # 如果使用 GPU 或强制清理，清理 GPU 显存
@@ -156,7 +158,8 @@ class OfflineOCR(CommonOCR, ModelWrapper):
                 import torch
                 if torch.cuda.is_available():
                     pass
-            except Exception:
+            except Exception as ignored_error:
+                note_ignored_error(ignored_error, "manga_translator/ocr/common.py:OfflineOCR._cleanup_ocr_memory")
                 pass
         
         # 轻量级垃圾回收（不强制完整 GC，避免性能影响）
@@ -189,7 +192,8 @@ class OfflineOCR(CommonOCR, ModelWrapper):
                 elif isinstance(data, dict):
                     data.clear()
                 del data
-            except Exception:
+            except Exception as ignored_error:
+                note_ignored_error(ignored_error, "manga_translator/ocr/common.py:OfflineOCR._cleanup_batch_data")
                 pass
         
         # GPU 清理
@@ -198,7 +202,8 @@ class OfflineOCR(CommonOCR, ModelWrapper):
                 import torch
                 if torch.cuda.is_available():
                     pass
-            except Exception:
+            except Exception as ignored_error:
+                note_ignored_error(ignored_error, "manga_translator/ocr/common.py:OfflineOCR._cleanup_batch_data")
                 pass
 
     def _get_ocr_canvas_width(self, valid_widths: List[int], base_align: int = 4, extra_pad: int = 0) -> int:

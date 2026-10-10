@@ -31,6 +31,7 @@ from ..image_formats import SUPPORTED_IMAGE_EXTENSIONS
 from .generic import Context, dump_image, imwrite_unicode, open_pil_image, save_pil_image
 from .path_manager import TRANSLATED_IMAGES_SUBDIR, get_work_dir
 from .textblock import TextBlock
+from manga_translator.utils.swallowed import note_ignored_error
 
 logger = logging.getLogger(__name__)
 
@@ -684,12 +685,14 @@ async def translate_batch_replace_translation(translator, images_with_configs: L
             if translated_image is not None and hasattr(translated_image, 'close'):
                 try:
                     translated_image.close()
-                except Exception:
+                except Exception as ignored_error:
+                    note_ignored_error(ignored_error, "manga_translator/utils/replace_translation.py:translate_batch_replace_translation")
                     pass
             if loaded_source_image and hasattr(image, 'close'):
                 try:
                     image.close()
-                except Exception:
+                except Exception as ignored_error:
+                    note_ignored_error(ignored_error, "manga_translator/utils/replace_translation.py:translate_batch_replace_translation")
                     pass
     
     logger.info(f"Replace translation completed: {len(results)} images processed")

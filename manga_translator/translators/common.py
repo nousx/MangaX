@@ -30,13 +30,15 @@ from ..utils.retry import (
     summarize_response_text,
 )
 from ..utils.system_proxy import system_proxy_request_kwargs
+from manga_translator.utils.swallowed import note_ignored_error
 
 _http_logger = get_logger('translator')
 
 
 try:
     import readline
-except Exception:
+except Exception as ignored_error:
+    note_ignored_error(ignored_error, "manga_translator/translators/common.py:<module>")
     readline = None
 
 VALID_LANGUAGES = {
@@ -141,7 +143,8 @@ def _extract_http_error_details(response) -> str:
     )
     try:
         payload = response.json()
-    except Exception:
+    except Exception as ignored_error:
+        note_ignored_error(ignored_error, "manga_translator/translators/common.py:_extract_http_error_details")
         return raw_text
 
     if not isinstance(payload, dict):
@@ -171,13 +174,15 @@ def _extract_http_error_details(response) -> str:
         if data_value not in (None, "", [], {}):
             try:
                 data_text = json.dumps(data_value, ensure_ascii=False)
-            except Exception:
+            except Exception as ignored_error:
+                note_ignored_error(ignored_error, "manga_translator/translators/common.py:_extract_http_error_details")
                 data_text = str(data_value)
             details.append(f"data={summarize_response_text(data_text, limit=400)}")
 
     try:
         raw_json = json.dumps(payload, ensure_ascii=False)
-    except Exception:
+    except Exception as ignored_error:
+        note_ignored_error(ignored_error, "manga_translator/translators/common.py:_extract_http_error_details")
         raw_json = raw_text
 
     if details:
@@ -191,7 +196,8 @@ def _response_diagnostics(response, *, limit: int = 1200) -> str:
     content_type = ""
     try:
         content_type = headers.get("content-type", "") or headers.get("Content-Type", "")
-    except Exception:
+    except Exception as ignored_error:
+        note_ignored_error(ignored_error, "manga_translator/translators/common.py:_response_diagnostics")
         content_type = ""
     status_code = getattr(response, "status_code", "unknown")
     raw_text = summarize_response_text(
@@ -344,7 +350,8 @@ class AsyncOpenAICurlCffi:
                             break
                         try:
                             chunk_data = json.loads(payload)
-                        except Exception:
+                        except Exception as ignored_error:
+                            note_ignored_error(ignored_error, "manga_translator/translators/common.py:AsyncOpenAICurlCffi.ChatCompletions._create_stream._gen")
                             continue
                         yield _OpenAIStreamChunk(chunk_data)
 
@@ -712,7 +719,8 @@ class AsyncGeminiCurlCffi:
                     error_data = response.json()
                     if "error" in error_data:
                         error_msg = f"{error_msg}: {error_data['error'].get('message', '')}"
-                except Exception:
+                except Exception as ignored_error:
+                    note_ignored_error(ignored_error, "manga_translator/translators/common.py:AsyncGeminiCurlCffi.Models.generate_content")
                     error_msg = (
                         f"{error_msg}: "
                         f"{summarize_response_text(response.text, empty_placeholder='(empty response)')}"
@@ -776,7 +784,8 @@ class AsyncGeminiCurlCffi:
                         payload = line[5:].strip()
                         try:
                             chunk_data = json.loads(payload)
-                        except Exception:
+                        except Exception as ignored_error:
+                            note_ignored_error(ignored_error, "manga_translator/translators/common.py:AsyncGeminiCurlCffi.Models._generate_content_stream._gen")
                             continue
                         yield _GeminiResponse(chunk_data)
 
@@ -811,7 +820,8 @@ class AsyncGeminiCurlCffi:
                     error_data = response.json()
                     if "error" in error_data:
                         error_msg = f"{error_msg}: {error_data['error'].get('message', '')}"
-                except Exception:
+                except Exception as ignored_error:
+                    note_ignored_error(ignored_error, "manga_translator/translators/common.py:AsyncGeminiCurlCffi.Models.list")
                     error_msg = f"{error_msg}: {summarize_response_text(response.text)}"
                 raise Exception(error_msg)
 
@@ -1026,7 +1036,8 @@ def _normalize_gemini_enum(value: Any) -> Optional[str]:
     if hasattr(value, 'name'):
         try:
             return str(value.name)
-        except Exception:
+        except Exception as ignored_error:
+            note_ignored_error(ignored_error, "manga_translator/translators/common.py:_normalize_gemini_enum")
             pass
     text = str(value)
     if '.' in text:
@@ -1057,7 +1068,8 @@ def extract_gemini_response_diagnostics(response: Any, fallback_finish_reason: A
     if candidates:
         try:
             candidate = candidates[0]
-        except Exception:
+        except Exception as ignored_error:
+            note_ignored_error(ignored_error, "manga_translator/translators/common.py:extract_gemini_response_diagnostics")
             candidate = None
 
     prompt_feedback = _get_gemini_field(response, 'prompt_feedback', 'promptFeedback')
@@ -2525,7 +2537,8 @@ class CommonTranslator(InfererModule):
     ) -> None:
         try:
             parsed = json.loads(obj_text)
-        except Exception:
+        except Exception as ignored_error:
+            note_ignored_error(ignored_error, "manga_translator/translators/common.py:CommonTranslator._process_stream_preview_object")
             return
 
         if not isinstance(parsed, dict):
@@ -2535,7 +2548,8 @@ class CommonTranslator(InfererModule):
         if "id" in parsed and "translation" in parsed:
             try:
                 translation_items.append((int(parsed["id"]), str(parsed["translation"])))
-            except Exception:
+            except Exception as ignored_error:
+                note_ignored_error(ignored_error, "manga_translator/translators/common.py:CommonTranslator._process_stream_preview_object")
                 pass
 
         trans_list = parsed.get("translations")
@@ -2556,7 +2570,8 @@ class CommonTranslator(InfererModule):
                         continue
                     try:
                         translation_items.append((int(item["id"]), str(text)))
-                    except Exception:
+                    except Exception as ignored_error:
+                        note_ignored_error(ignored_error, "manga_translator/translators/common.py:CommonTranslator._process_stream_preview_object")
                         continue
             else:
                 for idx, text in enumerate(trans_list, start=1):
@@ -2617,7 +2632,8 @@ class CommonTranslator(InfererModule):
             try:
                 sys.stdout.write("\r" + line + (" " * pad) + "\n")
                 sys.stdout.flush()
-            except Exception:
+            except Exception as ignored_error:
+                note_ignored_error(ignored_error, "manga_translator/translators/common.py:CommonTranslator._update_stream_inline")
                 self._emit_stream_lines(prefix, line_text)
             self._stream_inline_last_len = 0
 
@@ -2627,7 +2643,8 @@ class CommonTranslator(InfererModule):
             return
         try:
             term_width = shutil.get_terminal_size(fallback=(120, 24)).columns
-        except Exception:
+        except Exception as ignored_error:
+            note_ignored_error(ignored_error, "manga_translator/translators/common.py:CommonTranslator._update_stream_inline")
             term_width = 120
         # 预留少量边距，避免贴边抖动
         available = max(20, term_width - len(prefix) - 2)
@@ -2638,7 +2655,8 @@ class CommonTranslator(InfererModule):
             sys.stdout.write("\r" + line + (" " * pad))
             sys.stdout.flush()
             self._stream_inline_last_len = len(line)
-        except Exception:
+        except Exception as ignored_error:
+            note_ignored_error(ignored_error, "manga_translator/translators/common.py:CommonTranslator._update_stream_inline")
             # 终端不可写时退回普通日志
             self._emit_stream_lines(prefix, tail)
 
@@ -2648,7 +2666,8 @@ class CommonTranslator(InfererModule):
             try:
                 sys.stdout.write("\n")
                 sys.stdout.flush()
-            except Exception:
+            except Exception as ignored_error:
+                note_ignored_error(ignored_error, "manga_translator/translators/common.py:CommonTranslator._finish_stream_inline")
                 pass
             self._stream_inline_last_len = 0
             self._stream_inline_buffer = ""
@@ -3009,12 +3028,14 @@ def extract_json_payload_from_mixed_text(text: str) -> Tuple[str, bool]:
         try:
             json.loads(candidate)
             return True
-        except Exception:
+        except Exception as ignored_error:
+            note_ignored_error(ignored_error, "manga_translator/translators/common.py:extract_json_payload_from_mixed_text._is_json_parseable")
             try:
                 import json5
                 json5.loads(candidate)
                 return True
-            except Exception:
+            except Exception as ignored_error:
+                note_ignored_error(ignored_error, "manga_translator/translators/common.py:extract_json_payload_from_mixed_text._is_json_parseable")
                 return False
 
     candidates: List[str] = []
@@ -3190,7 +3211,8 @@ def parse_hq_response(result_text: str) -> Tuple[List[str], List[Dict[str, Any]]
                 import json5
                 parsed = json5.loads(candidate_text)
                 logger.info("Using json5 for parsing")
-            except (ImportError, Exception):
+            except (ImportError, Exception) as ignored_error:
+                note_ignored_error(ignored_error, "manga_translator/translators/common.py:parse_hq_response._parse_candidate")
                 parsed = None
         if parsed is None:
             return None
@@ -3225,7 +3247,8 @@ def parse_hq_response(result_text: str) -> Tuple[List[str], List[Dict[str, Any]]
                     else:
                         out_trans = [str(x) for x in parsed]
             return out_trans, out_terms
-        except Exception:
+        except Exception as ignored_error:
+            note_ignored_error(ignored_error, "manga_translator/translators/common.py:parse_hq_response._parse_candidate")
             return None
 
     # 优先选择“翻译条目数最多”的候选；同分时选术语更多

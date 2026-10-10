@@ -33,6 +33,7 @@ from .prompt_loader import (
     ensure_ai_ocr_prompt_file,
     load_ai_ocr_prompt_file,
 )
+from manga_translator.utils.swallowed import note_ignored_error
 
 OPENAI_BROWSER_HEADERS = OPENAI_CURL_HEADERS
 GEMINI_BROWSER_HEADERS = GEMINI_CURL_HEADERS
@@ -84,7 +85,8 @@ class BaseAPIOCR(OfflineOCR):
         if not is_web_server:
             try:
                 load_app_dotenv(override=True)
-            except Exception:
+            except Exception as ignored_error:
+                note_ignored_error(ignored_error, "manga_translator/ocr/model_api_ocr.py:BaseAPIOCR.__init__")
                 pass
 
     async def _load(self, device: str):
@@ -108,7 +110,8 @@ class BaseAPIOCR(OfflineOCR):
     def _read_runtime_config(self, runtime_config=None):
         try:
             load_app_dotenv(override=True)
-        except Exception:
+        except Exception as ignored_error:
+            note_ignored_error(ignored_error, "manga_translator/ocr/model_api_ocr.py:BaseAPIOCR._read_runtime_config")
             pass
 
         return resolve_runtime_api_config(

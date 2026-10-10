@@ -20,6 +20,7 @@ from .common import (
     validate_openai_response,
 )
 from .keys import OPENAI_API_KEY
+from manga_translator.utils.swallowed import note_ignored_error
 
 # 浏览器身份由 curl_cffi 的 impersonate 配置生成；这里只保留业务请求头。
 BROWSER_HEADERS = OPENAI_CURL_HEADERS
@@ -139,7 +140,8 @@ class OpenAITranslator(CommonTranslator):
             return
         try:
             await self.client.close()
-        except Exception:
+        except Exception as ignored_error:
+            note_ignored_error(ignored_error, "manga_translator/translators/openai.py:OpenAITranslator._close_current_client")
             pass
         finally:
             self.client = None
@@ -219,7 +221,8 @@ class OpenAITranslator(CommonTranslator):
         if self.client:
             try:
                 await self.client.close()
-            except Exception:
+            except Exception as ignored_error:
+                note_ignored_error(ignored_error, "manga_translator/translators/openai.py:OpenAITranslator._cleanup")
                 pass  # 忽略清理时的错误
 
     async def _abort_inflight_request(self):
@@ -241,7 +244,8 @@ class OpenAITranslator(CommonTranslator):
                 if not loop.is_running() and not loop.is_closed():
                     # 如果事件循环未关闭，同步执行清理
                     loop.run_until_complete(self._cleanup())
-            except Exception:
+            except Exception as ignored_error:
+                note_ignored_error(ignored_error, "manga_translator/translators/openai.py:OpenAITranslator.__del__")
                 pass  # 忽略所有清理错误
 
     def _build_user_prompt(self, texts: List[str], ctx: Any, retry_attempt: int = 0, retry_reason: str = "") -> str:

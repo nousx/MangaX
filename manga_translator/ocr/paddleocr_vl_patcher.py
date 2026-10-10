@@ -7,6 +7,7 @@ PaddleOCR-VL 模型文件自动修补工具
 import os
 import sys
 from pathlib import Path
+from manga_translator.utils.swallowed import note_ignored_error
 
 
 _PADDLEOCR_VL_KWARGS_DOCS = """    min_pixels (`int`, *optional*, defaults to 147456):
@@ -21,7 +22,8 @@ def patch_transformers_paddleocr_vl_docs(module_file: str | None = None) -> bool
     if module_file is None:
         try:
             import transformers
-        except Exception:
+        except Exception as ignored_error:
+            note_ignored_error(ignored_error, "manga_translator/ocr/paddleocr_vl_patcher.py:patch_transformers_paddleocr_vl_docs")
             return False
         module_file = str(
             Path(transformers.__file__).resolve().parent
@@ -221,7 +223,8 @@ def register_ernie_modules(model_path: str):
         sys.path.insert(0, model_path)
         try:
             __import__('__init__')
-        except Exception:
+        except Exception as ignored_error:
+            note_ignored_error(ignored_error, "manga_translator/ocr/paddleocr_vl_patcher.py:register_ernie_modules")
             pass
         finally:
             if model_path in sys.path:

@@ -5,6 +5,7 @@ from typing import Any, Callable, List, Optional
 from ..config import Config
 from ..utils import TextBlock, get_logger
 from .rich_text import is_rich_text_document
+from manga_translator.utils.swallowed import note_ignored_error
 
 logger = get_logger('render')
 
@@ -148,7 +149,8 @@ def sync_translation_raw_from_layout(
             )
             try:
                 delattr(region, '_replacement_layout_record')
-            except Exception:
+            except Exception as ignored_error:
+                note_ignored_error(ignored_error, "manga_translator/rendering/text_replacement_layout.py:sync_translation_raw_from_layout")
                 pass
 
         if not skip_text_replacements:

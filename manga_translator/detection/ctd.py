@@ -14,6 +14,7 @@ from .ctd_utils.textmask import refine_mask
 from .ctd_utils.utils.db_utils import SegDetectorRepresenter
 from .ctd_utils.utils.imgproc_utils import letterbox
 from .ctd_utils.utils.yolov5_utils import non_max_suppression
+from manga_translator.utils.swallowed import note_ignored_error
 
 
 def preprocess_img(img, input_size=(1024, 1024), device='cpu', bgr2rgb=True, half=False, to_tensor=True):
@@ -208,7 +209,8 @@ class ComicTextDetector(OfflineDetector):
                 import torch
                 if torch.cuda.is_available():
                     pass
-            except Exception:
+            except Exception as ignored_error:
+                note_ignored_error(ignored_error, "manga_translator/detection/ctd.py:ComicTextDetector._infer")
                 pass
         
         return textlines, mask_refined, None

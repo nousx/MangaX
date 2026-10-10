@@ -40,6 +40,7 @@ from .utils import (
 from .utils.batch_skip import BatchInputPlan, input_path, plan_batch_inputs, slice_batch_indices
 from .utils.onnx_runtime import set_onnx_gpu_disabled
 from .utils.text_filter import match_filter
+from manga_translator.utils.swallowed import note_ignored_error
 
 matplotlib.use('Agg')  # 使用非GUI后端
 
@@ -252,7 +253,8 @@ def _detect_region_keep_language(text: str) -> str:
 
     try:
         detected_lang, _ = langid.classify(text)
-    except Exception:
+    except Exception as ignored_error:
+        note_ignored_error(ignored_error, "manga_translator/manga_translator.py:_detect_region_keep_language")
         return 'UNKNOWN'
 
     return _normalize_detected_keep_language(detected_lang)
@@ -407,7 +409,8 @@ class MangaTranslator:
         try:
             from .runtime_files import ensure_runtime_files
             ensure_runtime_files()
-        except Exception:
+        except Exception as ignored_error:
+            note_ignored_error(ignored_error, "manga_translator/manga_translator.py:MangaTranslator.__init__")
             pass
 
     def parse_init_params(self, params: dict):
@@ -677,7 +680,8 @@ class MangaTranslator:
             # 记录本次输出目录，供 _save_text_to_file 写入 JSON，供编辑器后续导出时回写到同一位置
             try:
                 ctx.final_output_dir = os.path.dirname(final_output_path)
-            except Exception:
+            except Exception as ignored_error:
+                note_ignored_error(ignored_error, "manga_translator/manga_translator.py:MangaTranslator._save_and_cleanup_context")
                 pass
             success = self._save_translated_image(
                 ctx.result,
@@ -1429,7 +1433,8 @@ class MangaTranslator:
         was_pil = hasattr(base, 'resize') and hasattr(base, 'mode')
         try:
             base_arr = np.asarray(base)
-        except Exception:
+        except Exception as ignored_error:
+            note_ignored_error(ignored_error, "manga_translator/manga_translator.py:MangaTranslator._compose_render_overlays_on_inpainted")
             return
         if base_arr.ndim != 3 or base_arr.shape[2] < 3:
             return
@@ -1791,7 +1796,8 @@ class MangaTranslator:
             if hasattr(stale_image, 'close'):
                 try:
                     stale_image.close()
-                except Exception:
+                except Exception as ignored_error:
+                    note_ignored_error(ignored_error, "manga_translator/manga_translator.py:MangaTranslator._append_colorizer_history_image")
                     pass
 
     def _clear_colorizer_history(self) -> None:
@@ -1799,7 +1805,8 @@ class MangaTranslator:
             if hasattr(history_image, 'close'):
                 try:
                     history_image.close()
-                except Exception:
+                except Exception as ignored_error:
+                    note_ignored_error(ignored_error, "manga_translator/manga_translator.py:MangaTranslator._clear_colorizer_history")
                     pass
         self._colorizer_history_images = []
 
@@ -2232,7 +2239,8 @@ class MangaTranslator:
                         if hasattr(torch.cuda, 'ipc_collect'):
                             torch.cuda.ipc_collect()
                     torch.cuda.synchronize()
-            except Exception:
+            except Exception as ignored_error:
+                note_ignored_error(ignored_error, "manga_translator/manga_translator.py:MangaTranslator._cleanup_gpu_memory")
                 pass
 
     def _get_cuda_memory_snapshot(self) -> Optional[dict]:
@@ -2255,7 +2263,8 @@ class MangaTranslator:
                 'free_mb': free_bytes / (1024 ** 2),
                 'total_mb': total_bytes / (1024 ** 2),
             }
-        except Exception:
+        except Exception as ignored_error:
+            note_ignored_error(ignored_error, "manga_translator/manga_translator.py:MangaTranslator._get_cuda_memory_snapshot")
             return None
 
     def _log_cuda_memory_snapshot(self, stage: str, include_peak: bool = True):
@@ -2301,7 +2310,8 @@ class MangaTranslator:
                 if hasattr(ctx.input, 'close'):
                     try:
                         ctx.input.close()
-                    except Exception:
+                    except Exception as ignored_error:
+                        note_ignored_error(ignored_error, "manga_translator/manga_translator.py:MangaTranslator._cleanup_context_memory")
                         pass
             del ctx.input
             ctx.input = None
@@ -2377,7 +2387,8 @@ class MangaTranslator:
                     if hasattr(image, 'close'):
                         try:
                             image.close()
-                        except Exception:
+                        except Exception as ignored_error:
+                            note_ignored_error(ignored_error, "manga_translator/manga_translator.py:MangaTranslator._cleanup_batch_memory")
                             pass
             current_batch_images.clear()
         
@@ -2396,7 +2407,8 @@ class MangaTranslator:
                         if hasattr(ctx.input, 'close'):
                             try:
                                 ctx.input.close()
-                            except Exception:
+                            except Exception as ignored_error:
+                                note_ignored_error(ignored_error, "manga_translator/manga_translator.py:MangaTranslator._cleanup_batch_memory")
                                 pass
                     del ctx.input
                     ctx.input = None
@@ -2419,7 +2431,8 @@ class MangaTranslator:
             import ctypes
             ctypes.windll.kernel32.SetProcessWorkingSetSize(-1, -1, -1)
             logger.debug('[MEMORY] Windows working set trimmed')
-        except Exception:
+        except Exception as ignored_error:
+            note_ignored_error(ignored_error, "manga_translator/manga_translator.py:MangaTranslator._cleanup_batch_memory")
             pass  # 非 Windows 系统时忽略
         
         logger.debug('[MEMORY] Batch cleanup completed')
@@ -2714,7 +2727,8 @@ class MangaTranslator:
                     source_language = ISO_639_1_TO_VALID_LANGUAGES.get(detected_lang, 'UNKNOWN')
                     if source_language != 'UNKNOWN':
                         source_language = source_language.upper()
-                except Exception:  
+                except Exception as ignored_error:
+                    note_ignored_error(ignored_error, "manga_translator/manga_translator.py:MangaTranslator._run_textline_merge")
                     source_language = 'UNKNOWN'  
     
                 # Print detected source_language and whether it's in skip_langs  
@@ -3244,7 +3258,8 @@ class MangaTranslator:
         if snapshot is not None:
             try:
                 torch.cuda.reset_peak_memory_stats(snapshot['device'])
-            except Exception:
+            except Exception as ignored_error:
+                note_ignored_error(ignored_error, "manga_translator/manga_translator.py:MangaTranslator._run_inpainting")
                 pass
             self._log_cuda_memory_snapshot("inpainting/before_dispatch", include_peak=False)
         
@@ -4225,7 +4240,8 @@ class MangaTranslator:
                             if hasattr(image, 'close'):
                                 try:
                                     image.close()
-                                except Exception:
+                                except Exception as ignored_error:
+                                    note_ignored_error(ignored_error, "manga_translator/manga_translator.py:MangaTranslator.translate_batch")
                                     pass
                     
                     # 清空列表，防止 finally 中的 _cleanup_batch_memory 再次关闭这些 image
@@ -4324,7 +4340,8 @@ class MangaTranslator:
                             if hasattr(image, 'close'):
                                 try:
                                     image.close()
-                                except Exception:
+                                except Exception as ignored_error:
+                                    note_ignored_error(ignored_error, "manga_translator/manga_translator.py:MangaTranslator.translate_batch")
                                     pass
 
                     continue
@@ -4393,7 +4410,8 @@ class MangaTranslator:
                             if hasattr(image, 'close'):
                                 try:
                                     image.close()
-                                except Exception:
+                                except Exception as ignored_error:
+                                    note_ignored_error(ignored_error, "manga_translator/manga_translator.py:MangaTranslator.translate_batch")
                                     pass
                     
                     continue  # 跳过渲染，继续下一批次
@@ -4421,7 +4439,8 @@ class MangaTranslator:
                             if hasattr(image, 'close'):
                                 try:
                                     image.close()
-                                except Exception:
+                                except Exception as ignored_error:
+                                    note_ignored_error(ignored_error, "manga_translator/manga_translator.py:MangaTranslator.translate_batch")
                                     pass
                     
                     continue  # 跳过渲染，继续下一批次
@@ -5159,7 +5178,8 @@ class MangaTranslator:
                 # 安全地获取异常信息
                 try:
                     error_msg = str(e)
-                except Exception:
+                except Exception as ignored_error:
+                    note_ignored_error(ignored_error, "manga_translator/manga_translator.py:MangaTranslator._batch_translate_contexts")
                     error_msg = f"Unable to retrieve exception details (exception type: {type(e).__name__})"
                 
                 logger.error(f"Error in batch translation: {error_msg}")

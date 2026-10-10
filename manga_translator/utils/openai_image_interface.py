@@ -11,6 +11,7 @@ from .curl_cffi_transport import validate_api_key_for_http_header
 from .image_modes import normalize_rgb_image
 from .openai_compat import resolve_openai_compatible_api_key
 from .retry import summarize_exception_message, summarize_response_text
+from manga_translator.utils.swallowed import note_ignored_error
 
 _OPENAI_IMAGE_INTERFACE_CACHE: dict[tuple[str, str], str] = {}
 _OPENAI_IMAGE_INTERFACES = ("images/edits", "images/generations", "chat/completions")
@@ -810,7 +811,8 @@ def _load_image_from_data_url(value: str) -> Optional[Image.Image]:
 def _load_image_from_base64(value: str) -> Optional[Image.Image]:
     try:
         return normalize_rgb_image(Image.open(io.BytesIO(base64.b64decode(value))))
-    except Exception:
+    except Exception as ignored_error:
+        note_ignored_error(ignored_error, "manga_translator/utils/openai_image_interface.py:_load_image_from_base64")
         return None
 
 

@@ -13,6 +13,7 @@ from shapely.geometry import MultiPoint, Polygon
 from .generic import color_difference, fg_bg_compare
 from .log import get_logger
 from .panel import get_panels_from_array
+from manga_translator.utils.swallowed import note_ignored_error
 
 logger = get_logger('textblock')
 
@@ -445,7 +446,8 @@ class TextBlock(object):
                         render_box_extra = {
                             'render_box_rect_local': [cpx - hw, cpy - hh, cpx + hw, cpy + hh],
                         }
-            except Exception:
+            except Exception as ignored_error:
+                note_ignored_error(ignored_error, "manga_translator/utils/textblock.py:TextBlock.to_dict")
                 pass
 
         result = {

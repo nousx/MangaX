@@ -20,6 +20,7 @@ from PyQt6.QtGui import QFont, QFontDatabase, QGuiApplication, QRawFont, QTextLa
 from ...utils import BASE_PATH
 from ..rich_text import TextStyle
 from ._shared import _QFONT_CACHE_MAX, _QT_FONT_PROBE_SIZE, _RAW_FONT_CACHE_MAX, _cache_get, _cache_put
+from manga_translator.utils.swallowed import note_ignored_error
 
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
@@ -27,7 +28,8 @@ logger.addHandler(logging.NullHandler())
 try:
     HYPHENATOR_LANGUAGES.remove('fr')
     HYPHENATOR_LANGUAGES.append('fr_FR')
-except Exception:
+except Exception as ignored_error:
+    note_ignored_error(ignored_error, "manga_translator/rendering/text_render/_fonts.py:<module>")
     pass
 
 DEFAULT_FONT_FAMILY = 'Microsoft YaHei UI'
@@ -407,7 +409,8 @@ def _font_descriptor(path: str) -> LayoutFontDescriptor:
         if raw.isValid():
             family = raw.familyName() or ''
             style = raw.styleName() or ''
-    except Exception:
+    except Exception as ignored_error:
+        note_ignored_error(ignored_error, "manga_translator/rendering/text_render/_fonts.py:_font_descriptor")
         pass
 
     # 文件里读出的家族名带方括号时不能直接交给 QFont 匹配（foundry 语法），
@@ -594,6 +597,7 @@ def select_hyphenator(lang: str):
     if lang not in _hyphenator_cache:
         try:
             _hyphenator_cache[lang] = Hyphenator(lang)
-        except Exception:
+        except Exception as ignored_error:
+            note_ignored_error(ignored_error, "manga_translator/rendering/text_render/_fonts.py:select_hyphenator")
             _hyphenator_cache[lang] = None
     return _hyphenator_cache[lang]

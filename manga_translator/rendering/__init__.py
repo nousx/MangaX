@@ -48,6 +48,7 @@ from .rich_text import (
     plain_equivalent_text,
     plain_text_of,
 )
+from manga_translator.utils.swallowed import note_ignored_error
 
 logger = get_logger('render')
 
@@ -71,7 +72,8 @@ def _encode_mask_png_base64(mask: Optional[np.ndarray]) -> str:
         if not ok:
             return ""
         return base64.b64encode(buffer).decode("ascii")
-    except Exception:
+    except Exception as ignored_error:
+        note_ignored_error(ignored_error, "manga_translator/rendering/__init__.py:_encode_mask_png_base64")
         return ""
 
 
@@ -1470,7 +1472,8 @@ def _layout_regions_to_font_size(
                     )
                 else:
                     center_check_mask = None
-        except Exception:
+        except Exception as ignored_error:
+            note_ignored_error(ignored_error, "manga_translator/rendering/__init__.py:_layout_regions_to_font_size")
             pass
 
     dst_points_list = []
@@ -2304,7 +2307,8 @@ def _layout_regions_to_font_size(
                     # Create base polygon for scaling
                     try:
                         unrotated_base_poly = Polygon(region.unrotated_min_rect[0])
-                    except Exception:
+                    except Exception as ignored_error:
+                        note_ignored_error(ignored_error, "manga_translator/rendering/__init__.py:_layout_regions_to_font_size")
                         unrotated_base_poly = Polygon([(0, 0), (bubble_width, 0), (bubble_width, bubble_height), (0, bubble_height)])
 
                     logger.debug(
@@ -2650,7 +2654,8 @@ def render(
         # Last resort: Use the method2
         else:
             fg, _ = region.get_font_colors()
-    except Exception:
+    except Exception as ignored_error:
+        note_ignored_error(ignored_error, "manga_translator/rendering/__init__.py:render")
         # If anything fails, fg remains black
         pass
 

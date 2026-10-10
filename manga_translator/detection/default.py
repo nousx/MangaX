@@ -10,6 +10,7 @@ from ..utils import Quadrilateral, det_rearrange_forward
 from .common import OfflineDetector
 from .default_utils import craft_utils, dbnet_utils, imgproc
 from .default_utils.DBNet_resnet34 import TextDetection as TextDetectionDefault
+from manga_translator.utils.swallowed import note_ignored_error
 
 MODEL = None
 def det_batch_forward_default(batch: np.ndarray, device: str):
@@ -262,7 +263,8 @@ class DefaultDetector(OfflineDetector):
                 import torch
                 if torch.cuda.is_available():
                     pass
-            except Exception:
+            except Exception as ignored_error:
+                note_ignored_error(ignored_error, "manga_translator/detection/default.py:DefaultDetector._infer")
                 pass
         
         return textlines, raw_mask, bbox_debug_img

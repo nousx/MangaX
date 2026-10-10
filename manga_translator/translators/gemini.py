@@ -24,6 +24,7 @@ from .common import (
     parse_hq_response,
     validate_gemini_response,
 )
+from manga_translator.utils.swallowed import note_ignored_error
 
 # 浏览器身份由 curl_cffi 的 impersonate 配置生成；这里只保留业务请求头。
 BROWSER_HEADERS = GEMINI_CURL_HEADERS
@@ -178,7 +179,8 @@ class GeminiTranslator(CommonTranslator):
                 close_result = close_fn()
                 if asyncio.iscoroutine(close_result):
                     await close_result
-        except Exception:
+        except Exception as ignored_error:
+            note_ignored_error(ignored_error, "manga_translator/translators/gemini.py:GeminiTranslator._close_current_client")
             pass
         finally:
             self.client = None

@@ -18,6 +18,7 @@ from typing import Any, Callable, Optional, Tuple
 
 import cv2
 import numpy as np
+from manga_translator.utils.swallowed import note_ignored_error
 
 warnings.filterwarnings("ignore", message=".*pynvml package is deprecated.*", category=FutureWarning)
 
@@ -446,7 +447,8 @@ def _node_label(node: Any) -> str:
     if callable(label):
         try:
             return str(label())
-        except Exception:
+        except Exception as ignored_error:
+            note_ignored_error(ignored_error, "manga_translator/rendering/chinese_linebreak.py:_node_label")
             return ""
     return ""
 
@@ -456,7 +458,8 @@ def _node_leaves(node: Any) -> list[str]:
     if callable(leaves):
         try:
             return [str(token) for token in leaves()]
-        except Exception:
+        except Exception as ignored_error:
+            note_ignored_error(ignored_error, "manga_translator/rendering/chinese_linebreak.py:_node_leaves")
             return []
     if isinstance(node, str):
         return [node]
@@ -466,7 +469,8 @@ def _node_leaves(node: Any) -> list[str]:
 def _node_children(node: Any) -> list[Any]:
     try:
         return list(node)
-    except Exception:
+    except Exception as ignored_error:
+        note_ignored_error(ignored_error, "manga_translator/rendering/chinese_linebreak.py:_node_children")
         return []
 
 

@@ -21,6 +21,7 @@ from .generic import (
 )
 from .log import get_logger
 from .model_hash_cache import verify_file as verify_model_file_cached
+from manga_translator.utils.swallowed import note_ignored_error
 
 # Set to 1/true to load local model files whose SHA-256 does not match the
 # hash declared in _MODEL_MAPPING (a warning is still printed).
@@ -283,7 +284,8 @@ class ModelWrapper(ABC):
                             os.remove(download_path)
                         if os.path.exists(extracted_path):
                             shutil.rmtree(extracted_path)
-                    except Exception:
+                    except Exception as ignored_error:
+                        note_ignored_error(ignored_error, "manga_translator/utils/inference.py:ModelWrapper._download")
                         pass
                     continue
 
@@ -321,7 +323,8 @@ class ModelWrapper(ABC):
                 try:
                     os.remove(download_path)
                     shutil.rmtree(extracted_path)
-                except Exception:
+                except Exception as ignored_error:
+                    note_ignored_error(ignored_error, "manga_translator/utils/inference.py:ModelWrapper._download")
                     pass
 
             print()
@@ -463,7 +466,8 @@ class ModelWrapper(ABC):
                     torch.cuda.empty_cache()
                     if hasattr(torch.cuda, 'ipc_collect'):
                         torch.cuda.ipc_collect()
-            except Exception:
+            except Exception as ignored_error:
+                note_ignored_error(ignored_error, "manga_translator/utils/inference.py:ModelWrapper.unload")
                 pass
 
     async def infer(self, *args, **kwargs):

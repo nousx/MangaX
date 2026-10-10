@@ -21,6 +21,7 @@ from .generic import (
 )
 from .inference import ModelWrapper
 from .log import get_logger
+from manga_translator.utils.swallowed import note_ignored_error
 
 ImageInput = Union[str, Path, np.ndarray]
 
@@ -178,7 +179,8 @@ class MangaLensBubbleDetector(ModelWrapper):
                 return "cuda:0"
             if getattr(torch.backends, "mps", None) and torch.backends.mps.is_available():
                 return "mps"
-        except Exception:
+        except Exception as ignored_error:
+            note_ignored_error(ignored_error, "manga_translator/utils/mangalens_detector.py:MangaLensBubbleDetector._auto_select_device")
             pass
         return "cpu"
 
@@ -799,7 +801,8 @@ def build_bubble_mask_from_mangalens_result(
                     if merged.shape != (h, w):
                         merged = cv2.resize(merged, (w, h), interpolation=cv2.INTER_NEAREST)
                     mask = np.maximum(mask, merged)
-            except Exception:
+            except Exception as ignored_error:
+                note_ignored_error(ignored_error, "manga_translator/utils/mangalens_detector.py:build_bubble_mask_from_mangalens_result")
                 pass
 
         polygons = getattr(raw_masks, "xy", None)
@@ -817,7 +820,8 @@ def build_bubble_mask_from_mangalens_result(
         for det in getattr(result, "detections", []):
             try:
                 x1, y1, x2, y2 = det.xyxy
-            except Exception:
+            except Exception as ignored_error:
+                note_ignored_error(ignored_error, "manga_translator/utils/mangalens_detector.py:build_bubble_mask_from_mangalens_result")
                 continue
             ix1 = max(0, min(w - 1, int(round(x1))))
             iy1 = max(0, min(h - 1, int(round(y1))))

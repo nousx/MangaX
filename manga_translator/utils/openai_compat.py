@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import ipaddress
 from urllib.parse import urlparse
+from manga_translator.utils.swallowed import note_ignored_error
 
 LOCAL_OPENAI_API_KEY_PLACEHOLDER = "ollama"
 _OFFICIAL_OPENAI_HOSTNAMES = {
@@ -29,7 +30,8 @@ def _extract_hostname(base_url: str | None) -> str:
         raw = f"http://{raw}"
     try:
         return (urlparse(raw).hostname or "").strip().lower()
-    except Exception:
+    except Exception as ignored_error:
+        note_ignored_error(ignored_error, "manga_translator/utils/openai_compat.py:_extract_hostname")
         return ""
 
 

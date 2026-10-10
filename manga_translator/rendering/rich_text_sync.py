@@ -37,6 +37,7 @@ from .rich_text_rules import (
     apply_rich_text_rules,
 )
 from .text_replacements import load_replacements
+from manga_translator.utils.swallowed import note_ignored_error
 
 logger = logging.getLogger(__name__)
 
@@ -138,7 +139,8 @@ def apply_replacements_to_entries(
                     continue
                 try:
                     replacement_text = match.expand(repl)
-                except Exception:
+                except Exception as ignored_error:
+                    note_ignored_error(ignored_error, "manga_translator/rendering/rich_text_sync.py:apply_replacements_to_entries")
                     replacement_text = repl
                 span = entries[match.start() : match.end()]
                 first = span[0]

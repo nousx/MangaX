@@ -11,6 +11,7 @@ from .text_render import (
     get_char_offset_x,
     get_string_width,
 )
+from manga_translator.utils.swallowed import note_ignored_error
 
 logger = get_logger('text_render_eng')
 
@@ -241,7 +242,8 @@ def apply_manga2eng_line_breaks(
                 box_w = float(max(region.xywh[2], 1))
                 box_h = float(max(region.xywh[3], 1))
                 enlarge_ratio = min(max(box_w / box_h, box_h / box_w) * 1.5, 3)
-            except Exception:
+            except Exception as ignored_error:
+                note_ignored_error(ignored_error, "manga_translator/rendering/text_render_eng.py:apply_manga2eng_line_breaks")
                 enlarge_ratio = 1.0
 
         if original_img is not None:
@@ -255,7 +257,8 @@ def apply_manga2eng_line_breaks(
             try:
                 box_w = max(int(round(float(region.xywh[2]))), 1)
                 max_width = max(int(box_w * 1.2), max(word_lengths))
-            except Exception:
+            except Exception as ignored_error:
+                note_ignored_error(ignored_error, "manga_translator/rendering/text_render_eng.py:apply_manga2eng_line_breaks")
                 max_width = max(word_lengths)
 
             current_words = []

@@ -14,6 +14,7 @@ from typing import Optional
 
 from . import Context
 from ..rendering.rich_text import plain_text_of
+from manga_translator.utils.swallowed import note_ignored_error
 
 logger = logging.getLogger(__name__)
 
@@ -727,7 +728,8 @@ def photoshop_export(output_file: str, ctx: Context, default_font: str = None, i
     if os.path.exists(error_file):
         try:
             os.unlink(error_file)
-        except Exception:
+        except Exception as ignored_error:
+            note_ignored_error(ignored_error, "manga_translator/utils/photoshop_export.py:photoshop_export")
             pass
     
     try:

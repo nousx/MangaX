@@ -26,6 +26,7 @@ from timm.layers import (
 	to_ntuple,
 	trunc_normal_,
 )
+from manga_translator.utils.swallowed import note_ignored_error
 
 
 class Downsample(nn.Module):
@@ -614,7 +615,8 @@ class DBConvNextDetector(OfflineDetector):
                 import torch
                 if torch.cuda.is_available():
                     pass
-            except Exception:
+            except Exception as ignored_error:
+                note_ignored_error(ignored_error, "manga_translator/detection/dbnet_convnext.py:DBConvNextDetector._infer")
                 pass
         
         return textlines, raw_mask, None

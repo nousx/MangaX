@@ -19,6 +19,7 @@ from ..utils import (
     det_unrearrange_patch_maps,
     imwrite_unicode,
 )
+from manga_translator.utils.swallowed import note_ignored_error
 
 COLOR_RANGE_SIGMA = 1.5 # how many stddev away is considered the same color
 
@@ -305,18 +306,21 @@ def _complete_mask_core(img: np.ndarray, mask: np.ndarray, textlines: List[Quadr
             try:
                 overlapping_area = polys[tl_idx].intersection(cc_poly).area
             except Exception as _e:
+                note_ignored_error(_e, "manga_translator/mode/__init__.py:_complete_mask_core")
                 try:
                     fixed_poly = polys[tl_idx].buffer(0)
                     fixed_cc_poly = cc_poly.buffer(0)
                     overlapping_area = fixed_poly.intersection(fixed_cc_poly).area
-                except Exception:
+                except Exception as ignored_error:
+                    note_ignored_error(ignored_error, "manga_translator/mode/__init__.py:_complete_mask_core")
                     overlapping_area = 0
             
             ratio_mat[label, tl_idx] = overlapping_area / min(area1, area2)
             
             try:
                 dist_mat[label, tl_idx] = polys[tl_idx].distance(cc_poly.centroid)
-            except Exception:
+            except Exception as ignored_error:
+                note_ignored_error(ignored_error, "manga_translator/mode/__init__.py:_complete_mask_core")
                 dist_mat[label, tl_idx] = float('inf')
 
         avg = np.argmax(ratio_mat[label])

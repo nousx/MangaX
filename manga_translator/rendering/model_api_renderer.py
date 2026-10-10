@@ -31,6 +31,7 @@ from .prompt_loader import (
     load_ai_renderer_prompt_file,
 )
 from .rich_text import plain_text_of
+from manga_translator.utils.swallowed import note_ignored_error
 
 OPENAI_BROWSER_HEADERS = OPENAI_CURL_HEADERS
 GEMINI_BROWSER_HEADERS = GEMINI_CURL_HEADERS
@@ -74,13 +75,15 @@ class BaseAPIRenderer:
         if not is_web_server:
             try:
                 load_app_dotenv(override=True)
-            except Exception:
+            except Exception as ignored_error:
+                note_ignored_error(ignored_error, "manga_translator/rendering/model_api_renderer.py:BaseAPIRenderer.__init__")
                 pass
 
     def _read_runtime_config(self, runtime_config=None):
         try:
             load_app_dotenv(override=True)
-        except Exception:
+        except Exception as ignored_error:
+            note_ignored_error(ignored_error, "manga_translator/rendering/model_api_renderer.py:BaseAPIRenderer._read_runtime_config")
             pass
 
         return resolve_runtime_api_config(
@@ -123,7 +126,8 @@ class BaseAPIRenderer:
             if self._client_loop is current_loop:
                 try:
                     await self.client.close()
-                except Exception:
+                except Exception as ignored_error:
+                    note_ignored_error(ignored_error, "manga_translator/rendering/model_api_renderer.py:BaseAPIRenderer.ensure_client")
                     pass
             else:
                 self.logger.info(f"{self.PROVIDER_NAME}: recreating API client for a new event loop.")
@@ -220,7 +224,8 @@ class BaseAPIRenderer:
         if self._client_loop is current_loop and current_loop is not None:
             try:
                 await self.client.close()
-            except Exception:
+            except Exception as ignored_error:
+                note_ignored_error(ignored_error, "manga_translator/rendering/model_api_renderer.py:BaseAPIRenderer._close_current_client")
                 pass
         self.client = None
         self._client_loop = None

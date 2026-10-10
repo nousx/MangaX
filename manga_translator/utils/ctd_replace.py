@@ -18,6 +18,7 @@ from ..detection.ctd_utils.textmask import REFINEMASK_INPAINT, refine_mask
 from ..detection.ctd_utils.utils.db_utils import postprocess_mask
 from ..detection.ctd_utils.utils.imgproc_utils import preprocess_img
 from ..utils import Quadrilateral, det_rearrange_forward
+from manga_translator.utils.swallowed import note_ignored_error
 
 
 class ReplaceTranslationCTD:
@@ -100,7 +101,8 @@ class ReplaceTranslationCTD:
             try:
                 if torch.cuda.is_available():
                     pass
-            except Exception:
+            except Exception as ignored_error:
+                note_ignored_error(ignored_error, "manga_translator/utils/ctd_replace.py:ReplaceTranslationCTD.detect_with_winpy_refine")
                 pass
         
         # 返回和 win.py 一样的格式：(textlines, mask_raw, mask_refined)

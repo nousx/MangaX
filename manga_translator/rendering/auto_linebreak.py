@@ -24,6 +24,7 @@ from .text_render import (
 from .chinese_linebreak import append_chinese_linebreak_debug_record, layout_chinese_cjk
 from ..utils.log import get_logger
 from ..config import Config
+from manga_translator.utils.swallowed import note_ignored_error
 
 logger = get_logger('render')
 
@@ -37,7 +38,8 @@ except OSError:
 try:
     from pythainlp.tokenize import word_tokenize as thai_word_tokenize
     HAS_PYTHAINLP = True
-except Exception:
+except Exception as ignored_error:
+    note_ignored_error(ignored_error, "manga_translator/rendering/auto_linebreak.py:<module>")
     thai_word_tokenize = None
     HAS_PYTHAINLP = False
 
@@ -288,7 +290,8 @@ def _resolve_current_region_source_direction(region: Any) -> str:
 
             try:
                 area = float(Polygon(line_points).area)
-            except Exception:
+            except Exception as ignored_error:
+                note_ignored_error(ignored_error, "manga_translator/rendering/auto_linebreak.py:_resolve_current_region_source_direction")
                 area = 0.0
 
             if area < max_area:
@@ -336,7 +339,8 @@ def _vert_char_bitmap_width(font_size: int, cdpt: str) -> int:
     cdpt_trans, _ = CJK_Compatibility_Forms_translate(cdpt, 1)
     try:
         return get_vertical_char_bitmap_width(font_size, cdpt_trans)
-    except Exception:
+    except Exception as ignored_error:
+        note_ignored_error(ignored_error, "manga_translator/rendering/auto_linebreak.py:_vert_char_bitmap_width")
         return font_size
 
 
@@ -346,7 +350,8 @@ def _vert_char_metrics(font_size: int, cdpt: str, letter_spacing: float = 1.0) -
         base = text_render._vertical_base(font_size, '　' if cdpt == '＿' else cdpt, letter_spacing)
         width = int(base.frame_width or font_size)
         return int(base.advance_y or font_size), width
-    except Exception:
+    except Exception as ignored_error:
+        note_ignored_error(ignored_error, "manga_translator/rendering/auto_linebreak.py:_vert_char_metrics")
         return (
             _vert_char_advance(font_size, cdpt, letter_spacing=letter_spacing),
             _vert_char_bitmap_width(font_size, cdpt),
@@ -606,7 +611,8 @@ def _layout_horizontal_eng(
         if hyphenator and len(word) <= 100:
             try:
                 new_syls = hyphenator.syllables(word)
-            except Exception:
+            except Exception as ignored_error:
+                note_ignored_error(ignored_error, "manga_translator/rendering/auto_linebreak.py:_layout_horizontal_eng")
                 new_syls = []
         if not new_syls:
             new_syls = [word] if len(word) <= 3 else list(word)
@@ -890,12 +896,14 @@ def _tokenize_thai_words(text: str) -> List[str]:
             tokens = thai_word_tokenize(text, engine='nlpo3', keep_whitespace=True)
             if tokens:
                 return tokens
-        except Exception:
+        except Exception as ignored_error:
+            note_ignored_error(ignored_error, "manga_translator/rendering/auto_linebreak.py:_tokenize_thai_words")
             try:
                 tokens = thai_word_tokenize(text, engine='newmm', keep_whitespace=True)
                 if tokens:
                     return tokens
-            except Exception:
+            except Exception as ignored_error:
+                note_ignored_error(ignored_error, "manga_translator/rendering/auto_linebreak.py:_tokenize_thai_words")
                 pass
 
     return re.findall(r'[\u0E00-\u0E7F]+|\s+|[^\u0E00-\u0E7F\s]+', text)

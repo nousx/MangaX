@@ -18,6 +18,7 @@ import numpy as np
 
 from . import Context, load_image, open_pil_image
 from .batch_skip import slice_batch_indices
+from manga_translator.utils.swallowed import note_ignored_error
 
 # 使用 manga_translator 的主 logger，确保日志能被UI捕获
 logger = logging.getLogger('manga_translator')
@@ -368,7 +369,8 @@ class ConcurrentPipeline:
                 except Exception as e:
                     try:
                         error_msg = str(e)
-                    except Exception:
+                    except Exception as ignored_error:
+                        note_ignored_error(ignored_error, "manga_translator/utils/concurrent_pipeline.py:ConcurrentPipeline._detection_ocr_async")
                         error_msg = f'Unable to retrieve exception details (exception type: {type(e).__name__})'
                     
                     logger.error(f"[Detection+OCR] Failed: {error_msg}")
@@ -477,7 +479,8 @@ class ConcurrentPipeline:
                 except Exception as e:
                     try:
                         error_msg = str(e)
-                    except Exception:
+                    except Exception as ignored_error:
+                        note_ignored_error(ignored_error, "manga_translator/utils/concurrent_pipeline.py:ConcurrentPipeline._translation_async")
                         error_msg = f'Unable to retrieve exception details (exception type: {type(e).__name__})'
                     
                     logger.error(f"[Translation thread] Error: {error_msg}")
@@ -748,7 +751,8 @@ class ConcurrentPipeline:
                 except Exception as e:
                     try:
                         error_msg = str(e)
-                    except Exception:
+                    except Exception as ignored_error:
+                        note_ignored_error(ignored_error, "manga_translator/utils/concurrent_pipeline.py:ConcurrentPipeline._inpaint_async")
                         error_msg = f'Unable to retrieve exception details (exception type: {type(e).__name__})'
                     
                     logger.error(f"[Inpainting thread] Error: {error_msg}")
@@ -973,7 +977,8 @@ class ConcurrentPipeline:
                 except Exception as e:
                     try:
                         error_msg = str(e)
-                    except Exception:
+                    except Exception as ignored_error:
+                        note_ignored_error(ignored_error, "manga_translator/utils/concurrent_pipeline.py:ConcurrentPipeline._render_async")
                         error_msg = f'Unable to retrieve exception details (exception type: {type(e).__name__})'
                     
                     logger.error(f"[Rendering thread] Error: {error_msg}")
@@ -1093,7 +1098,8 @@ class ConcurrentPipeline:
                         await self.translator._report_progress(
                             f"batch:1:{completed}:{total}:{current_failed}:{runtime_skipped}"
                         )
-                    except Exception:
+                    except Exception as ignored_error:
+                        note_ignored_error(ignored_error, "manga_translator/utils/concurrent_pipeline.py:ConcurrentPipeline.process_batch")
                         pass
                     last_rendered = current_rendered
                 

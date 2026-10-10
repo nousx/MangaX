@@ -14,6 +14,7 @@ from manga_translator.utils import (
     imwrite_unicode,
     open_pil_image,
 )
+from manga_translator.utils.swallowed import note_ignored_error
 
 
 class MangaTranslatorWS(MangaTranslator):
@@ -46,7 +47,8 @@ class MangaTranslatorWS(MangaTranslator):
                 wsa_data = ctypes.create_string_buffer(WSADATA_SIZE)
                 ws2_32 = ctypes.WinDLL('ws2_32')
                 ws2_32.WSAStartup(0x0202, wsa_data)
-            except Exception:
+            except Exception as ignored_error:
+                note_ignored_error(ignored_error, "manga_translator/mode/ws.py:MangaTranslatorWS.listen")
                 pass
             
             asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
@@ -240,7 +242,8 @@ class MangaTranslatorWS(MangaTranslator):
                     wsa_data = ctypes.create_string_buffer(WSADATA_SIZE)
                     ws2_32 = ctypes.WinDLL('ws2_32')
                     ws2_32.WSAStartup(0x0202, wsa_data)
-                except Exception:
+                except Exception as ignored_error:
+                    note_ignored_error(ignored_error, "manga_translator/mode/ws.py:MangaTranslatorWS.listen.server_thread")
                     pass
                 
                 asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())

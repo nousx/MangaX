@@ -6,6 +6,7 @@ import numpy as np
 
 from ..rendering.ballon_extractor import enlarge_window
 from ..utils.bubble import calc_bbox_mask_overlap_ratio
+from manga_translator.utils.swallowed import note_ignored_error
 
 
 MODEL_BUBBLE_SHRINK_RATIO = 0.02
@@ -51,7 +52,8 @@ def solid_fill_pure_bubbles(
     for region in text_regions:
         try:
             x1, y1, x2, y2 = [int(round(float(v))) for v in region.xyxy]
-        except Exception:
+        except Exception as ignored_error:
+            note_ignored_error(ignored_error, "manga_translator/inpainting/ballon_fill.py:solid_fill_pure_bubbles")
             continue
         if x2 > x1 and y2 > y1:
             region_bboxes.append((x1, y1, x2 - x1, y2 - y1))

@@ -25,6 +25,7 @@ from .common import (
     validate_openai_response,
 )
 from .keys import OPENAI_API_KEY
+from manga_translator.utils.swallowed import note_ignored_error
 
 # 禁用openai库的DEBUG日志,避免打印base64图片数据
 logging.getLogger("openai").setLevel(logging.WARNING)
@@ -170,7 +171,8 @@ class OpenAIHighQualityTranslator(CommonTranslator):
             return
         try:
             await self.client.close()
-        except Exception:
+        except Exception as ignored_error:
+            note_ignored_error(ignored_error, "manga_translator/translators/openai_hq.py:OpenAIHighQualityTranslator._close_current_client")
             pass
         finally:
             self.client = None
@@ -250,7 +252,8 @@ class OpenAIHighQualityTranslator(CommonTranslator):
         if self.client:
             try:
                 await self.client.close()
-            except Exception:
+            except Exception as ignored_error:
+                note_ignored_error(ignored_error, "manga_translator/translators/openai_hq.py:OpenAIHighQualityTranslator._cleanup")
                 pass  # 忽略清理时的错误
 
     async def _abort_inflight_request(self):
@@ -272,7 +275,8 @@ class OpenAIHighQualityTranslator(CommonTranslator):
                 if not loop.is_running() and not loop.is_closed():
                     # 如果事件循环未关闭，同步执行清理
                     loop.run_until_complete(self._cleanup())
-            except Exception:
+            except Exception as ignored_error:
+                note_ignored_error(ignored_error, "manga_translator/translators/openai_hq.py:OpenAIHighQualityTranslator.__del__")
                 pass  # 忽略所有清理错误
 
 

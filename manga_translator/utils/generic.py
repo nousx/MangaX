@@ -12,6 +12,7 @@ from ..image_formats import (
     RGB_PIL_FORMATS,
     resolve_pil_image_format,
 )
+from manga_translator.utils.swallowed import note_ignored_error
 
 # 解除 PIL 图片大小限制（防止 DecompressionBombWarning）
 # 可通过环境变量 PIL_MAX_IMAGE_PIXELS 自定义，设为 0 表示无限制
@@ -223,7 +224,8 @@ def get_image_md5(image) -> str:
         h = hashlib.md5()
         h.update(img_bytes)
         return h.hexdigest()[:8]  # 只取前8位，避免文件夹名过长
-    except Exception:
+    except Exception as ignored_error:
+        note_ignored_error(ignored_error, "manga_translator/utils/generic.py:get_image_md5")
         # 如果计算失败，返回基于时间戳的fallback值
         import time
         return f"fallback_{int(time.time() * 1000)}"
@@ -234,12 +236,14 @@ def _preserve_runtime_image_attrs(src: Image.Image, dst: Image.Image) -> Image.I
             value = getattr(src, attr, None)
             if value is not None:
                 setattr(dst, attr, value)
-        except Exception:
+        except Exception as ignored_error:
+            note_ignored_error(ignored_error, "manga_translator/utils/generic.py:_preserve_runtime_image_attrs")
             pass
     try:
         if getattr(dst, 'name', None) is None and getattr(dst, 'filename', None):
             dst.name = dst.filename
-    except Exception:
+    except Exception as ignored_error:
+        note_ignored_error(ignored_error, "manga_translator/utils/generic.py:_preserve_runtime_image_attrs")
         pass
     return dst
 
@@ -255,7 +259,8 @@ def normalize_pil_image(img: Image.Image, eager: bool = False, apply_exif: bool 
         if fmt in {'JPEG', 'JPG', 'TIFF'} or has_exif_payload:
             try:
                 orientation = int(img.getexif().get(EXIF_ORIENTATION_TAG, 1) or 1)
-            except Exception:
+            except Exception as ignored_error:
+                note_ignored_error(ignored_error, "manga_translator/utils/generic.py:normalize_pil_image")
                 orientation = 1
             if orientation != 1:
                 normalized = ImageOps.exif_transpose(img)
@@ -283,13 +288,15 @@ def open_pil_image(source, eager: bool = False, apply_exif: bool = True) -> Imag
     try:
         if getattr(image, 'name', None) is None and getattr(image, 'filename', None):
             image.name = image.filename
-    except Exception:
+    except Exception as ignored_error:
+        note_ignored_error(ignored_error, "manga_translator/utils/generic.py:open_pil_image")
         pass
     normalized = normalize_pil_image(image, eager=eager, apply_exif=apply_exif)
     if normalized is not image:
         try:
             image.close()
-        except Exception:
+        except Exception as ignored_error:
+            note_ignored_error(ignored_error, "manga_translator/utils/generic.py:open_pil_image")
             pass
     return normalized
 
@@ -1365,7 +1372,8 @@ def get_color_name(rgb: List[int]) -> str:
                 return json.loads(response.text)['name']['value']
             else:
                 return 'Unnamed'
-        except Exception:
+        except Exception as ignored_error:
+            note_ignored_error(ignored_error, "manga_translator/utils/generic.py:get_color_name")
             return 'Unnamed'
 
 def square_pad_resize(img: np.ndarray, tgt_size: int):
