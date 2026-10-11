@@ -2678,6 +2678,7 @@ def update_code_force(skip_confirm=False, target_branch=None):
         # On Linux/macOS, remove the Windows start files and editor settings, keeping the repository metadata and the Unix scripts.
         files_to_remove = [
             'Win-Start.bat',
+            'Win-Start-Console.bat',
             'Win-Install-or-Update.bat',
             '.editorconfig',
         ]

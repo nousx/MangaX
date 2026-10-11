@@ -908,6 +908,8 @@ namespace MangaXSetup
                 Type type = shortcut.GetType();
                 type.InvokeMember("TargetPath", BindingFlags.SetProperty, null, shortcut, new object[] { Path.Combine(options.Directory, "Win-Start.bat") });
                 type.InvokeMember("WorkingDirectory", BindingFlags.SetProperty, null, shortcut, new object[] { options.Directory });
+                // 7 = minimized: Win-Start.bat only hands over to the windowless launcher and exits.
+                type.InvokeMember("WindowStyle", BindingFlags.SetProperty, null, shortcut, new object[] { 7 });
                 string icon = Path.Combine(options.Directory, @"desktop_qt_ui\ui\icons\icon.ico");
                 if (File.Exists(icon))
                 {

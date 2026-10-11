@@ -119,6 +119,11 @@ def launch_update_maintenance(branch: str | None = None) -> bool:
     update_args = ["--auto-update"]
     if branch:
         update_args.extend(["--branch", branch])
+    # The app may run with a hidden console; the maintenance tool is a text
+    # program and needs a visible one of its own.
+    creation_flags = (
+        getattr(subprocess, "CREATE_NEW_CONSOLE", 0) if sys.platform == "win32" else 0
+    )
     try:
         if sys.platform == "win32":
             batch_file = root / "Win-Install-or-Update.bat"
@@ -126,6 +131,7 @@ def launch_update_maintenance(branch: str | None = None) -> bool:
                 subprocess.Popen(
                     ["cmd.exe", "/d", "/c", str(batch_file), *update_args],
                     cwd=root,
+                    creationflags=creation_flags,
                 )
                 return True
         launcher = root / "packaging" / "launch.py"
@@ -138,6 +144,7 @@ def launch_update_maintenance(branch: str | None = None) -> bool:
                     *update_args,
                 ],
                 cwd=root,
+                creationflags=creation_flags,
             )
             return True
     except OSError:

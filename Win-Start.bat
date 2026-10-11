@@ -84,6 +84,18 @@ echo [OK] Using Conda environment: !ENV_PATH!
 
 :env_ready
 
+REM Default: start without a console window and close this one.
+REM "Win-Start.bat --console" (or Win-Start-Console.bat) keeps the console.
+if /I "%~1"=="--console" goto :console_start
+set "PYW="
+for %%I in ("!PY!") do set "PYW=%%~dpIpythonw.exe"
+if not exist "!PYW!" goto :console_start
+if not exist "%SCRIPT_DIR%\packaging\start_windowed.py" goto :console_start
+start "" "!PYW!" "%SCRIPT_DIR%\packaging\start_windowed.py"
+exit /b 0
+
+:console_start
+
 echo Starting...
 echo ========================================
 echo.

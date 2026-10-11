@@ -119,6 +119,23 @@ def test_launch_update_maintenance_passes_confirmed_branch_without_environment_f
     assert "env" not in captured["kwargs"]
 
 
+def test_should_give_the_maintenance_tool_its_own_console_on_windows(monkeypatch):
+    captured = {}
+
+    def fake_popen(args, **kwargs):
+        captured["kwargs"] = kwargs
+        return object()
+
+    monkeypatch.setattr(update_service.subprocess, "Popen", fake_popen)
+    monkeypatch.setattr(update_service.sys, "platform", "win32")
+    monkeypatch.setattr(
+        update_service.subprocess, "CREATE_NEW_CONSOLE", 0x10, raising=False
+    )
+
+    assert update_service.launch_update_maintenance()
+    assert captured["kwargs"]["creationflags"] == 0x10
+
+
 def test_automatic_full_update_skips_confirmation(monkeypatch):
     dependency_updates = []
     monkeypatch.setattr(

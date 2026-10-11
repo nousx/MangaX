@@ -21,7 +21,6 @@ This guide documents the Windows startup chain, runtime selection, and maintenan
 
 > Before installing, first make sure the Microsoft Visual C++ Redistributable ([vc_redist.x64.exe](https://aka.ms/vs/17/release/vc_redist.x64.exe)) is installed; otherwise the app may fail to start with errors such as missing VCRUNTIME140.dll.
 
-
 The portable package is published under the `portable` tag in GitHub Releases:
 
 1. Download the latest version from the [portable package release page](https://github.com/hgmzhn/manga-translator-ui/releases/tag/portable) and extract it; the package bundles Python 3.12 and uv, so no Python installation is required.
@@ -49,7 +48,7 @@ The startup chain, environment selection, and maintenance-menu behavior of `Win-
 
 ### Startup and error feedback
 
-`Win-Start.bat` first prints `Starting...` and runs `desktop_qt_ui\\main.py`. A normal close prints `Application closed.`; a non-zero exit prints the exit code, recommends reinstalling, shows the public Issue URL, and asks whether to open the maintenance script. If neither portable Python nor a valid Conda environment is found, the script reports the missing environment and exits instead of silently using another Python.
+`Win-Start.bat` starts the app without a console window: it hands over to `packaging\\start_windowed.py` (run with `pythonw.exe`) and closes. If the app exits with a non-zero code, a message box shows the code and the log folder. `Win-Start-Console.bat` (or `Win-Start.bat --console`) keeps the console for a live log. In console mode, the script first prints `Starting...` and runs `desktop_qt_ui\\main.py`. A normal close prints `Application closed.`; a non-zero exit prints the exit code, recommends reinstalling, shows the public Issue URL, and asks whether to open the maintenance script. If neither portable Python nor a valid Conda environment is found, the script reports the missing environment and exits instead of silently using another Python.
 
 ## What the installer does {#runtime}
 
