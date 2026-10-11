@@ -393,7 +393,7 @@ class PaintOverlayEditCommand(QUndoCommand):
             y_min, y_max, x_min, x_max = self._bounds
             current[y_min:y_max, x_min:x_max] = patch
 
-        # 如果图层全透明，降级为 None 以节省内存
+        # When the layer is fully transparent, reduce it to None to save memory
         if not np.any(current[..., 3]):
             self._set_layer_image(None)
         else:
@@ -424,7 +424,7 @@ class MultiRegionUpdateCommand(QUndoCommand):
         self._model = model
         self._fields = fields
         self._source = source
-        # index → (old_patch, new_patch)，只保存有实际差异的条目
+        # index -> (old_patch, new_patch); only entries with a real difference are kept
         self._patches: Dict[int, tuple[Dict[str, Any], Dict[str, Any]]] = {}
         for index, (old_data, new_data) in enumerate(zip(old_regions, new_regions)):
             new_patch = _build_region_patch(old_data, new_data)

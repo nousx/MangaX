@@ -87,8 +87,8 @@ def _calc_font_size(
     if size is None:
         return None
     w, h = size
-    # 反算与正算使用同一文本源（translation_rich 优先），
-    # 保证拖框得到的字号与随后按字号正算的白框尺寸一致。
+    # Deriving the font size and computing the box use the same text source (translation_rich first),
+    # so the font size obtained by dragging the box matches the white box size computed from that font size afterwards.
     text = render_text_value_from_region(region_data)
     direction = region_data.get("direction") or params.direction
     is_h = direction in ("h", "horizontal", "hr")

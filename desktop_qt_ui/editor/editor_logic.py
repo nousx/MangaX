@@ -30,7 +30,7 @@ class EditorLogic(QObject):
         self.config_service = get_config_service()
         self.logger = get_logger(__name__)
 
-        # 使用新的文件列表模型
+        # Use the new file list model
         self.file_model = FileListModel()
 
         self._snapshot = FileCatalogSnapshot.empty()
@@ -248,7 +248,7 @@ class EditorLogic(QObject):
         """Opens a dialog to select folders (supports multiple selection) and adds all containing images to the list."""
         last_dir = self._last_open_dir()
 
-        # 使用自定义的现代化文件夹选择器
+        # Use the custom modern folder picker
         folders = select_folders(
             parent=None,
             start_dir=last_dir,
@@ -358,7 +358,7 @@ class EditorLogic(QObject):
             )
             cleared_current = True
 
-        # 检查是否还有文件，如果没有了就清空画布
+        # Check whether any files are left; if not, clear the canvas
         if len(self.file_model.files) == 0 and not cleared_current:
             self.controller.document_service.clear_editor_state(
                 release_image_cache=True
@@ -378,8 +378,8 @@ class EditorLogic(QObject):
         self.file_model.clear()
         self.file_snapshot_changed.emit(self._snapshot)
 
-        # 先清空画布图片，这样后台任务会检测到图片为None而提前返回
-        # 然后清空编辑器状态（包括取消后台任务）
+        # Clear the canvas image first, so background tasks see that the image is None and return early
+        # Then clear the editor state (which also cancels background tasks)
         self.controller.document_service.clear_editor_state(release_image_cache=True)
 
     # --- Image Loading Methods ---
@@ -421,7 +421,7 @@ class EditorLogic(QObject):
     def _load_resolved_image(self, resolved_path: str) -> None:
         resolved_path = os.path.abspath(os.path.normpath(resolved_path))
 
-        # 获取文件项
+        # Get the file item
         if not FileListModel.is_supported_image_file(resolved_path):
             self.logger.warning(f"Unsupported editor file type; ignored: {resolved_path}")
             return

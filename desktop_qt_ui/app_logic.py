@@ -145,8 +145,8 @@ class MainAppLogic(QObject):
         self.i18n = get_i18n_manager()
         self.preset_service = get_preset_service()
 
-        # 扫描与翻译严格串行，避免模型/ONNX 资源并发冲突；执行器常驻，
-        # 运行期间不在 GUI 线程 join，应用退出时再等待任务完成清理。
+        # Scanning and translation run strictly one after the other, to avoid concurrent conflicts over model/ONNX resources; the executor stays alive,
+        # it is not joined in the GUI thread while running, and the app waits for tasks to finish and cleans up on exit.
         self._task_executor = concurrent.futures.ThreadPoolExecutor(
             max_workers=1,
             thread_name_prefix="translation-task",
@@ -155,12 +155,12 @@ class MainAppLogic(QObject):
         self._translate_future: Optional[concurrent.futures.Future] = None
         self._cleanup_future: Optional[concurrent.futures.Future] = None
         self._scan_request_id = 0
-        self.current_worker = None  # 当前运行的worker
+        self.current_worker = None  # The worker that is running
         self._shutdown_started = False
         self._stop_requested = False
         # Set by resume_backend_task for the next run only; the saved setting is untouched.
         self._skip_existing_once = False
-        self.current_task_id = 0  # 任务ID，用于区分不同的翻译任务
+        self.current_task_id = 0  # Task ID, to tell translation tasks apart
         self.saved_files_count = 0
         self.completed_output_sources: Dict[str, str] = {}
         self._last_progress_log_at = 0.0
@@ -169,10 +169,10 @@ class MainAppLogic(QObject):
 
         self.source_files: List[str] = [] # Holds both files and folders
         self._source_folders: Dict[str, str] = {}
-        self.file_to_folder_map: Dict[str, Optional[str]] = {} # 记录文件来自哪个文件夹
-        self.archive_to_temp_map: Dict[str, str] = {} # 记录压缩包解压的临时目录
-        self.excluded_subfolders: set = set() # 记录被删除的子文件夹路径
-        self.excluded_files: set = set() # 记录从已添加文件夹中排除的单文件/压缩包
+        self.file_to_folder_map: Dict[str, Optional[str]] = {} # Records which folder a file came from
+        self.archive_to_temp_map: Dict[str, str] = {} # Records the temporary folders archives were extracted to
+        self.excluded_subfolders: set = set() # Records the paths of removed subfolders
+        self.excluded_files: set = set() # Records single files and archives excluded from folders that were added
 
         self.app_config = AppConfig()
 
@@ -376,7 +376,7 @@ class MainAppLogic(QObject):
     def open_dict_directory(self):
         import subprocess
         import sys
-        # dict 目录在 app.exe 同级（打包后）或项目根目录（开发时）
+        # The dict folder is next to app.exe (packaged) or in the project root (development)
         dict_dir = os.path.join(self.config_service.root_dir, 'dict')
         try:
             if not os.path.exists(dict_dir):
@@ -408,11 +408,11 @@ class MainAppLogic(QObject):
 
     def get_hq_prompt_options(self) -> List[str]:
         try:
-            # dict 目录在 app.exe 同级（打包后）或项目根目录（开发时）
+            # The dict folder is next to app.exe (packaged) or in the project root (development)
             dict_dir = os.path.join(self.config_service.root_dir, 'dict')
             if not os.path.isdir(dict_dir):
                 return []
-            # 系统提示词文件的 stem（不含扩展名），排除这些文件
+            # Stems (names without extension) of the system prompt files; these files are excluded
             system_prompt_stems = {
                 'system_prompt_hq',
                 'system_prompt_hq_format',
@@ -436,9 +436,9 @@ class MainAppLogic(QObject):
     @pyqtSlot(str, str)
     def save_env_var(self, key: str, value: str):
         self.config_service.save_env_var(key, value)
-        # 不再输出日志，避免刷屏
+        # No more logging here, to avoid flooding the log
 
-    # region 预设管理
+    # region Preset management
     def get_presets_list(self) -> List[str]:
         """获取所有预设名称列表"""
         return self.preset_service.get_presets_list()
@@ -454,17 +454,17 @@ class MainAppLogic(QObject):
         try:
             preset_env_keys = self.config_service.get_all_preset_env_vars()
             if copy_current:
-                # 复制当前配置模式：保存全部 API 相关的环境变量
+                # Copy-current-configuration mode: save every API-related environment variable
                 current_env_vars = self.config_service.load_env_vars()
                 all_env_vars = {key: current_env_vars.get(key, "") for key in preset_env_keys}
                 
-                # 保存所有环境变量，包括空值，以准确反映当前配置状态
+                # Save all environment variables, empty ones included, so the current configuration is reflected exactly
                 success = self.preset_service.save_preset(preset_name, all_env_vars)
                 if success:
-                    # 不输出日志，避免刷屏
+                    # Not logged, to avoid flooding the log
                     pass
             else:
-                # 创建空白预设模式：为全部 API 环境变量创建空白结构
+                # Create-blank-preset mode: create an empty structure for every API environment variable
                 empty_env_vars = {key: "" for key in preset_env_keys}
                 
                 success = self.preset_service.save_preset(preset_name, empty_env_vars)
@@ -483,13 +483,13 @@ class MainAppLogic(QObject):
     def load_preset(self, preset_name: str) -> bool:
         """加载预设并完全替换.env文件"""
         try:
-            # 加载预设文件
+            # Load the preset file
             preset_env_vars = self.preset_service.load_preset(preset_name)
             if preset_env_vars is None:
                 self._ui_log(f"Failed to load preset: {preset_name}", "ERROR")
                 return False
             
-            # 完全替换.env文件，只保留预设中的字段
+            # Replace the .env file completely, keeping only the fields of the preset
             success = self.config_service.replace_env_file(preset_env_vars)
             if not success:
                 self._ui_log(f"Failed to apply preset: {preset_name}", "ERROR")
@@ -517,7 +517,7 @@ class MainAppLogic(QObject):
             return False
     # endregion
     
-    # region API测试
+    # region API test
     @staticmethod
     def _normalize_api_test_target(translator_key: str) -> str:
         return (translator_key or "").strip().lower()
@@ -897,21 +897,21 @@ class MainAppLogic(QObject):
             if "gemini" in normalized_key:
                 return await self._test_gemini_text_api(api_key, api_base, model)
             if "sakura" in normalized_key:
-                # Sakura使用OpenAI兼容API
+                # Sakura uses an OpenAI-compatible API
                 from openai import AsyncOpenAI
                 if not api_base:
                     return False, self._t("api_test_error_sakura_base")
                 client = AsyncOpenAI(
-                    api_key="sk-114514",  # Sakura使用固定密钥
+                    api_key="sk-114514",  # Sakura uses a fixed key
                     base_url=api_base,
                     **openai_http_client_kwargs(api_base),
                 )
                 
                 try:
-                    # 如果指定了模型，测试该模型
+                    # When a model is given, test that model
                     if model and model.strip():
                         try:
-                            # 不传递 max_tokens 以兼容所有模型
+                            # max_tokens is not passed, to work with every model
                             await client.chat.completions.create(
                                 model=model,
                                 messages=[{"role": "user", "content": "test"}]
@@ -950,7 +950,7 @@ class MainAppLogic(QObject):
 
             if self._is_openai_compatible_target(normalized_key):
                 resolved_api_key = resolve_openai_compatible_api_key(api_key, api_base or "https://api.openai.com/v1")
-                # 尝试使用 curl_cffi 客户端绕过 TLS 指纹检测
+                # Try the curl_cffi client, to get past TLS fingerprint checks
                 try:
                     from manga_translator.translators.common import AsyncOpenAICurlCffi
                     client = AsyncOpenAICurlCffi(
@@ -971,20 +971,20 @@ class MainAppLogic(QObject):
                 try:
                     models_response = await client.models.list()
                     
-                    # 获取所有模型ID，不过滤
+                    # Get every model ID, unfiltered
                     model_ids = [m.id for m in models_response.data]
-                    model_ids.sort(reverse=True)  # 新模型在前
+                    model_ids.sort(reverse=True)  # Newer models first
                     
                     return True, model_ids, "获取成功"
                 finally:
                     await client.close()
             
             elif "gemini" in normalized_key:
-                # Gemini API - 使用 curl_cffi 绕过 TLS 指纹检测，使用 Google Gemini 认证格式
+                # Gemini API - curl_cffi to get past TLS fingerprint checks, with the Google Gemini authentication format
                 try:
                     from manga_translator.translators.common import AsyncGeminiCurlCffi
 
-                    # 确定 base_url
+                    # Decide the base_url
                     base_url = api_base.strip() if api_base and api_base.strip() else "https://generativelanguage.googleapis.com"
 
                     client = AsyncGeminiCurlCffi(
@@ -1000,14 +1000,14 @@ class MainAppLogic(QObject):
                     finally:
                         await client.close()
                 except ImportError:
-                    # 如果 curl_cffi 不可用，回退到标准客户端
+                    # When curl_cffi is not available, fall back to the standard client
                     import asyncio
 
                     from google import genai
                     from google.genai import types
                     loop = asyncio.get_event_loop()
 
-                    # 检查是否是自定义API
+                    # Check whether it is a custom API
                     is_custom_api = (
                         api_base
                         and api_base.strip()
@@ -1030,7 +1030,7 @@ class MainAppLogic(QObject):
                     return await loop.run_in_executor(None, sync_get_models)
             
             elif "sakura" in normalized_key:
-                # Sakura使用OpenAI兼容API
+                # Sakura uses an OpenAI-compatible API
                 from openai import AsyncOpenAI
                 if not api_base:
                     return False, [], self._t("api_test_error_sakura_base")
@@ -1059,7 +1059,7 @@ class MainAppLogic(QObject):
             return False, [], self._t("api_models_error_failed", error=str(e))
     # endregion
 
-    # region 配置管理
+    # region Configuration management
     def load_config_file(self, config_path: str) -> bool:
         try:
             success = self.config_service.load_config_file(config_path)
@@ -1115,17 +1115,17 @@ class MainAppLogic(QObject):
             self.config_service.save_config_file()
             self.logger.debug("Config saved: '{config_key}' = '{value}'".format(config_key=full_key, value=value))
 
-            # 当翻译器设置被更改时，直接更新翻译服务的内部状态
+            # When the translator setting changes, update the internal state of the translation service directly
             if full_key == 'translator.translator':
                 self.logger.debug("Translator switched: '{value}'".format(value=value))
                 self.translation_service.set_translator(value)
             
-            # 当目标语言被更改时，更新翻译服务的目标语言
+            # When the target language changes, update the target language of the translation service
             if full_key == 'translator.target_lang':
                 self.logger.debug(f"Target language switched to: {value}")
                 self.translation_service.set_target_language(value)
 
-            # 当渲染设置被更改时，通知编辑器刷新
+            # When a render setting changes, tell the editor to refresh
             if full_key.startswith('render.'):
                 self.logger.debug("Render setting changed: '{config_key}'".format(config_key=full_key))
                 self.render_setting_changed.emit()
@@ -1134,7 +1134,7 @@ class MainAppLogic(QObject):
             self.logger.error(f"Error saving single config change for {full_key}: {e}")
     # endregion
 
-    # region UI数据提供
+    # region Data for the UI
     def _cli_model_choices(self, setting: str, listed: List[tuple]) -> Dict[str, str]:
         """Choices for a CLI translator's model: the CLI default, the known models and the saved one."""
         choices = {"": self._t("cli_model_default")}
@@ -1159,7 +1159,7 @@ class MainAppLogic(QObject):
         cli_models = self._cli_model_display_mapping(key)
         if cli_models is not None:
             return cli_models
-        # 每次都动态生成翻译映射，确保语言切换时能正确更新
+        # The translated mapping is built every time, so it updates correctly when the language changes
         display_name_maps = {
             "alignment": {
                 "auto": self._t("alignment_auto"),
@@ -1483,7 +1483,7 @@ class MainAppLogic(QObject):
         from PyQt6.QtWidgets import QFileDialog, QMessageBox
         
         try:
-            # 选择保存位置
+            # Choose where to save
             file_path, _ = QFileDialog.getSaveFileName(
                 None,
                 self._t("Export Config"),
@@ -1494,24 +1494,24 @@ class MainAppLogic(QObject):
             if not file_path:
                 return
             
-            # 获取当前配置
+            # Get the current configuration
             config = self.config_service.get_config()
             config_dict = config.model_dump()
             
-            # 排除敏感信息和临时状态
-            # 1. 排除 app 配置（包含路径等临时信息）
+            # Leave out sensitive information and temporary state
+            # 1. Leave out the app configuration (it holds paths and other temporary information)
             if 'app' in config_dict:
                 del config_dict['app']
             
-            # 2. 排除 CLI 中的临时状态
+            # 2. Leave out temporary state in the CLI section
             if 'cli' in config_dict:
-                # 保留 CLI 配置，但排除某些临时字段
-                cli_exclude = ['verbose']  # 可以根据需要添加更多
+                # Keep the CLI configuration, but leave out some temporary fields
+                cli_exclude = ['verbose']  # More can be added as needed
                 for key in cli_exclude:
                     if key in config_dict['cli']:
                         del config_dict['cli'][key]
             
-            # 保存到文件
+            # Save to the file
             with open(file_path, 'w', encoding='utf-8') as f:
                 json.dump(config_dict, f, indent=2, ensure_ascii=False)
             
@@ -1538,7 +1538,7 @@ class MainAppLogic(QObject):
         from PyQt6.QtWidgets import QFileDialog, QMessageBox
         
         try:
-            # 选择要导入的文件
+            # Choose the file to import
             file_path, _ = QFileDialog.getOpenFileName(
                 None,
                 self._t("Import Config"),
@@ -1549,18 +1549,18 @@ class MainAppLogic(QObject):
             if not file_path:
                 return
             
-            # 读取导入的配置
+            # Read the imported configuration
             with open(file_path, 'r', encoding='utf-8') as f:
                 imported_config = json.load(f)
             
-            # 获取当前配置
+            # Get the current configuration
             current_config = self.config_service.get_config()
             current_dict = current_config.model_dump()
             
-            # 保留当前的 app 配置（路径等临时信息）
+            # Keep the current app configuration (paths and other temporary information)
             preserved_app = current_dict.get('app', {})
             
-            # 深度合并配置
+            # Deep-merge the configuration
             def deep_update(target, source):
                 for key, value in source.items():
                     if isinstance(value, dict) and key in target and isinstance(target[key], dict):
@@ -1568,20 +1568,20 @@ class MainAppLogic(QObject):
                     else:
                         target[key] = value
             
-            # 合并导入的配置到当前配置
+            # Merge the imported configuration into the current one
             deep_update(current_dict, imported_config)
             
-            # 恢复 app 配置
+            # Restore the app configuration
             current_dict['app'] = preserved_app
             
-            # 更新配置
+            # Update the configuration
             from core.config_models import AppSettings
             new_config = AppSettings.model_validate(current_dict)
             self.config_service.set_config(new_config)
             self.config_service.save_config_file()
             
-            # 通知UI更新 - 与首次加载/重新加载保持一致，直接发原始 dump,
-            # 避免 None → '不使用' 这类有损转换让下游 UI 的 None 判定失效
+            # Tell the UI to update - the same as on first load and reload: send the raw dump directly,
+            # so that lossy conversions such as None -> "not used" do not break the None checks of the UI downstream
             self.config_loaded.emit(new_config.model_dump())
             
             self.logger.info('Config imported from {path}'.format(path=file_path))
@@ -1600,7 +1600,7 @@ class MainAppLogic(QObject):
             )
     # endregion
 
-    # region 文件管理
+    # region File management
     def add_files(self, file_paths: List[str]):
         """
         Adds files/folders to the list for processing.
@@ -1685,7 +1685,7 @@ class MainAppLogic(QObject):
         """Opens a dialog to select folders (supports multiple selection) and adds their paths to the list."""
         last_dir = self.get_last_open_dir()
 
-        # 使用自定义的现代化文件夹选择器
+        # Use the custom modern folder picker
         from ui.secondary_pages.folder_dialog import select_folders
 
         folders = select_folders(
@@ -1696,7 +1696,7 @@ class MainAppLogic(QObject):
         )
 
         if folders:
-            self.set_last_open_dir(folders[0])  # 保存第一个文件夹的路径
+            self.set_last_open_dir(folders[0])  # Keep the path of the first folder
             self.add_files(folders)
     
     def add_folders(self):
@@ -1715,7 +1715,7 @@ class MainAppLogic(QObject):
                 None,
             )
 
-            # 直接添加的文件、压缩包或文件夹只移除源，不扫描磁盘。
+            # For files, archives or folders that were added directly, only the source is removed; the disk is not scanned.
             if matched_path:
                 self.source_files.remove(matched_path)
                 self._source_folders.pop(target_key, None)
@@ -1760,7 +1760,7 @@ class MainAppLogic(QObject):
                 self.file_sources_changed.emit()
                 return
 
-            # 兼容“若干单文件按父目录分组”的目录节点删除；只检查已有源列表。
+            # Supports removing a folder node made of "several single files grouped by parent folder"; only the existing source list is checked.
             grouped_files = [
                 path
                 for path in self.source_files
@@ -1777,7 +1777,7 @@ class MainAppLogic(QObject):
                 self.file_sources_changed.emit()
                 return
 
-            # 如果到这里还没有处理，说明路径不存在
+            # Not handled by this point: the path does not exist
             self.logger.warning(f"Path not found in list for removal: {file_path}")
         except Exception as e:
             self._ui_log(f"Error removing path: {e}", "ERROR")
@@ -1791,15 +1791,15 @@ class MainAppLogic(QObject):
         # TODO: Add confirmation dialog
         self.source_files.clear()
         self._source_folders.clear()
-        self.file_to_folder_map.clear()  # 清空文件夹映射
-        self.excluded_subfolders.clear()  # 清空排除列表
+        self.file_to_folder_map.clear()  # Clear the folder mapping
+        self.excluded_subfolders.clear()  # Clear the exclusion list
         self.excluded_files.clear()
         self.files_cleared.emit()
         self.file_sources_changed.emit()
         self.logger.info("File list cleared by user.")
     # endregion
 
-    # region 核心任务逻辑
+    # region Core task logic
     def start_file_scanning(self, task_config: dict):
         """启动后台文件扫描任务"""
         self.state_manager.set_translating(True)
@@ -1863,7 +1863,7 @@ class MainAppLogic(QObject):
         self.excluded_subfolders = excluded_subfolders
         self.excluded_files = excluded_files
         
-        # 检查文件列表是否为空
+        # Check whether the file list is empty
         if not resolved_files:
             self._ui_log("No valid image files found; task aborted", "WARNING")
             self.state_manager.set_translating(False)
@@ -1876,7 +1876,7 @@ class MainAppLogic(QObject):
             )
             return
 
-        # 启动真正的翻译任务
+        # Start the actual translation task
         self._start_translation_worker(resolved_files, task_config)
 
     def on_scanning_error(self, request_id, error_msg):
@@ -1920,7 +1920,7 @@ class MainAppLogic(QObject):
         self._last_progress_log_at = 0.0
         self._reset_task_failures()
         
-        # 生成新的任务ID
+        # Create a new task ID
         self.current_task_id += 1
         task_id = self.current_task_id
         
@@ -1968,7 +1968,7 @@ class MainAppLogic(QObject):
         # Read and clear the request first, so a refused start cannot leak it into the next one.
         skip_existing = self._skip_existing_once
         self._skip_existing_once = False
-        # 检查是否有任务在运行
+        # Check whether a task is running
         assistant = getattr(self, 'chapter_assistant', None)
         if assistant is not None and assistant.busy():
             self._ui_log(self._t('The assistant is working: pause its queue before starting a main-page task'), 'WARNING')
@@ -1992,11 +1992,11 @@ class MainAppLogic(QObject):
             self._ui_log("The previous task is still finishing in the background. Please try again later.", "WARNING")
             return
 
-        # 任务启动前排空 UI 中尚未提交的 .env 写入。
+        # Before the task starts, flush the .env writes the UI has not committed yet.
         if hasattr(self, 'main_view') and self.main_view and hasattr(self.main_view, '_flush_all_pending_env_vars'):
             self.main_view._flush_all_pending_env_vars(wait=False)
 
-        # 检查输出目录是否合法 (提前检查)
+        # Check whether the output folder is valid (checked early)
         config = self.config_service.get_config()
         output_path = config.app.last_output_path
         if not output_path or not os.path.isdir(output_path):
@@ -2009,7 +2009,7 @@ class MainAppLogic(QObject):
             )
             return
             
-        # 检查源文件列表是否为空 (初步检查，具体以扫描结果为准)
+        # Check whether the source file list is empty (a first check; the scan result decides)
         if not self.source_files:
             self._ui_log("The file list is empty", "WARNING")
             from PyQt6.QtWidgets import QMessageBox
@@ -2020,7 +2020,7 @@ class MainAppLogic(QObject):
             )
             return
 
-        # 按当前所选功能精确校验 API Keys
+        # Validate the API keys exactly for the features currently selected
         try:
             if not self._validate_runtime_api_requirements(config):
                 return
@@ -2035,7 +2035,7 @@ class MainAppLogic(QObject):
             )
             return
 
-        # 启动后台文件扫描
+        # Start the background file scan
         task_config = config.model_dump()
         if skip_existing:
             task_config.setdefault('cli', {})['overwrite'] = False
@@ -2044,7 +2044,7 @@ class MainAppLogic(QObject):
 
     def on_task_finished(self, results, task_id):
         """处理后端已经保存完成的任务结果。"""
-        # 检查任务ID是否匹配，防止已停止的任务更新状态
+        # Check that the task ID matches, so a stopped task cannot update the state
         if task_id != self.current_task_id:
             return
 
@@ -2119,18 +2119,18 @@ class MainAppLogic(QObject):
                 self.state_manager.set_status_message(self._t(
                     "task_done_status", count=self.saved_files_count))
             
-            # 重置主视图的进度条
+            # Reset the progress bar of the main view
             if hasattr(self, 'main_view') and self.main_view:
                 self.main_view.reset_progress()
             
-            # 播放系统提示音
+            # Play the system notification sound
             try:
                 from PyQt6.QtWidgets import QApplication
                 QApplication.beep()
             except Exception:
                 pass
             
-            # 使用列表副本发送信号，避免引用问题
+            # Send the signal with a copy of the list, to avoid reference problems
             self.task_completed.emit(list(saved_files))
             if failed_count > 0:
                 self.error_dialog_requested.emit(self._build_task_failure_dialog_message())
@@ -2175,21 +2175,21 @@ class MainAppLogic(QObject):
             return None
     
     def on_task_error(self, error_message, task_id):
-        # 检查任务ID是否匹配，防止已停止的任务更新状态
+        # Check that the task ID matches, so a stopped task cannot update the state
         if task_id != self.current_task_id:
             return
         
         self.state_manager.set_translating(False)
         self.state_manager.set_status_message("任务失败")
         
-        # 重置主视图的进度条
+        # Reset the progress bar of the main view
         if hasattr(self, 'main_view') and self.main_view:
             self.main_view.reset_progress()
         
-        # 弹出错误提示框
+        # Show an error message box
         self.error_dialog_requested.emit(error_message)
         
-        # 清理worker引用
+        # Clear the worker reference
         self.current_worker = None
 
     def on_task_progress(self, current, total, message, task_id):
@@ -2203,7 +2203,7 @@ class MainAppLogic(QObject):
         self.state_manager.set_translation_progress(percentage)
         self.state_manager.set_status_message(f"[{current}/{total}] {message}")
         
-        # 更新主视图的进度条
+        # Update the progress bar of the main view
         if hasattr(self, 'main_view') and self.main_view:
             self.main_view.update_progress(current, total, message)
 
@@ -2215,7 +2215,7 @@ class MainAppLogic(QObject):
             if hasattr(self, 'main_view') and self.main_view:
                 self.main_view.set_stopping_state()
             
-            # 使扫描和翻译的晚到回调全部失效。
+            # Invalidate every late callback of scanning and translation.
             self._scan_request_id += 1
             self.current_task_id += 1
             worker = self.current_worker
@@ -2272,7 +2272,7 @@ class MainAppLogic(QObject):
         self._finish_stop_task()
     # endregion
 
-    # region 应用生命周期
+    # region Application lifecycle
     def initialize(self) -> bool:
         try:
             # The config is already loaded at startup. We just need to ensure the UI
@@ -2322,7 +2322,7 @@ class MainAppLogic(QObject):
             self.state_manager.set_translating(False)
             self._task_executor.shutdown(wait=True, cancel_futures=True)
 
-            # 关闭缩略图加载线程池
+            # Shut down the thumbnail loading thread pool
             try:
                 from ui.widgets.file_list_view import (
                     shutdown_thumbnail_executor,
@@ -2331,7 +2331,7 @@ class MainAppLogic(QObject):
             except Exception:
                 pass
 
-            # 关闭轻量级修复器线程池
+            # Shut down the lightweight inpainter thread pool
             try:
                 from desktop_qt_ui.services.lightweight_inpainter import (
                     get_lightweight_inpainter,
@@ -2342,8 +2342,8 @@ class MainAppLogic(QObject):
             except Exception:
                 pass
 
-            # 关闭编辑器文档线程池，并排空专属导出队列。
-            # 只在编辑器模块已加载过时清理，避免退出路径反而把整个编辑器栈 import 进来
+            # Shut down the editor document thread pool and drain its dedicated export queue.
+            # Clean up only when the editor module has been loaded, so the exit path does not import the whole editor stack
             try:
                 import sys
                 for module_name in ("editor.editor_controller", "desktop_qt_ui.editor.editor_controller"):
@@ -2358,8 +2358,8 @@ class MainAppLogic(QObject):
             except Exception:
                 pass
 
-            # 有序停止后台协程事件循环线程（inpaint/OCR 协程），
-            # 避免退出时事件循环线程被强杀
+            # Stop the background coroutine event loop thread (inpaint/OCR coroutines) in order,
+            # so the event loop thread is not killed on exit
             try:
                 from services import get_async_service
                 async_service = get_async_service()
@@ -2368,7 +2368,7 @@ class MainAppLogic(QObject):
             except Exception as e:
                 self._ui_log(f"Error shutting down async service: {e}", "WARNING")
             try:
-                # 模块级单例（若有代码直接使用过 services.async_service 的全局实例）
+                # Module-level singleton (in case some code used the global instance of services.async_service directly)
                 from services.async_service import shutdown_async_service
                 shutdown_async_service()
             except Exception:
@@ -2391,9 +2391,9 @@ class TranslationWorker(QObject):
         self.config_dict = config_dict
         self.output_folder = output_folder
         self.root_dir = root_dir
-        self.file_to_folder_map = file_to_folder_map or {}  # 文件到文件夹的映射
+        self.file_to_folder_map = file_to_folder_map or {}  # Mapping from file to folder
         self._is_running = True
-        self._current_task = None  # 保存当前运行的异步任务
+        self._current_task = None  # Keep the asynchronous task that is running
         self.i18n = get_i18n_manager()
         self.logger = get_logger(__name__)
         self.file_service = get_file_service()
@@ -2521,18 +2521,18 @@ class TranslationWorker(QObject):
         file_path = image_path
         parent_dir = os.path.normpath(os.path.dirname(file_path))
         
-        # 检查是否启用了"输出到原图目录"模式
+        # Check whether "save next to the source image" is on
         if save_to_source_dir:
-            # 输出到原图所在目录的 manga_translator_work/result 子目录
+            # Write to the manga_translator_work/result subfolder next to the source image
             final_output_dir = os.path.join(parent_dir, 'manga_translator_work', 'result')
         else:
-            # 原有逻辑：使用配置的输出目录
+            # Original behaviour: use the configured output folder
             final_output_dir = output_folder
             
-            # 检查文件是否来自文件夹
+            # Check whether the file came from a folder
             source_folder = self.file_to_folder_map.get(image_path)
             if source_folder:
-                # 检查是否来自压缩包
+                # Check whether it came from an archive
                 if self.file_service.is_archive_file(source_folder):
                     archive_output_dir = _resolve_archive_output_dir_from_extracted_image(
                         image_path, output_folder
@@ -2543,7 +2543,7 @@ class TranslationWorker(QObject):
                         archive_name = os.path.splitext(os.path.basename(source_folder))[0]
                         final_output_dir = os.path.join(output_folder, archive_name)
                 else:
-                    # 文件来自文件夹，保持相对路径结构
+                    # The file came from a folder: keep the relative path structure
                     relative_path = os.path.relpath(parent_dir, source_folder)
                     # Normalize path and avoid adding '.' as a directory component
                     if relative_path == '.':
@@ -2552,7 +2552,7 @@ class TranslationWorker(QObject):
                         final_output_dir = os.path.join(output_folder, os.path.basename(source_folder), relative_path)
                 final_output_dir = os.path.normpath(final_output_dir)
         
-        # 处理输出文件名和格式
+        # Work out the output file name and format
         base_filename, _ = os.path.splitext(os.path.basename(file_path))
         if output_format and output_format.strip() and output_format.lower() not in ['none', '不指定']:
             output_filename = f"{base_filename}.{output_format}"
@@ -2565,14 +2565,14 @@ class TranslationWorker(QObject):
     def stop(self):
         self._log_info("--- Stop request received.")
         self._is_running = False
-        # 取消当前运行的异步任务
+        # Cancel the asynchronous task that is running
         if self._current_task and not self._current_task.done():
             self._current_task.cancel()
         
-        # 使用统一的内存清理模块
+        # Use the shared memory clean-up module
         try:
             from desktop_qt_ui.utils.memory_cleanup import full_memory_cleanup
-            # 使用配置中的卸载模型开关
+            # Use the unload-models switch from the configuration
             unload_models = self.config_dict.get('app', {}).get('unload_models_after_translation', False)
             full_memory_cleanup(log_callback=self._log_info, unload_models=unload_models)
         except Exception as e:
@@ -2588,21 +2588,21 @@ class TranslationWorker(QObject):
     async def _do_processing(self):
         manga_logger = logging.getLogger('manga_translator')
         
-        # 根据 verbose 配置设置日志级别
+        # Set the log level from the verbose setting
         verbose = self.config_dict.get('cli', {}).get('verbose', False)
         log_level = logging.DEBUG if verbose else logging.INFO
         manga_logger.setLevel(log_level)
         
-        # 根日志器设为 DEBUG 以允许所有日志通过
+        # The root logger is set to DEBUG so every record gets through
         root_logger = logging.getLogger()
         root_logger.setLevel(logging.DEBUG)
         
-        # 文件处理器始终为 DEBUG，其他处理器根据 verbose 设置
+        # The file handler is always DEBUG; the other handlers follow the verbose setting
         for handler in root_logger.handlers:
             if isinstance(handler, logging.FileHandler):
-                handler.setLevel(logging.DEBUG)  # 文件日志始终 DEBUG
+                handler.setLevel(logging.DEBUG)  # The file log is always DEBUG
             else:
-                handler.setLevel(log_level)  # 控制台根据 verbose 设置
+                handler.setLevel(log_level)  # The console follows the verbose setting
 
         results = []
         try:
@@ -2614,7 +2614,7 @@ class TranslationWorker(QObject):
             translator_params = self.config_dict.get('cli', {})
             translator_params.update(self.config_dict)
             
-            # 根据 verbose 设置设置日志级别
+            # Set the log level from the verbose setting
             verbose = translator_params.get('verbose', False)
             if hasattr(self, 'log_service') and self.log_service:
                 self.log_service.set_console_log_level(verbose)
@@ -2625,8 +2625,8 @@ class TranslationWorker(QObject):
             translator = MangaTranslator(params=translator_params)
             self._log_info("--- Translator initialization completed")
             
-            # 注册进度钩子，接收后端的批次进度
-            progress_signal = self.progress  # 捕获信号引用
+            # Register the progress hook, to receive the batch progress of the backend
+            progress_signal = self.progress  # Capture the signal reference
             progress_context = {
                 "skipped_count": 0,
                 "processing_started_at": None,
@@ -2655,7 +2655,7 @@ class TranslationWorker(QObject):
             async def progress_hook(state: str, finished: bool):
                 try:
                     if state.startswith("batch:"):
-                        # 后端统一报告绝对进度: batch:start:end:total[:failed][:skipped]
+                        # The backend always reports absolute progress: batch:start:end:total[:failed][:skipped]
                         parts = state.split(":")
                         if len(parts) >= 4:
                             batch_end = int(parts[2])
@@ -2672,7 +2672,7 @@ class TranslationWorker(QObject):
                                     pass
                             emit_eta_progress(batch_end, total)
                 except Exception:
-                    pass  # 忽略进度更新错误，不影响翻译流程
+                    pass  # Ignore progress update errors; they do not affect the translation
             
             translator.add_progress_hook(progress_hook)
 
@@ -2691,7 +2691,7 @@ class TranslationWorker(QObject):
             output_format = save_info['format']
             input_folders = save_info['input_folders']
 
-            # 确定翻译流程模式
+            # Decide the mode of the translation workflow
             workflow_mode = 'Normal Translation'
             workflow_tip = ""
             cli_config = self.config_dict.get('cli', {})
@@ -2724,7 +2724,7 @@ class TranslationWorker(QObject):
                 workflow_mode = 'Translate JSON Only'
                 workflow_tip = 'Tip: Requires existing JSON data. The app reads original text from JSON, translates it, writes results back to JSON, and deletes imagename_original.txt after success'
                  
-                # TXT导入JSON的预处理已经统一到翻译器入口（manga_translator.py），这里不再需要
+                # Importing TXT into JSON is now preprocessed at the translator entry (manga_translator.py), so it is no longer needed here
 
             total_images = len(self.files)
             progress_context["detail"] = self._t("eta_processing")
@@ -2823,20 +2823,20 @@ class TranslationWorker(QObject):
             error_message = str(e)
             error_traceback = traceback.format_exc()
             
-            # 记录到logger，确保命令行能看到
+            # Log it too, so it shows on the command line
             self.logger.error(f"Translation error: {error_message}")
             self.logger.error(error_traceback)
             
-            # 构建友好的中文错误提示
+            # Build a readable Chinese error message
             friendly_error = self._build_friendly_error_message(error_message, error_traceback)
             
             self.error.emit(friendly_error)
         finally:
-            # 翻译结束后进行完整的内存清理（特别是CPU模式）
+            # Full memory clean-up after translation (especially in CPU mode)
             try:
-                # 显式清理大对象引用，帮助GC回收
+                # Clear references to large objects explicitly, to help the GC
                 if 'translator' in locals():
-                    # 确保卸载所有模型
+                    # Make sure every model is unloaded
                     if hasattr(translator, '_detector_cleanup_task') and translator._detector_cleanup_task:
                         translator._detector_cleanup_task.cancel()
                         try:
@@ -2850,7 +2850,7 @@ class TranslationWorker(QObject):
                     del images_with_configs
                 
                 from desktop_qt_ui.utils.memory_cleanup import full_memory_cleanup
-                # 使用配置中的卸载模型开关
+                # Use the unload-models switch from the configuration
                 unload_models = self.config_dict.get('app', {}).get('unload_models_after_translation', False)
                 full_memory_cleanup(log_callback=self._log_info, unload_models=unload_models)
             except Exception as e:
@@ -2864,16 +2864,16 @@ class TranslationWorker(QObject):
             import sys
             self._log_info("--- Starting task processing...")
 
-            # 在Windows上的工作线程中，需要手动初始化Windows Socket
+            # In a worker thread on Windows, Windows Sockets has to be initialised by hand
             if sys.platform == 'win32':
-                # 使用ctypes直接调用WSAStartup
+                # Call WSAStartup directly through ctypes
                 import ctypes
                 
                 try:
-                    # WSADATA结构体大小
+                    # Size of the WSADATA structure
                     WSADATA_SIZE = 400
                     wsa_data = ctypes.create_string_buffer(WSADATA_SIZE)
-                    # 调用WSAStartup，版本2.2
+                    # Call WSAStartup, version 2.2
                     ws2_32 = ctypes.WinDLL('ws2_32')
                     result = ws2_32.WSAStartup(0x0202, wsa_data)
                     if result != 0:
@@ -2881,10 +2881,10 @@ class TranslationWorker(QObject):
                 except Exception as e:
                     self._log_error(f"--- [ERROR] Failed to initialize WSA: {e}")
                 
-                # 使用ProactorEventLoop（Windows默认）
+                # Use ProactorEventLoop (the Windows default)
                 asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
 
-            # 创建事件循环并保存任务引用
+            # Create the event loop and keep a reference to the task
             try:
                 loop = asyncio.new_event_loop()
             except Exception as e:
@@ -2900,25 +2900,25 @@ class TranslationWorker(QObject):
             # computer to sleep in the middle of it.
             with keep_system_awake():
                 loop.run_until_complete(self._current_task)
-            # 任务处理完成，不输出日志
+            # The task is handled; nothing is logged
 
         except asyncio.CancelledError:
             pass
         except Exception as e:
             import traceback
             error_msg = f"An error occurred in the asyncio runner: {str(e)}\n{traceback.format_exc()}"
-            # 同时记录到logger，确保命令行能看到
+            # Log it too, so it shows on the command line
             self.logger.error(error_msg)
             self.error.emit(error_msg)
         finally:
             if loop:
                 shutdown_event_loop(loop, logger=self.logger, label="worker loop")
-                # 清理完成，不输出日志
+                # Clean-up is done; nothing is logged
 
 
 
 # ============================================================================
-# 线程池版本的Worker类（使用QRunnable替代QThread，避免线程管理问题）
+# Thread-pool version of the worker class (QRunnable instead of QThread, to avoid thread management problems)
 # ============================================================================
 
 class WorkerSignals(QObject):
@@ -2950,7 +2950,7 @@ class FileScannerRunnable(QRunnable):
         self._is_running = True
         self.setAutoDelete(True)
         
-        # ✅ 创建信号对象用于线程安全通信
+        # ✅ Create a signal object for thread-safe communication
         self.signals = WorkerSignals()
         if finished_callback:
             self.signals.finished.connect(lambda args: finished_callback(*args), type=Qt.ConnectionType.QueuedConnection)
@@ -2971,7 +2971,7 @@ class FileScannerRunnable(QRunnable):
             resolved_files = []
             processed_archives = set()
              
-            # 分离文件和文件夹
+            # Separate files and folders
             folders = []
             individual_files = []
             archive_files = []
@@ -3063,7 +3063,7 @@ class FileScannerRunnable(QRunnable):
                 except Exception as e:
                     self._emit_progress(f"Failed to extract {os.path.basename(archive_path)}: {e}")
 
-            # 处理顶层压缩包文件
+            # Handle top-level archive files
             for archive_path in archive_files:
                 if not self._is_running:
                     return
@@ -3082,10 +3082,10 @@ class FileScannerRunnable(QRunnable):
                 MainAppLogic._path_key(path) for path in self.excluded_files
             }
             
-            # 对文件夹进行自然排序
+            # Natural sort of the folders
             folders.sort(key=self.file_service._natural_sort_key)
             
-            # 按文件夹分组处理
+            # Process grouped by folder
             for folder in folders:
                 if not self._is_running:
                     return
@@ -3099,7 +3099,7 @@ class FileScannerRunnable(QRunnable):
                 folder_files = [f for f in folder_files if not _is_excluded(f)]
                 folder_archives = [f for f in folder_archives if not _is_excluded(f)]
 
-                # 处理文件夹内的压缩包文件
+                # Handle archive files inside folders
                 for archive_path in folder_archives:
                     if not self._is_running:
                         return
@@ -3109,7 +3109,7 @@ class FileScannerRunnable(QRunnable):
                 for file_path in folder_files:
                     self.file_to_folder_map[file_path] = folder
             
-            # 处理单独添加的文件
+            # Handle files that were added on their own
             individual_files.sort(key=self.file_service._natural_sort_key)
             for file_path in individual_files:
                 if not self._is_running:
@@ -3169,7 +3169,7 @@ class TranslationRunnable(QRunnable):
         self.file_service = get_file_service()
         self.setAutoDelete(True)
         
-        # ✅ 创建信号对象用于线程安全通信
+        # ✅ Create a signal object for thread-safe communication
         self.signals = WorkerSignals()
         if finished_callback:
             self.signals.finished.connect(lambda args: finished_callback(*args), type=Qt.ConnectionType.QueuedConnection)
@@ -3202,7 +3202,7 @@ class TranslationRunnable(QRunnable):
                 return
             self.logger.info("--- Starting task processing...")
 
-            # Windows平台初始化
+            # Windows platform initialisation
             if sys.platform == 'win32':
                 import ctypes
                 try:
@@ -3217,12 +3217,12 @@ class TranslationRunnable(QRunnable):
                 
                 asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
 
-            # 创建事件循环
+            # Create the event loop
             loop = asyncio.new_event_loop()
             self._loop = loop
             asyncio.set_event_loop(loop)
             
-            # 创建并运行任务（复用TranslationWorker的_do_processing逻辑）
+            # Create and run the task (reuses the _do_processing logic of TranslationWorker)
             worker = TranslationWorker(
                 self.files, self.config_dict, self.output_folder, 
                 self.root_dir, self.file_to_folder_map
@@ -3232,7 +3232,7 @@ class TranslationRunnable(QRunnable):
             if not self._is_running:
                 return
             
-            # 用于接收 worker 的 finished 信号
+            # Receives the finished signal of the worker
             results = []
             worker_had_error = False
 
@@ -3244,7 +3244,7 @@ class TranslationRunnable(QRunnable):
                 worker_had_error = True
                 self._emit_error(msg)
             
-            # 连接信号到回调
+            # Connect the signals to the callbacks
             worker.progress.connect(lambda c, t, m: self._emit_progress(c, t, m))
             worker.error.connect(on_worker_error)
             worker.finished.connect(on_worker_finished)
@@ -3252,7 +3252,7 @@ class TranslationRunnable(QRunnable):
             self._current_task = loop.create_task(worker._do_processing())
             loop.run_until_complete(self._current_task)
             
-            # 任务完成，发送结果
+            # The task is done; send the result
             if not worker_had_error:
                 self._emit_finished(results)
 

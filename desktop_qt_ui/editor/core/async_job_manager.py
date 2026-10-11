@@ -14,17 +14,17 @@ class AsyncJobManager:
         """初始化异步任务管理器"""
         self.logger = logging.getLogger(__name__)
         
-        # 由 run_coroutine_threadsafe 返回的 Future 集合
+        # Set of the Futures returned by run_coroutine_threadsafe
         self._futures: Set[Future] = set()
         self._lock = threading.RLock()
         
-        # 事件循环
+        # Event loop
         self._loop: Optional[asyncio.AbstractEventLoop] = None
         self._thread: Optional[threading.Thread] = None
         self._running = False
         self._stopping = False
         
-        # 启动事件循环
+        # Start the event loop
         self._start_event_loop()
     
     def _start_event_loop(self) -> None:
@@ -35,9 +35,9 @@ class AsyncJobManager:
         def run_loop():
             """在线程中运行事件循环"""
             import sys
-            # 在Windows上的工作线程中，需要手动初始化Windows Socket
+            # In a worker thread on Windows, Windows Sockets has to be initialised by hand
             if sys.platform == 'win32':
-                # 使用ctypes直接调用WSAStartup
+                # Call WSAStartup directly through ctypes
                 import ctypes
                 try:
                     WSADATA_SIZE = 400
@@ -81,7 +81,7 @@ class AsyncJobManager:
         self._thread = threading.Thread(target=run_loop, daemon=True)
         self._thread.start()
         
-        # 等待事件循环启动
+        # Wait for the event loop to start
         import time
         timeout = 5.0
         start_time = time.time()
@@ -156,7 +156,7 @@ class AsyncJobManager:
         if not wait:
             self.cancel_all()
         
-        # 停止事件循环
+        # Stop the event loop
         if self._loop and not self._loop.is_closed():
             try:
                 drain_future = asyncio.run_coroutine_threadsafe(self._drain_loop(), self._loop)
@@ -167,10 +167,10 @@ class AsyncJobManager:
             try:
                 self._loop.call_soon_threadsafe(self._loop.stop)
             except RuntimeError:
-                # 事件循环可能已经停止
+                # The event loop may have stopped already
                 pass
         
-        # 等待线程结束
+        # Wait for the thread to end
         if self._thread and self._thread.is_alive():
             self._thread.join(timeout=5.0)
 
@@ -192,6 +192,6 @@ class AsyncJobManager:
             if getattr(self, "_running", False):
                 self.shutdown(wait=False)
         except Exception:
-            # 忽略析构时的错误
+            # Ignore errors during destruction
             pass
 

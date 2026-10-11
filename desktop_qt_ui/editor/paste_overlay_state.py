@@ -237,9 +237,9 @@ def compose_paste_overlays(
     if width <= 0 or height <= 0:
         return None
 
-    # 画布本体保存 straight-alpha uint8（整页内存 = 4 字节/像素）；
-    # 预乘 alpha 只出现在每张贴片的包围盒局部 float 计算里，
-    # 大页面多贴片不会再同时持有整页 float32 副本。
+    # The canvas itself is stored as straight-alpha uint8 (memory for a whole page = 4 bytes per pixel);
+    # premultiplied alpha only appears in the local float calculation of each overlay's bounding box,
+    # so a large page with many overlays no longer holds whole-page float32 copies at the same time.
     canvas = np.zeros((height, width, 4), dtype=np.uint8)
 
     def _blend_premultiplied(base: np.ndarray, patch: np.ndarray) -> np.ndarray:
@@ -250,9 +250,9 @@ def compose_paste_overlays(
         merged[..., 3:4] = patch[..., 3:4] + base[..., 3:4] * (1.0 - patch_coverage)
         return merged
 
-    # 单张贴片图片体积极限：防御手工构造的超大 base64（见 CodeRabbit CWE-400）
+    # Size limit for a single overlay image: guards against a hand-made oversized base64 (see CodeRabbit CWE-400)
     max_image_chars = 24_000_000
-    # 解码后像素最大边长：超过即视为异常工程，跳过该贴片
+    # Largest side in pixels after decoding: beyond it the project is treated as abnormal and the overlay is skipped
     max_source_side = 8192
 
     items = [
@@ -260,7 +260,7 @@ def compose_paste_overlays(
         for item in overlays
         if isinstance(item, Mapping) and item.get("visible", True)
     ]
-    # z 升序合成：低 z 先画（在下层），同 z 保持列表顺序
+    # Composite in ascending z: lower z is drawn first (below); equal z keeps the list order
     items.sort(key=lambda item: float(item.get("z", 0)) or 0.0)
 
     drawn = False
@@ -303,7 +303,7 @@ def compose_paste_overlays(
             source = source.copy()
             source[..., 3] = (source[..., 3].astype(np.float32) * opacity).astype(np.uint8)
 
-        # 预乘：RGB × (alpha/255)，参与插值的 RGB 是颜色×覆盖度，透明处为 0
+        # Premultiply: RGB x (alpha/255); the RGB that takes part in interpolation is colour x coverage, 0 where transparent
         premul_source = np.empty((source_h, source_w, 4), dtype=np.float32)
         premul_source[..., 3:4] = source[..., 3:4].astype(np.float32)
         premul_source[..., :3] = (
@@ -311,8 +311,8 @@ def compose_paste_overlays(
             * (premul_source[..., 3:4] / 255.0)
         )
 
-        # 仿射矩阵：p_scene = center + R * S * (p_source - source_center)
-        # S 内置非等比缩放与水平/垂直翻转，无需先放大中间图
+        # Affine matrix: p_scene = center + R * S * (p_source - source_center)
+        # S includes non-uniform scaling and horizontal/vertical flips, so no enlarged intermediate image is needed first
         scale_x = flip_h * (target_width / source_w)
         scale_y = flip_v * (target_height / source_h)
         theta = math.radians(rotation)
@@ -327,8 +327,8 @@ def compose_paste_overlays(
             [[a00, a01, offset_x], [a10, a11, offset_y]], dtype=np.float64
         )
 
-        # 只对变换后的包围盒做 warp+blend：避免大页面上每张贴片都分配一张整页
-        # float32 画布（8192² 单张就 ~1GiB，多贴片直接 OOM）
+        # Warp and blend only the transformed bounding box: this avoids allocating a whole-page float32 canvas for every overlay
+        # on a large page (a single 8192x8192 one is about 1 GiB; several overlays would run out of memory)
         src_corners = np.array(
             [[0.0, 0.0], [source_w, 0.0], [source_w, source_h], [0.0, source_h]],
             dtype=np.float64,
@@ -348,7 +348,7 @@ def compose_paste_overlays(
         min_y = max(0, int(math.floor(transformed_y.min())) - 1)
         max_y = min(height, int(math.ceil(transformed_y.max())) + 1)
         if max_x <= min_x or max_y <= min_y:
-            # 贴片完全落在画布外
+            # The overlay lies completely outside the canvas
             continue
 
         box_width = max_x - min_x

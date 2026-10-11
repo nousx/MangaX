@@ -58,7 +58,7 @@ class RichTextEditorState:
         self.pending_document_change = False
         self.ruby_draft: RubyEditDraft | None = None
         self.pending_style_edit: PendingStyleEdit | None = None
-        # 编辑时自动应用富文本规则的开关查询（由 UI 层注入，None=关闭）
+        # Query for the switch that applies the rich-text rules automatically while editing (injected by the UI layer; None = off)
         self.auto_rules_provider = None
 
     @property
@@ -279,7 +279,7 @@ class RichTextEditorState:
         text_changed = storage_text != self.region_data.get("translation", "")
         self.region_data["translation"] = storage_text
         if text_changed or "translation_raw" not in self.region_data:
-            # 正文改变后无法可靠反推替换前译文；仅改样式时则必须保留 raw。
+            # After the body changes, the translation before replacement cannot be derived reliably; when only the style changes, raw must be kept.
             self.region_data["translation_raw"] = storage_text
         self.region_data["translation_rich"] = copy.deepcopy(self.document)
         return self.region_index, copy.deepcopy(self.document), storage_text

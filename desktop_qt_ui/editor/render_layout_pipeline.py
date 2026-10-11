@@ -54,7 +54,7 @@ def calculate_region_dst_points(
     target_lang = text_block.target_lang or "en_US"
     region_font = params.font_family or getattr(text_block, "font_family", "")
     text_renderer_backend.apply_font_for_render(region_font)
-    # 编辑器尺寸计算与最终渲染保持一致，避免预览白框和最终文字尺寸不一致。
+    # The size calculation of the editor matches the final rendering, so the preview white box and the final text size do not differ.
     box_w, box_h, _, _ = calc_box_from_font(
         font_size,
         translation,

@@ -13,7 +13,7 @@ from manga_translator.rendering.rich_text import (
 
 
 def has_renderable_text(value: Any) -> bool:
-    # 薄委托：富文本/纯文本"是否有可渲染内容"的唯一实现在 rich_text.py（F12）。
+    # Thin wrapper: the one implementation of "has renderable content" for rich text and plain text is in rich_text.py (F12).
     return has_content(value)
 
 
@@ -31,7 +31,7 @@ def render_text_value_from_text_block(text_block) -> Any:
     if hasattr(text_block, "get_translation_for_rendering"):
         value = text_block.get_translation_for_rendering()
         if not has_renderable_text(value):
-            # 未翻译（仅检测/OCR）的区域回退显示原文预览，而不是画布空白（F29）
+            # A region that is not translated yet (detection/OCR only) falls back to a preview of the original text instead of a blank canvas (F29)
             value = getattr(text_block, "text", "")
     else:
         value = getattr(text_block, "translation", "") or getattr(

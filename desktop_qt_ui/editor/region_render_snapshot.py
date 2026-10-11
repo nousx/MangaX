@@ -21,8 +21,8 @@ def _resolve_effective_box_local(data: dict):
     render_box = data.get("render_box_rect_local")
     has_custom = bool(data.get("has_custom_white_frame", False))
 
-    # 解绑：用户手动设置过白框时，白框始终主导渲染中心；
-    # 不让 render_box（字号反算的小框）夺权。
+    # Unbound: once the user has set a white box by hand, the white box always decides the render centre;
+    # render_box (the small box the font size is derived from) does not take over.
     if has_custom and is_rect_like(custom_box):
         return custom_box
     if is_rect_like(render_box):
@@ -36,8 +36,8 @@ def _resolve_effective_box_local(data: dict):
 class RegionRenderSnapshot:
     region_index: int
     region_data: Dict[str, Any]
-    source_center: Tuple[float, float]  # 源区域中心（世界坐标）
-    render_center: Tuple[float, float]  # 白框中心（世界坐标），文字定位锚点
+    source_center: Tuple[float, float]  # Centre of the source region (world coordinates)
+    render_center: Tuple[float, float]  # Centre of the white box (world coordinates), the anchor for placing the text
     white_frame_local: Optional[Tuple[float, float, float, float]]
     white_frame_world: Optional[np.ndarray]  # shape (1, 4, 2)
 
@@ -54,7 +54,7 @@ class RegionRenderSnapshot:
             else {}
         )
 
-        # 优先合并 item 当前几何，避免"模型旧值"回流
+        # Merge the current geometry of the item first, so "old values of the model" do not flow back
         if geo_state is not None:
             try:
                 data.update(geo_state.to_persisted_state_patch())
@@ -105,7 +105,7 @@ class RegionRenderSnapshot:
                 dtype=np.float32,
             )
 
-        # 将渲染中心写回快照数据，后续流水线不再隐式改 center
+        # Write the render centre back to the snapshot data; the later pipeline no longer changes center implicitly
         data["center"] = [render_center[0], render_center[1]]
 
         return cls(

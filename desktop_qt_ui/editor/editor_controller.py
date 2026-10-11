@@ -37,8 +37,8 @@ from .render_text_value import has_renderable_text, render_text_value_from_regio
 
 _UNSET = object()
 
-# 活跃控制器弱引用注册表：退出路径（app_logic.shutdown）需要在不持有
-# 编辑器引用的情况下找到控制器做线程池清理；弱引用避免延长其生命周期。
+# Weak-reference registry of live controllers: the exit path (app_logic.shutdown) has to find the controllers for thread pool
+# clean-up without holding a reference to the editor; weak references avoid extending their lifetime.
 _ACTIVE_CONTROLLERS: "weakref.WeakSet" = weakref.WeakSet()
 
 
@@ -60,8 +60,8 @@ class _AsyncRegionUpdateRequest:
     error_count: int = 0
 
 
-# 改变这些字段会影响字号反算的文字像素尺寸，需要同步刷新白框：
-# 锚定正文中心，把宽高更新为完整绘制尺寸 calc_box_from_font(新参数) 的结果。
+# Changing these fields affects the pixel size of the text that the font size is derived from, so the white box has to be refreshed too:
+# anchor the body centre and update width and height to the full paint size given by calc_box_from_font(new parameters).
 _FONT_AFFECTING_FIELDS = frozenset(
     {
         "translation",
@@ -155,8 +155,8 @@ def _sync_white_frame_size_for_font_change(
         else:
             local_cx = local_cy = 0.0
 
-        # 正文锚点 = 旧框正中心 + 旧正文差值。
-        # 拿不到旧文本时按"差值未变"处理（退化为保持框中心的旧行为）。
+        # Body anchor = centre of the old box + the old body offset.
+        # When the old text is not available, treat the offset as unchanged (which falls back to the old behaviour of keeping the box centre).
         old_metrics = (
             _box_metrics(old_region_data, old_render_params)
             if old_region_data
@@ -197,23 +197,23 @@ class EditorController(QObject):
     _export_queue_status_signal = pyqtSignal(object)
     _export_job_finished_signal = pyqtSignal(object)
 
-    _load_result_ready = pyqtSignal(object)  # 加载结果信号
+    _load_result_ready = pyqtSignal(object)  # Signal for load results
     _deferred_load_requested = pyqtSignal(str)
 
     def __init__(self, model: EditorModel, parent=None):
         super().__init__(parent)
         self.model = model
-        self.view = None  # 将在 EditorView 中设置
+        self.view = None  # Set later in EditorView
         self.logger = get_logger(__name__)
 
-        # 获取所需的服务
+        # Get the services needed
         self.ocr_service = get_ocr_service()
         self.translation_service = get_translation_service()
         self.async_service = get_async_service()
-        self.history_service = get_history_service()  # 用于撤销/重做
+        self.history_service = get_history_service()  # For undo/redo
         self.file_service = get_file_service()
         self.config_service = get_config_service()
-        self.resource_manager = get_resource_manager()  # 新的资源管理器
+        self.resource_manager = get_resource_manager()  # The new resource manager
 
         self.document_service = EditorControllerDocumentService(self)
         self.inpaint_service = EditorControllerInpaintService(self)
@@ -230,7 +230,7 @@ class EditorController(QObject):
             self._apply_inpaint_result,
             type=Qt.ConnectionType.QueuedConnection,
         )
-        self._load_result_ready.connect(self._apply_load_result)  # 连接加载结果信号
+        self._load_result_ready.connect(self._apply_load_result)  # Connect the load result signal
         self._deferred_load_requested.connect(self.document_service.do_load_image)
         self._export_queue_status_signal.connect(self._on_export_queue_status_changed)
         self._export_job_finished_signal.connect(self._on_export_job_finished)
@@ -258,7 +258,7 @@ class EditorController(QObject):
         except Exception as e:
             self.logger.warning(f"Editor export queue shutdown failed: {e}")
 
-    # ========== Resource Access Helpers (新的资源访问辅助方法) ==========
+    # ========== Resource Access Helpers ==========
 
     @staticmethod
     def _normalize_image_path(path: Optional[str]) -> Optional[str]:
@@ -449,8 +449,8 @@ class EditorController(QObject):
         graphics_view = self.get_graphics_view()
         if graphics_view is not None:
             graphics_view.set_controller(self)
-        # Toast管理器与信号连接只建立一次：set_view 被重复调用时复用，
-        # 避免重复 connect 导致同一条 Toast 弹出多次
+        # The toast manager and its signal connections are created once: reused when set_view is called again,
+        # so a repeated connect does not show the same toast several times
         existing_toast_manager = getattr(self, "toast_manager", None)
         if (
             existing_toast_manager is None
@@ -459,7 +459,7 @@ class EditorController(QObject):
             from ui.widgets.toast_notification import ToastManager
 
             self.toast_manager = ToastManager(view)
-        # 初始化撤销/重做按钮状态
+        # Initialise the state of the undo/redo buttons
         self._update_undo_redo_buttons()
 
     def _close_export_progress_toast(self) -> None:
@@ -733,7 +733,7 @@ class EditorController(QObject):
         new_region_data = old_region_data.copy()
         new_region_data[field_name] = value
 
-        # 字体/译文等属性改变 → 同步白框尺寸（锚定正文中心），让 UI 立即跟上新字号。
+        # Font, translation and similar properties changed -> sync the white box size (anchored on the body centre), so the UI follows the new font size at once.
         if field_name in _FONT_AFFECTING_FIELDS:
             _sync_white_frame_size_for_font_change(
                 new_region_data,
@@ -805,7 +805,7 @@ class EditorController(QObject):
 
     @pyqtSlot(int, str, object)
     def update_translated_text(self, region_index: int, text: str, edit_info=None):
-        # 译文编辑:同步覆盖 translation_raw(规则不可逆,只能粗暴同步)
+        # Editing the translation: translation_raw is overwritten too (the rules cannot be reversed, so a plain sync is the only option)
         old_region_data = self.model.get_region_by_index(region_index)
         if not old_region_data:
             return
@@ -825,7 +825,7 @@ class EditorController(QObject):
         """对译文跑 text_replacements 规则；规则失败时回退原文。"""
         from manga_translator.rendering.text_replacements import apply_replacements
 
-        # 推 direction(参考 L57: ('h','horizontal','hr') 为横排,其它视为竖排)
+        # Derive direction (see L57: ('h','horizontal','hr') is horizontal, anything else counts as vertical)
         direction_val = region_data.get("direction", "h")
         direction = 0 if direction_val in ("h", "horizontal", "hr") else 1
         try:
@@ -876,7 +876,7 @@ class EditorController(QObject):
         text_changed = old_region_data.get("translation", "") != plain_text
         new_region_data["translation"] = plain_text
         if text_changed or "translation_raw" not in old_region_data:
-            # 富文本正文改变后无法可靠反推替换前译文；纯样式修改保留原 raw。
+            # After the rich-text body changes, the translation before replacement cannot be derived reliably; a pure style change keeps the original raw.
             new_region_data["translation_raw"] = plain_text
         new_region_data["translation_rich"] = rich_document
 
@@ -926,7 +926,7 @@ class EditorController(QObject):
             translation_rich=translation_rich,
         )
 
-        # translation 是 _FONT_AFFECTING_FIELDS 成员,改动后同步白框尺寸
+        # translation is a member of _FONT_AFFECTING_FIELDS, so the white box size is synced after a change
         _sync_white_frame_size_for_font_change(
             new_region_data,
             old_region_data,
@@ -1113,13 +1113,13 @@ class EditorController(QObject):
     @pyqtSlot(int, dict)
     def update_region_geometry(self, region_index: int, new_region_data: dict):
         """处理来自视图的区域几何变化。"""
-        # 现在RegionTextItem在调用callback之前不会修改self.region_data
-        # 所以我们可以从模型中获取正确的旧数据
+        # RegionTextItem no longer modifies self.region_data before calling the callback,
+        # so the correct old data can be read from the model
         old_region_data = self.model.get_region_by_index(region_index)
         if not old_region_data:
             return
 
-        # 深拷贝以避免引用问题
+        # Deep copy, to avoid reference problems
         old_region_data = copy.deepcopy(old_region_data)
 
         command = UpdateRegionCommand(
@@ -1132,7 +1132,7 @@ class EditorController(QObject):
         self.execute_command(command)
 
     # ------------------------------------------------------------------
-    # 对齐与分布
+    # Align and distribute
     # ------------------------------------------------------------------
 
     def align_regions(self, mode: str, reference: str) -> None:
@@ -1160,7 +1160,7 @@ class EditorController(QObject):
         if not results:
             return
 
-        # 构建单条批量命令：修改 model center + 同步移动 item 白框和文字
+        # Build one batch command: change the model centre and move the white box and text of the item with it
         regions = self.model.get_regions()
         old_regions = [dict(r) for r in regions]
         new_regions = [dict(r) for r in regions]
@@ -1185,7 +1185,7 @@ class EditorController(QObject):
         )
         self.execute_command(cmd)
 
-        # 不依赖 debounce → 异步重建，仿照拖拽逻辑立刻移动 item 的白框和文字
+        # Does not rely on debounce -> asynchronous rebuild; moves the white box and text of the item at once, as dragging does
         self._sync_items_positions(results, items)
 
     def _sync_items_positions(self, results, items):
@@ -1230,7 +1230,7 @@ class EditorController(QObject):
             return
         items = [item for item in view._region_items if item.isSelected()]
 
-        # 间距分布 vs 边缘分布
+        # Distribute by spacing vs by edges
         if mode in ("spacing_v", "spacing_h"):
             if len(items) < 3:
                 return
@@ -1439,7 +1439,7 @@ class EditorController(QObject):
         self.history_service.redo()
         self._update_undo_redo_buttons()
 
-    # --- 贴片（paste overlay）操作方法 ---
+    # --- Paste overlay operations ---
     def _normalize_paste_overlays(self, overlays) -> list:
         """贴片列表规范化（统一补默认值/id），保证 undo/redo 快照 id 稳定。"""
         from editor.paste_overlay_state import serialize_paste_overlays
@@ -1545,7 +1545,7 @@ class EditorController(QObject):
         if clipboard is None or self.model.get_source_image_path() is None:
             return False
         clone = copy.deepcopy(clipboard)
-        clone.pop("id", None)  # 重新生成 id，避免与源重复
+        clone.pop("id", None)  # Generate a new id, so it does not repeat the source
         if center is not None:
             center_x = center.x() if hasattr(center, "x") else center[0]
             center_y = center.y() if hasattr(center, "y") else center[1]
@@ -1561,22 +1561,22 @@ class EditorController(QObject):
             return False
         return self.paste_paste_overlay()
 
-    # --- 右键菜单相关方法 ---
+    # --- Context menu methods ---
     def ocr_regions(self, region_indices: list):
         """对指定区域进行OCR识别，使用与UI按钮相同的逻辑"""
         if not region_indices:
             return
 
-        # 临时保存当前选择
+        # Keep the current selection for now
         original_selection = self.model.get_selection()
 
-        # 设置选择为要OCR的区域
+        # Set the selection to the regions to run OCR on
         self.model.set_selection(region_indices)
 
-        # 调用现有的OCR方法（这会使用UI配置的OCR模型）
+        # Call the existing OCR method (it uses the OCR model set in the UI)
         self.run_ocr_for_selection()
 
-        # 恢复原始选择
+        # Restore the original selection
         self.model.set_selection(original_selection)
 
     def translate_regions(self, region_indices: list):
@@ -1584,16 +1584,16 @@ class EditorController(QObject):
         if not region_indices:
             return
 
-        # 临时保存当前选择
+        # Keep the current selection for now
         original_selection = self.model.get_selection()
 
-        # 设置选择为要翻译的区域
+        # Set the selection to the regions to translate
         self.model.set_selection(region_indices)
 
-        # 调用现有的翻译方法（这会使用UI配置的翻译器和目标语言）
+        # Call the existing translation method (it uses the translator and target language set in the UI)
         self.run_translation_for_selection()
 
-        # 恢复原始选择
+        # Restore the original selection
         self.model.set_selection(original_selection)
 
     def copy_region(self, region_index: int):
@@ -1629,11 +1629,11 @@ class EditorController(QObject):
             self.logger.error(f"Region {region_index} does not exist")
             return
 
-        # 复制样式相关属性，但保留位置和文本
+        # Copy the style properties, but keep the position and the text
         old_region_data = region_data.copy()
         new_region_data = region_data.copy()
 
-        # 复制样式属性
+        # Copy the style properties
         style_keys = [
             "font_family",
             "font_size",
@@ -1730,7 +1730,7 @@ class EditorController(QObject):
                 f"Delete Regions ({len(pending_commands)} ops)",
             )
 
-        # 清除选择
+        # Clear the selection
         self.model.set_selection([])
 
     @staticmethod
@@ -1760,10 +1760,10 @@ class EditorController(QObject):
 
     def enter_drawing_mode(self):
         """进入绘制模式以添加新文本框"""
-        # 清除当前选择
+        # Clear the current selection
         self.model.set_selection([])
 
-        # 设置工具为绘制文本框
+        # Set the tool to drawing a text box
         self.model.set_active_tool("draw_textbox")
 
     @staticmethod
@@ -1847,7 +1847,7 @@ class EditorController(QObject):
 
     def _update_undo_redo_buttons(self):
         """主动刷新撤销/重做按钮状态。"""
-        # 检查history_service是否已初始化
+        # Check whether history_service is initialised
         if not hasattr(self, "history_service") or self.history_service is None:
             return
 
@@ -1896,7 +1896,7 @@ class EditorController(QObject):
         render_parameter_service = get_render_parameter_service()
         render_parameter_service.clear_cache()
 
-        # 全局渲染参数影响所有 region 的派生渲染结果；只重建视图缓存，不重建 region/id。
+        # Global render parameters affect the derived render result of every region; only the view cache is rebuilt, not the regions or their ids.
         self.model.refresh_regions()
 
     @pyqtSlot()
@@ -1944,7 +1944,7 @@ class EditorController(QObject):
                         f"Invalid OCR selection '{selected_ocr}', using default: {e}"
                     )
 
-        # 显示开始Toast，保存引用以便后续关闭
+        # Show the start toast and keep a reference so it can be closed later
         self._ocr_toast = None
         toast_manager = self.get_toast_manager()
         if toast_manager is not None:
@@ -1982,7 +1982,7 @@ class EditorController(QObject):
                     continue
                 current_region_data = applied.get(index, region_data)
                 if request.field_name == "translation":
-                    # 与手动编辑同一条路：译文先过替换规则，raw 保留原始译文
+                    # The same path as a manual edit: the translation goes through the replacement rules first, raw keeps the original translation
                     replaced_value = self._apply_translation_replacements(
                         current_region_data, value
                     )
@@ -2000,7 +2000,7 @@ class EditorController(QObject):
                 applied[index] = new_region_data
 
             if applied:
-                # 走撤销栈：OCR/翻译结果可 Ctrl+Z，且切图时"未保存"检测能感知到
+                # Goes through the undo stack: OCR and translation results can be undone with Ctrl+Z, and the "unsaved" check on switching images sees them
                 from .commands import MultiRegionUpdateCommand
 
                 fields = (
@@ -2129,13 +2129,13 @@ class EditorController(QObject):
                     f"Using target language from property panel: {selected_target_lang}"
                 )
 
-        # 显示开始Toast，保存引用以便后续关闭
+        # Show the start toast and keep a reference so it can be closed later
         self._translation_toast = None
         toast_manager = self.get_toast_manager()
         if toast_manager is not None:
             self._translation_toast = toast_manager.show_info("正在翻译...", duration=0)
 
-        # 传递所有区域以提供上下文，但只翻译选中的文本
+        # Pass all regions to give context, but only translate the selected text
         self.async_service.submit_task(
             self._async_translation_task(
                 texts_to_translate,
@@ -2158,7 +2158,7 @@ class EditorController(QObject):
         target_lang_to_use,
         chapter_context=None,
     ):
-        # 将image和所有regions信息传递给翻译服务以提供完整上下文
+        # Pass the image and the information of all regions to the translation service for full context
         try:
             results = await self.translation_service.translate_text_batch(
                 texts,

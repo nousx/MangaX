@@ -46,8 +46,8 @@ class ExportJob:
     config: dict
     paint_overlay: Optional[np.ndarray] = None
     stamp_overlay: Optional[np.ndarray] = None
-    # 可编辑贴片记录：整页预合成放到导出 worker（execute_export_job）内进行，
-    # 避免在 GUI 线程分配整页大缓冲
+    # Editable paste overlay records: the whole-page pre-compositing is done inside the export worker (execute_export_job),
+    # to avoid allocating a large whole-page buffer on the GUI thread
     paste_overlays: tuple = ()
 
     def __post_init__(self) -> None:
@@ -242,8 +242,8 @@ class EditorControllerExportService:
                 return self._reject_export("导出失败：缺少活动文档")
             config = self._build_config_dict(self.config_service.get_config())
 
-            # 贴片整页预合成移到导出 worker（ExportService.execute_export_job）内执行，
-            # GUI 线程只负责把规范化记录快照塞进 job，避免大图卡界面
+            # Whole-page pre-compositing of the paste overlays moved into the export worker (ExportService.execute_export_job);
+            # the GUI thread only puts a snapshot of the normalised records into the job, so large images do not freeze the interface
             job = ExportJob(
                 automatic=bool(automatic),
                 source_path=source_path,
@@ -348,8 +348,8 @@ class EditorControllerExportService:
         render_box = region.get("render_box_rect_local")
         has_custom = bool(region.get("has_custom_white_frame", False))
 
-        # 解绑：与编辑器 snapshot 同步——用户手动白框存在时优先白框，
-        # 让导出和预览的渲染中心走同一条路。
+        # Unbound: in step with the editor snapshot - when the user has a manual white box it takes precedence,
+        # so the render centres of export and preview follow the same path.
         if (
             has_custom
             and isinstance(custom_box, (list, tuple))
@@ -373,8 +373,8 @@ class EditorControllerExportService:
         if not (
             isinstance(base_center, (list, tuple, np.ndarray)) and len(base_center) >= 2
         ):
-            # 旧工程通常不保存 center；必须与编辑器快照使用同一套 lines
-            # 回退中心，否则白框局部偏移不会进入导出，文字会沿旋转轴漂移。
+            # Old projects usually store no center; the same fallback centre from lines as in the editor snapshot has to be used,
+            # otherwise the local offset of the white box does not reach the export and the text drifts along the rotation axis.
             try:
                 base_center = RegionGeometryState.from_region_data(region).center
             except (TypeError, ValueError, IndexError):
@@ -391,7 +391,7 @@ class EditorControllerExportService:
                 cx + lx * cos_a - ly * sin_a,
                 cy + lx * sin_a + ly * cos_a,
             ]
-            # 同步平移 local 坐标，以新 center 为原点，防止存/读漂移
+            # Shift the local coordinates as well, with the new center as origin, to prevent drift between saving and loading
             if "white_frame_rect_local" in region:
                 wf = region["white_frame_rect_local"]
                 if isinstance(wf, (list, tuple)) and len(wf) == 4:

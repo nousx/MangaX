@@ -46,7 +46,7 @@ class RegionGeometryState:
     """统一管理源区域 / 自定义白框 / 渲染框几何状态的纯数据类。"""
 
     # ------------------------------------------------------------------
-    # 构造
+    # Construction
     # ------------------------------------------------------------------
 
     def __init__(
@@ -58,16 +58,16 @@ class RegionGeometryState:
         render_box_local: Optional[List[float]] = None,
         has_custom_white_frame: bool = False,
     ):
-        self.lines = lines  # List[List[[x, y]]]（世界坐标）
+        self.lines = lines  # List[List[[x, y]]] (world coordinates)
         self.center = list(center)  # [cx, cy]
         self.angle = float(angle)  # degrees
 
-        # 派生：源区域各多边形在局部坐标系中的顶点
+        # Derived: the vertices of each polygon of the source region in the local coordinate system
         self.polygons_local: List[List[List[float]]] = []
         self._source_box_local: Optional[List[float]] = None
         self._rebuild_polygons_local()
 
-        # 自定义白框 / 渲染框（局部坐标 [left, top, right, bottom]）
+        # Custom white box / render box (local coordinates [left, top, right, bottom])
         self._custom_white_frame_local: Optional[List[float]] = (
             list(custom_white_frame_local)
             if custom_white_frame_local is not None
@@ -81,13 +81,13 @@ class RegionGeometryState:
         )
 
     # ------------------------------------------------------------------
-    # 属性
+    # Properties
     # ------------------------------------------------------------------
 
     @property
     def white_frame_local(self) -> Optional[List[float]]:
-        # 解绑：用户手动白框优先于渲染框。
-        # 渲染框（render_box）只是字号反算的小框，不应该夺权白框 UI。
+        # Unbound: the user's manual white box takes precedence over the render box.
+        # The render box (render_box) is only the small box the font size is derived from and should not take over the white box UI.
         if self.has_custom_white_frame and self._custom_white_frame_local is not None:
             return self._custom_white_frame_local
         if self._render_box_local is not None:
@@ -103,7 +103,7 @@ class RegionGeometryState:
         return self._render_box_local
 
     # ------------------------------------------------------------------
-    # 坐标变换（纯计算，无状态修改）
+    # Coordinate transforms (pure calculation, no state change)
     # ------------------------------------------------------------------
 
     def _angle_trig(self) -> Tuple[float, float]:
@@ -124,7 +124,7 @@ class RegionGeometryState:
         )
 
     # ------------------------------------------------------------------
-    # 工厂
+    # Factories
     # ------------------------------------------------------------------
 
     @classmethod
@@ -147,7 +147,7 @@ class RegionGeometryState:
             else:
                 center = [0, 0]
 
-        # 从 region_data 恢复自定义白框 / 渲染框
+        # Restore the custom white box / render box from region_data
         custom_wf_local = region_data.get("white_frame_rect_local")
         render_box_local = region_data.get("render_box_rect_local")
         has_custom = region_data.get("has_custom_white_frame", False)
@@ -155,7 +155,7 @@ class RegionGeometryState:
         custom_wf_explicit = "white_frame_rect_local" in region_data
         render_box_explicit = "render_box_rect_local" in region_data
 
-        # 仅当本次数据没有显式给出自定义白框状态时，才继承上一次自定义白框
+        # The previous custom white box is inherited only when this data gives no explicit custom white box state
         if (
             prev_state is not None
             and prev_state.has_custom_white_frame
@@ -186,7 +186,7 @@ class RegionGeometryState:
         )
 
     # ------------------------------------------------------------------
-    # 自定义白框 / 渲染框操作
+    # Custom white box / render box operations
     # ------------------------------------------------------------------
 
     def set_render_box(self, dst_points: Optional[np.ndarray]):
@@ -199,7 +199,7 @@ class RegionGeometryState:
             self._render_box_local = None
             return
 
-        # 展平为 (4, 2)
+        # Flatten to (4, 2)
         pts_world = (
             dst_points.reshape(-1, 2) if len(dst_points.shape) == 3 else dst_points
         )
@@ -207,13 +207,13 @@ class RegionGeometryState:
             self._render_box_local = None
             return
 
-        # 世界 → 局部
+        # World -> local
         pts_local = np.array(
             [self.world_to_local(float(p[0]), float(p[1])) for p in pts_world[:4]],
             dtype=np.float64,
         )
 
-        # 用中心 + 邻边宽高重建局部 AABB
+        # Rebuild the local AABB from the centre and the width and height of adjacent edges
         cpx = float(np.mean(pts_local[:, 0]))
         cpy = float(np.mean(pts_local[:, 1]))
         width = float(
@@ -272,7 +272,7 @@ class RegionGeometryState:
         return patch
 
     # ------------------------------------------------------------------
-    # 内部
+    # Internal
     # ------------------------------------------------------------------
 
     def _rebuild_polygons_local(self):

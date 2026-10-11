@@ -155,7 +155,7 @@ def distribute_items(
     is_vertical = mode in _VERTICAL_MODES
     ref_key = _MODE_REFERENCE.get(mode, "center")
 
-    # 收集每个 item 的参考位置，过滤无数据的
+    # Collect the reference position of each item, leaving out those without data
     positioned: list[tuple["RegionTextItem", float, float, float]] = []
     for item in items:
         cx = float(item.pos().x())
@@ -168,7 +168,7 @@ def distribute_items(
     if len(positioned) < 3:
         return []
 
-    # 按参考值排序
+    # Sort by the reference value
     positioned.sort(key=lambda p: p[1])
 
     first_ref = positioned[0][1]
@@ -178,7 +178,7 @@ def distribute_items(
     results = []
     for i, (item, ref, cx, cy) in enumerate(positioned):
         if i == 0 or i == n - 1:
-            # 两端不动
+            # The two ends stay where they are
             continue
         target_ref = first_ref + (last_ref - first_ref) * i / (n - 1)
         delta = target_ref - ref

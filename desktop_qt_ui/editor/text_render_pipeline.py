@@ -43,17 +43,17 @@ def build_text_block_from_region(region_data: dict, font_size_override=None, log
             elif d == "vertical":
                 args["direction"] = "v"
 
-        # center 由上游快照显式给定，不做隐式偏移
+        # center is given explicitly by the upstream snapshot; no implicit offset is applied
         args["angle"] = 0
         if font_size_override is not None:
             args["font_size"] = font_size_override
 
         return TextBlock(**args)
     except (ValueError, TypeError, KeyError, IndexError) as exc:
-        # 非法区域数据不再被静默吞掉：记录后跳过该区域（画布留空），供用户
-        # 排查（F04c）。IndexError 覆盖 texts 为空列表时 TextBlock 取
-        # texts[0] 的既有崩溃路径；lines 形状不合法时 np.array 的 ValueError
-        # 同属"坏区域数据"，一并纳入降级。
+        # Invalid region data is no longer swallowed silently: it is logged and the region skipped (the canvas stays empty there), so the user
+        # can look into it (F04c). IndexError covers the existing crash where TextBlock reads
+        # texts[0] of an empty texts list; the ValueError of np.array for an invalid lines shape
+        # is "bad region data" as well and gets the same fallback.
         logger.warning("Failed to build TextBlock from region data%s: %s", log_tag, exc)
         return None
 

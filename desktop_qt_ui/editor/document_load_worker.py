@@ -77,7 +77,7 @@ class DocumentLoadWorker:
             aux_paths,
         )
         try:
-            # 后台预转 QImage 到 ImageResource(走 LRU);命中缓存时跳过
+            # Convert the QImage to an ImageResource in the background (through the LRU); skipped on a cache hit
             self._ensure_qimage(image_resource, image)
 
             compare_image = futures["compare"].result()
@@ -93,7 +93,7 @@ class DocumentLoadWorker:
                 if not future.done():
                     future.cancel()
 
-        # JSON 内的 base64 图层优先；旧版单文件 PNG 仅作画笔层兜底
+        # The base64 layers inside the JSON come first; the single PNG file of old versions is only a fallback for the paint layer
         paint_overlay_image = self._align_overlay_array(
             json_overlays.get("paint"), image_size
         )

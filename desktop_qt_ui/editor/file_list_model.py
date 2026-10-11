@@ -14,17 +14,17 @@ from services.file_list_data_service import canonical_path_key
 class FileType(Enum):
     """文件类型枚举"""
 
-    SOURCE = "source"  # 原图（有JSON）
-    UNTRANSLATED = "untranslated"  # 未翻译的原图（暂无JSON）
+    SOURCE = "source"  # Original image (with JSON)
+    UNTRANSLATED = "untranslated"  # Untranslated original image (no JSON yet)
 
 
 @dataclass
 class FileItem:
     """文件项数据类"""
 
-    path: str  # 文件路径
-    file_type: FileType  # 文件类型
-    json_path: str | None = None  # JSON路径（如果是原图）
+    path: str  # File path
+    file_type: FileType  # File type
+    json_path: str | None = None  # JSON path (for an original image)
 
 
 class FileListModel:

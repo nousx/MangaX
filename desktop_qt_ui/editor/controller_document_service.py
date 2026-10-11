@@ -28,9 +28,9 @@ class EditorControllerDocumentService:
     def __init__(self, controller: "EditorController"):
         self.controller = controller
 
-        # 常驻单 worker 线程池：max_workers=1 保证加载请求严格按提交顺序执行。
-        # 不随 clear_editor_state 销毁——每次切图重建线程池会打破"单 worker
-        # 按序"的前提，导致旧图结果晚于新图到达（画面与选中文件错位）。
+        # A long-lived thread pool with a single worker: max_workers=1 makes load requests run strictly in the order they were submitted.
+        # It is not destroyed with clear_editor_state - rebuilding the pool on every image switch would break the "single worker,
+        # in order" premise and let the result of an old image arrive after a new one (the canvas and the selected file would not match).
         self._load_executor = concurrent.futures.ThreadPoolExecutor(
             max_workers=1, thread_name_prefix="editor-doc-load"
         )
@@ -41,7 +41,7 @@ class EditorControllerDocumentService:
             max_workers=DocumentLoadWorker.AUX_WORKERS,
             thread_name_prefix="editor-doc-aux",
         )
-        # 加载代号：每次作废在途加载时 +1；结果只有携带当前代号才会被应用
+        # Load generation: increased by 1 each time in-flight loads are invalidated; a result is only applied when it carries the current generation
         self._load_generation = 0
         self._active_load_future: Optional[concurrent.futures.Future] = None
         self._active_prefetch_future: Optional[concurrent.futures.Future] = None
@@ -217,7 +217,7 @@ class EditorControllerDocumentService:
 
         json_path = find_json_path(source_path)
         if not json_path:
-            # 没有 JSON 可参考 → 无法证明 editor_base 有效，按过期处理
+            # No JSON to compare with -> editor_base cannot be shown to be valid, so it is treated as stale
             return True
         try:
             with open(json_path, "r", encoding="utf-8") as f:
@@ -384,8 +384,8 @@ class EditorControllerDocumentService:
             except Exception as e:
                 self.logger.error(f"Load failed: {e}", exc_info=True)
                 result = DocumentLoadFailure(str(e))
-            # 工作线程侧先粗筛，避免给主线程发注定作废的信号；
-            # 权威校验在主线程 apply_load_result 里再做一次
+            # A rough filter on the worker side first, to avoid sending the main thread signals that are bound to be discarded;
+            # the authoritative check is done once more on the main thread, in apply_load_result
             if generation != self._load_generation:
                 self.logger.debug("Discarding stale load result for %s", image_path)
                 return
@@ -397,8 +397,8 @@ class EditorControllerDocumentService:
         future.add_done_callback(on_load_complete)
 
     def apply_load_result(self, payload: object) -> None:
-        # 载荷为 (generation, result)：主线程权威校验"仍是当前代"，
-        # 过期结果（快速翻页时旧图晚到）直接丢弃，防止画面与选中文件错位
+        # The payload is (generation, result): the main thread checks authoritatively that it is "still the current generation";
+        # a stale result (an old image arriving late when paging quickly) is dropped, so the canvas and the selected file do not get out of step
         if not isinstance(payload, tuple) or len(payload) != 2:
             self.logger.warning("Ignoring untagged editor load result")
             return

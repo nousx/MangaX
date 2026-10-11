@@ -84,20 +84,20 @@ class ResourceManager:
         """初始化资源管理器"""
         self.logger = logging.getLogger(__name__)
 
-        # 图片缓存与 current 会被预读线程、加载线程和主线程同时访问，
-        # 用可重入锁保护；解码（open_pil_image）一律放在锁外，只锁字典读写。
+        # The image cache and current are accessed by the read-ahead thread, the load thread and the main thread at the same time
+        # and are protected by a re-entrant lock; decoding (open_pil_image) always happens outside the lock, which only guards dict reads and writes.
         self._lock = threading.RLock()
 
-        # 当前加载的资源
+        # The resource currently loaded
         self._current_image: Optional[ImageResource] = None
 
-        # 资源缓存（用于快速切换）
+        # Resource cache (for fast switching)
         self._image_cache: Dict[str, ImageResource] = {}
-        self._cache_limit = 5  # 最多缓存5张图片
+        self._cache_limit = 5  # At most 5 images are cached
 
         self._export_cleanup_threshold_bytes = 2 * 1024 * 1024 * 1024
 
-    # ==================== 图片管理 ====================
+    # ==================== Image management ====================
 
     @staticmethod
     def _resolve_image_path(image_path: str) -> str:
@@ -125,14 +125,14 @@ class ResourceManager:
 
         try:
             self.logger.debug(f"Loading image: {image_path}")
-            # 解码放在锁外：慢操作不该阻塞其他线程读缓存
+            # Decoding happens outside the lock: a slow operation should not block other threads reading the cache
             image = open_pil_image(image_path, eager=True)
         except Exception as e:
             self.logger.error(f"Failed to load image {image_path}: {e}")
             raise
 
         with self._lock:
-            # 双检：解码期间可能已被别的线程（如预读）放进缓存
+            # Double check: another thread (such as read-ahead) may have put it in the cache while decoding
             cached = self._image_cache.get(image_path)
             if cached is not None:
                 cached.touch()
@@ -234,7 +234,7 @@ class ResourceManager:
                     f"Removed least recently used image from cache: {oldest_path}"
                 )
             else:
-                # 极端情况：缓存里只剩当前页，宁可超限也不淘汰它
+                # Edge case: when only the current page is left in the cache, exceed the limit rather than evict it
                 self.logger.debug(
                     "Cache eviction skipped: only the current image is cached"
                 )
@@ -252,7 +252,7 @@ class ResourceManager:
         """
         from pathlib import Path
 
-        # 规范化路径以匹配缓存中的键
+        # Normalise the path so it matches the keys in the cache
         path = str(Path(path).resolve())
         with self._lock:
             resource = self._image_cache.pop(path, None)
@@ -302,7 +302,7 @@ class ResourceManager:
             if self._current_image:
                 current_path = self._current_image.path
 
-                # 如果需要从缓存中释放
+                # When it has to be released from the cache
                 if release_from_cache and current_path in self._image_cache:
                     resource = self._image_cache.pop(current_path)
                     resource.release()
@@ -372,7 +372,7 @@ class ResourceManager:
         )
         return snapshot
 
-    # ==================== 资源清理 ====================
+    # ==================== Resource clean-up ====================
 
     def cleanup_all(self) -> None:
         """Release the image LRU."""

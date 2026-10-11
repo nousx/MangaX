@@ -5,7 +5,7 @@
 import math
 from typing import List, Optional, Tuple
 
-# === desktop-ui 的核心几何函数 ===
+# === Core geometry functions of desktop-ui ===
 
 def rotate_point(x, y, angle_deg, cx, cy):
     """围绕中心点旋转一个点"""
@@ -25,7 +25,7 @@ def get_polygon_center(vertices: List[Tuple[float, float]]) -> Tuple[float, floa
     if not vertices:
         return 0, 0
 
-    # 直接计算边界框中心（对于未旋转的坐标）
+    # Compute the bounding box centre directly (for unrotated coordinates)
     x_coords = [v[0] for v in vertices]
     y_coords = [v[1] for v in vertices]
 

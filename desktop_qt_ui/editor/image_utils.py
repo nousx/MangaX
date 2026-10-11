@@ -278,7 +278,7 @@ def build_display_image_frame(
             else cv2.INTER_LINEAR
         )
         if is_rgba:
-            # 预乘 alpha 再缩放，避免透明像素 (RGB=0) 拉低边缘像素 → 黑边。
+            # Premultiply alpha before scaling, so transparent pixels (RGB=0) do not darken the edge pixels -> black fringe.
             array = _resize_rgba_premultiplied(
                 array, preview_width, preview_height, interpolation
             )

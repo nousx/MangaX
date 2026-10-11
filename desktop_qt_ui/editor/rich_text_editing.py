@@ -76,15 +76,15 @@ def utf16_range_to_python_range(text: str, start: int, end: int) -> tuple[int, i
 
 
 def plain_text_to_storage_text(text: str) -> str:
-    # 刻意保留：写回 translation 字段时用 [BR] 标记换行，维持 PSD 导出等
-    # 下游对 [BR] 形式的兼容（见审查报告 F31 备注）。
+    # Kept on purpose: line breaks are written back to the translation field as [BR] markers, so PSD export and other
+    # downstream code that expects the [BR] form keeps working (see the note on F31 in the review report).
     return re.sub(r"\n+", "[BR]", str(text or ""))
 
 
 def storage_text_to_editor_text(text: Any) -> str:
     if is_rich_text_document(text):
         return plain_text_of(text)
-    # 薄委托：BR 标记 → 换行 的唯一实现在 rich_text.py（F14）。
+    # Thin wrapper: the one implementation of BR marker -> line break is in rich_text.py (F14).
     return normalize_rich_linebreaks(str(text or ""))
 
 
@@ -92,21 +92,21 @@ def document_from_region(region_data: dict) -> dict:
     rich = region_data.get("translation_rich")
     if is_rich_text_document(rich):
         try:
-            # 严格解析 + to_dict：既做隔离拷贝，又把 RichTextDocument 实例
-            # 归一成编辑器使用的 dict 形态；非法文档降级回纯文本而不是让
-            # 编辑器崩溃（加载边界的整体降级见 F04）。
+            # Strict parsing + to_dict: it makes an isolated copy and also normalises a RichTextDocument instance
+            # into the dict form the editor works with; an invalid document degrades to plain text instead of making
+            # the editor crash (for the whole-document fallback at the load boundary see F04).
             return ensure_rich_text_document(rich).to_dict()
         except (ValueError, TypeError):
             pass
-    # 换行/BR 标记 → 段落 的唯一实现在 rich_text.py（F11）。
+    # The one implementation of line break / BR marker -> paragraph is in rich_text.py (F11).
     return legacy_line_breaks_to_document(
         str(region_data.get("translation", "") or "")
     ).to_dict()
 
 
 def visible_text_from_document(document: Any) -> str:
-    # 薄委托（F11）：plain_text_of 同时兼容 RichTextDocument 实例与 dict，
-    # 纯字符串原样返回 —— 不再有 str(document) 垃圾输出分支。
+    # Thin wrapper (F11): plain_text_of accepts both a RichTextDocument instance and a dict,
+    # and returns a plain string unchanged - there is no longer a branch that outputs str(document) garbage.
     return plain_text_of(document)
 
 
@@ -191,7 +191,7 @@ def text_style_from_control_values(values: dict, enabled: set[str]) -> dict:
 
 
 # ---------------------------------------------------------------------------
-# 节点归属拍平（共享 walk，F01/F17/F25）
+# Flatten node membership (shared walk, F01/F17/F25)
 # ---------------------------------------------------------------------------
 
 
@@ -215,7 +215,7 @@ def _visible_entries(document: Any) -> list[_CharEntry]:
     if not is_rich_text_document(document):
         return entries
     if not isinstance(document, dict):
-        # RichTextDocument 实例 → 编辑器统一以 dict 形态操作
+        # RichTextDocument instance -> the editor always works with the dict form
         document = ensure_rich_text_document(document).to_dict()
     blocks = document.get("blocks", [])
     if not isinstance(blocks, list):
@@ -341,7 +341,7 @@ def _runs_text(runs: Any) -> str:
 
 
 # ---------------------------------------------------------------------------
-# 编辑操作
+# Edit operations
 # ---------------------------------------------------------------------------
 
 
@@ -420,14 +420,14 @@ def apply_qt_text_change(
         position + chars_added,
         round_up=True,
     )
-    # 修改点之前的文本相同，理论上 old_start == new_start。遇到异常 signal
-    # 参数时取较小值，仍保证范围落在两份文本共同前缀内。
+    # The text before the change point is identical, so in theory old_start == new_start. With odd signal
+    # arguments the smaller value is taken, which still keeps the range inside the common prefix of the two texts.
     change_start = min(old_start, new_start)
     removed_seg = old_text[change_start:old_end]
     added_seg = new_text[change_start:new_end]
-    # IME 提交可能把整篇文档报成一次"全量替换"。对照前后文本裁掉报告区间
-    # 首尾未变的部分，收窄成最小真实操作——未改动字符原地保留自己的样式
-    # 与节点归属，而不是被当作新插入重建（样式丢失）。
+    # An IME commit may report the whole document as one "full replacement". Compare the text before and after and trim
+    # the unchanged start and end of the reported range, narrowing it to the smallest real operation - unchanged characters keep their own style
+    # and node membership in place, instead of being rebuilt as newly inserted text (which loses the styling).
     prefix = 0
     limit = min(len(removed_seg), len(added_seg))
     while prefix < limit and removed_seg[prefix] == added_seg[prefix]:
@@ -546,10 +546,10 @@ def _wrap_range_as_node(
     if start >= end:
         return copy.deepcopy(document)
 
-    # 范围外的既有 ruby/tcy 原样保留（条目携带节点归属，重建时复原）。
-    # 范围与既有节点部分/全部重叠：拆散被重叠的旧节点 —— 其全部字符降级为
-    # 携带原样式的普通文本（协议不允许节点嵌套，部分重叠时保留残半节点会
-    # 产生歧义），随后把范围包成新节点。
+    # Existing ruby/tcy outside the range is kept as it is (the entries carry node membership and it is restored on rebuild).
+    # The range overlaps existing nodes partly or fully: break up the overlapped old nodes - all their characters degrade to
+    # ordinary text carrying the original style (the protocol does not allow nested nodes, and keeping half a node on a partial overlap would
+    # be ambiguous), then wrap the range as a new node.
     overlapped_ids = {
         id(entry.node) for entry in entries[start:end] if entry.node is not None
     }
@@ -568,13 +568,13 @@ def _wrap_range_as_node(
         new_node = {"type": "tcy", "content": []}
     for entry in entries[start:end]:
         entry.node = new_node
-    # 注：范围跨段落时按段落各自重组为一个节点（ruby 注音随之复制到每段），
-    # 与旧实现的逐行包装行为一致。
+    # Note: a range that spans paragraphs is regrouped into one node per paragraph (the ruby text is copied to each paragraph),
+    # the same as the line-by-line wrapping of the old implementation.
     return _document_from_entries(entries)
 
 
 # ---------------------------------------------------------------------------
-# 查询（浮动编辑器工具栏状态）
+# Queries (toolbar state of the floating editor)
 # ---------------------------------------------------------------------------
 
 
