@@ -35,7 +35,7 @@ class ToastNotification(QObject):
         info_duration = duration if duration > 0 else -1
         content = str(message)
         if self._clickable:
-            content = f"{content}\n点击打开所在文件夹"
+            content = f"{content}\nClick to open the containing folder"
 
         factory = InfoBar.success if success else InfoBar.error
         self._bar = factory(
@@ -52,7 +52,7 @@ class ToastNotification(QObject):
         if self._clickable:
             self._bar.setCursor(Qt.CursorShape.PointingHandCursor)
             self._bar.installEventFilter(self)
-            open_button = PushButton("打开", self._bar, FIF.FOLDER)
+            open_button = PushButton("Open", self._bar, FIF.FOLDER)
             open_button.clicked.connect(self._open_extra_location)
             self._bar.addWidget(open_button)
 
@@ -111,7 +111,7 @@ class ToastNotification(QObject):
             else:
                 subprocess.run(["xdg-open", os.path.dirname(file_path)])
         except Exception as e:
-            print(f"无法打开文件位置: {e}")
+            print(f"Cannot open the file location: {e}")
 
 
 class ToastManager:

@@ -329,14 +329,14 @@ class EditorControllerDocumentService:
             self.view if self.view is not None else QApplication.activeWindow()
         )
         dialog = Dialog(
-            "未保存的编辑",
-            "当前图片有未保存的编辑\n\n保存工程数据后再切换图片。",
+            "Unsaved edits",
+            "The current image has unsaved edits\n\nSave the project data before switching image.",
             dialog_parent,
         )
         dialog.setTitleBarVisible(True)
-        dialog.yesButton.setText("保存")
-        dialog.cancelButton.setText("取消")
-        discard_button = PushButton("不保存", dialog.buttonGroup)
+        dialog.yesButton.setText("Save")
+        dialog.cancelButton.setText("Cancel")
+        discard_button = PushButton("Don't save", dialog.buttonGroup)
         dialog.buttonLayout.insertWidget(1, discard_button, 1)
         selected_action = {"value": "save"}
         discard_button.clicked.connect(lambda: selected_action.update(value="discard"))
@@ -357,7 +357,7 @@ class EditorControllerDocumentService:
         toast_manager = self.controller.get_toast_manager()
         if toast_manager is not None:
             self.controller._loading_toast = toast_manager.show_info(
-                "正在加载...", duration=0
+                "Loading...", duration=0
             )
 
         generation = self._load_generation
@@ -522,6 +522,6 @@ class EditorControllerDocumentService:
 
         toast_manager = self.controller.get_toast_manager()
         if toast_manager is not None:
-            toast_manager.show_error(f"加载失败: {error_msg}")
+            toast_manager.show_error(f"Loading failed: {error_msg}")
 
         self.controller._log_memory_snapshot("after-load-error")

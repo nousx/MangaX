@@ -1197,7 +1197,7 @@ class FolderDialog(FluentSecondaryDialog):
                 else:
                     self.favorite_folders = []
         except Exception as e:
-            print(f"加载收藏文件夹失败: {e}")
+            print(f"Loading the favourite folders failed: {e}")
             self.favorite_folders = []
 
     def _load_folder_sort_state(self) -> str:
@@ -1217,7 +1217,7 @@ class FolderDialog(FluentSecondaryDialog):
                     )
             return _normalize_folder_sort_state(value)
         except Exception as e:
-            print(f"加载文件夹排序方式失败: {e}")
+            print(f"Loading the folder sort order failed: {e}")
             return _DEFAULT_FOLDER_SORT
 
     def _save_folder_sort_state(self):
@@ -1246,7 +1246,7 @@ class FolderDialog(FluentSecondaryDialog):
             with open(config_path, "w", encoding="utf-8") as f:
                 json.dump(config_dict, f, indent=2, ensure_ascii=False)
         except Exception as e:
-            print(f"保存文件夹排序方式失败: {e}")
+            print(f"Saving the folder sort order failed: {e}")
 
     def _save_favorite_folders(self):
         """Save the favourite folders to the configuration file"""
@@ -1287,7 +1287,7 @@ class FolderDialog(FluentSecondaryDialog):
                     json.dump(config_dict, f, indent=2, ensure_ascii=False)
 
         except Exception as e:
-            print(f"保存收藏文件夹失败: {e}")
+            print(f"Saving the favourite folders failed: {e}")
             # No dialog, so the user is not disturbed
 
     def _toggle_favorite(self):

@@ -153,11 +153,11 @@ class EditorStateManager(QObject):
     def current_revision(self) -> int:
         return self._revision
 
-    def create_undo_action(self, parent, text: str = "撤销"):
+    def create_undo_action(self, parent, text: str = "Undo"):
         """Create the undo action (for menus and toolbars)."""
         return self.undo_stack.createUndoAction(parent, text)
 
-    def create_redo_action(self, parent, text: str = "重做"):
+    def create_redo_action(self, parent, text: str = "Redo"):
         """Create the redo action (for menus and toolbars)."""
         return self.undo_stack.createRedoAction(parent, text)
 

@@ -181,13 +181,13 @@ class EditorControllerExportService:
         self.controller.commit_pending_edits()
         source_path = self.model.get_source_image_path()
         if not source_path:
-            self._reject_export("保存失败：当前图片没有来源路径")
+            self._reject_export("Save failed: the current image has no source path")
             return False
 
         try:
             image = self.model.get_image()
             if image is None:
-                self._reject_export("保存失败：缺少图像数据")
+                self._reject_export("Save failed: the image data is missing")
                 return False
             regions = self.model.get_regions() or []
             mask = self.model.get_refined_mask()
@@ -220,11 +220,11 @@ class EditorControllerExportService:
             self.controller.history_service.mark_clean()
             toast_manager = self.controller.get_toast_manager()
             if toast_manager is not None:
-                toast_manager.show_success("保存成功", 2500)
+                toast_manager.show_success("Saved successfully", 2500)
             return True
         except Exception as e:
             self.logger.error("Failed to save editor state", exc_info=True)
-            self._reject_export(f"保存失败：{e}")
+            self._reject_export(f"Save failed: {e}")
             return False
 
     def export_image(
@@ -233,13 +233,13 @@ class EditorControllerExportService:
     ) -> Optional[concurrent.futures.Future]:
         source_path = self.model.get_source_image_path()
         if not source_path:
-            return self._reject_export("导出失败：当前图片没有来源路径")
+            return self._reject_export("Export failed: the current image has no source path")
         source_path = os.path.abspath(source_path)
 
         try:
             export_base = self.model.get_export_base()
             if export_base is None:
-                return self._reject_export("导出失败：缺少活动文档")
+                return self._reject_export("Export failed: there is no active document")
             config = self._build_config_dict(self.config_service.get_config())
 
             # Whole-page pre-compositing of the paste overlays moved into the export worker (ExportService.execute_export_job);
@@ -258,11 +258,11 @@ class EditorControllerExportService:
             future = self._submit_job(job)
             if future is None:
                 job.release_resources()
-                return self._reject_export("导出队列已经关闭")
+                return self._reject_export("The export queue is already closed")
             return future
         except Exception as e:
             self.logger.error(f"Error during export request: {e}", exc_info=True)
-            return self._reject_export(f"导出快照创建失败：{e}")
+            return self._reject_export(f"Creating the export snapshot failed: {e}")
 
     def _reject_export(self, message: str):
         toast_manager = self.controller.get_toast_manager()

@@ -290,7 +290,7 @@ class FileService:
                     if self.validate_image_file(file_path):
                         image_files.append(file_path)
                     else:
-                        errors.append(f"不支持的图片格式: {os.path.basename(file_path)}")
+                        errors.append(f"Unsupported image format: {os.path.basename(file_path)}")
                         
                 elif os.path.isdir(file_path):
                     # Handle folders
@@ -298,13 +298,13 @@ class FileService:
                     if folder_images:
                         image_files.extend(folder_images)
                     else:
-                        errors.append(f"文件夹中没有找到图片: {os.path.basename(file_path)}")
+                        errors.append(f"No images found in the folder: {os.path.basename(file_path)}")
                 else:
-                    errors.append(f"文件不存在: {os.path.basename(file_path)}")
+                    errors.append(f"The file does not exist: {os.path.basename(file_path)}")
                     
         except Exception as e:
             self.logger.error(f"Failed to process dropped files: {e}")
-            errors.append(f"处理拖拽文件时出错: {str(e)}")
+            errors.append(f"Error while handling the dropped files: {str(e)}")
             
         return image_files, errors
     
@@ -340,7 +340,7 @@ class FileService:
         """Get the information of a file"""
         try:
             if not os.path.exists(file_path):
-                return {'error': '文件不存在'}
+                return {'error': 'The file does not exist'}
                 
             stat = os.stat(file_path)
             file_info = {

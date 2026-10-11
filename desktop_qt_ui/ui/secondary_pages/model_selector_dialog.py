@@ -26,8 +26,8 @@ class ModelSelectorDialog(FluentSecondaryDialog):
     def __init__(
         self,
         models: list[str],
-        title: str = "选择模型",
-        prompt: str = "可用模型：",
+        title: str = "Select model",
+        prompt: str = "Available models:",
         parent=None,
         t_func: Callable[..., str] | None = None,
     ):
@@ -118,8 +118,8 @@ class ModelSelectorDialog(FluentSecondaryDialog):
     @staticmethod
     def get_model(
         models: list[str],
-        title: str = "选择模型",
-        prompt: str = "可用模型：",
+        title: str = "Select model",
+        prompt: str = "Available models:",
         parent=None,
         t_func: Callable[..., str] | None = None,
     ) -> tuple[str | None, bool]:

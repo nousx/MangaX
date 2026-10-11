@@ -898,9 +898,9 @@ class MainWindow(FluentWindow):
 
             reply = show_error_dialog(
                 self,
-                "后台任务尚未完成",
+                "Background tasks are not finished yet",
                 "",
-                f"还有 {unfinished_exports} 个保存或导出任务正在处理。\n\n等待全部任务完成后退出？",
+                f"Still running: {unfinished_exports} save or export tasks.\n\nWait for all of them to finish, then exit?",
                 icon=QMessageBox.Icon.Question,
                 buttons=QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
                 default_button=QMessageBox.StandardButton.Yes,

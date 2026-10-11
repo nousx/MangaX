@@ -54,13 +54,13 @@ class InputValidator:
         result = ValidationResult()
         
         if not file_path:
-            result.add_error("文件路径不能为空")
+            result.add_error("The file path must not be empty")
             return result
         
         if not os.path.exists(file_path):
-            result.add_error("文件不存在")
+            result.add_error("The file does not exist")
         elif not os.path.isfile(file_path):
-            result.add_error("路径不是文件")
+            result.add_error("The path is not a file")
         
         return result
     
@@ -72,7 +72,7 @@ class InputValidator:
             _, ext = os.path.splitext(file_path)
             
             if ext.lower() not in SUPPORTED_IMAGE_EXTENSIONS:
-                result.add_error(f"不支持的图片格式: {ext}")
+                result.add_error(f"Unsupported image format: {ext}")
         
         return result
     
@@ -81,12 +81,12 @@ class InputValidator:
         result = ValidationResult()
         
         if not api_key:
-            result.add_error("API密钥不能为空")
+            result.add_error("The API key must not be empty")
             return result
         
         pattern = self.api_patterns.get(provider.lower())
         if pattern and not re.match(pattern, api_key):
-            result.add_error(f"{provider} API密钥格式不正确")
+            result.add_error(f"{provider} API key has an invalid format")
         
         return result
 

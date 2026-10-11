@@ -75,7 +75,7 @@ def update_progress(self, current: int, total: int, message: str = ""):
         percentage = int((current / total) * 100) if total > 0 else 0
         self.progress_count_label.setText(f"{current}/{total} ({percentage}%)")
         if hasattr(self, "progress_info_label"):
-            self.progress_info_label.setText(message or f"已完成 {current}/{total}")
+            self.progress_info_label.setText(message or f"Done {current}/{total}")
 
         if not getattr(self, "_progress_active", False):
             self._progress_active = True

@@ -85,7 +85,7 @@ def global_exception_handler(exc_type, exc_value, exc_traceback):
     
     # Print to the console as well (so it is certainly seen)
     print(f"\n{'='*60}", file=sys.stderr)
-    print("❌ 程序发生未捕获的异常:", file=sys.stderr)
+    print("❌ Uncaught exception in the program:", file=sys.stderr)
     print(f"{'='*60}", file=sys.stderr)
     print(error_msg, file=sys.stderr)
     print(f"{'='*60}\n", file=sys.stderr)
@@ -426,7 +426,7 @@ def main():
         faulthandler.disable()
         shutdown_queue_logging()
     except Exception as e:
-        print(f"关闭日志处理器时出错: {e}", file=sys.stderr)
+        print(f"Error while closing the log handlers: {e}", file=sys.stderr)
     return ret
 
 if __name__ == '__main__':

@@ -191,7 +191,7 @@ class _CatalogBuilder:
             elif os.path.isfile(path):
                 files.append(path)
             else:
-                self.warnings.append(f"路径不存在，已跳过: {path}")
+                self.warnings.append(f"Path does not exist, skipped: {path}")
 
         folder_keys = {canonical_path_key(path) for path in folders}
         folders = [
@@ -259,9 +259,9 @@ class _CatalogBuilder:
                             if extension in SUPPORTED_LIST_EXTENSIONS:
                                 files.append(os.path.abspath(os.path.normpath(entry.path)))
                     except OSError as exc:
-                        self.warnings.append(f"无法读取目录项 {entry.path}: {exc}")
+                        self.warnings.append(f"Cannot read folder entry {entry.path}: {exc}")
         except OSError as exc:
-            self.warnings.append(f"无法扫描目录 {normalized}: {exc}")
+            self.warnings.append(f"Cannot scan folder {normalized}: {exc}")
 
         children: list[FileCatalogNode] = []
         for directory in sorted(directories, key=natural_sort_key):
@@ -305,7 +305,7 @@ class _CatalogBuilder:
             stat = os.stat(normalized, follow_symlinks=False)
             mtime_ns, size = stat.st_mtime_ns, stat.st_size
         except OSError as exc:
-            self.warnings.append(f"无法读取文件 {normalized}: {exc}")
+            self.warnings.append(f"Cannot read file {normalized}: {exc}")
             return None
 
         kind = KIND_ARCHIVE if extension in SUPPORTED_ARCHIVE_EXTENSIONS else KIND_IMAGE
@@ -354,7 +354,7 @@ class _CatalogBuilder:
                         if isinstance(translated, str) and isinstance(source, str):
                             result[canonical_path_key(translated)] = os.path.abspath(os.path.normpath(source))
             except (OSError, ValueError) as exc:
-                self.warnings.append(f"无法读取 translation_map.json {map_path}: {exc}")
+                self.warnings.append(f"Cannot read translation_map.json {map_path}: {exc}")
         self._translation_maps[folder_key] = result
         return result
 
@@ -439,7 +439,7 @@ class FileListDataService(QObject):
     ) -> int:
         with self._lock:
             if self._shutdown:
-                raise RuntimeError("FileListDataService 已关闭")
+                raise RuntimeError("FileListDataService is shut down")
             generation = self._generations.get(channel, 0) + 1
             self._generations[channel] = generation
             previous = self._cancel_events.get(channel)

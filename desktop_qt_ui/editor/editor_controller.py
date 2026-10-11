@@ -360,34 +360,34 @@ class EditorController(QObject):
     ) -> None:
         if task_kind == "ocr":
             if applied_count > 0 and skipped_count == 0 and error_count == 0:
-                self._ocr_finished.emit("success", "识别完成")
+                self._ocr_finished.emit("success", "OCR done")
             elif applied_count > 0:
                 self._ocr_finished.emit(
                     "warning",
-                    f"识别部分完成，已应用 {applied_count} 项，跳过 {skipped_count + error_count} 项",
+                    f"OCR partly done: {applied_count} applied, {skipped_count + error_count} skipped",
                 )
             elif skipped_count > 0:
-                self._ocr_finished.emit("warning", "识别结果未应用，目标区域已变化")
+                self._ocr_finished.emit("warning", "The OCR result was not applied; the target regions have changed")
             elif error_count > 0:
-                self._ocr_finished.emit("error", "识别失败")
+                self._ocr_finished.emit("error", "OCR failed")
             else:
-                self._ocr_finished.emit("warning", "未识别到可更新的文本")
+                self._ocr_finished.emit("warning", "No text to update was recognised")
             return
 
         if task_kind == "translation":
             if applied_count > 0 and skipped_count == 0:
-                self._translation_finished.emit("success", "翻译完成")
+                self._translation_finished.emit("success", "Translation done")
             elif applied_count > 0:
                 self._translation_finished.emit(
                     "warning",
-                    f"翻译部分完成，已应用 {applied_count} 项，跳过 {skipped_count} 项",
+                    f"Translation partly done: {applied_count} applied, {skipped_count} skipped",
                 )
             elif skipped_count > 0:
                 self._translation_finished.emit(
-                    "warning", "翻译结果未应用，目标区域已变化"
+                    "warning", "The translation result was not applied; the target regions have changed"
                 )
             else:
-                self._translation_finished.emit("warning", "未生成可应用的翻译结果")
+                self._translation_finished.emit("warning", "No translation result to apply was produced")
 
     def _finalize_progress_toast(
         self, toast_attr: str, status: str, message: str
@@ -486,9 +486,9 @@ class EditorController(QObject):
             return
 
         message = (
-            "正在处理后台任务..."
+            "Processing background tasks..."
             if unfinished_count == 1
-            else f"正在处理后台任务（{unfinished_count} 个）"
+            else f"Processing background tasks ({unfinished_count})"
         )
         if message == self._export_status_text:
             return
@@ -510,7 +510,7 @@ class EditorController(QObject):
                 self.model.install_inpaint_artifact(outcome.generated_artifact)
             if not outcome.automatic and toast_manager is not None:
                 toast_manager.show_success(
-                    f"导出成功\n{outcome.output_path}",
+                    f"Exported\n{outcome.output_path}",
                     5000,
                     outcome.output_path,
                 )
@@ -525,7 +525,7 @@ class EditorController(QObject):
 
         if toast_manager is not None:
             toast_manager.show_error(
-                f"{file_name} 导出失败：{outcome.error or '未知错误'}",
+                f"{file_name} export failed: {outcome.error or 'unknown error'}",
                 7000,
             )
 
@@ -1949,7 +1949,7 @@ class EditorController(QObject):
         self._ocr_toast = None
         toast_manager = self.get_toast_manager()
         if toast_manager is not None:
-            self._ocr_toast = toast_manager.show_info("正在识别...", duration=0)
+            self._ocr_toast = toast_manager.show_info("Recognising...", duration=0)
 
         self.async_service.submit_task(
             self._async_ocr_task(image, selected_regions_data, region_ids, ocr_config)
@@ -2079,9 +2079,9 @@ class EditorController(QObject):
             return
 
         if error_count > 0:
-            self._ocr_finished.emit("error", "识别失败")
+            self._ocr_finished.emit("error", "OCR failed")
             return
-        self._ocr_finished.emit("warning", "未识别到可更新的文本")
+        self._ocr_finished.emit("warning", "No text to update was recognised")
 
     @pyqtSlot()
     def run_translation_for_selection(self):
@@ -2134,7 +2134,7 @@ class EditorController(QObject):
         self._translation_toast = None
         toast_manager = self.get_toast_manager()
         if toast_manager is not None:
-            self._translation_toast = toast_manager.show_info("正在翻译...", duration=0)
+            self._translation_toast = toast_manager.show_info("Translating...", duration=0)
 
         # Pass all regions to give context, but only translate the selected text
         self.async_service.submit_task(
@@ -2182,10 +2182,10 @@ class EditorController(QObject):
                 )
                 return
 
-            self._translation_finished.emit("warning", "未生成可应用的翻译结果")
+            self._translation_finished.emit("warning", "No translation result to apply was produced")
         except Exception as e:
             self.logger.error(f"Translation failed: {e}", exc_info=True)
-            self._translation_finished.emit("error", "翻译失败")
+            self._translation_finished.emit("error", "Translation failed")
 
     @pyqtSlot(list)
     def set_selection_from_list(self, indices: list):

@@ -861,7 +861,7 @@ class ExportService:
             from manga_translator.manga_translator import MangaTranslator
 
             if progress_callback:
-                progress_callback("创建翻译器实例...")
+                progress_callback("Creating the translator instance...")
 
             # Create the translator instance and register the in-memory payload
             translator = MangaTranslator(params=translator_params)
@@ -935,7 +935,7 @@ class ExportService:
             )
 
             if progress_callback:
-                progress_callback("执行后端渲染...")
+                progress_callback("Running the backend render...")
 
             # Run the translation (which here means rendering)
             import sys
@@ -1037,7 +1037,7 @@ class ExportService:
 
                         if progress_callback:
                             progress_callback(
-                                f"已导出PSD: {os.path.basename(psd_path)}"
+                                f"PSD exported: {os.path.basename(psd_path)}"
                             )
                     except Exception as psd_err:
                         self.logger.error(f"Failed to export PSD: {psd_err}")

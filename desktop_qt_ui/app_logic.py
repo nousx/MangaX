@@ -602,9 +602,9 @@ class MainAppLogic(QObject):
                     model=model.strip(),
                     messages=[{"role": "user", "content": "test"}],
                 )
-                return True, f"连接成功，模型 {model.strip()} 可用"
+                return True, f"Connected; model {model.strip()} is available"
             await client.models.list()
-            return True, "连接成功"
+            return True, "Connected"
         finally:
             await client.close()
 
@@ -648,7 +648,7 @@ class MainAppLogic(QObject):
                     }
                 ],
             )
-            return True, f"连接成功，OCR 模型 {model_name} 可用"
+            return True, f"Connected; OCR model {model_name} is available"
         finally:
             await client.close()
 
@@ -698,7 +698,7 @@ class MainAppLogic(QObject):
                     provider_name="OpenAI API Test",
                     logger=self.logger,
                 )
-                return True, f"连接成功，图像模型 {model_name} 可用"
+                return True, f"Connected; image model {model_name} is available"
             finally:
                 await client.close()
         except ImportError:
@@ -716,7 +716,7 @@ class MainAppLogic(QObject):
                     prompt="Generate a simple test image.",
                     size="1024x1024",
                 )
-                return True, f"连接成功，图像模型 {model_name} 可用"
+                return True, f"Connected; image model {model_name} is available"
             finally:
                 await client.close()
 
@@ -736,9 +736,9 @@ class MainAppLogic(QObject):
             try:
                 if model and model.strip():
                     await client.models.generate_content(model=model.strip(), contents="test")
-                    return True, f"连接成功，模型 {model.strip()} 可用"
+                    return True, f"Connected; model {model.strip()} is available"
                 await client.models.list()
-                return True, "连接成功"
+                return True, "Connected"
             finally:
                 await client.close()
         except ImportError:
@@ -755,9 +755,9 @@ class MainAppLogic(QObject):
                 ) if http_options_kwargs else genai.Client(api_key=api_key)
                 if model and model.strip():
                     client.models.generate_content(model=model.strip(), contents="test")
-                    return True, f"连接成功，模型 {model.strip()} 可用"
+                    return True, f"Connected; model {model.strip()} is available"
                 list(client.models.list())
-                return True, "连接成功"
+                return True, "Connected"
 
             return await asyncio.get_running_loop().run_in_executor(None, sync_test)
 
@@ -787,7 +787,7 @@ class MainAppLogic(QObject):
             )
             try:
                 await client.models.generate_content(model=model_name, contents=contents)
-                return True, f"连接成功，OCR 模型 {model_name} 可用"
+                return True, f"Connected; OCR model {model_name} is available"
             finally:
                 await client.close()
         except ImportError:
@@ -803,7 +803,7 @@ class MainAppLogic(QObject):
                     http_options=types.HttpOptions(**http_options_kwargs),
                 ) if http_options_kwargs else genai.Client(api_key=api_key)
                 client.models.generate_content(model=model_name, contents=contents)
-                return True, f"连接成功，OCR 模型 {model_name} 可用"
+                return True, f"Connected; OCR model {model_name} is available"
 
             return await asyncio.get_running_loop().run_in_executor(None, sync_test)
 
@@ -845,7 +845,7 @@ class MainAppLogic(QObject):
                 response = await client.models.generate_content(**request_kwargs)
                 if not self._extract_gemini_image_bytes(response):
                     raise RuntimeError(self._t("api_test_error_gemini_no_image"))
-                return True, f"连接成功，图像模型 {model_name} 可用"
+                return True, f"Connected; image model {model_name} is available"
             finally:
                 await client.close()
         except ImportError:
@@ -873,7 +873,7 @@ class MainAppLogic(QObject):
                 )
                 if not self._extract_gemini_image_bytes(response):
                     raise RuntimeError(self._t("api_test_error_gemini_no_image"))
-                return True, f"连接成功，图像模型 {model_name} 可用"
+                return True, f"Connected; image model {model_name} is available"
 
             return await asyncio.get_running_loop().run_in_executor(None, sync_test)
 
@@ -916,7 +916,7 @@ class MainAppLogic(QObject):
                                 model=model,
                                 messages=[{"role": "user", "content": "test"}]
                             )
-                            return True, f"连接成功，模型 {model} 可用"
+                            return True, f"Connected; model {model} is available"
                         except Exception as e:
                             return False, self._t(
                                 "api_test_error_model_unavailable",
@@ -925,7 +925,7 @@ class MainAppLogic(QObject):
                             )
                     else:
                         await client.models.list()
-                        return True, "连接成功"
+                        return True, "Connected"
                 finally:
                     await client.close()
             
@@ -975,7 +975,7 @@ class MainAppLogic(QObject):
                     model_ids = [m.id for m in models_response.data]
                     model_ids.sort(reverse=True)  # Newer models first
                     
-                    return True, model_ids, "获取成功"
+                    return True, model_ids, "Fetched successfully"
                 finally:
                     await client.close()
             
@@ -996,7 +996,7 @@ class MainAppLogic(QObject):
                     try:
                         models_response = await client.models.list()
                         model_ids = [m.id for m in models_response]
-                        return True, model_ids, "获取成功"
+                        return True, model_ids, "Fetched successfully"
                     finally:
                         await client.close()
                 except ImportError:
@@ -1025,7 +1025,7 @@ class MainAppLogic(QObject):
                         ) if http_options_kwargs else genai.Client(api_key=api_key)
                         models = list(client.models.list())
                         model_names = [m.name.replace("models/", "") for m in models]
-                        return True, model_names, "获取成功"
+                        return True, model_names, "Fetched successfully"
 
                     return await loop.run_in_executor(None, sync_get_models)
             
@@ -1042,7 +1042,7 @@ class MainAppLogic(QObject):
                 try:
                     models_response = await client.models.list()
                     model_ids = [m.id for m in models_response.data]
-                    return True, model_ids, "获取成功"
+                    return True, model_ids, "Fetched successfully"
                 finally:
                     await client.close()
             
@@ -1803,7 +1803,7 @@ class MainAppLogic(QObject):
     def start_file_scanning(self, task_config: dict):
         """Start the background file scan task"""
         self.state_manager.set_translating(True)
-        self.state_manager.set_status_message("正在准备文件...")
+        self.state_manager.set_status_message("Preparing files...")
 
         self._scan_request_id += 1
         request_id = self._scan_request_id
@@ -1825,7 +1825,7 @@ class MainAppLogic(QObject):
 
         def run_after_config_flush():
             if not self.config_service.flush_pending_writes():
-                scanner_worker._emit_error("配置或 API Key 保存失败，任务未启动")
+                scanner_worker._emit_error("Saving the configuration or the API key failed; the task was not started")
                 return
             scanner_worker.run()
 
@@ -1834,7 +1834,7 @@ class MainAppLogic(QObject):
         except RuntimeError as exc:
             self.current_worker = None
             self.state_manager.set_translating(False)
-            self.state_manager.set_status_message("任务启动失败")
+            self.state_manager.set_status_message("The task failed to start")
             self._ui_log(f"Failed to start file scan: {exc}", "ERROR")
             return
 
@@ -1867,7 +1867,7 @@ class MainAppLogic(QObject):
         if not resolved_files:
             self._ui_log("No valid image files found; task aborted", "WARNING")
             self.state_manager.set_translating(False)
-            self.state_manager.set_status_message("就绪")
+            self.state_manager.set_status_message("Ready")
             from PyQt6.QtWidgets import QMessageBox
             QMessageBox.warning(
                 None,
@@ -1887,9 +1887,9 @@ class MainAppLogic(QObject):
         self._ui_log(f"Error scanning files: {error_msg}", "ERROR")
         self.current_worker = None
         self.state_manager.set_translating(False)
-        self.state_manager.set_status_message("扫描失败")
+        self.state_manager.set_status_message("Scan failed")
         from PyQt6.QtWidgets import QMessageBox
-        QMessageBox.critical(None, "扫描失败", f"扫描文件时出错:\n{error_msg}")
+        QMessageBox.critical(None, "Scan failed", f"Error while scanning files:\n{error_msg}")
 
     def _start_translation_worker(self, files_to_process, task_config):
         """Start the translation worker (internal method, called after the scan is done)"""
@@ -1944,13 +1944,13 @@ class MainAppLogic(QObject):
         except RuntimeError as exc:
             self.current_worker = None
             self.state_manager.set_translating(False)
-            self.state_manager.set_status_message("任务启动失败")
+            self.state_manager.set_status_message("The task failed to start")
             self._ui_log(f"Failed to start translation task: {exc}", "ERROR")
             return
 
         self._ui_log(f"Translation task started (task ID: {task_id})")
         self.state_manager.set_translating(True)
-        self.state_manager.set_status_message("正在翻译...")
+        self.state_manager.set_status_message("Translating...")
 
     def resume_backend_task(self):
         """Start the task, skipping every page whose output already exists.
@@ -2180,7 +2180,7 @@ class MainAppLogic(QObject):
             return
         
         self.state_manager.set_translating(False)
-        self.state_manager.set_status_message("任务失败")
+        self.state_manager.set_status_message("Task failed")
         
         # Reset the progress bar of the main view
         if hasattr(self, 'main_view') and self.main_view:
@@ -2211,7 +2211,7 @@ class MainAppLogic(QObject):
         """Stop the translation task"""
         if self.current_worker and hasattr(self.current_worker, 'stop'):
             self._stop_requested = True
-            self.state_manager.set_status_message("正在停止...")
+            self.state_manager.set_status_message("Stopping...")
             if hasattr(self, 'main_view') and self.main_view:
                 self.main_view.set_stopping_state()
             
@@ -2247,7 +2247,7 @@ class MainAppLogic(QObject):
         """Restore the UI once the background task has really ended."""
         self._stop_requested = False
         self.state_manager.set_translating(False)
-        self.state_manager.set_status_message("任务已停止")
+        self.state_manager.set_status_message("Task stopped")
         if hasattr(self, 'main_view') and self.main_view:
             self.main_view.reset_progress()
         self.current_worker = None
@@ -2294,7 +2294,7 @@ class MainAppLogic(QObject):
                 self.state_manager.set_state(AppStateKey.CONFIG_PATH, default_config_path)
 
             self.state_manager.set_app_ready(True)
-            self.state_manager.set_status_message("就绪")
+            self.state_manager.set_status_message("Ready")
             self._ui_log("Application initialization completed")
             return True
         except Exception as e:

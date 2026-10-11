@@ -103,7 +103,7 @@ class StateManager(QObject):
             AppStateKey.EDITOR_STATE: {},
             AppStateKey.APP_READY: False,
             AppStateKey.ERROR_MESSAGES: [],
-            AppStateKey.STATUS_MESSAGE: "就绪"
+            AppStateKey.STATUS_MESSAGE: "Ready"
         }
         
         with self._lock:

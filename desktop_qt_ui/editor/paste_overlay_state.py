@@ -46,16 +46,16 @@ def _to_float(value: Any, name: str) -> float:
     try:
         number = float(value)
     except (TypeError, ValueError) as error:
-        raise ValueError(f"{name} 必须为数字，收到: {value!r}") from error
+        raise ValueError(f"{name} must be a number, got: {value!r}") from error
     if not math.isfinite(number):
-        raise ValueError(f"{name} 必须是有限数值，收到: {value!r}")
+        raise ValueError(f"{name} must be a finite number, got: {value!r}")
     return number
 
 
 def _to_int(value: Any, name: str) -> int:
     number = _to_float(value, name)
     if not number.is_integer():
-        raise ValueError(f"{name} 必须为整数，收到: {value!r}")
+        raise ValueError(f"{name} must be an integer, got: {value!r}")
     return int(number)
 
 
@@ -65,15 +65,15 @@ def _to_bool(value: Any, name: str) -> bool:
     if isinstance(value, (int, float)):
         if value in (0, 1):
             return bool(value)
-        raise ValueError(f"{name} 必须为布尔值，收到: {value!r}")
+        raise ValueError(f"{name} must be a boolean, got: {value!r}")
     if isinstance(value, str):
         normalized = value.strip().lower()
         if normalized in ("true", "1", "yes", "on"):
             return True
         if normalized in ("false", "0", "no", "off", ""):
             return False
-        raise ValueError(f"{name} 布尔字符串无法解析: {value!r}")
-    raise ValueError(f"{name} 必须为布尔值，收到: {type(value).__name__}")
+        raise ValueError(f"{name} boolean string cannot be parsed: {value!r}")
+    raise ValueError(f"{name} must be a boolean, got: {type(value).__name__}")
 
 
 def _clamp_opacity(value: float) -> float:
@@ -82,13 +82,13 @@ def _clamp_opacity(value: float) -> float:
 
 def _validate_image_field(image: Any) -> str:
     if not isinstance(image, str):
-        raise ValueError(f"image 必须为 base64 PNG 字符串，收到: {type(image).__name__}")
+        raise ValueError(f"image must be a base64 PNG string, got: {type(image).__name__}")
     if not image:
         return ""
     try:
         base64.b64decode(image, validate=True)
     except Exception as error:
-        raise ValueError("image 不是合法的 base64 数据") from error
+        raise ValueError("image is not valid base64 data") from error
     return image
 
 
@@ -104,12 +104,12 @@ def normalize_paste_overlay(raw: Mapping[str, Any]) -> dict[str, Any]:
     Invalid input raises :class:`ValueError`, and the caller decides whether to skip it or report an error.
     """
     if not isinstance(raw, Mapping):
-        raise ValueError(f"贴片必须是字典，收到: {type(raw).__name__}")
+        raise ValueError(f"a paste overlay must be a dictionary, got: {type(raw).__name__}")
 
     width = _to_float(raw.get("width", 0.0), "width")
     height = _to_float(raw.get("height", 0.0), "height")
     if width <= 0 or height <= 0:
-        raise ValueError(f"width/height 必须为正数，收到 width={width} height={height}")
+        raise ValueError(f"width/height must be positive, got width={width} height={height}")
 
     return {
         "id": str(raw.get("id") or "").strip() or new_overlay_id(),
@@ -160,7 +160,7 @@ def parse_page_paste_overlays(
     if raw is None:
         return []
     if not isinstance(raw, list):
-        raise ValueError(f"{PAGE_KEY} 必须是列表，收到: {type(raw).__name__}")
+        raise ValueError(f"{PAGE_KEY} must be a list, got: {type(raw).__name__}")
     overlays: list[dict[str, Any]] = []
     for index, item in enumerate(raw):
         try:
@@ -175,11 +175,11 @@ def rgba_overlay_to_png_base64(image_rgba: Any) -> str:
     """RGBA uint8 array → base64 PNG string (the same encoding as the paint and stamp layers)."""
     array = np.asarray(image_rgba)
     if array.ndim != 3 or array.shape[2] != 4:
-        raise ValueError(f"贴片必须为 RGBA，收到 shape {array.shape}")
+        raise ValueError(f"a paste overlay must be RGBA, got shape {array.shape}")
     bgra = cv2.cvtColor(array.astype(np.uint8, copy=False), cv2.COLOR_RGBA2BGRA)
     ok, encoded = cv2.imencode(".png", bgra)
     if not ok:
-        raise ValueError("贴片 PNG 编码失败")
+        raise ValueError("encoding the paste overlay as PNG failed")
     return base64.b64encode(encoded).decode("utf-8")
 
 

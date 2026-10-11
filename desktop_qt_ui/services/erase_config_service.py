@@ -72,8 +72,8 @@ class EraseConfigService:
         self.algorithm_info = {
             InpainterType.DEFAULT: AlgorithmInfo(
                 name="default",
-                display_name="默认 (AOT)",
-                description="默认的AOT图像修复算法，速度较快",
+                display_name="Default (AOT)",
+                description="The default AOT inpainting algorithm, fairly fast",
                 supports_gpu=True,
                 supports_precision=False,
                 preview_suitable=True
@@ -81,7 +81,7 @@ class EraseConfigService:
             InpainterType.LAMA_LARGE: AlgorithmInfo(
                 name="lama_large", 
                 display_name="Lama Large",
-                description="高质量的Lama修复算法，效果最佳",
+                description="High-quality Lama inpainting algorithm, best results",
                 supports_gpu=True,
                 supports_precision=True,
                 preview_suitable=False  # The model is large and not suitable for a live preview
@@ -89,7 +89,7 @@ class EraseConfigService:
             InpainterType.LAMA_MPE: AlgorithmInfo(
                 name="lama_mpe",
                 display_name="Lama MPE", 
-                description="轻量级Lama算法，平衡速度与质量",
+                description="Lightweight Lama algorithm, a balance of speed and quality",
                 supports_gpu=True,
                 supports_precision=True,
                 preview_suitable=True
@@ -97,23 +97,23 @@ class EraseConfigService:
             InpainterType.STABLE_DIFFUSION: AlgorithmInfo(
                 name="sd",
                 display_name="Stable Diffusion",
-                description="基于扩散模型的修复算法，质量很高但速度慢",
+                description="Inpainting algorithm based on a diffusion model, very high quality but slow",
                 supports_gpu=True,
                 supports_precision=True,
                 preview_suitable=False  # Too slow for a live preview
             ),
             InpainterType.NONE: AlgorithmInfo(
                 name="none",
-                display_name="无擦除",
-                description="不进行擦除，将蒙版区域填充为白色",
+                display_name="No erasing",
+                description="Nothing is erased; the mask area is filled with white",
                 supports_gpu=False,
                 supports_precision=False,
                 preview_suitable=True
             ),
             InpainterType.ORIGINAL: AlgorithmInfo(
                 name="original", 
-                display_name="保持原图",
-                description="保持原图不变，不进行任何处理",
+                display_name="Keep original",
+                description="The original image is kept unchanged, without any processing",
                 supports_gpu=False,
                 supports_precision=False,
                 preview_suitable=True
@@ -198,7 +198,7 @@ class EraseConfigService:
     def set_inpainting_size(self, size: int):
         """Set the inpainting size"""
         if size < 512 or size > 4096:
-            raise ValueError("修复尺寸必须在512-4096之间")
+            raise ValueError("The inpainting size must be between 512 and 4096")
         self.current_config.inpainting_size = size
         self.logger.info(f"Setting inpainting size: {size}")
     

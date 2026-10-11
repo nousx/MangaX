@@ -1341,7 +1341,7 @@ class MangaTranslator:
                     )
                     result = safe_update_large_json_from_text(txt_path, json_path, template_path)
                     
-                    if not result.startswith("错误"):
+                    if not result.startswith("Error"):
                         success_count += 1
                         logger.debug(f"Imported TXT to JSON: {os.path.basename(image_path)}")
                     

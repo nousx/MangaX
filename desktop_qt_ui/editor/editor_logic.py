@@ -237,7 +237,7 @@ class EditorLogic(QObject):
         """Opens a file dialog to add files to the editor's list."""
         last_dir = self._last_open_dir()
         file_paths, _ = QFileDialog.getOpenFileNames(
-            None, "添加文件到编辑器", last_dir, IMAGE_FILE_DIALOG_FILTER
+            None, "Add files to the editor", last_dir, IMAGE_FILE_DIALOG_FILTER
         )
         if file_paths:
             self.add_files(file_paths)

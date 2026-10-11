@@ -52,7 +52,7 @@ class BatchEditService(QObject):
     def _begin(self, channel: str) -> tuple[int, threading.Event]:
         with self._lock:
             if self._shutdown:
-                raise RuntimeError("BatchEditService 已关闭")
+                raise RuntimeError("BatchEditService is shut down")
             generation = self._generations.get(channel, 0) + 1
             self._generations[channel] = generation
             previous = self._cancel_events.get(channel)

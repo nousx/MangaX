@@ -1569,7 +1569,7 @@ def on_open_custom_api_params_file(self):
     except Exception as e:
         from PyQt6.QtWidgets import QMessageBox
 
-        QMessageBox.warning(self._dialog_parent(), self._t("Error"), f"创建配置文件失败: {e}")
+        QMessageBox.warning(self._dialog_parent(), self._t("Error"), f"Creating the configuration file failed: {e}")
         return
 
     try:
@@ -1582,7 +1582,7 @@ def on_open_custom_api_params_file(self):
     except Exception as e:
         from PyQt6.QtWidgets import QMessageBox
 
-        QMessageBox.warning(self._dialog_parent(), self._t("Error"), f"打开编辑器失败: {e}")
+        QMessageBox.warning(self._dialog_parent(), self._t("Error"), f"Opening the editor failed: {e}")
 
 
 def on_test_api_clicked(self, key: str):

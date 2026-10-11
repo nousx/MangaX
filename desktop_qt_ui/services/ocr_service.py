@@ -141,7 +141,7 @@ class OcrService:
     async def prepare_model(self, ocr_type: Optional[Ocr] = None):
         """Prepare the OCR model (when the model was switched, the old one is destroyed and unloaded automatically)"""
         if not OCR_AVAILABLE:
-            raise RuntimeError("OCR后端模块不可用")
+            raise RuntimeError("The OCR backend module is not available")
             
         ocr_to_use = ocr_type or self._get_current_config().ocr
         if isinstance(ocr_to_use, str):
@@ -344,7 +344,7 @@ class OcrService:
                              config: Optional[OcrConfig] = None) -> Optional[OcrResult]:
         """Recognise the text of a single text box region (a region may hold several polygons)"""
         if not OCR_AVAILABLE:
-            raise RuntimeError("OCR后端模块不可用")
+            raise RuntimeError("The OCR backend module is not available")
 
         config = config or self._get_current_config()
         ocr_config = self._resolve_ocr_config(config)
@@ -460,7 +460,7 @@ class OcrService:
                                        config: Optional[OcrConfig] = None) -> List[Optional[OcrResult]]:
         """Recognise several text box regions as a batch"""
         if not OCR_AVAILABLE:
-            raise RuntimeError("OCR后端模块不可用")
+            raise RuntimeError("The OCR backend module is not available")
 
         config = config or self._get_current_config()
         ocr_config = self._resolve_ocr_config(config)

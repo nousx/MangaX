@@ -158,7 +158,7 @@ class ServiceContainer:
         
         self.services.clear()
         self.initialized = False
-        print("所有服务已关闭")
+        print("All services are shut down")
 
 class ServiceManager:
     """Service manager - the global access point for services"""

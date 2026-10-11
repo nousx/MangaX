@@ -560,11 +560,11 @@ def create_template_selection_dialog(parent=None):
         # Open the file dialog
         template_path = filedialog.askopenfilename(
             parent=parent,
-            title="选择翻译模板文件",
+            title="Select a translation template file",
             filetypes=[
-                ("JSON模板文件", "*.json"),
-                ("文本模板文件", "*.txt"),
-                ("所有文件", "*.*")
+                ("JSON template files", "*.json"),
+                ("Text template files", "*.txt"),
+                ("All files", "*.*")
             ],
             initialdir=os.path.dirname(get_default_template_path())
         )
@@ -596,12 +596,12 @@ def export_with_custom_template(
         str: the export result, or an error message
     """
     if not os.path.exists(json_path):
-        return f"错误：JSON文件不存在: {json_path}"
+        return f"Error: the JSON file does not exist: {json_path}"
     
     # Get the template path
     final_template_path = get_template_path_from_config(template_path)
     if not os.path.exists(final_template_path):
-        return f"错误：模板文件不存在: {final_template_path}"
+        return f"Error: the template file does not exist: {final_template_path}"
     
     # Build the output path
     if output_path is None:
@@ -615,11 +615,11 @@ def export_with_custom_template(
     try:
         result_path = generate_text_from_template(json_path, final_template_path)
         if result_path and os.path.exists(result_path):
-            return f"成功导出到: {result_path}"
+            return f"Exported to: {result_path}"
         else:
-            return f"导出失败: {result_path}"
+            return f"Export failed: {result_path}"
     except Exception as e:
-        return f"导出过程中出错: {e}"
+        return f"Error during export: {e}"
 
 
 def import_with_custom_template(
@@ -639,7 +639,7 @@ def import_with_custom_template(
         str: the import result, or an error message
     """
     if not os.path.exists(txt_path):
-        return f"错误：TXT文件不存在: {txt_path}"
+        return f"Error: the TXT file does not exist: {txt_path}"
     
     # Infer the JSON path automatically
     if json_path is None:
@@ -647,18 +647,18 @@ def import_with_custom_template(
         json_path = base_name + ".json"
     
     if not os.path.exists(json_path):
-        return f"错误：JSON文件不存在: {json_path}"
+        return f"Error: the JSON file does not exist: {json_path}"
     
     # Get the template path
     final_template_path = get_template_path_from_config(template_path)
     if not os.path.exists(final_template_path):
-        return f"错误：模板文件不存在: {final_template_path}"
+        return f"Error: the template file does not exist: {final_template_path}"
     
     try:
         result = safe_update_large_json_from_text(txt_path, json_path, final_template_path)
         return result
     except Exception as e:
-        return f"导入过程中出错: {e}"
+        return f"Error during import: {e}"
 
 
 def get_default_template_path() -> str:
@@ -687,22 +687,22 @@ def smart_update_translations_from_images(
         str: report of the processing result
     """
     if not image_file_paths:
-        return "错误：未提供图片文件路径"
+        return "Error: no image file paths were given"
 
     # Use the default template when none is given, and make sure the template file exists
     if template_path is None:
         template_path = ensure_default_template_exists()
         if template_path is None:
-            return "错误：无法创建或找到默认模板文件"
+            return "Error: the default template file could not be created or found"
 
     if not os.path.exists(template_path):
-        return f"错误：模板文件不存在: {template_path}"
+        return f"Error: the template file does not exist: {template_path}"
 
     results = []
 
     for image_path in image_file_paths:
         if not os.path.exists(image_path):
-            results.append(f"✗ {os.path.basename(image_path)}: 图片文件不存在")
+            results.append(f"✗ {os.path.basename(image_path)}: the image file does not exist")
             continue
 
         # Find the JSON and TXT files with path_manager (supports the new folder structure)
@@ -711,14 +711,14 @@ def smart_update_translations_from_images(
 
         # Check that the files exist
         if not json_path:
-            results.append(f"- {os.path.basename(image_path)}: 未找到JSON文件")
+            results.append(f"- {os.path.basename(image_path)}: JSON file not found")
             continue
 
         # Use the original-text TXT (imported after the user edited the original text)
         txt_path = original_txt_path if original_txt_path else translated_txt_path
 
         if not txt_path:
-            results.append(f"- {os.path.basename(image_path)}: 未找到TXT文件")
+            results.append(f"- {os.path.basename(image_path)}: TXT file not found")
             continue
 
         # Update the translations
@@ -726,16 +726,16 @@ def smart_update_translations_from_images(
             result = safe_update_large_json_from_text(txt_path, json_path, template_path)
             results.append(f"✓ {os.path.basename(image_path)}: {result}")
         except Exception as e:
-            results.append(f"✗ {os.path.basename(image_path)}: 更新失败 - {e}")
+            results.append(f"✗ {os.path.basename(image_path)}: update failed - {e}")
 
     if not results:
-        return "未找到任何可处理的文件"
+        return "No files that can be processed were found"
 
     # Count the results
     successful = len([r for r in results if r.startswith("✓")])
     total = len(results)
 
-    summary = f"批量翻译更新完成 (成功: {successful}/{total}):\n" + "\n".join(results)
+    summary = f"Batch translation update finished (succeeded: {successful}/{total}):\n" + "\n".join(results)
     return summary
 
 
@@ -768,18 +768,18 @@ def auto_detect_and_update_translations(
                 image_files.extend(glob.glob(pattern, recursive=True))
             
             if not image_files:
-                return f"在目录 {directory_or_files} 中未找到任何图片文件"
+                return f"Folder {directory_or_files} contains no image files"
             
             return smart_update_translations_from_images(image_files, template_path)
         else:
-            return f"错误：目录不存在: {directory_or_files}"
+            return f"Error: the folder does not exist: {directory_or_files}"
     
     elif isinstance(directory_or_files, list):
         # For a file list, process it directly
         return smart_update_translations_from_images(directory_or_files, template_path)
     
     else:
-        return "错误：参数类型不正确，需要目录路径或图片文件路径列表"
+        return "Error: wrong argument type; a folder path or a list of image file paths is needed"
 
 
 def _load_large_json_optimized(json_file_path: str):
@@ -822,9 +822,9 @@ def safe_update_large_json_from_text(
     import time
     
     # Check that the file exists
-    for file_path, name in [(text_file_path, "TXT"), (json_file_path, "JSON"), (template_path, "模板")]:
+    for file_path, name in [(text_file_path, "TXT"), (json_file_path, "JSON"), (template_path, "template")]:
         if not os.path.exists(file_path):
-            return f"错误：{name}文件不存在: {file_path}"
+            return f"Error: the {name} file does not exist: {file_path}"
     
     # Get the file size
     json_size_mb = os.path.getsize(json_file_path) / (1024 * 1024)
@@ -838,12 +838,12 @@ def safe_update_large_json_from_text(
         with open(text_file_path, 'r', encoding='utf-8') as f:
             text_content = f.read()
     except Exception as e:
-        return f"错误：读取输入文件失败: {e}"
+        return f"Error: reading the input file failed: {e}"
 
     try:
         prefix, item_template, separator, suffix = parse_template(template_string)
     except ValueError as e:
-        return f"错误：解析模板失败: {e}"
+        return f"Error: parsing the template failed: {e}"
 
     # 2. Parse the translation content
     logger.debug("Parsing translations from text content.")
@@ -913,7 +913,7 @@ def safe_update_large_json_from_text(
 
     if not translations:
         logger.warning(f"Could not parse any translations from '{os.path.basename(text_file_path)}'.")
-        return "错误：未能从TXT文件中解析出任何翻译内容"
+        return "Error: no translation content could be parsed from the TXT file"
 
     logger.info(f"Parsed {len(translations)} translations")
 
@@ -968,7 +968,7 @@ def safe_update_large_json_from_text(
         image_key = next(iter(source_data.keys()), None)
         
         if not image_key or 'regions' not in source_data[image_key]:
-            return "错误：JSON文件格式不正确，找不到regions数据"
+            return "Error: the JSON file has the wrong format; no regions data was found"
 
         start_time = time.time()
         
@@ -1065,7 +1065,7 @@ def safe_update_large_json_from_text(
             logger.error("File integrity check failed! Restoring backup.")
             if backup_path and os.path.exists(backup_path):
                 shutil.copy2(backup_path, json_file_path)
-                return "错误：文件写入后验证失败，已恢复备份。请检查磁盘空间和文件权限。"
+                return "Error: verification after writing the file failed, and the backup was restored. Check the disk space and the file permissions."
         
         # 10. Remove old backups (optional; the 3 most recent are kept)
         try:
@@ -1081,11 +1081,11 @@ def safe_update_large_json_from_text(
         except Exception:
             pass
 
-        return f"成功更新 {updated_count} 条翻译 (总时间: {load_time + update_time + write_time:.2f}秒)"
+        return f"Updated {updated_count} translations (total time: {load_time + update_time + write_time:.2f}s)"
 
     except Exception as e:
         # Error recovery
-        error_msg = f"错误：更新过程中出现异常: {e}"
+        error_msg = f"Error: an exception occurred during the update: {e}"
         backup_recovery = "not attempted"
         
         # Remove the temporary file
@@ -1101,10 +1101,10 @@ def safe_update_large_json_from_text(
             try:
                 logger.warning("Exception occurred, attempting to restore backup.")
                 shutil.copy2(backup_path, json_file_path)
-                error_msg += " (已恢复备份文件)"
+                error_msg += " (the backup file was restored)"
                 backup_recovery = "restored"
             except Exception:
-                error_msg += " (备份恢复失败，请手动恢复)"
+                error_msg += " (restoring the backup failed; restore it by hand)"
                 backup_recovery = "failed"
         
         logger.error("Error updating translations: %s (backup recovery: %s)", e, backup_recovery)
@@ -1134,17 +1134,17 @@ def batch_update_directory_translations(
     import glob
 
     if not os.path.isdir(directory_path):
-        return f"错误：目录不存在: {directory_path}"
+        return f"Error: the folder does not exist: {directory_path}"
 
     # Use the default template when none is given, and make sure the template file exists
     if template_path is None:
         logger.debug("No template path provided, using default.")
         template_path = ensure_default_template_exists()
         if template_path is None:
-            return "错误：无法创建或找到默认模板文件"
+            return "Error: the default template file could not be created or found"
 
     if not os.path.exists(template_path):
-        return f"错误：模板文件不存在: {template_path}"
+        return f"Error: the template file does not exist: {template_path}"
     logger.debug(f"Using template: {template_path}")
 
     search_pattern = os.path.join(directory_path, "**", pattern)
@@ -1152,7 +1152,7 @@ def batch_update_directory_translations(
     logger.debug(f"Found {len(json_files)} JSON files: {json_files}")
 
     if not json_files:
-        return f"在目录 {directory_path} 中未找到匹配 '{pattern}' 的JSON文件"
+        return f"In folder {directory_path}, no JSON file matches '{pattern}'"
 
     results = []
     for json_path in json_files:
@@ -1188,7 +1188,7 @@ def batch_update_directory_translations(
 
         if not os.path.exists(txt_path):
             logger.warning(f"Could not find matching TXT file for '{os.path.basename(json_path)}', skipping.")
-            results.append(f"- {os.path.basename(json_path)}: 未找到对应的TXT文件 ({os.path.basename(txt_path)})")
+            results.append(f"- {os.path.basename(json_path)}: the matching TXT file was not found ({os.path.basename(txt_path)})")
             continue
 
         try:
@@ -1196,10 +1196,10 @@ def batch_update_directory_translations(
             results.append(f"✓ {os.path.basename(json_path)}: {result}")
         except Exception as e:
             logger.error(f"An exception occurred while processing '{os.path.basename(json_path)}': {e}", exc_info=True)
-            results.append(f"✗ {os.path.basename(json_path)}: 更新失败 - {e}")
+            results.append(f"✗ {os.path.basename(json_path)}: update failed - {e}")
 
     successful = len([r for r in results if r.startswith("✓")])
     total = len(json_files)
-    summary = f"批量更新完成 (处理: {successful}/{total}):\n" + "\n".join(results)
+    summary = f"Batch update finished (processed: {successful}/{total}):\n" + "\n".join(results)
     logger.debug("Batch update completed (processed: %s/%s); files: %s", successful, total, json_files)
     return summary

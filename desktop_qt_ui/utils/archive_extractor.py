@@ -295,7 +295,7 @@ def extract_images_from_pdf(pdf_path: str, output_dir: str) -> List[str]:
     try:
         import fitz  # PyMuPDF
     except ImportError:
-        raise ImportError("需要安装 PyMuPDF: pip install PyMuPDF")
+        raise ImportError("PyMuPDF has to be installed: pip install PyMuPDF")
 
     os.makedirs(output_dir, exist_ok=True)
     extracted_images = []
@@ -568,7 +568,7 @@ def extract_images_from_cbr(cbr_path: str, output_dir: str) -> List[str]:
     try:
         import rarfile
     except ImportError:
-        raise ImportError("需要安装 rarfile: pip install rarfile")
+        raise ImportError("rarfile has to be installed: pip install rarfile")
 
     os.makedirs(output_dir, exist_ok=True)
 
@@ -626,7 +626,7 @@ def extract_images_from_archive(archive_path: str, output_dir: Optional[str] = N
         elif ext == '.cbr':
             images = extract_images_from_cbr(archive_path, output_dir)
         else:
-            raise ValueError(f"不支持的文件格式: {ext}")
+            raise ValueError(f"Unsupported file format: {ext}")
     except ArchiveLimitError:
         # Extraction was aborted: drop the (already emptied) output directory so
         # that no partial result can be mistaken for a valid cache later.

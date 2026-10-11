@@ -212,7 +212,7 @@ def test_stopping_state_remains_until_worker_and_cleanup_finish(monkeypatch):
     assert worker.stopped
     assert logic._stop_requested
     assert state.translating
-    assert state.status == "正在停止..."
+    assert state.status == "Stopping..."
     assert main_view.stopping
 
     delayed_button = SimpleNamespace(
@@ -232,7 +232,7 @@ def test_stopping_state_remains_until_worker_and_cleanup_finish(monkeypatch):
 
     assert not logic._stop_requested
     assert not state.translating
-    assert state.status == "任务已停止"
+    assert state.status == "Task stopped"
     assert main_view.reset
 
 
