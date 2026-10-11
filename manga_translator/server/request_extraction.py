@@ -454,7 +454,7 @@ async def while_streaming(req: Request, transform, config: Config, image: bytes 
         # Get the semaphore again inside the generator (to be sure the latest one is used)
         nonlocal translation_semaphore
         translation_semaphore = get_semaphore()
-        print(f"[DEBUG] generate() 开始, semaphore={translation_semaphore}, task_id={task_id}")
+        print(f"[DEBUG] generate() started, semaphore={translation_semaphore}, task_id={task_id}")
         
         # Check the per-user concurrency limit first (before acquiring the semaphore)
         from manga_translator.server.core.middleware import (
@@ -471,11 +471,11 @@ async def while_streaming(req: Request, transform, config: Config, image: bytes 
             check_concurrent_limit(username)
             
             if translation_semaphore is None:
-                print("[DEBUG] semaphore 是 None，尝试初始化")
+                print("[DEBUG] semaphore is None, trying to initialise it")
                 from manga_translator.server.core.task_manager import init_semaphore
                 init_semaphore()
                 translation_semaphore = get_semaphore()
-                print(f"[DEBUG] 初始化后 semaphore={translation_semaphore}")
+                print(f"[DEBUG] after initialisation semaphore={translation_semaphore}")
             
             if translation_semaphore:
                 # Check the current waiting queue
@@ -489,21 +489,21 @@ async def while_streaming(req: Request, transform, config: Config, image: bytes 
                     # Send the queued status to the frontend
                     yield pack_message(1, json.dumps({
                         "stage": "queued", 
-                        "message": f"排队中... (前面还有 {waiters_count} 个任务)",
+                        "message": f"Queued... ({waiters_count} tasks ahead)",
                         "queue_position": waiters_count + 1
                     }, ensure_ascii=False).encode('utf-8'))
                 
                 # Wait for the semaphore (the real queueing happens here)
-                print(f"[DEBUG] 准备获取 semaphore, task_id={task_id}, waiters={waiters_count}")
+                print(f"[DEBUG] about to acquire semaphore, task_id={task_id}, waiters={waiters_count}")
                 async with translation_semaphore:
                     # With a slot acquired, update the status to running
-                    print(f"[DEBUG] 获得 semaphore! task_id={task_id}, 更新状态为 running")
+                    print(f"[DEBUG] semaphore acquired! task_id={task_id}, state updated to running")
                     update_task_status(task_id, "running")
                     add_log("✓ Translation slot acquired; starting translation", "INFO")
                     # Send the notification that a slot was acquired
                     yield pack_message(1, json.dumps({
                         "stage": "slot_acquired", 
-                        "message": "获得翻译槽位，开始处理..."
+                        "message": "Translation slot acquired, starting..."
                     }, ensure_ascii=False).encode('utf-8'))
                     
                     async for chunk in _do_translation():
@@ -520,10 +520,10 @@ async def while_streaming(req: Request, transform, config: Config, image: bytes 
             yield pack_message(1, json.dumps({"stage": "task_id", "task_id": task_id}, ensure_ascii=False).encode('utf-8'))
             
             add_log("Starting translation task", "INFO")
-            yield pack_message(1, json.dumps({"stage": "start", "message": "开始处理..."}, ensure_ascii=False).encode('utf-8'))
+            yield pack_message(1, json.dumps({"stage": "start", "message": "Starting..."}, ensure_ascii=False).encode('utf-8'))
             
             add_log("Loading image", "INFO")
-            yield pack_message(1, json.dumps({"stage": "image_loading", "message": "加载图片中..."}, ensure_ascii=False).encode('utf-8'))
+            yield pack_message(1, json.dumps({"stage": "image_loading", "message": "Loading image..."}, ensure_ascii=False).encode('utf-8'))
             pil_image = await to_pil_image(image)
             
             add_log("Preparing translation parameters", "INFO")
@@ -531,20 +531,20 @@ async def while_streaming(req: Request, transform, config: Config, image: bytes 
             
             if is_task_cancelled(task_id):
                 add_log("Task cancelled", "WARNING")
-                raise asyncio.CancelledError("任务已被管理员取消")
+                raise asyncio.CancelledError("The task was cancelled by an administrator")
             
             async with with_user_env_vars(config):
                 add_log("Using the global translator (reusing models)", "INFO")
-                yield pack_message(1, json.dumps({"stage": "translator_init", "message": "初始化翻译器..."}, ensure_ascii=False).encode('utf-8'))
+                yield pack_message(1, json.dumps({"stage": "translator_init", "message": "Initialising the translator..."}, ensure_ascii=False).encode('utf-8'))
                 
                 if is_task_cancelled(task_id):
-                    raise asyncio.CancelledError("任务已被管理员取消")
+                    raise asyncio.CancelledError("The task was cancelled by an administrator")
                 
                 add_log("Running translation", "INFO")
-                yield pack_message(1, json.dumps({"stage": "translating", "message": "翻译中..."}, ensure_ascii=False).encode('utf-8'))
+                yield pack_message(1, json.dumps({"stage": "translating", "message": "Translating..."}, ensure_ascii=False).encode('utf-8'))
                 
                 if is_task_cancelled(task_id):
-                    raise asyncio.CancelledError("任务已被管理员取消")
+                    raise asyncio.CancelledError("The task was cancelled by an administrator")
                 
                 try:
                     add_log("Calling translator", "INFO")
@@ -662,7 +662,7 @@ async def while_streaming(req: Request, transform, config: Config, image: bytes 
             
             unregister_active_task(task_id)
     
-    print(f"[DEBUG] while_streaming 返回 StreamingResponse, task_id={task_id}")
+    print(f"[DEBUG] while_streaming returns StreamingResponse, task_id={task_id}")
     return StreamingResponse(generate(), media_type="application/octet-stream")
 
 
@@ -723,12 +723,12 @@ async def get_batch_ctx(req: Request, config: Config, images: list[str|bytes], b
                 except Exception:
                     waiters_count = 0
                 
-                print(f"[DEBUG] get_batch_ctx 准备获取 semaphore, task_id={task_id}, waiters={waiters_count}")
+                print(f"[DEBUG] get_batch_ctx about to acquire semaphore, task_id={task_id}, waiters={waiters_count}")
                 if waiters_count > 0:
                     add_log(f"Batch translation waiting for a slot... ({waiters_count} tasks queued)", "INFO")
                 
                 async with translation_semaphore:
-                    print(f"[DEBUG] get_batch_ctx 获得 semaphore! task_id={task_id}")
+                    print(f"[DEBUG] get_batch_ctx semaphore acquired! task_id={task_id}")
                     if task_id:
                         update_task_status(task_id, "running")
                     add_log("Batch translation slot acquired; starting execution", "INFO")

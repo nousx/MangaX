@@ -88,7 +88,7 @@ async def user_login(req: Request, password: str = Form(...)):
     if not allowed:
         raise HTTPException(
             status_code=429,
-            detail="尝试过于频繁，请稍后再试",
+            detail="Too many attempts; try again later",
             headers={"Retry-After": str(retry_after)},
         )
     

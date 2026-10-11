@@ -78,7 +78,7 @@ def _check_login_rate_limit(client_ip: str, username: str) -> None:
     for key, max_attempts in keys:
         allowed, retry_after = _auth_rate_limiter.check(key, max_attempts, LOGIN_WINDOW)
         if not allowed:
-            _raise_rate_limit("登录尝试过于频繁，请稍后再试", retry_after)
+            _raise_rate_limit("Too many login attempts; try again later", retry_after)
 
 
 def _record_login_failure(client_ip: str, username: str) -> None:
@@ -98,7 +98,7 @@ def _consume_registration_attempt(client_ip: str) -> None:
     key = f"auth:register:ip:{client_ip}"
     allowed, retry_after = _auth_rate_limiter.check(key, REGISTER_IP_MAX_ATTEMPTS, REGISTER_WINDOW)
     if not allowed:
-        _raise_rate_limit("注册尝试过于频繁，请稍后再试", retry_after)
+        _raise_rate_limit("Too many registration attempts; try again later", retry_after)
     _auth_rate_limiter.record(key, REGISTER_IP_MAX_ATTEMPTS, REGISTER_WINDOW)
 
 
@@ -122,7 +122,7 @@ def _require_setup_access(req: Request, body_token: Optional[str]) -> str:
     key = f"auth:setup:denied:ip:{client_ip}"
     allowed, retry_after = _auth_rate_limiter.check(key, SETUP_IP_MAX_DENIED_ATTEMPTS, SETUP_WINDOW)
     if not allowed:
-        _raise_rate_limit("初始设置尝试过于频繁，请稍后再试", retry_after)
+        _raise_rate_limit("Too many initial setup attempts; try again later", retry_after)
 
     supplied_token = req.headers.get(SETUP_TOKEN_HEADER) or body_token
     granted, reason = evaluate_setup_access(req, supplied_token)
@@ -140,17 +140,17 @@ def _require_setup_access(req: Request, body_token: Optional[str]) -> str:
             result="failure"
         )
     if reason == "token_invalid":
-        detail = "设置令牌不正确 (invalid setup token)"
+        detail = "Invalid setup token"
     elif reason == "token_required":
         detail = (
-            "初始设置只能在服务器本机 (127.0.0.1) 上完成，或提供设置令牌 "
-            f"(initial setup is only allowed from the server machine itself, or with the setup token from {SETUP_TOKEN_ENV})"
+            "Initial setup is only allowed from the server machine itself (127.0.0.1), "
+            f"or with the setup token from {SETUP_TOKEN_ENV}"
         )
     else:
         detail = (
-            "初始设置只能在服务器本机 (127.0.0.1) 上完成；如需远程设置，请在启动服务器前设置环境变量 "
-            f"{SETUP_TOKEN_ENV}（至少 {SETUP_TOKEN_MIN_LENGTH} 个字符）并在此处填写 "
-            f"(initial setup is only allowed from the server machine itself; for remote setup start the server with {SETUP_TOKEN_ENV} set)"
+            "Initial setup is only allowed from the server machine itself (127.0.0.1); "
+            f"for remote setup, start the server with the environment variable {SETUP_TOKEN_ENV} set "
+            f"(at least {SETUP_TOKEN_MIN_LENGTH} characters) and enter it here"
         )
     raise HTTPException(status_code=403, detail=detail)
 
@@ -169,14 +169,14 @@ class ChangePasswordRequest(BaseModel):
 
 class RegisterRequest(BaseModel):
     """User registration request model"""
-    username: str = Field(..., min_length=2, max_length=50, description="用户名")
-    password: str = Field(..., min_length=6, description="密码（至少6个字符）")
+    username: str = Field(..., min_length=2, max_length=50, description="User name")
+    password: str = Field(..., min_length=6, description="Password (at least 6 characters)")
 
 
 class InitialSetupRequest(BaseModel):
     """Initial admin setup request model"""
-    username: str = Field(..., min_length=2, max_length=50, description="管理员用户名")
-    password: str = Field(..., min_length=6, description="管理员密码（至少6个字符）")
+    username: str = Field(..., min_length=2, max_length=50, description="Administrator user name")
+    password: str = Field(..., min_length=6, description="Administrator password (at least 6 characters)")
     setup_token: Optional[str] = Field(
         None,
         max_length=512,
@@ -224,7 +224,7 @@ async def login(request: LoginRequest, req: Request):
         
         return LoginResponse(
             success=False,
-            message="用户名或密码错误"
+            message="Wrong user name or password"
         )
     
     # Get user account
@@ -233,14 +233,14 @@ async def login(request: LoginRequest, req: Request):
         _record_login_failure(client_ip, request.username)
         return LoginResponse(
             success=False,
-            message="用户不存在"
+            message="The user does not exist"
         )
     
     if not user.is_active:
         _record_login_failure(client_ip, request.username)
         return LoginResponse(
             success=False,
-            message="账号已被禁用"
+            message="The account has been disabled"
         )
     
     # Create session
@@ -307,7 +307,7 @@ async def logout(req: Request):
         result="success"
     )
     
-    return {"success": True, "message": "已成功注销"}
+    return {"success": True, "message": "Logged out successfully"}
 
 
 @router.post("/change-password")
@@ -334,7 +334,7 @@ async def change_password(request: ChangePasswordRequest, req: Request):
     
     # Verify old password
     if not _account_service.verify_password(session.username, request.old_password):
-        return {"success": False, "message": "旧密码错误"}
+        return {"success": False, "message": "The old password is wrong"}
     
     # Change password
     success = _account_service.change_password(session.username, request.new_password)
@@ -352,9 +352,9 @@ async def change_password(request: ChangePasswordRequest, req: Request):
         # Clear must_change_password flag if set
         _account_service.update_user(session.username, {"must_change_password": False})
         
-        return {"success": True, "message": "密码修改成功"}
+        return {"success": True, "message": "Password changed successfully"}
     else:
-        return {"success": False, "message": "密码修改失败"}
+        return {"success": False, "message": "Changing the password failed"}
 
 
 @router.get("/check")
@@ -434,7 +434,7 @@ async def initial_setup(request: InitialSetupRequest, req: Request):
     if len(users) > 0:
         raise HTTPException(
             status_code=400,
-            detail="系统已初始化，无法再次设置"
+            detail="The system is already initialised and cannot be set up again"
         )
 
     # Only the operator (loopback) or a holder of the setup token may create
@@ -446,14 +446,14 @@ async def initial_setup(request: InitialSetupRequest, req: Request):
     if not request.username or len(request.username) < 2:
         raise HTTPException(
             status_code=400,
-            detail="用户名至少需要2个字符"
+            detail="The user name needs at least 2 characters"
         )
     
     # Validate the password
     if not request.password or len(request.password) < 6:
         raise HTTPException(
             status_code=400,
-            detail="密码至少需要6个字符"
+            detail="The password needs at least 6 characters"
         )
     
     client_ip = req.client.host if req.client else "unknown"
@@ -501,7 +501,7 @@ async def initial_setup(request: InitialSetupRequest, req: Request):
         
         return {
             "success": True,
-            "message": "初始设置完成",
+            "message": "Initial setup completed",
             "token": session.token,
             "user": {
                 "username": account.username,
@@ -515,7 +515,7 @@ async def initial_setup(request: InitialSetupRequest, req: Request):
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         logger.error(f"Initial setup error: {e}")
-        raise HTTPException(status_code=500, detail="初始设置失败")
+        raise HTTPException(status_code=500, detail="Initial setup failed")
 
 
 @router.post("/register")
@@ -536,21 +536,21 @@ async def register_user(request: RegisterRequest, req: Request):
     if not registration_config.get('enabled', False):
         raise HTTPException(
             status_code=403,
-            detail="注册功能未开启，请联系管理员"
+            detail="Registration is not enabled; contact the administrator"
         )
     
     # Validate the user name
     if not request.username or len(request.username) < 2:
         raise HTTPException(
             status_code=400,
-            detail="用户名至少需要2个字符"
+            detail="The user name needs at least 2 characters"
         )
     
     # Validate the password
     if not request.password or len(request.password) < 6:
         raise HTTPException(
             status_code=400,
-            detail="密码至少需要6个字符"
+            detail="The password needs at least 6 characters"
         )
     
     _require_valid_new_username(request.username)
@@ -560,7 +560,7 @@ async def register_user(request: RegisterRequest, req: Request):
     if existing_user:
         raise HTTPException(
             status_code=400,
-            detail="用户名已存在"
+            detail="The user name already exists"
         )
     
     user_agent = req.headers.get("user-agent", "unknown")
@@ -598,7 +598,7 @@ async def register_user(request: RegisterRequest, req: Request):
         
         return {
             "success": True,
-            "message": "注册成功",
+            "message": "Registered successfully",
             "token": session.token,
             "user": {
                 "username": account.username,
@@ -612,4 +612,4 @@ async def register_user(request: RegisterRequest, req: Request):
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         logger.error(f"Registration error: {e}")
-        raise HTTPException(status_code=500, detail="注册失败")
+        raise HTTPException(status_code=500, detail="Registration failed")

@@ -26,39 +26,39 @@ router = APIRouter(prefix="/api/admin/users", tags=["users"])
 class CreateUserRequest(BaseModel):
     """Request for creating a user"""
     # Character rules are enforced by AccountService.create_user (returns 400).
-    username: str = Field(..., min_length=1, max_length=50, description="用户名")
-    password: str = Field(..., min_length=6, description="密码（至少6个字符）")
-    role: str = Field(..., pattern="^(admin|user)$", description="角色（admin 或 user）")
-    group: str = Field(default="default", description="用户组名称")
-    permissions: Optional[dict] = Field(None, description="用户权限（可选）")
+    username: str = Field(..., min_length=1, max_length=50, description="User name")
+    password: str = Field(..., min_length=6, description="Password (at least 6 characters)")
+    role: str = Field(..., pattern="^(admin|user)$", description="Role (admin or user)")
+    group: str = Field(default="default", description="User group name")
+    permissions: Optional[dict] = Field(None, description="User permissions (optional)")
 
 
 class UpdateUserRequest(BaseModel):
     """Request for updating a user"""
-    role: Optional[str] = Field(None, pattern="^(admin|user)$", description="角色")
-    group: Optional[str] = Field(None, description="用户组名称")
-    is_active: Optional[bool] = Field(None, description="是否激活")
-    must_change_password: Optional[bool] = Field(None, description="是否必须修改密码")
+    role: Optional[str] = Field(None, pattern="^(admin|user)$", description="Role")
+    group: Optional[str] = Field(None, description="User group name")
+    is_active: Optional[bool] = Field(None, description="Whether the account is active")
+    must_change_password: Optional[bool] = Field(None, description="Whether the password must be changed")
 
 
 class UpdatePermissionsRequest(BaseModel):
     """Request for updating permissions"""
-    allowed_translators: Optional[List[str]] = Field(None, description="允许使用的翻译器列表（白名单）")
-    denied_translators: Optional[List[str]] = Field(None, description="禁止使用的翻译器列表（黑名单）")
-    allowed_ocr: Optional[List[str]] = Field(None, description="允许使用的 OCR 列表（白名单）")
-    denied_ocr: Optional[List[str]] = Field(None, description="禁止使用的 OCR 列表（黑名单）")
-    allowed_colorizers: Optional[List[str]] = Field(None, description="允许使用的上色器列表（白名单）")
-    denied_colorizers: Optional[List[str]] = Field(None, description="禁止使用的上色器列表（黑名单）")
-    allowed_renderers: Optional[List[str]] = Field(None, description="允许使用的渲染器列表（白名单）")
-    denied_renderers: Optional[List[str]] = Field(None, description="禁止使用的渲染器列表（黑名单）")
-    allowed_workflows: Optional[List[str]] = Field(None, description="允许使用的工作流列表（白名单）")
-    denied_workflows: Optional[List[str]] = Field(None, description="禁止使用的工作流列表（黑名单）")
-    allowed_parameters: Optional[List[str]] = Field(None, description="允许调整的参数列表（白名单）")
-    denied_parameters: Optional[List[str]] = Field(None, description="禁止调整的参数列表（黑名单）")
-    max_concurrent_tasks: Optional[int] = Field(None, ge=0, description="最大并发任务数")
-    daily_quota: Optional[int] = Field(None, ge=-1, description="每日翻译配额（-1表示无限制）")
-    can_upload_files: Optional[bool] = Field(None, description="是否可以上传文件")
-    can_delete_files: Optional[bool] = Field(None, description="是否可以删除文件")
+    allowed_translators: Optional[List[str]] = Field(None, description="List of translators the user may use (allow list)")
+    denied_translators: Optional[List[str]] = Field(None, description="List of translators the user may not use (deny list)")
+    allowed_ocr: Optional[List[str]] = Field(None, description="List of OCR engines the user may use (allow list)")
+    denied_ocr: Optional[List[str]] = Field(None, description="List of OCR engines the user may not use (deny list)")
+    allowed_colorizers: Optional[List[str]] = Field(None, description="List of colorizers the user may use (allow list)")
+    denied_colorizers: Optional[List[str]] = Field(None, description="List of colorizers the user may not use (deny list)")
+    allowed_renderers: Optional[List[str]] = Field(None, description="List of renderers the user may use (allow list)")
+    denied_renderers: Optional[List[str]] = Field(None, description="List of renderers the user may not use (deny list)")
+    allowed_workflows: Optional[List[str]] = Field(None, description="List of workflows the user may use (allow list)")
+    denied_workflows: Optional[List[str]] = Field(None, description="List of workflows the user may not use (deny list)")
+    allowed_parameters: Optional[List[str]] = Field(None, description="List of parameters the user may adjust (allow list)")
+    denied_parameters: Optional[List[str]] = Field(None, description="List of parameters the user may not adjust (deny list)")
+    max_concurrent_tasks: Optional[int] = Field(None, ge=0, description="Maximum number of concurrent tasks")
+    daily_quota: Optional[int] = Field(None, ge=-1, description="Daily translation quota (-1 means unlimited)")
+    can_upload_files: Optional[bool] = Field(None, description="Whether the user may upload files")
+    can_delete_files: Optional[bool] = Field(None, description="Whether the user may delete files")
 
 
 class UserResponse(BaseModel):
@@ -156,7 +156,7 @@ async def create_user(
             detail={
                 "error": {
                     "code": "INTERNAL_ERROR",
-                    "message": "创建用户时发生错误"
+                    "message": "An error occurred while creating the user"
                 }
             }
         )
@@ -209,7 +209,7 @@ async def list_users(
             detail={
                 "error": {
                     "code": "INTERNAL_ERROR",
-                    "message": "获取用户列表时发生错误"
+                    "message": "An error occurred while getting the list of users"
                 }
             }
         )
@@ -238,7 +238,7 @@ async def get_user(
                 detail={
                     "error": {
                         "code": "USER_NOT_FOUND",
-                        "message": f"用户 '{username}' 不存在"
+                        "message": f"User '{username}' does not exist"
                     }
                 }
             )
@@ -263,7 +263,7 @@ async def get_user(
             detail={
                 "error": {
                     "code": "INTERNAL_ERROR",
-                    "message": "获取用户信息时发生错误"
+                    "message": "An error occurred while getting the user information"
                 }
             }
         )
@@ -305,7 +305,7 @@ async def update_user(
                 detail={
                     "error": {
                         "code": "NO_UPDATES",
-                        "message": "没有提供要更新的字段"
+                        "message": "No fields to update were given"
                     }
                 }
             )
@@ -370,7 +370,7 @@ async def update_user(
             detail={
                 "error": {
                     "code": "INTERNAL_ERROR",
-                    "message": "更新用户信息时发生错误"
+                    "message": "An error occurred while updating the user information"
                 }
             }
         )
@@ -398,7 +398,7 @@ async def delete_user(
                 detail={
                     "error": {
                         "code": "CANNOT_DELETE_SELF",
-                        "message": "不能删除自己的账号"
+                        "message": "You cannot delete your own account"
                     }
                 }
             )
@@ -449,7 +449,7 @@ async def delete_user(
             detail={
                 "error": {
                     "code": "INTERNAL_ERROR",
-                    "message": "删除用户时发生错误"
+                    "message": "An error occurred while deleting the user"
                 }
             }
         )
@@ -485,7 +485,7 @@ async def update_user_permissions(
                 detail={
                     "error": {
                         "code": "USER_NOT_FOUND",
-                        "message": f"用户 '{username}' 不存在"
+                        "message": f"User '{username}' does not exist"
                     }
                 }
             )
@@ -549,7 +549,7 @@ async def update_user_permissions(
                 detail={
                     "error": {
                         "code": "NO_UPDATES",
-                        "message": "没有提供要更新的权限字段"
+                        "message": "No permission fields to update were given"
                     }
                 }
             )
@@ -599,7 +599,7 @@ async def update_user_permissions(
             detail={
                 "error": {
                     "code": "INTERNAL_ERROR",
-                    "message": "更新用户权限时发生错误"
+                    "message": "An error occurred while updating the user permissions"
                 }
             }
         )

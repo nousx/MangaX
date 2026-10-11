@@ -42,13 +42,13 @@ class AuditEventResponse(BaseModel):
 
 @router.get("/events", response_model=List[AuditEventResponse])
 async def query_audit_events(
-    username: Optional[str] = Query(None, description="按用户名筛选"),
-    event_type: Optional[str] = Query(None, description="按事件类型筛选"),
-    result: Optional[str] = Query(None, pattern="^(success|failure)$", description="按结果筛选"),
-    start_time: Optional[str] = Query(None, description="开始时间（ISO格式）"),
-    end_time: Optional[str] = Query(None, description="结束时间（ISO格式）"),
-    limit: int = Query(100, ge=1, le=1000, description="返回的最大事件数"),
-    offset: int = Query(0, ge=0, description="跳过的事件数（用于分页）"),
+    username: Optional[str] = Query(None, description="Filter by user name"),
+    event_type: Optional[str] = Query(None, description="Filter by event type"),
+    result: Optional[str] = Query(None, pattern="^(success|failure)$", description="Filter by result"),
+    start_time: Optional[str] = Query(None, description="Start time (ISO format)"),
+    end_time: Optional[str] = Query(None, description="End time (ISO format)"),
+    limit: int = Query(100, ge=1, le=1000, description="Maximum number of events returned"),
+    offset: int = Query(0, ge=0, description="Number of events skipped (for paging)"),
     session: Session = Depends(require_admin)
 ):
     """
@@ -83,7 +83,7 @@ async def query_audit_events(
                     detail={
                         "error": {
                             "code": "INVALID_TIME_FORMAT",
-                            "message": "start_time 格式无效，请使用 ISO 格式"
+                            "message": "start_time has an invalid format; use the ISO format"
                         }
                     }
                 )
@@ -96,7 +96,7 @@ async def query_audit_events(
                     detail={
                         "error": {
                             "code": "INVALID_TIME_FORMAT",
-                            "message": "end_time 格式无效，请使用 ISO 格式"
+                            "message": "end_time has an invalid format; use the ISO format"
                         }
                     }
                 )
@@ -136,7 +136,7 @@ async def query_audit_events(
             detail={
                 "error": {
                     "code": "INTERNAL_ERROR",
-                    "message": "查询审计事件时发生错误"
+                    "message": "An error occurred while querying the audit events"
                 }
             }
         )
@@ -144,12 +144,12 @@ async def query_audit_events(
 
 @router.get("/export")
 async def export_audit_events(
-    username: Optional[str] = Query(None, description="按用户名筛选"),
-    event_type: Optional[str] = Query(None, description="按事件类型筛选"),
-    result: Optional[str] = Query(None, pattern="^(success|failure)$", description="按结果筛选"),
-    start_time: Optional[str] = Query(None, description="开始时间（ISO格式）"),
-    end_time: Optional[str] = Query(None, description="结束时间（ISO格式）"),
-    format: str = Query("json", pattern="^(json|csv)$", description="导出格式（json 或 csv）"),
+    username: Optional[str] = Query(None, description="Filter by user name"),
+    event_type: Optional[str] = Query(None, description="Filter by event type"),
+    result: Optional[str] = Query(None, pattern="^(success|failure)$", description="Filter by result"),
+    start_time: Optional[str] = Query(None, description="Start time (ISO format)"),
+    end_time: Optional[str] = Query(None, description="End time (ISO format)"),
+    format: str = Query("json", pattern="^(json|csv)$", description="Export format (json or csv)"),
     session: Session = Depends(require_admin)
 ):
     """
@@ -183,7 +183,7 @@ async def export_audit_events(
                     detail={
                         "error": {
                             "code": "INVALID_TIME_FORMAT",
-                            "message": "start_time 格式无效，请使用 ISO 格式"
+                            "message": "start_time has an invalid format; use the ISO format"
                         }
                     }
                 )
@@ -196,7 +196,7 @@ async def export_audit_events(
                     detail={
                         "error": {
                             "code": "INVALID_TIME_FORMAT",
-                            "message": "end_time 格式无效，请使用 ISO 格式"
+                            "message": "end_time has an invalid format; use the ISO format"
                         }
                     }
                 )
@@ -250,7 +250,7 @@ async def export_audit_events(
             detail={
                 "error": {
                     "code": "INTERNAL_ERROR",
-                    "message": "导出审计日志时发生错误"
+                    "message": "An error occurred while exporting the audit log"
                 }
             }
         )

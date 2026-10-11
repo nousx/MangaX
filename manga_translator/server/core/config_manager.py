@@ -416,13 +416,13 @@ def reload_admin_settings_if_changed() -> bool:
             if old_concurrent != new_concurrent:
                 from .task_manager import update_server_config
                 update_server_config({'max_concurrent_tasks': new_concurrent})
-                print(f"[INFO] 配置热加载: max_concurrent_tasks {old_concurrent} -> {new_concurrent}")
+                print(f"[INFO] Configuration hot reload: max_concurrent_tasks {old_concurrent} -> {new_concurrent}")
             
             return True
         
         return False
     except Exception as e:
-        print(f"[WARNING] 配置热加载失败: {e}")
+        print(f"[WARNING] Configuration hot reload failed: {e}")
         return False
 
 

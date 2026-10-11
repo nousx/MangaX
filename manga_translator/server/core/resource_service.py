@@ -66,14 +66,14 @@ class ResourceManagementService:
         """
         # Validate the file
         if not file or not file.filename:
-            raise ValueError("无效的文件")
+            raise ValueError("Invalid file")
         
         # Validate the file format
         file_format = self._get_file_extension(file.filename)
         if not self.validate_file_format(file.filename, 'prompt'):
             raise ValueError(
-                f"不支持的提示词文件格式: {file_format}. "
-                f"支持的格式: {', '.join(self.PROMPT_FORMATS)}"
+                f"Unsupported prompt file format: {file_format}. "
+                f"Supported formats: {', '.join(self.PROMPT_FORMATS)}"
             )
         
         # Create the user folder
@@ -115,7 +115,7 @@ class ResourceManagementService:
             if file_path.exists():
                 file_path.unlink()
             logger.error(f"Failed to upload prompt: {e}")
-            raise ValueError(f"上传提示词失败: {str(e)}")
+            raise ValueError(f"Uploading the prompt failed: {str(e)}")
     
     async def upload_font(self, user_id: str, file) -> FontResource:
         """
@@ -133,14 +133,14 @@ class ResourceManagementService:
         """
         # Validate the file
         if not file or not file.filename:
-            raise ValueError("无效的文件")
+            raise ValueError("Invalid file")
         
         # Validate the file format
         file_format = self._get_file_extension(file.filename)
         if not self.validate_file_format(file.filename, 'font'):
             raise ValueError(
-                f"不支持的字体文件格式: {file_format}. "
-                f"支持的格式: {', '.join(self.FONT_FORMATS)}"
+                f"Unsupported font file format: {file_format}. "
+                f"Supported formats: {', '.join(self.FONT_FORMATS)}"
             )
         
         # Create the user folder
@@ -186,7 +186,7 @@ class ResourceManagementService:
             if file_path.exists():
                 file_path.unlink()
             logger.error(f"Failed to upload font: {e}")
-            raise ValueError(f"上传字体失败: {str(e)}")
+            raise ValueError(f"Uploading the font failed: {str(e)}")
     
     def get_user_prompts(self, user_id: str) -> List[PromptResource]:
         """
@@ -275,11 +275,11 @@ class ResourceManagementService:
         # Get the resource
         resource_data = repo.get_resource_by_id(resource_id)
         if not resource_data:
-            raise ValueError(f"资源不存在: {resource_id}")
+            raise ValueError(f"The resource does not exist: {resource_id}")
         
         # Verify ownership
         if resource_data['user_id'] != user_id:
-            raise ValueError("无权删除此资源")
+            raise ValueError("You may not delete this resource")
         
         # Delete the file
         file_path = self.base_path / resource_data['file_path']

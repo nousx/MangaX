@@ -126,18 +126,18 @@ class QuotaManagementService:
             if file_size > quota.max_file_size:
                 max_mb = quota.max_file_size / (1024 * 1024)
                 current_mb = file_size / (1024 * 1024)
-                return False, f"文件大小 {current_mb:.2f}MB 超过限制 {max_mb:.2f}MB"
+                return False, f"File size {current_mb:.2f}MB exceeds the limit of {max_mb:.2f}MB"
             
             # Check the file count limit
             if file_count > quota.max_files_per_upload:
-                return False, f"文件数量 {file_count} 超过限制 {quota.max_files_per_upload}"
+                return False, f"File count {file_count} exceeds the limit of {quota.max_files_per_upload}"
             
             logger.info(f"Upload limit check passed for user {user_id}: {file_count} files, {file_size} bytes")
             return True, None
             
         except Exception as e:
             logger.error(f"Error checking upload limit for user {user_id}: {e}")
-            return False, f"检查上传限制时出错: {str(e)}"
+            return False, f"Error while checking the upload limits: {str(e)}"
     
     def check_session_limit(self, user_id: str) -> tuple[bool, Optional[str]]:
         """
@@ -157,14 +157,14 @@ class QuotaManagementService:
             
             # Check whether the limit is exceeded
             if active_count >= quota.max_sessions:
-                return False, f"活跃对话框数量 {active_count} 已达到限制 {quota.max_sessions}"
+                return False, f"Number of active sessions {active_count} has reached the limit of {quota.max_sessions}"
             
             logger.info(f"Session limit check passed for user {user_id}: {active_count}/{quota.max_sessions}")
             return True, None
             
         except Exception as e:
             logger.error(f"Error checking session limit for user {user_id}: {e}")
-            return False, f"检查对话框限制时出错: {str(e)}"
+            return False, f"Error while checking the session limit: {str(e)}"
     
     def check_daily_quota(self, user_id: str, image_count: int = 1) -> tuple[bool, Optional[str]]:
         """
@@ -195,14 +195,14 @@ class QuotaManagementService:
             remaining = quota.daily_quota - quota.current_usage
             if remaining < image_count:
                 logger.warning(f"Daily quota exceeded for user {user_id}: remaining {remaining}, requested {image_count}")
-                return False, f"每日配额不足: 剩余 {remaining}, 需要 {image_count}"
+                return False, f"Daily quota insufficient: remaining {remaining}, needed {image_count}"
             
             logger.info(f"Daily quota check passed for user {user_id}: {quota.current_usage}/{quota.daily_quota}")
             return True, None
             
         except Exception as e:
             logger.error(f"Error checking daily quota for user {user_id}: {e}")
-            return False, f"检查每日配额时出错: {str(e)}"
+            return False, f"Error while checking the daily quota: {str(e)}"
     
     def _check_and_reset_daily_quota(self, user_id: str, quota: QuotaLimit) -> None:
         """

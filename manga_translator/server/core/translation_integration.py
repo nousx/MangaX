@@ -78,7 +78,7 @@ class TranslationIntegrationService:
             if not has_permission:
                 permissions = self.permission_service.get_user_permissions(username)
                 allowed = permissions.allowed_translators if permissions else []
-                error_msg = f"您没有权限使用翻译器 '{translator}'。允许的翻译器: {allowed}"
+                error_msg = f"You do not have permission to use the translator '{translator}'. Allowed translators: {allowed}"
                 logger.warning(f"Permission denied for user {username}: translator '{translator}' is not allowed. Allowed translators: {allowed}")
                 return False, error_msg
             
@@ -87,7 +87,7 @@ class TranslationIntegrationService:
             
         except Exception as e:
             logger.error(f"Error checking permission: {e}")
-            return False, f"权限检查失败: {str(e)}"
+            return False, f"Permission check failed: {str(e)}"
     
     def check_quota_before_translation(
         self,
@@ -122,7 +122,7 @@ class TranslationIntegrationService:
             
         except Exception as e:
             logger.error(f"Error checking quota: {e}")
-            return False, f"配额检查失败: {str(e)}"
+            return False, f"Quota check failed: {str(e)}"
     
     def on_translation_start(
         self,

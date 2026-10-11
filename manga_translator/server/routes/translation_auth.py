@@ -255,7 +255,7 @@ async def verify_translation_auth(
             detail={
                 "error": {
                     "code": "NO_TOKEN",
-                    "message": "未提供会话令牌，请先登录"
+                    "message": "No session token was provided; log in first"
                 }
             }
         )
@@ -271,7 +271,7 @@ async def verify_translation_auth(
             detail={
                 "error": {
                     "code": "INVALID_TOKEN",
-                    "message": "会话令牌无效或已过期，请重新登录"
+                    "message": "The session token is invalid or has expired; log in again"
                 }
             }
         )
@@ -283,7 +283,7 @@ async def verify_translation_auth(
             detail={
                 "error": {
                     "code": "INVALID_TOKEN",
-                    "message": "会话令牌无效或已过期，请重新登录"
+                    "message": "The session token is invalid or has expired; log in again"
                 }
             }
         )
@@ -347,7 +347,7 @@ async def verify_translation_auth(
                 detail={
                     "error": {
                         "code": code,
-                        "message": f"您没有权限使用{label} '{feature_name}'",
+                        "message": f"You do not have permission to use the {label} '{feature_name}'",
                         "details": {
                             feature_type: feature_name,
                             allowed_details_key: allowed_values,
@@ -363,7 +363,7 @@ async def verify_translation_auth(
         'allowed_translators',
         'allowed_translators',
         'TRANSLATOR_PERMISSION_DENIED',
-        '翻译器',
+        'translator',
     )
 
     if hasattr(config, 'ocr'):
@@ -401,7 +401,7 @@ async def verify_translation_auth(
                 'allowed_colorizers',
                 'allowed_colorizers',
                 'COLORIZER_PERMISSION_DENIED',
-                '上色器',
+                'colorizer',
             )
 
     if hasattr(config, 'render'):
@@ -414,7 +414,7 @@ async def verify_translation_auth(
                 'allowed_renderers',
                 'allowed_renderers',
                 'RENDERER_PERMISSION_DENIED',
-                '渲染器',
+                'renderer',
             )
     
     # Note: checking the concurrency limit and increasing the count is done by track_task_start/track_task_end in the route layer;
@@ -494,7 +494,7 @@ def track_task_start(username: str) -> None:
     current_count = permission_service.get_active_task_count(username)
     # Use the effective concurrency limit (from the user group first)
     max_tasks = permission_service.get_effective_max_concurrent(username)
-    print(f"[并发检查] 用户 '{username}': 当前任务数={current_count}, 最大允许={max_tasks}")
+    print(f"[concurrency check] user '{username}': current tasks={current_count}, maximum allowed={max_tasks}")
     
     try:
         # Check the concurrency limit
@@ -503,10 +503,10 @@ def track_task_start(username: str) -> None:
         check_daily_quota(username)
         # Increase the daily usage
         increment_daily_usage(username)
-        print(f"[并发检查] 用户 '{username}': 检查通过，任务开始")
+        print(f"[concurrency check] user '{username}': check passed, task started")
     except Exception as e:
         # The check failed: roll back the concurrency count
-        print(f"[并发检查] 用户 '{username}': 检查失败，回滚计数 - {e}")
+        print(f"[concurrency check] user '{username}': check failed, count rolled back - {e}")
         decrement_task_count(username)
         raise
 

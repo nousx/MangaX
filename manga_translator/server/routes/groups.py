@@ -35,44 +35,44 @@ class GroupResponse(BaseModel):
 
 class CreateGroupRequest(BaseModel):
     """Request for creating a user group"""
-    group_id: str = Field(..., description="用户组ID")
-    name: str = Field(..., description="用户组名称")
-    description: str = Field(..., description="描述")
-    parameter_config: Optional[Dict[str, Any]] = Field(default=None, description="参数配置")
-    permissions: Optional[Dict[str, Any]] = Field(default=None, description="权限配置")
-    quota_limits: Optional[Dict[str, Any]] = Field(default=None, description="配额限制")
-    visible_presets: Optional[List[str]] = Field(default=None, description="可见预设列表")
-    default_preset_id: Optional[str] = Field(default=None, description="默认API密钥预设ID")
+    group_id: str = Field(..., description="User group ID")
+    name: str = Field(..., description="User group name")
+    description: str = Field(..., description="Description")
+    parameter_config: Optional[Dict[str, Any]] = Field(default=None, description="Parameter configuration")
+    permissions: Optional[Dict[str, Any]] = Field(default=None, description="Permission configuration")
+    quota_limits: Optional[Dict[str, Any]] = Field(default=None, description="Quota limits")
+    visible_presets: Optional[List[str]] = Field(default=None, description="List of visible presets")
+    default_preset_id: Optional[str] = Field(default=None, description="ID of the default API key preset")
 
 
 class RenameGroupRequest(BaseModel):
     """Request for renaming a user group"""
-    new_group_id: str = Field(..., description="新用户组ID")
-    new_name: str = Field(..., description="新用户组名称")
+    new_group_id: str = Field(..., description="New user group ID")
+    new_name: str = Field(..., description="New user group name")
 
 
 class UpdateGroupRequest(BaseModel):
     """Request for updating a user group"""
-    display_name: str = Field(..., description="显示名称")
-    description: str = Field(..., description="描述")
-    parameter_config: Dict[str, Any] = Field(..., description="参数配置")
+    display_name: str = Field(..., description="Display name")
+    description: str = Field(..., description="Description")
+    parameter_config: Dict[str, Any] = Field(..., description="Parameter configuration")
 
 
 class UpdateGroupConfigRequest(BaseModel):
     """Request for updating the configuration of a user group"""
-    parameter_config: Dict[str, Any] = Field(default={}, description="参数配置")
-    allowed_translators: Optional[List[str]] = Field(default=None, description="翻译器白名单")
-    denied_translators: Optional[List[str]] = Field(default=None, description="翻译器黑名单")
-    allowed_ocr: Optional[List[str]] = Field(default=None, description="OCR 白名单")
-    denied_ocr: Optional[List[str]] = Field(default=None, description="OCR 黑名单")
-    allowed_colorizers: Optional[List[str]] = Field(default=None, description="上色器白名单")
-    denied_colorizers: Optional[List[str]] = Field(default=None, description="上色器黑名单")
-    allowed_renderers: Optional[List[str]] = Field(default=None, description="渲染器白名单")
-    denied_renderers: Optional[List[str]] = Field(default=None, description="渲染器黑名单")
-    allowed_workflows: Optional[List[str]] = Field(default=None, description="工作流白名单")
-    denied_workflows: Optional[List[str]] = Field(default=None, description="工作流黑名单")
-    default_preset_id: Optional[str] = Field(default=None, description="默认API密钥预设ID")
-    visible_presets: Optional[List[str]] = Field(default=None, description="可见的API预设列表")
+    parameter_config: Dict[str, Any] = Field(default={}, description="Parameter configuration")
+    allowed_translators: Optional[List[str]] = Field(default=None, description="Translator allow list")
+    denied_translators: Optional[List[str]] = Field(default=None, description="Translator deny list")
+    allowed_ocr: Optional[List[str]] = Field(default=None, description="OCR allow list")
+    denied_ocr: Optional[List[str]] = Field(default=None, description="OCR deny list")
+    allowed_colorizers: Optional[List[str]] = Field(default=None, description="Colorizer allow list")
+    denied_colorizers: Optional[List[str]] = Field(default=None, description="Colorizer deny list")
+    allowed_renderers: Optional[List[str]] = Field(default=None, description="Renderer allow list")
+    denied_renderers: Optional[List[str]] = Field(default=None, description="Renderer deny list")
+    allowed_workflows: Optional[List[str]] = Field(default=None, description="Workflow allow list")
+    denied_workflows: Optional[List[str]] = Field(default=None, description="Workflow deny list")
+    default_preset_id: Optional[str] = Field(default=None, description="ID of the default API key preset")
+    visible_presets: Optional[List[str]] = Field(default=None, description="List of visible API presets")
 
 
 # ============================================================================
@@ -115,7 +115,7 @@ async def create_group(
                 detail={
                     "error": {
                         "code": "CREATE_FAILED",
-                        "message": f"创建用户组失败，可能用户组ID '{request.group_id}' 已存在"
+                        "message": f"Creating the user group failed; the user group ID '{request.group_id}' may already exist"
                     }
                 }
             )
@@ -124,7 +124,7 @@ async def create_group(
         
         return {
             "success": True,
-            "message": "用户组创建成功",
+            "message": "User group created",
             "group": {
                 "id": group.id,
                 "name": group.name,
@@ -142,7 +142,7 @@ async def create_group(
             detail={
                 "error": {
                     "code": "INTERNAL_ERROR",
-                    "message": "创建用户组失败"
+                    "message": "Creating the user group failed"
                 }
             }
         )
@@ -176,7 +176,7 @@ async def rename_group(
                 detail={
                     "error": {
                         "code": "RENAME_FAILED",
-                        "message": "重命名用户组失败，可能是系统组或新ID已存在"
+                        "message": "Renaming the user group failed; it may be a system group, or the new ID already exists"
                     }
                 }
             )
@@ -185,7 +185,7 @@ async def rename_group(
         
         return {
             "success": True,
-            "message": "用户组重命名成功",
+            "message": "User group renamed",
             "old_group_id": group_id,
             "new_group_id": request.new_group_id,
             "new_name": request.new_name
@@ -200,7 +200,7 @@ async def rename_group(
             detail={
                 "error": {
                     "code": "INTERNAL_ERROR",
-                    "message": "重命名用户组失败"
+                    "message": "Renaming the user group failed"
                 }
             }
         )
@@ -232,7 +232,7 @@ async def delete_group(
                 detail={
                     "error": {
                         "code": "DELETE_FAILED",
-                        "message": "删除用户组失败，可能是系统组或不存在"
+                        "message": "Deleting the user group failed; it may be a system group, or it does not exist"
                     }
                 }
             )
@@ -241,7 +241,7 @@ async def delete_group(
         
         return {
             "success": True,
-            "message": "用户组删除成功，该组用户已移动到default组",
+            "message": "User group deleted; its users were moved to the default group",
             "group_id": group_id
         }
     
@@ -254,7 +254,7 @@ async def delete_group(
             detail={
                 "error": {
                     "code": "INTERNAL_ERROR",
-                    "message": "删除用户组失败"
+                    "message": "Deleting the user group failed"
                 }
             }
         )
@@ -288,7 +288,7 @@ async def get_all_groups(
             detail={
                 "error": {
                     "code": "INTERNAL_ERROR",
-                    "message": "获取用户组列表失败"
+                    "message": "Getting the list of user groups failed"
                 }
             }
         )
@@ -315,7 +315,7 @@ async def get_group(
                 detail={
                     "error": {
                         "code": "GROUP_NOT_FOUND",
-                        "message": f"用户组 '{group_id}' 不存在"
+                        "message": f"User group '{group_id}' does not exist"
                     }
                 }
             )
@@ -336,7 +336,7 @@ async def get_group(
             detail={
                 "error": {
                     "code": "INTERNAL_ERROR",
-                    "message": "获取用户组失败"
+                    "message": "Getting the user group failed"
                 }
             }
         )
@@ -401,7 +401,7 @@ async def update_group_config(
                 detail={
                     "error": {
                         "code": "UPDATE_FAILED",
-                        "message": "更新用户组配置失败，用户组可能不存在"
+                        "message": "Updating the user group configuration failed; the user group may not exist"
                     }
                 }
             )
@@ -410,7 +410,7 @@ async def update_group_config(
         
         return {
             "success": True,
-            "message": "用户组配置更新成功",
+            "message": "User group configuration updated",
             "group_id": group_id
         }
     
@@ -423,7 +423,7 @@ async def update_group_config(
             detail={
                 "error": {
                     "code": "INTERNAL_ERROR",
-                    "message": "更新用户组配置失败"
+                    "message": "Updating the user group configuration failed"
                 }
             }
         )

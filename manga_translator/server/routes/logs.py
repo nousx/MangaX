@@ -43,7 +43,7 @@ class CleanupRequest(BaseModel):
 @logs_router.get('/session/{session_token}')
 async def get_session_logs(
     session_token: str,
-    format: str = Query('list', description='返回格式 (json 或 list)'),
+    format: str = Query('list', description='Return format (json or list)'),
     session: Session = Depends(require_auth)
 ):
     """
@@ -74,7 +74,7 @@ async def get_session_logs(
         if not allowed:
             raise HTTPException(
                 status_code=403,
-                detail=reason or "您没有访问此会话日志的权限"
+                detail=reason or "You do not have permission to access the logs of this session"
             )
         
         # Get the logs
@@ -104,7 +104,7 @@ async def get_session_logs(
 @logs_router.get('/session/{session_token}/export')
 async def export_session_logs(
     session_token: str,
-    format: str = Query('json', description='导出格式 (json 或 txt)'),
+    format: str = Query('json', description='Export format (json or txt)'),
     session: Session = Depends(require_auth)
 ):
     """
@@ -135,7 +135,7 @@ async def export_session_logs(
         if not allowed:
             raise HTTPException(
                 status_code=403,
-                detail=reason or "您没有导出此会话日志的权限"
+                detail=reason or "You do not have permission to export the logs of this session"
             )
         
         # Export the logs
@@ -199,7 +199,7 @@ async def clear_session_logs(
         if not allowed:
             raise HTTPException(
                 status_code=403,
-                detail=reason or "您没有清空此会话日志的权限"
+                detail=reason or "You do not have permission to clear the logs of this session"
             )
         
         # Clear the logs
@@ -224,9 +224,9 @@ async def clear_session_logs(
 
 @logs_router.get('')
 async def get_logs(
-    task_id: Optional[str] = Query(None, description='任务ID过滤'),
-    limit: int = Query(50, description='返回数量限制'),
-    level: Optional[str] = Query(None, description='日志级别过滤'),
+    task_id: Optional[str] = Query(None, description='Filter by task ID'),
+    limit: int = Query(50, description='Limit on the number returned'),
+    level: Optional[str] = Query(None, description='Filter by log level'),
     session: Session = Depends(require_auth)
 ):
     """
@@ -251,9 +251,9 @@ async def get_logs(
 
 @logs_router.get('/user')
 async def get_user_logs(
-    level: Optional[str] = Query(None, description='日志级别过滤'),
-    start_time: Optional[str] = Query(None, description='开始时间 (ISO格式)'),
-    end_time: Optional[str] = Query(None, description='结束时间 (ISO格式)'),
+    level: Optional[str] = Query(None, description='Filter by log level'),
+    start_time: Optional[str] = Query(None, description='Start time (ISO format)'),
+    end_time: Optional[str] = Query(None, description='End time (ISO format)'),
     session: Session = Depends(require_auth)
 ):
     """
@@ -283,12 +283,12 @@ async def get_user_logs(
 
 @logs_router.get('/search')
 async def search_logs(
-    session_token: Optional[str] = Query(None, description='会话令牌过滤'),
-    level: Optional[str] = Query(None, description='日志级别过滤'),
-    event_type: Optional[str] = Query(None, description='事件类型过滤'),
-    start_time: Optional[str] = Query(None, description='开始时间'),
-    end_time: Optional[str] = Query(None, description='结束时间'),
-    keyword: Optional[str] = Query(None, description='关键词搜索'),
+    session_token: Optional[str] = Query(None, description='Filter by session token'),
+    level: Optional[str] = Query(None, description='Filter by log level'),
+    event_type: Optional[str] = Query(None, description='Filter by event type'),
+    start_time: Optional[str] = Query(None, description='Start time'),
+    end_time: Optional[str] = Query(None, description='End time'),
+    keyword: Optional[str] = Query(None, description='Keyword search'),
     session: Session = Depends(require_auth)
 ):
     """
@@ -337,10 +337,10 @@ async def search_logs(
 
 @logs_router.get('/admin/system')
 async def get_system_logs(
-    level: Optional[str] = Query(None, description='日志级别过滤'),
-    start_time: Optional[str] = Query(None, description='开始时间'),
-    end_time: Optional[str] = Query(None, description='结束时间'),
-    limit: Optional[int] = Query(None, description='结果数量限制'),
+    level: Optional[str] = Query(None, description='Filter by log level'),
+    start_time: Optional[str] = Query(None, description='Start time'),
+    end_time: Optional[str] = Query(None, description='End time'),
+    limit: Optional[int] = Query(None, description='Limit on the number of results'),
     session: Session = Depends(require_admin)
 ):
     """
@@ -367,9 +367,9 @@ async def get_system_logs(
 
 @logs_router.get('/admin/sessions')
 async def get_all_sessions_logs(
-    user_id: Optional[str] = Query(None, description='用户ID过滤'),
-    start_time: Optional[str] = Query(None, description='开始时间'),
-    end_time: Optional[str] = Query(None, description='结束时间'),
+    user_id: Optional[str] = Query(None, description='Filter by user ID'),
+    start_time: Optional[str] = Query(None, description='Start time'),
+    end_time: Optional[str] = Query(None, description='End time'),
     session: Session = Depends(require_admin)
 ):
     """
@@ -436,9 +436,9 @@ async def export_multiple_sessions(
 
 @logs_router.get('/admin/statistics')
 async def get_log_statistics(
-    user_id: Optional[str] = Query(None, description='用户ID过滤'),
-    start_time: Optional[str] = Query(None, description='开始时间'),
-    end_time: Optional[str] = Query(None, description='结束时间'),
+    user_id: Optional[str] = Query(None, description='Filter by user ID'),
+    start_time: Optional[str] = Query(None, description='Start time'),
+    end_time: Optional[str] = Query(None, description='End time'),
     session: Session = Depends(require_admin)
 ):
     """

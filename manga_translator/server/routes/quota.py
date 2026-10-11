@@ -101,7 +101,7 @@ async def get_user_quota_stats(
         stats = quota_service.get_quota_stats(session.username)
         
         if not stats:
-            raise HTTPException(status_code=404, detail="配额信息未找到")
+            raise HTTPException(status_code=404, detail="Quota information not found")
         
         return QuotaStatsResponse(
             user_id=stats.user_id,
@@ -116,7 +116,7 @@ async def get_user_quota_stats(
         raise
     except Exception as e:
         logger.error(f"Error getting quota stats for user {session.username}: {e}")
-        raise HTTPException(status_code=500, detail=f"获取配额统计失败: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Getting the quota statistics failed: {str(e)}")
 
 
 # ============================================================================
@@ -156,7 +156,7 @@ async def get_all_quota_stats(
         
     except Exception as e:
         logger.error(f"Error getting all quota stats: {e}")
-        raise HTTPException(status_code=500, detail=f"获取配额统计失败: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Getting the quota statistics failed: {str(e)}")
 
 
 @router.post("/admin/quota/reset", response_model=QuotaResetResponse)
@@ -183,13 +183,13 @@ async def reset_quota(
                 logger.info(f"Admin {session.username} reset quota for user {request.user_id}")
                 return QuotaResetResponse(
                     success=True,
-                    message=f"成功重置用户 {request.user_id} 的配额",
+                    message=f"Quota of user {request.user_id} was reset",
                     users_reset=1
                 )
             else:
                 return QuotaResetResponse(
                     success=False,
-                    message=f"重置用户 {request.user_id} 的配额失败"
+                    message=f"Resetting the quota of user {request.user_id} failed"
                 )
         else:
             # Reset all users
@@ -201,18 +201,18 @@ async def reset_quota(
                 logger.info(f"Admin {session.username} reset quota for all users ({users_count} users)")
                 return QuotaResetResponse(
                     success=True,
-                    message="成功重置所有用户的配额",
+                    message="The quotas of all users were reset",
                     users_reset=users_count
                 )
             else:
                 return QuotaResetResponse(
                     success=False,
-                    message="重置所有用户配额失败"
+                    message="Resetting the quotas of all users failed"
                 )
                 
     except Exception as e:
         logger.error(f"Error resetting quota: {e}")
-        raise HTTPException(status_code=500, detail=f"重置配额失败: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Resetting the quota failed: {str(e)}")
 
 
 @router.post("/admin/quota/set-limits")
@@ -243,17 +243,17 @@ async def set_quota_limits(
             logger.info(f"Admin {session.username} updated quota limits for user {request.user_id}")
             return {
                 "success": True,
-                "message": f"成功更新用户 {request.user_id} 的配额限制"
+                "message": f"Quota limits of user {request.user_id} were updated"
             }
         else:
             return {
                 "success": False,
-                "message": f"更新用户 {request.user_id} 的配额限制失败"
+                "message": f"Updating the quota limits of user {request.user_id} failed"
             }
             
     except Exception as e:
         logger.error(f"Error setting quota limits: {e}")
-        raise HTTPException(status_code=500, detail=f"设置配额限制失败: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Setting the quota limits failed: {str(e)}")
 
 
 @router.get("/admin/quota/user/{user_id}", response_model=QuotaStatsResponse)
@@ -275,7 +275,7 @@ async def get_user_quota_stats_admin(
         stats = quota_service.get_quota_stats(user_id)
         
         if not stats:
-            raise HTTPException(status_code=404, detail=f"用户 {user_id} 的配额信息未找到")
+            raise HTTPException(status_code=404, detail=f"Quota information of user {user_id} was not found")
         
         return QuotaStatsResponse(
             user_id=stats.user_id,
@@ -290,4 +290,4 @@ async def get_user_quota_stats_admin(
         raise
     except Exception as e:
         logger.error(f"Error getting quota stats for user {user_id}: {e}")
-        raise HTTPException(status_code=500, detail=f"获取配额统计失败: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Getting the quota statistics failed: {str(e)}")

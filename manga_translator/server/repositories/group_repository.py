@@ -20,18 +20,18 @@ class GroupRepository(BaseJSONRepository):
             "version": "1.0",
             "groups": {
                 "admin": {
-                    "name": "管理员组",
-                    "description": "拥有所有权限的管理员用户组",
+                    "name": "Administrators",
+                    "description": "Administrator user group with all permissions",
                     "parameter_config": {}
                 },
                 "default": {
-                    "name": "默认用户组",
-                    "description": "新用户的默认用户组",
+                    "name": "Default users",
+                    "description": "Default user group of new users",
                     "parameter_config": {}
                 },
                 "guest": {
-                    "name": "访客组",
-                    "description": "受限的访客用户组",
+                    "name": "Guests",
+                    "description": "Restricted guest user group",
                     "parameter_config": {}
                 }
             },

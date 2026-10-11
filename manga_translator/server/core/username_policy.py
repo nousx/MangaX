@@ -14,10 +14,8 @@ USERNAME_MAX_LENGTH = 50
 USERNAME_ALLOWED_PUNCTUATION = "_-."
 
 USERNAME_RULES_MESSAGE = (
-    f"用户名长度需为 {USERNAME_MIN_LENGTH}-{USERNAME_MAX_LENGTH} 个字符，"
-    "只能包含字母、数字、下划线(_)、连字符(-)和点(.)，且必须以字母或数字开头和结尾 "
-    f"(Username must be {USERNAME_MIN_LENGTH}-{USERNAME_MAX_LENGTH} characters, "
-    "use only letters, digits, '_', '-' and '.', and start and end with a letter or digit)"
+    f"Username must be {USERNAME_MIN_LENGTH}-{USERNAME_MAX_LENGTH} characters, "
+    "use only letters, digits, '_', '-' and '.', and start and end with a letter or digit"
 )
 
 

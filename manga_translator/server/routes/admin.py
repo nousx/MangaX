@@ -114,16 +114,16 @@ async def cancel_task(
                 if task and not task.done():
                     task.cancel()
                     add_log(f"Administrator {session.username} forcibly cancelled task: {task_id[:8]}", "WARNING")
-                    return {"success": True, "message": "任务已强制终止"}
+                    return {"success": True, "message": "The task was terminated by force"}
                 else:
                     add_log(f"Administrator {session.username} requested forced task cancellation, but the task has already completed: {task_id[:8]}", "INFO")
-                    return {"success": True, "message": "任务已完成，无需取消"}
+                    return {"success": True, "message": "The task is already finished; nothing to cancel"}
             else:
                 # Cooperative cancel: set flag, wait for task to respond at checkpoint
                 add_log(f"Administrator {session.username} requested task cancellation: {task_id[:8]}", "WARNING")
-                return {"success": True, "message": "取消请求已发送（协作式取消）"}
+                return {"success": True, "message": "Cancellation request sent (cooperative cancellation)"}
         else:
-            raise HTTPException(404, detail="任务不存在或已完成")
+            raise HTTPException(404, detail="The task does not exist or is already finished")
 
 
 # ============================================================================
@@ -321,7 +321,7 @@ async def cleanup_storage(
     }
     
     if target not in targets and target != "all":
-        raise HTTPException(400, detail=f"无效的清理目标: {target}")
+        raise HTTPException(400, detail=f"Invalid clean-up target: {target}")
     
     freed_bytes = 0
     cleaned_dirs = []

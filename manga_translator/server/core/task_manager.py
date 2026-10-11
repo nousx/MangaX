@@ -191,15 +191,15 @@ def cancel_task(task_id: str, force: bool = False) -> dict:
                 
                 if cancelled:
                     add_log(f"Administrator forcibly cancelled task: {task_id[:8]}", "WARNING")
-                    return {"success": True, "message": "任务已强制终止"}
+                    return {"success": True, "message": "The task was terminated by force"}
                 else:
                     add_log(f"Administrator requested forced task cancellation, but the task has already completed: {task_id[:8]}", "INFO")
-                    return {"success": True, "message": "任务已完成，无需取消"}
+                    return {"success": True, "message": "The task is already finished; nothing to cancel"}
             else:
                 add_log(f"Administrator requested task cancellation: {task_id[:8]}", "WARNING")
-                return {"success": True, "message": "取消请求已发送（协作式取消）"}
+                return {"success": True, "message": "Cancellation request sent (cooperative cancellation)"}
         else:
-            return {"success": False, "message": "任务不存在或已完成"}
+            return {"success": False, "message": "The task does not exist or is already finished"}
 
 
 def update_server_config(config: dict):
@@ -364,9 +364,9 @@ def reset_global_translator():
                 pass
             
             logger.info("Global translator reset")
-            return {"success": True, "message": "翻译器已重置，模型已卸载"}
+            return {"success": True, "message": "The translator was reset and the models were unloaded"}
         else:
-            return {"success": True, "message": "翻译器未初始化，无需重置"}
+            return {"success": True, "message": "The translator is not initialised; nothing to reset"}
 
 
 def get_translator_status() -> dict:

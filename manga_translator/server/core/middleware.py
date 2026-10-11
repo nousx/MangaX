@@ -120,7 +120,7 @@ async def require_auth(
             detail={
                 "error": {
                     "code": "NO_TOKEN",
-                    "message": "未提供会话令牌，请先登录"
+                    "message": "No session token was provided; log in first"
                 }
             }
         )
@@ -135,7 +135,7 @@ async def require_auth(
             detail={
                 "error": {
                     "code": "INVALID_TOKEN",
-                    "message": "会话令牌无效或已过期，请重新登录"
+                    "message": "The session token is invalid or has expired; log in again"
                 }
             }
         )
@@ -147,7 +147,7 @@ async def require_auth(
             detail={
                 "error": {
                     "code": "INVALID_TOKEN",
-                    "message": "会话令牌无效或已过期，请重新登录"
+                    "message": "The session token is invalid or has expired; log in again"
                 }
             }
         )
@@ -163,7 +163,7 @@ async def require_auth(
             detail={
                 "error": {
                     "code": "USER_INACTIVE",
-                    "message": "用户账号已被停用"
+                    "message": "The user account has been deactivated"
                 }
             }
         )
@@ -199,7 +199,7 @@ async def require_admin(
             detail={
                 "error": {
                     "code": "ADMIN_REQUIRED",
-                    "message": "此操作需要管理员权限"
+                    "message": "This operation requires administrator permission"
                 }
             }
         )
@@ -247,7 +247,7 @@ async def check_translator_permission(
             detail={
                 "error": {
                     "code": "TRANSLATOR_PERMISSION_DENIED",
-                    "message": f"您没有权限使用翻译器 '{translator}'",
+                    "message": f"You do not have permission to use the translator '{translator}'",
                     "details": {
                         "translator": translator,
                         "allowed_translators": allowed_translators
@@ -328,7 +328,7 @@ def check_concurrent_limit(username: str) -> None:
             detail={
                 "error": {
                     "code": "CONCURRENT_LIMIT_EXCEEDED",
-                    "message": "您已达到最大并发任务数限制",
+                    "message": "You have reached the limit on concurrent tasks",
                     "details": {
                         "current_tasks": current_tasks,
                         "max_concurrent_tasks": max_tasks
@@ -367,7 +367,7 @@ def check_daily_quota(username: str) -> None:
             detail={
                 "error": {
                     "code": "DAILY_QUOTA_EXCEEDED",
-                    "message": "您已达到今日翻译配额限制",
+                    "message": "You have reached today's translation quota",
                     "details": {
                         "current_usage": current_usage,
                         "daily_quota": daily_quota

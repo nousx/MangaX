@@ -418,12 +418,12 @@ async def translate_batch_json(req: Request, data: BatchTranslateRequest):
         return [to_translation(ctx) for ctx in results]
     except asyncio.CancelledError:
         add_log("Batch translation (JSON) forcibly cancelled", "WARNING")
-        raise HTTPException(499, detail="任务已被强制取消")
+        raise HTTPException(499, detail="The task was cancelled by force")
     except Exception as e:
         error_msg = str(e)
         if "cancelled" in error_msg.lower():
             add_log("Batch translation (JSON) cancelled", "WARNING")
-            raise HTTPException(499, detail="任务已被取消")
+            raise HTTPException(499, detail="The task was cancelled")
         raise
     finally:
         # Track task end
@@ -446,7 +446,7 @@ async def batch_images(req: Request, data: BatchTranslateRequest):
     # Validate the request data
     if not data.images or len(data.images) == 0:
         add_log("Batch translation request failed: no images provided", "ERROR")
-        raise HTTPException(400, detail="没有提供图片")
+        raise HTTPException(400, detail="No image was provided")
     
     task_id = generate_task_id()
     
@@ -515,12 +515,12 @@ async def batch_images(req: Request, data: BatchTranslateRequest):
             
     except asyncio.CancelledError:
         add_log("Batch translation forcibly cancelled", "WARNING")
-        raise HTTPException(499, detail="任务已被强制取消")
+        raise HTTPException(499, detail="The task was cancelled by force")
     except Exception as e:
         error_msg = str(e)
         if "cancelled" in error_msg.lower():
             add_log("Batch translation cancelled", "WARNING")
-            raise HTTPException(499, detail="任务已被取消")
+            raise HTTPException(499, detail="The task was cancelled")
         add_log(f"Batch translation failed: {e}", "ERROR")
         import traceback
         traceback.print_exc()
@@ -700,7 +700,7 @@ async def export_original(req: Request, image: UploadFile = File(...), config: s
         # Get default template
         template_path = workflow_service.ensure_default_template_exists()
         if not template_path:
-            raise HTTPException(500, detail="无法创建或找到默认模板文件")
+            raise HTTPException(500, detail="The default template file could not be created or found")
         
         ui_generate_original_text = workflow_service.generate_original_text
         txt_path = ui_generate_original_text(tmp_json_path, template_path=template_path, output_path=tmp_txt_path)
@@ -791,7 +791,7 @@ async def export_translated(req: Request, image: UploadFile = File(...), config:
         # Get default template
         template_path = workflow_service.ensure_default_template_exists()
         if not template_path:
-            raise HTTPException(500, detail="无法创建或找到默认模板文件")
+            raise HTTPException(500, detail="The default template file could not be created or found")
         
         ui_generate_translated_text = workflow_service.generate_translated_text
         txt_path = ui_generate_translated_text(tmp_json_path, template_path=template_path, output_path=tmp_txt_path)
@@ -1118,12 +1118,12 @@ async def import_txt_and_render(req: Request, image: UploadFile = File(...), txt
             # Use default template
             template_path = ensure_default_template_exists()
             if not template_path:
-                raise HTTPException(500, detail="无法找到或创建默认模板文件")
+                raise HTTPException(500, detail="The default template file could not be found or created")
         
         # Use UI layer import logic (supports template parsing and fuzzy matching)
         import_result = safe_update_large_json_from_text(temp_txt_path, json_path, template_path)
         
-        if import_result.startswith("错误"):
+        if import_result.startswith("Error"):
             raise HTTPException(400, detail=import_result)
         
         # Save image to temporary location
@@ -1293,12 +1293,12 @@ async def import_txt_and_render_stream(req: Request, image: UploadFile = File(..
             # Use default template
             template_path = ensure_default_template_exists()
             if not template_path:
-                raise HTTPException(500, detail="无法找到或创建默认模板文件")
+                raise HTTPException(500, detail="The default template file could not be found or created")
         
         # Use UI layer import logic
         import_result = safe_update_large_json_from_text(temp_txt_path, json_path, template_path)
         
-        if import_result.startswith("错误"):
+        if import_result.startswith("Error"):
             raise HTTPException(400, detail=import_result)
         
         # Save image to temporary location

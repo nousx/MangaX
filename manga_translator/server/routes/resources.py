@@ -87,7 +87,7 @@ async def upload_prompt(
     if not permission_service.check_upload_prompt_permission(session.username):
         raise HTTPException(
             status_code=403,
-            detail="您没有上传提示词的权限"
+            detail="You do not have permission to upload prompts"
         )
     
     try:
@@ -98,7 +98,7 @@ async def upload_prompt(
         
         return {
             "success": True,
-            "message": "提示词上传成功",
+            "message": "Prompt uploaded",
             "resource": resource.to_dict()
         }
     
@@ -108,7 +108,7 @@ async def upload_prompt(
     
     except Exception as e:
         logger.error(f"Unexpected error during prompt upload: {e}")
-        raise HTTPException(status_code=500, detail="上传提示词时发生错误")
+        raise HTTPException(status_code=500, detail="An error occurred while uploading the prompt")
 
 
 @router.get("/prompts", response_model=dict)
@@ -139,7 +139,7 @@ async def get_prompts(
     
     except Exception as e:
         logger.error(f"Error getting prompts for user {session.username}: {e}")
-        raise HTTPException(status_code=500, detail="获取提示词列表时发生错误")
+        raise HTTPException(status_code=500, detail="An error occurred while getting the list of prompts")
 
 
 @router.delete("/prompts/{resource_id}", response_model=dict)
@@ -170,7 +170,7 @@ async def delete_prompt(
     if not permission_service.check_delete_own_files_permission(session.username):
         raise HTTPException(
             status_code=403,
-            detail="您没有删除文件的权限"
+            detail="You do not have permission to delete files"
         )
     
     try:
@@ -181,10 +181,10 @@ async def delete_prompt(
             logger.info(f"User {session.username} deleted prompt: {resource_id}")
             return {
                 "success": True,
-                "message": "提示词删除成功"
+                "message": "Prompt deleted"
             }
         else:
-            raise HTTPException(status_code=500, detail="删除提示词失败")
+            raise HTTPException(status_code=500, detail="Deleting the prompt failed")
     
     except ValueError as e:
         logger.warning(f"Prompt deletion failed for user {session.username}: {e}")
@@ -192,7 +192,7 @@ async def delete_prompt(
     
     except Exception as e:
         logger.error(f"Unexpected error during prompt deletion: {e}")
-        raise HTTPException(status_code=500, detail="删除提示词时发生错误")
+        raise HTTPException(status_code=500, detail="An error occurred while deleting the prompt")
 
 
 # ============================================================================
@@ -236,7 +236,7 @@ async def upload_font(
     if not has_permission:
         raise HTTPException(
             status_code=403,
-            detail="您没有上传字体的权限"
+            detail="You do not have permission to upload fonts"
         )
     
     try:
@@ -255,7 +255,7 @@ async def upload_font(
         
         return {
             "success": True,
-            "message": "字体上传成功",
+            "message": "Font uploaded",
             "resource": _font_public_dict(resource)
         }
     
@@ -265,7 +265,7 @@ async def upload_font(
     
     except Exception as e:
         logger.error(f"Unexpected error during font upload: {e}")
-        raise HTTPException(status_code=500, detail="上传字体时发生错误")
+        raise HTTPException(status_code=500, detail="An error occurred while uploading the font")
 
 
 @router.get("/fonts", response_model=dict)
@@ -296,7 +296,7 @@ async def get_fonts(
     
     except Exception as e:
         logger.error(f"Error getting fonts for user {session.username}: {e}")
-        raise HTTPException(status_code=500, detail="获取字体列表时发生错误")
+        raise HTTPException(status_code=500, detail="An error occurred while getting the list of fonts")
 
 
 @router.delete("/fonts/{resource_id}", response_model=dict)
@@ -327,7 +327,7 @@ async def delete_font(
     if not permission_service.check_delete_own_files_permission(session.username):
         raise HTTPException(
             status_code=403,
-            detail="您没有删除文件的权限"
+            detail="You do not have permission to delete files"
         )
     
     try:
@@ -338,10 +338,10 @@ async def delete_font(
             logger.info(f"User {session.username} deleted font: {resource_id}")
             return {
                 "success": True,
-                "message": "字体删除成功"
+                "message": "Font deleted"
             }
         else:
-            raise HTTPException(status_code=500, detail="删除字体失败")
+            raise HTTPException(status_code=500, detail="Deleting the font failed")
     
     except ValueError as e:
         logger.warning(f"Font deletion failed for user {session.username}: {e}")
@@ -349,7 +349,7 @@ async def delete_font(
     
     except Exception as e:
         logger.error(f"Unexpected error during font deletion: {e}")
-        raise HTTPException(status_code=500, detail="删除字体时发生错误")
+        raise HTTPException(status_code=500, detail="An error occurred while deleting the font")
 
 
 @router.delete("/fonts/by-name/{filename}", response_model=dict)
@@ -370,7 +370,7 @@ async def delete_font_by_name(
         dict: the result of the deletion
     """
     if not permission_service.check_delete_own_files_permission(session.username):
-        raise HTTPException(status_code=403, detail="您没有删除文件的权限")
+        raise HTTPException(status_code=403, detail="You do not have permission to delete files")
     
     try:
         # Get the user's font list and find the matching resource
@@ -382,19 +382,19 @@ async def delete_font_by_name(
                 break
         
         if not target_font:
-            raise HTTPException(status_code=404, detail="字体不存在")
+            raise HTTPException(status_code=404, detail="The font does not exist")
         
         success = resource_service.delete_font(target_font.id, session.username)
         if success:
-            return {"success": True, "message": "字体删除成功"}
+            return {"success": True, "message": "Font deleted"}
         else:
-            raise HTTPException(status_code=500, detail="删除字体失败")
+            raise HTTPException(status_code=500, detail="Deleting the font failed")
     
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"Error deleting font by name: {e}")
-        raise HTTPException(status_code=500, detail="删除字体时发生错误")
+        raise HTTPException(status_code=500, detail="An error occurred while deleting the font")
 
 
 @router.delete("/prompts/by-name/{filename}", response_model=dict)
@@ -415,7 +415,7 @@ async def delete_prompt_by_name(
         dict: the result of the deletion
     """
     if not permission_service.check_delete_own_files_permission(session.username):
-        raise HTTPException(status_code=403, detail="您没有删除文件的权限")
+        raise HTTPException(status_code=403, detail="You do not have permission to delete files")
     
     try:
         # Get the user's prompt list and find the matching resource
@@ -427,19 +427,19 @@ async def delete_prompt_by_name(
                 break
         
         if not target_prompt:
-            raise HTTPException(status_code=404, detail="提示词不存在")
+            raise HTTPException(status_code=404, detail="The prompt does not exist")
         
         success = resource_service.delete_prompt(target_prompt.id, session.username)
         if success:
-            return {"success": True, "message": "提示词删除成功"}
+            return {"success": True, "message": "Prompt deleted"}
         else:
-            raise HTTPException(status_code=500, detail="删除提示词失败")
+            raise HTTPException(status_code=500, detail="Deleting the prompt failed")
     
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"Error deleting prompt by name: {e}")
-        raise HTTPException(status_code=500, detail="删除提示词时发生错误")
+        raise HTTPException(status_code=500, detail="An error occurred while deleting the prompt")
 
 
 # ============================================================================
@@ -471,4 +471,4 @@ async def get_resource_stats(
     
     except Exception as e:
         logger.error(f"Error getting resource stats for user {session.username}: {e}")
-        raise HTTPException(status_code=500, detail="获取资源统计时发生错误")
+        raise HTTPException(status_code=500, detail="An error occurred while getting the resource statistics")

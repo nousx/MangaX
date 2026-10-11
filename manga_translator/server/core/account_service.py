@@ -61,15 +61,15 @@ class AccountService:
 
         # Check that the user name is unique
         if username in self.accounts:
-            raise ValueError(f"用户名 '{username}' 已存在")
+            raise ValueError(f"User name '{username}' already exists")
         
         # Check the password strength (at least 6 characters)
         if len(password) < 6:
-            raise ValueError("密码长度必须至少为6个字符")
+            raise ValueError("The password must be at least 6 characters long")
         
         # Validate the role
         if role not in ['admin', 'user']:
-            raise ValueError(f"无效的角色: {role}")
+            raise ValueError(f"Invalid role: {role}")
         
         # Use the default permissions (when none are given)
         if permissions is None:
@@ -171,7 +171,7 @@ class AccountService:
         """
         account = self.accounts.get(username)
         if not account:
-            raise ValueError(f"用户 '{username}' 不存在")
+            raise ValueError(f"User '{username}' does not exist")
         
         # Fields that may be updated
         allowed_fields = {
@@ -182,12 +182,12 @@ class AccountService:
         # Validate the fields to update
         for field in updates.keys():
             if field not in allowed_fields:
-                raise ValueError(f"不允许更新字段: {field}")
+                raise ValueError(f"Updating this field is not allowed: {field}")
         
         # Apply the update
         if 'role' in updates:
             if updates['role'] not in ['admin', 'user']:
-                raise ValueError(f"无效的角色: {updates['role']}")
+                raise ValueError(f"Invalid role: {updates['role']}")
             account.role = updates['role']
         
         if 'permissions' in updates:
@@ -196,7 +196,7 @@ class AccountService:
             elif isinstance(updates['permissions'], UserPermissions):
                 account.permissions = updates['permissions']
             else:
-                raise ValueError("permissions 必须是字典或 UserPermissions 对象")
+                raise ValueError("permissions must be a dictionary or a UserPermissions object")
         
         if 'is_active' in updates:
             account.is_active = bool(updates['is_active'])
@@ -233,7 +233,7 @@ class AccountService:
             ValueError: when the user does not exist
         """
         if username not in self.accounts:
-            raise ValueError(f"用户 '{username}' 不存在")
+            raise ValueError(f"User '{username}' does not exist")
         
         # Remove from memory
         del self.accounts[username]
@@ -277,11 +277,11 @@ class AccountService:
         """
         account = self.accounts.get(username)
         if not account:
-            raise ValueError(f"用户 '{username}' 不存在")
+            raise ValueError(f"User '{username}' does not exist")
         
         # Check the password strength
         if len(new_password) < 6:
-            raise ValueError("密码长度必须至少为6个字符")
+            raise ValueError("The password must be at least 6 characters long")
         
         # Hash the new password
         account.password_hash = self._hash_password(new_password)

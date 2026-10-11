@@ -93,7 +93,7 @@ def get_search_service() -> SearchService:
 
 def _sanitize_history_filename(filename: str) -> str:
     if not filename or '/' in filename or '\\' in filename or filename in {'.', '..'}:
-        raise HTTPException(status_code=400, detail="无效的文件名")
+        raise HTTPException(status_code=400, detail="Invalid file name")
     return filename
 
 
@@ -106,19 +106,19 @@ def _resolve_history_file_path(
     try:
         session_dir = resolve_path_within(result_directory, result_path)
     except ValueError:
-        raise HTTPException(status_code=404, detail="会话文件目录不存在")
+        raise HTTPException(status_code=404, detail="The file folder of the session does not exist")
 
     if session_dir == Path(result_directory):
-        raise HTTPException(status_code=404, detail="会话文件目录不存在")
+        raise HTTPException(status_code=404, detail="The file folder of the session does not exist")
     if not session_dir.exists() or not session_dir.is_dir():
-        raise HTTPException(status_code=404, detail="会话文件目录不存在")
+        raise HTTPException(status_code=404, detail="The file folder of the session does not exist")
 
     try:
         file_path = resolve_path_within(session_dir, session_dir / safe_filename)
     except ValueError:
-        raise HTTPException(status_code=400, detail="无效的文件名")
+        raise HTTPException(status_code=400, detail="Invalid file name")
     if not file_path.exists() or not file_path.is_file():
-        raise HTTPException(status_code=404, detail="文件不存在")
+        raise HTTPException(status_code=404, detail="The file does not exist")
     return file_path
 
 
@@ -169,7 +169,7 @@ async def download_by_ticket(ticket: str):
     """Serve a file download with a short-lived download ticket."""
     download_ticket = _download_ticket_service.get_ticket(ticket)
     if download_ticket is None:
-        raise HTTPException(status_code=404, detail="下载链接无效或已过期")
+        raise HTTPException(status_code=404, detail="The download link is invalid or has expired")
 
     return FileResponse(
         path=download_ticket.path,
@@ -185,9 +185,9 @@ async def download_by_ticket(ticket: str):
 
 @router.get("", response_model=dict)
 async def get_user_history(
-    start_date: Optional[str] = Query(None, description="开始日期 (ISO格式)"),
-    end_date: Optional[str] = Query(None, description="结束日期 (ISO格式)"),
-    status: Optional[str] = Query(None, description="状态筛选"),
+    start_date: Optional[str] = Query(None, description="Start date (ISO format)"),
+    end_date: Optional[str] = Query(None, description="End date (ISO format)"),
+    status: Optional[str] = Query(None, description="Filter by status"),
     session: Session = Depends(require_auth),
     history_service: HistoryManagementService = Depends(get_history_service),
     permission_service: IntegratedPermissionService = Depends(get_permission_service)
@@ -217,7 +217,7 @@ async def get_user_history(
     if view_permission == 'none':
         raise HTTPException(
             status_code=403,
-            detail="您没有查看历史记录的权限"
+            detail="You do not have permission to view the history"
         )
     
     try:
@@ -241,7 +241,7 @@ async def get_user_history(
     
     except Exception as e:
         logger.error(f"Error getting history for user {session.username}: {e}")
-        raise HTTPException(status_code=500, detail="获取历史记录时发生错误")
+        raise HTTPException(status_code=500, detail="An error occurred while getting the history")
 
 
 @router.get("/{session_token}", response_model=dict)
@@ -269,7 +269,7 @@ async def get_session_details(
     if view_permission == 'none':
         raise HTTPException(
             status_code=403,
-            detail="您没有查看历史记录的权限"
+            detail="You do not have permission to view the history"
         )
     
     try:
@@ -282,7 +282,7 @@ async def get_session_details(
         if not result:
             raise HTTPException(
                 status_code=404,
-                detail="会话不存在"
+                detail="The session does not exist"
             )
         
         # Get the file list of the session
@@ -303,13 +303,13 @@ async def get_session_details(
         raise
     except Exception as e:
         logger.error(f"Error getting session details: {e}")
-        raise HTTPException(status_code=500, detail="获取会话详情时发生错误")
+        raise HTTPException(status_code=500, detail="An error occurred while getting the session details")
 
 
 @router.post("/{session_token}/download-ticket")
 async def create_session_download_ticket(
     session_token: str,
-    filename: Optional[str] = Query(None, description="自定义下载文件名"),
+    filename: Optional[str] = Query(None, description="Custom download file name"),
     session: Session = Depends(require_auth),
     history_service: HistoryManagementService = Depends(get_history_service),
     permission_service: IntegratedPermissionService = Depends(get_permission_service)
@@ -317,12 +317,12 @@ async def create_session_download_ticket(
     """Create a short-lived ticket for the ZIP download of a single session."""
     view_permission = permission_service.get_view_history_permission(session.username)
     if view_permission == 'none':
-        raise HTTPException(status_code=403, detail="您没有下载历史记录的权限")
+        raise HTTPException(status_code=403, detail="You do not have permission to download the history")
 
     user_id = _get_history_user_id(session)
     zip_path = history_service.create_download_archive(session_token, user_id)
     if not zip_path or not os.path.exists(zip_path):
-        raise HTTPException(status_code=404, detail="会话不存在")
+        raise HTTPException(status_code=404, detail="The session does not exist")
 
     download_filename = _sanitize_download_filename(
         filename,
@@ -343,12 +343,12 @@ async def create_session_download_ticket(
 
 @router.get("/admin/all", response_model=dict)
 async def get_all_history(
-    user_id: Optional[str] = Query(None, description="用户ID筛选"),
-    start_date: Optional[str] = Query(None, description="开始日期 (ISO格式)"),
-    end_date: Optional[str] = Query(None, description="结束日期 (ISO格式)"),
-    status: Optional[str] = Query(None, description="状态筛选"),
-    limit: int = Query(20, description="每页数量"),
-    offset: int = Query(0, description="偏移量"),
+    user_id: Optional[str] = Query(None, description="Filter by user ID"),
+    start_date: Optional[str] = Query(None, description="Start date (ISO format)"),
+    end_date: Optional[str] = Query(None, description="End date (ISO format)"),
+    status: Optional[str] = Query(None, description="Filter by status"),
+    limit: int = Query(20, description="Number per page"),
+    offset: int = Query(0, description="Offset"),
     session: Session = Depends(require_admin),
     history_service: HistoryManagementService = Depends(get_history_service)
 ):
@@ -416,7 +416,7 @@ async def get_all_history(
     
     except Exception as e:
         logger.error(f"Error getting all history: {e}")
-        raise HTTPException(status_code=500, detail="获取历史记录时发生错误")
+        raise HTTPException(status_code=500, detail="An error occurred while getting the history")
 
 
 # ============================================================================
@@ -425,10 +425,10 @@ async def get_all_history(
 
 @router.get("/search", response_model=dict)
 async def search_history(
-    q: str = Query(..., description="搜索查询"),
-    start_date: Optional[str] = Query(None, description="开始日期 (ISO格式)"),
-    end_date: Optional[str] = Query(None, description="结束日期 (ISO格式)"),
-    status: Optional[str] = Query(None, description="状态筛选"),
+    q: str = Query(..., description="Search query"),
+    start_date: Optional[str] = Query(None, description="Start date (ISO format)"),
+    end_date: Optional[str] = Query(None, description="End date (ISO format)"),
+    status: Optional[str] = Query(None, description="Filter by status"),
     session: Session = Depends(require_auth),
     search_service: SearchService = Depends(get_search_service),
     permission_service: IntegratedPermissionService = Depends(get_permission_service)
@@ -459,7 +459,7 @@ async def search_history(
     if view_permission == 'none':
         raise HTTPException(
             status_code=403,
-            detail="您没有查看历史记录的权限"
+            detail="You do not have permission to view the history"
         )
     
     try:
@@ -491,7 +491,7 @@ async def search_history(
     
     except Exception as e:
         logger.error(f"Error searching history: {e}")
-        raise HTTPException(status_code=500, detail="搜索历史记录时发生错误")
+        raise HTTPException(status_code=500, detail="An error occurred while searching the history")
 
 
 # ============================================================================
@@ -502,7 +502,7 @@ async def search_history(
 async def download_session(
     session_token: str,
     background_tasks: BackgroundTasks,
-    filename: Optional[str] = Query(None, description="自定义下载文件名"),
+    filename: Optional[str] = Query(None, description="Custom download file name"),
     session: Session = Depends(require_auth),
     history_service: HistoryManagementService = Depends(get_history_service),
     permission_service: IntegratedPermissionService = Depends(get_permission_service)
@@ -526,7 +526,7 @@ async def download_session(
     if view_permission == 'none':
         raise HTTPException(
             status_code=403,
-            detail="您没有下载历史记录的权限"
+            detail="You do not have permission to download the history"
         )
     
     try:
@@ -540,7 +540,7 @@ async def download_session(
         if not zip_path or not os.path.exists(zip_path):
             raise HTTPException(
                 status_code=404,
-                detail="会话不存在"
+                detail="The session does not exist"
             )
         
         # Add a background task that removes the temporary file
@@ -563,7 +563,7 @@ async def download_session(
         raise
     except Exception as e:
         logger.error(f"Error downloading session: {e}")
-        raise HTTPException(status_code=500, detail="下载会话时发生错误")
+        raise HTTPException(status_code=500, detail="An error occurred while downloading the session")
 
 
 @router.post("/batch-download-ticket")
@@ -576,15 +576,15 @@ async def create_batch_download_ticket(
     """Create a short-lived ticket for a batch ZIP download of history."""
     view_permission = permission_service.get_view_history_permission(session.username)
     if view_permission == 'none':
-        raise HTTPException(status_code=403, detail="您没有下载历史记录的权限")
+        raise HTTPException(status_code=403, detail="You do not have permission to download the history")
 
     if len(request.session_tokens) > 50:
-        raise HTTPException(status_code=400, detail="批量下载最多支持50个会话")
+        raise HTTPException(status_code=400, detail="A batch download supports at most 50 sessions")
 
     user_id = _get_history_user_id(session)
     zip_path = history_service.create_batch_download_archive(request.session_tokens, user_id)
     if not zip_path or not os.path.exists(zip_path):
-        raise HTTPException(status_code=404, detail="无法创建下载文件或您没有访问权限")
+        raise HTTPException(status_code=404, detail="The download file could not be created, or you do not have access")
 
     download_filename = _sanitize_download_filename(request.filename, os.path.basename(zip_path))
     return _issue_download_ticket(
@@ -622,14 +622,14 @@ async def batch_download_sessions(
     if view_permission == 'none':
         raise HTTPException(
             status_code=403,
-            detail="您没有下载历史记录的权限"
+            detail="You do not have permission to download the history"
         )
     
     # Limit the number of batch downloads
     if len(request.session_tokens) > 50:
         raise HTTPException(
             status_code=400,
-            detail="批量下载最多支持50个会话"
+            detail="A batch download supports at most 50 sessions"
         )
     
     try:
@@ -645,7 +645,7 @@ async def batch_download_sessions(
         if not zip_path or not os.path.exists(zip_path):
             raise HTTPException(
                 status_code=404,
-                detail="无法创建下载文件或您没有访问权限"
+                detail="The download file could not be created, or you do not have access"
             )
         
         # Add a background task that removes the temporary file
@@ -662,7 +662,7 @@ async def batch_download_sessions(
         raise
     except Exception as e:
         logger.error(f"Error batch downloading sessions: {e}")
-        raise HTTPException(status_code=500, detail="批量下载会话时发生错误")
+        raise HTTPException(status_code=500, detail="An error occurred while downloading the sessions as a batch")
 
 
 # ============================================================================
@@ -694,7 +694,7 @@ async def get_history_file(
     if view_permission == 'none':
         raise HTTPException(
             status_code=403,
-            detail="您没有查看历史记录的权限"
+            detail="You do not have permission to view the history"
         )
     
     try:
@@ -706,7 +706,7 @@ async def get_history_file(
         result = history_service.get_session_by_token(session_token, user_id)
         
         if not result:
-            raise HTTPException(status_code=404, detail="会话不存在或您没有访问权限")
+            raise HTTPException(status_code=404, detail="The session does not exist, or you do not have access")
         
         # Build the file path
         file_path = _resolve_history_file_path(
@@ -727,7 +727,7 @@ async def get_history_file(
         raise
     except Exception as e:
         logger.error(f"Error getting history file: {e}")
-        raise HTTPException(status_code=500, detail="获取文件时发生错误")
+        raise HTTPException(status_code=500, detail="An error occurred while getting the file")
 
 
 @router.post("/{session_token}/file/{filename}/download-ticket")
@@ -741,12 +741,12 @@ async def create_history_file_download_ticket(
     """Create a short-lived ticket for the download of a single history file."""
     view_permission = permission_service.get_view_history_permission(session.username)
     if view_permission == 'none':
-        raise HTTPException(status_code=403, detail="您没有查看历史记录的权限")
+        raise HTTPException(status_code=403, detail="You do not have permission to view the history")
 
     user_id = _get_history_user_id(session)
     result = history_service.get_session_by_token(session_token, user_id)
     if not result:
-        raise HTTPException(status_code=404, detail="会话不存在或您没有访问权限")
+        raise HTTPException(status_code=404, detail="The session does not exist, or you do not have access")
 
     file_path = _resolve_history_file_path(
         history_service.result_directory,
@@ -789,7 +789,7 @@ async def delete_session(
     if not is_admin and not can_delete_own:
         raise HTTPException(
             status_code=403,
-            detail="您没有删除历史记录的权限"
+            detail="You do not have permission to delete the history"
         )
     
     try:
@@ -801,17 +801,17 @@ async def delete_session(
             logger.info(f"User {session.username} deleted session: {session_token}")
             return {
                 "success": True,
-                "message": "会话删除成功"
+                "message": "Session deleted"
             }
         else:
             raise HTTPException(
                 status_code=404,
-                detail="会话不存在"
+                detail="The session does not exist"
             )
     
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"Error deleting session: {e}")
-        raise HTTPException(status_code=500, detail="删除会话时发生错误")
+        raise HTTPException(status_code=500, detail="An error occurred while deleting the session")
 
