@@ -137,8 +137,8 @@ class FileTranslationFailure(Exception):
 
 def _resolve_archive_output_dir_from_extracted_image(image_path: str, output_folder: str) -> Optional[str]:
     """
-    如果 image_path 指向输出目录中的压缩包解压图片，返回对应压缩包输出目录。
-    例如: <output>/A/B/1/original_images/page.png -> <output>/A/B/1
+    If image_path points to an image extracted from an archive inside the output folder, return the output folder of that archive.
+    For example: <output>/A/B/1/original_images/page.png -> <output>/A/B/1
     """
     if not image_path or not output_folder:
         return None
@@ -472,7 +472,7 @@ class MangaTranslator:
 
         
     def _set_image_context(self, config: Config, image=None):
-        """设置当前处理图片的上下文信息，用于生成调试图片子文件夹"""
+        """Set the context information of the image being processed, used to name the subfolder for debug images"""
         from .utils.generic import get_image_md5
 
         # Millisecond timestamp, so the name is unique
@@ -497,18 +497,18 @@ class MangaTranslator:
         }
         
     def _get_image_subfolder(self) -> str:
-        """获取当前图片的调试子文件夹名"""
+        """Get the name of the debug subfolder of the current image"""
         if self._current_image_context:
             return self._current_image_context['subfolder']
         return ''
     
     def _save_current_image_context(self, image_md5: str):
-        """保存当前图片上下文，用于批量处理中保持一致性"""
+        """Save the current image context, to keep it consistent during batch processing"""
         if self._current_image_context:
             self._saved_image_contexts[image_md5] = self._current_image_context.copy()
 
     def _restore_image_context(self, image_md5: str):
-        """恢复保存的图片上下文"""
+        """Restore a saved image context"""
         if image_md5 in self._saved_image_contexts:
             self._current_image_context = self._saved_image_contexts[image_md5].copy()
             return True
@@ -557,18 +557,18 @@ class MangaTranslator:
 
     def _calculate_output_path(self, image_path: str, save_info: dict) -> str:
         """
-        计算输出文件的完整路径
-        
+        Work out the full path of the output file
+
         Args:
-            image_path: 输入图片的路径
-            save_info: 包含输出配置的字典，包括：
-                - output_folder: 输出文件夹
-                - input_folders: 输入文件夹集合
-                - format: 输出格式（可选）
-                - save_to_source_dir: 是否输出到原图目录的 manga_translator_work/result 子目录
-                
+            image_path: path of the input image
+            save_info: dictionary with the output settings:
+                - output_folder: the output folder
+                - input_folders: the set of input folders
+                - format: the output format (optional)
+                - save_to_source_dir: whether to write to the manga_translator_work/result subfolder next to the source image
+
         Returns:
-            str: 计算后的输出文件完整路径
+            str: the full path of the output file
         """
         output_folder = save_info.get('output_folder')
         input_folders = save_info.get('input_folders', set())
@@ -626,15 +626,15 @@ class MangaTranslator:
         source_image: Optional[Image.Image] = None,
     ) -> Optional[bool]:
         """
-        保存翻译后的图片到指定路径
-        
+        Save the translated image to the given path
+
         Args:
-            image: 要保存的PIL图片对象
-            output_path: 输出文件路径
-            image_path: 原始图片路径（用于更新翻译映射表）
-            overwrite: 是否覆盖已存在的文件
-            mode_label: 模式标签（用于日志）
-            
+            image: the PIL image object to save
+            output_path: path of the output file
+            image_path: path of the original image (used to update the translation map)
+            overwrite: whether an existing file is overwritten
+            mode_label: mode label (for the log)
+
         Returns:
             True when saved, None when a post-plan race created the output, otherwise False.
         """
@@ -660,16 +660,16 @@ class MangaTranslator:
     
     def _save_and_cleanup_context(self, ctx: Context, save_info: dict, config: Config = None, mode_label: str = "BATCH") -> bool:
         """
-        统一的保存和清理方法：保存翻译结果、导出PSD并清理内存
-        
+        Shared save-and-clean-up method: save the translation result, export the PSD and free memory
+
         Args:
-            ctx: Context对象
-            save_info: 保存信息字典
-            config: Config对象（用于PSD导出）
-            mode_label: 模式标签（用于日志）
-            
+            ctx: the Context object
+            save_info: dictionary with the save information
+            config: the Config object (for the PSD export)
+            mode_label: mode label (for the log)
+
         Returns:
-            bool: 是否成功保存
+            bool: whether saving succeeded
         """
         if not save_info or not ctx.result:
             return False
@@ -853,7 +853,7 @@ class MangaTranslator:
                 logger.debug(f"Failed to preserve last_export_dir from existing JSON {text_output_file}: {e}")
 
     def _save_text_to_file(self, image_path: str, ctx: Context, config: Config = None) -> bool:
-        """保存/回写文本区域到JSON（含translation、font_size等渲染后字段），使用新的目录结构"""
+        """Save or write back the text regions to JSON (with post-render fields such as translation and font_size), using the new folder structure"""
         text_output_file = self.text_output_file
         if not text_output_file:
             # Build the JSON path with the new path manager
@@ -1209,12 +1209,12 @@ class MangaTranslator:
         )
 
     def _save_work_image(self, image_path: str, image_data, label: str = "Work image") -> Optional[str]:
-        """保存编辑器专用的上色/超分底图到 editor_base 目录。"""
+        """Save the colorized or upscaled base image for the editor to the editor_base folder."""
         work_image_path = get_work_image_path(image_path, create_dir=True)
         return self._save_image_to_path(work_image_path, image_data, label, source_image_path=image_path)
 
     def _save_editor_base_if_needed(self, ctx, config, image_data=None) -> Optional[str]:
-        """在执行了上色或超分时，保存编辑器使用的底图。"""
+        """Save the base image the editor uses when colorization or upscaling was run."""
         input_image = getattr(ctx, 'input', None)
         image_path = getattr(input_image, 'name', None)
         if not image_path:
@@ -1239,7 +1239,7 @@ class MangaTranslator:
         label: str,
         source_image_path: Optional[str] = None,
     ) -> Optional[str]:
-        """将图像保存到指定路径。"""
+        """Save an image to the given path."""
         try:
             if image_data is None:
                 return None
@@ -1281,8 +1281,8 @@ class MangaTranslator:
 
     def _preprocess_load_text_mode(self, images_with_configs: List[tuple]):
         """
-        load_text模式预处理：自动从TXT文件导入翻译到JSON
-        这个方法在翻译开始前统一执行，确保CLI和UI都能使用
+        Preprocessing for load_text mode: import translations from TXT files into JSON automatically.
+        This method runs once before translation starts, so both the CLI and the UI can use it
         """
         try:
             from manga_translator.utils.path_manager import (
@@ -1361,7 +1361,7 @@ class MangaTranslator:
 
     
     def _get_default_template_path(self) -> Optional[str]:
-        """获取默认模板文件路径"""
+        """Get the path of the default template file"""
         try:
             from manga_translator.runtime_paths import get_config_path
 
@@ -1393,16 +1393,16 @@ class MangaTranslator:
             return None
     
     def set_preloaded_load_text_payload(self, image_name: str, payload: Optional[dict]) -> None:
-        """注册内存直通的 load_text 载荷（编辑器导出通道）。
+        """Register an in-memory load_text payload (the editor export channel).
 
-        注册了载荷即视为编辑器导出（ctx.editor_export=True）：内容与布局是
-        编辑器授权的最终稿，后端跳过文本替换和工程 JSON 回写。
+        A registered payload counts as an editor export (ctx.editor_export=True): content and layout are
+        the final version authorised by the editor, and the backend skips text replacement and the project JSON write-back.
 
-        ``editor_export_base_kind`` 明确区分 source、paired 和
-        backend_inpaint。只有 paired 携带 ``inpainted_rgb`` 并纯渲染；
-        backend_inpaint 必须执行修复且绝不读取磁盘 sidecar 或采用 AI renderer
-        的原图回退。mask_raw 与修复图均可直接携带 ndarray。
-        载荷会被解析过程原地消费，每次 translate 前需重新注册。
+        ``editor_export_base_kind`` distinguishes source, paired and
+        backend_inpaint explicitly. Only paired carries ``inpainted_rgb`` and renders without inpainting;
+        backend_inpaint must run inpainting and never reads a sidecar from disk or takes the AI renderer's
+        fallback to the original image. Both mask_raw and the inpainted image may be carried as ndarrays.
+        The payload is consumed in place while it is parsed and has to be registered again before each translate.
         """
         if not image_name:
             return
@@ -1412,9 +1412,9 @@ class MangaTranslator:
             self._preloaded_load_text_payloads[image_name] = payload
 
     def _extract_render_overlays(self, image_data: dict):
-        """从 JSON/内存载荷提取画笔层与印章层（RGBA），按合成顺序返回列表。
+        """Extract the paint layer and the stamp layer (RGBA) from the JSON or the in-memory payload, returned as a list in compositing order.
 
-        兼容两种形态：内存直通的 ndarray、JSON 里的 base64 PNG 字符串。
+        Two forms are accepted: an ndarray passed in memory, and a base64 PNG string in the JSON.
         """
         import base64
 
@@ -1437,11 +1437,11 @@ class MangaTranslator:
         return overlays or None
 
     def _compose_render_overlays_on_inpainted(self, ctx):
-        """把画笔/印章/贴片层按顺序 alpha 合成到底图上（渲染前调用）。
+        """Alpha-composite the paint, stamp and paste layers onto the base image in order (called before rendering).
 
-        底图优先取 ctx.img_inpainted；无修复图时（如“只有贴片、没有文本框/蒙版”
-        的页面）回退到 ctx.upscaled。磁盘加载的可编辑贴片列表（paste_overlays）
-        在此物化后追加到叠加层末尾（位于画笔/印章之上，与编辑器一致）。
+        The base image is ctx.img_inpainted when available; without an inpainted image (for example a page with
+        "paste overlays only, no text boxes or mask") it falls back to ctx.upscaled. The list of editable paste overlays
+        loaded from disk (paste_overlays) is materialised here and appended to the end of the overlay layers (above paint and stamp, as in the editor).
         """
         pending = getattr(self, '_pending_paste_overlays', None)
         overlays = getattr(self, '_loaded_render_overlays', None) or []
@@ -1631,7 +1631,7 @@ class MangaTranslator:
         return mask_raw
 
     def _load_text_and_regions_from_file(self, image_path: str, config: Config):
-        """加载翻译数据，支持新的目录结构和向后兼容"""
+        """Load the translation data; supports the new folder structure and stays backward compatible"""
         self._loaded_render_overlays = None
         self._pending_paste_overlays = None
         if not image_path:
@@ -1764,8 +1764,8 @@ class MangaTranslator:
 
     def _load_text_and_regions_from_txt_file(self, image_path: str) -> Optional[List[TextBlock]]:
         """
-        旧的TXT格式加载方法（已废弃）
-        现在只支持JSON格式，此方法保留用于向后兼容但不再实现
+        Loader for the old TXT format (deprecated).
+        Only the JSON format is supported now; this method is kept for backward compatibility but is no longer implemented
         """
         logger.warning("TXT format is deprecated and no longer supported. Please use JSON format instead.")
         return None
@@ -2177,7 +2177,7 @@ class MangaTranslator:
 
     def _save_labeled_textline_debug_image(self, img_rgb: np.ndarray, textlines: List, filename: str = 'bboxes_unfiltered_labeled.png'):
         """
-        在原图上绘制带标签的检测框调试图（仅供 verbose 模式调用）。
+        Draw a debug image of the labelled detection boxes on the original image (called in verbose mode only).
         """
         if img_rgb is None or textlines is None:
             return
@@ -2275,11 +2275,11 @@ class MangaTranslator:
     _last_gc_collect_ts = 0.0
 
     def _cleanup_gpu_memory(self, aggressive: bool = False):
-        """清理 GPU 显存的辅助方法。
+        """Helper that frees GPU memory.
 
         Args:
-            aggressive: 是否执行激进清理（empty_cache/ipc_collect）。
-                        批次边界与模型卸载后建议 True。
+            aggressive: whether to clean up aggressively (empty_cache/ipc_collect).
+                        True is recommended at batch boundaries and after unloading models.
         """
         now = time.monotonic()
         if now - MangaTranslator._last_gc_collect_ts >= MangaTranslator._GC_MIN_INTERVAL_S:
@@ -2303,7 +2303,7 @@ class MangaTranslator:
                 pass
 
     def _get_cuda_memory_snapshot(self) -> Optional[dict]:
-        """获取当前 CUDA 显存快照。非 CUDA 设备返回 None。"""
+        """Get a snapshot of the current CUDA memory. Returns None on devices other than CUDA."""
         device_str = str(getattr(self, 'device', ''))
         if not device_str.startswith('cuda'):
             return None
@@ -2327,7 +2327,7 @@ class MangaTranslator:
             return None
 
     def _log_cuda_memory_snapshot(self, stage: str, include_peak: bool = True):
-        """打印 CUDA 显存占用快照，便于定位阶段性显存增长。"""
+        """Print a snapshot of CUDA memory use, to help locate memory growth between stages."""
         if not self.verbose:
             return
         snapshot = self._get_cuda_memory_snapshot()
@@ -2355,11 +2355,11 @@ class MangaTranslator:
 
     def _cleanup_context_memory(self, ctx, keep_result=True):
         """
-        清理单个上下文的中间数据（用于特殊模式）
-        
+        Clear the intermediate data of a single context (for the special modes)
+
         Args:
-            ctx: Context对象
-            keep_result: bool - 是否保留 ctx.result
+            ctx: the Context object
+            keep_result: bool - whether ctx.result is kept
         """
         # Clear the input images
         if hasattr(ctx, 'input') and ctx.input is not None:
@@ -2402,7 +2402,7 @@ class MangaTranslator:
 
     @staticmethod
     def _align_preloaded_inpainted(inpainted, img_rgb):
-        """将内存直通载荷里的修复图规整为与工作图同尺寸的 RGB uint8 数组。"""
+        """Normalise the inpainted image of an in-memory payload to an RGB uint8 array of the same size as the working image."""
         if inpainted is None or img_rgb is None:
             return None
         arr = np.asarray(inpainted)
@@ -2423,13 +2423,13 @@ class MangaTranslator:
     
     def _cleanup_batch_memory(self, current_batch_images=None, preprocessed_contexts=None, translated_contexts=None, keep_results=True):
         """
-        统一的批次内存清理方法
-        
+        Shared memory clean-up for a batch
+
         Args:
-            current_batch_images: List[(image, config)] - 当前批次的原始图片
-            preprocessed_contexts: List[(ctx, config)] - 预处理后的上下文
-            translated_contexts: List[(ctx, config)] - 翻译后的上下文
-            keep_results: bool - 是否保留 ctx.result（用于返回结果）
+            current_batch_images: List[(image, config)] - the original images of the current batch
+            preprocessed_contexts: List[(ctx, config)] - the contexts after preprocessing
+            translated_contexts: List[(ctx, config)] - the contexts after translation
+            keep_results: bool - whether ctx.result is kept (for returning results)
         """
 #         import gc
         
@@ -3114,9 +3114,9 @@ class MangaTranslator:
 
     def _normalize_context_page_entries(self, page: Any) -> List[dict]:
         """
-        历史上下文页兼容两种结构：
-        1. 旧结构：{original_text: translation}
-        2. 新结构：[{"text": ..., "translation": ..., "original_region_count": ...}, ...]
+        A history context page may have either of two structures:
+        1. Old structure: {original_text: translation}
+        2. New structure: [{"text": ..., "translation": ..., "original_region_count": ...}, ...]
         """
         normalized_entries: List[dict] = []
 
@@ -3163,17 +3163,17 @@ class MangaTranslator:
 
     def _build_prev_context(self, use_original_text=False, current_page_index=None, batch_index=None, batch_original_texts=None):
         """
-        跳过句子数为0的页面，取最近 context_size 个非空页面，构造成历史多轮对话：
-        - user: 过去发送给 AI 的文本请求（不附带图片）
-        - assistant: 过去 AI 返回的单行 JSON 结果
+        Skip pages with no sentences, take the most recent context_size non-empty pages and build a multi-turn history:
+        - user: the text request sent to the AI earlier (without images)
+        - assistant: the single-line JSON result the AI returned earlier
 
-        最终返回 JSON 数组字符串；如果没有任何非空页面，返回空串。
+        Returns a JSON array string; an empty string when there is no non-empty page.
 
         Args:
-            use_original_text: 是否使用原文而不是译文作为上下文（当前未使用）
-            current_page_index: 当前页面索引，用于确定上下文范围
-            batch_index: 当前页面在批次中的索引（当前未使用）
-            batch_original_texts: 当前批次的原文数据（当前未使用）
+            use_original_text: whether the original text is used as context instead of the translation (currently unused)
+            current_page_index: index of the current page, used to decide the context range
+            batch_index: index of the current page in the batch (currently unused)
+            batch_original_texts: original text data of the current batch (currently unused)
         """
         if self.context_size <= 0:
             return ""
@@ -3525,16 +3525,16 @@ class MangaTranslator:
 
     def _create_confidence_heatmap(self, mask: np.ndarray, vmin: float = 0.0, vmax: float = 1.0, equalize: bool = True) -> np.ndarray:
         """
-        将灰度mask转换为带颜色条的置信度热力图
-        
+        Turn a greyscale mask into a confidence heat map with a colour bar
+
         Args:
-            mask: 灰度mask数组 (0-255)
-            vmin: 颜色映射的最小值 (0-1)，低于此值显示为最低颜色
-            vmax: 颜色映射的最大值 (0-1)，高于此值显示为最高颜色
-            equalize: 是否应用直方图均衡化增强对比度
-        
+            mask: greyscale mask array (0-255)
+            vmin: minimum of the colour map (0-1); lower values are shown in the lowest colour
+            vmax: maximum of the colour map (0-1); higher values are shown in the highest colour
+            equalize: whether histogram equalisation is applied to raise the contrast
+
         Returns:
-            带颜色条的BGR图像
+            A BGR image with a colour bar
         """
         # Convert a multi-channel image to a single channel
         if len(mask.shape) == 3:
@@ -3657,11 +3657,11 @@ class MangaTranslator:
         self._progress_hooks.append(ph)
     
     def set_cancel_check_callback(self, callback):
-        """设置取消检查回调函数"""
+        """Set the callback that checks for cancellation"""
         self._cancel_check_callback = callback
     
     def _check_cancelled(self):
-        """检查任务是否被取消"""
+        """Check whether the task was cancelled"""
         if self._cancel_check_callback and self._cancel_check_callback():
             logger.warning("[Stage] Task cancelled")
             raise asyncio.CancelledError("Task cancelled")
@@ -4881,7 +4881,7 @@ class MangaTranslator:
 
     async def _translate_until_translation(self, image: Image.Image, config: Config) -> Context:
         """
-        执行翻译之前的所有步骤（彩色化、上采样、检测、OCR、文本行合并）
+        Run every step before translation (colorization, upscaling, detection, OCR, text line merging)
         """
         
         # ✅ Check the stop flag
@@ -5229,7 +5229,7 @@ class MangaTranslator:
 
     async def _batch_translate_contexts(self, contexts_with_configs: List[tuple], batch_size: int) -> List[tuple]:
         """
-        批量处理翻译步骤，防止内存溢出
+        Run the translation step in batches, to keep memory use down
         """
         results = []
         total_contexts = len(contexts_with_configs)
@@ -5388,16 +5388,16 @@ class MangaTranslator:
 
     async def _batch_translate_texts(self, texts: List[str], config: Config, ctx: Context, batch_contexts: List[Context] = None, page_index: int = None, batch_index: int = None, batch_original_texts: List[dict] = None) -> List[str]:
         """
-        批量翻译文本列表，使用现有的翻译器接口
+        Translate a list of texts as a batch, through the existing translator interface
 
         Args:
-            texts: 要翻译的文本列表
-            config: 配置对象
-            ctx: 上下文对象
-            batch_contexts: 批处理上下文列表
-            page_index: 当前页面索引，用于并发模式下的上下文计算
-            batch_index: 当前页面在批次中的索引
-            batch_original_texts: 当前批次的原文数据
+            texts: the list of texts to translate
+            config: the configuration object
+            ctx: the context object
+            batch_contexts: list of the batch contexts
+            page_index: index of the current page, used to compute the context in concurrent mode
+            batch_index: index of the current page in the batch
+            batch_original_texts: original text data of the current batch
         """
         if config.translator.translator == Translator.none:
             return ["" for _ in texts]
@@ -5515,7 +5515,7 @@ class MangaTranslator:
             
     async def _apply_post_translation_processing(self, ctx: Context, config: Config) -> List:
         """
-        应用翻译后处理逻辑（括号修正、过滤等）
+        Apply the post-translation processing (bracket correction, filtering and so on)
         """
         # Check whether text_regions is None or empty
         if not ctx.text_regions:
@@ -5681,7 +5681,7 @@ class MangaTranslator:
 
     async def _complete_translation_pipeline(self, ctx: Context, config: Config) -> Context:
         """
-        完成翻译后的处理步骤（掩码细化、修复、渲染）
+        Finish the steps after translation (mask refinement, inpainting, rendering)
         """
         await self._report_progress('after-translating')
 
@@ -5805,7 +5805,6 @@ class MangaTranslator:
     
     async def _check_repetition_hallucination(self, text: str, threshold: int = 5, silent: bool = False) -> bool:
         """
-        检查文本是否包含重复内容（模型幻觉）
         Check if the text contains repetitive content (model hallucination)
         """
         if not text or len(text.strip()) < threshold:
@@ -5861,17 +5860,16 @@ class MangaTranslator:
 
     async def _check_target_language_ratio(self, text_regions: List, target_lang: str, min_ratio: float = 0.5) -> bool:
         """
-        检查翻译结果中目标语言的占比是否达到要求
-        使用py3langid进行语言检测
-        Check if the target language ratio meets the requirement by detecting the merged translation text
-        
+        Check if the target language ratio meets the requirement by detecting the merged translation text.
+        The language is detected with py3langid.
+
         Args:
-            text_regions: 文本区域列表
-            target_lang: 目标语言代码
-            min_ratio: 最小目标语言占比（此参数在新逻辑中不使用，保留为兼容性）
-            
+            text_regions: list of text regions
+            target_lang: target language code
+            min_ratio: minimum target language ratio (unused by the new logic; kept for compatibility)
+
         Returns:
-            bool: True表示通过检查，False表示未通过
+            bool: True when the check passes, False when it does not
         """
         if not text_regions or len(text_regions) <= 10:
             # Skip this check when there are 10 regions or fewer
@@ -5918,11 +5916,10 @@ class MangaTranslator:
 
     async def _validate_translation(self, original_text: str, translation: str, target_lang: str, config, ctx: Context = None, silent: bool = False, page_lang_check_result: bool = None) -> bool:
         """
-        验证翻译质量（包含目标语言比例检查和幻觉检测）
         Validate translation quality (includes target language ratio check and hallucination detection)
-        
+
         Args:
-            page_lang_check_result: 页面级目标语言检查结果，如果为None则进行检查，如果已有结果则直接使用
+            page_lang_check_result: result of the page-level target language check; when None the check is run, otherwise the given result is used
         """
         if not config.translator.enable_post_translation_check:
             return True
@@ -5958,7 +5955,6 @@ class MangaTranslator:
 
     async def _retry_translation_with_validation(self, region, config: Config, ctx: Context) -> str:
         """
-        带验证的重试翻译
         Retry translation with validation
         """
         original_translation = region.translation
@@ -6026,7 +6022,7 @@ class MangaTranslator:
         return region.translation
 
     def _update_translation_map(self, source_path: str, translated_path: str):
-        """在输出目录创建或更新 translation_map.json"""
+        """Create or update translation_map.json in the output folder"""
         try:
             output_dir = os.path.dirname(translated_path)
             map_path = os.path.join(output_dir, 'translation_map.json')
@@ -6054,19 +6050,19 @@ class MangaTranslator:
 
     async def _translate_batch_replace_translation(self, images_with_configs: List[tuple], save_info: dict = None, global_offset: int = 0, global_total: int = None) -> List[Context]:
         """
-        替换翻译模式：从翻译图提取OCR结果并应用到生肉图
-        
-        流程：
-        1. 对生肉图执行检测+OCR，过滤低置信度区域
-        2. 查找对应的翻译图，执行检测+OCR
-        3. 区域匹配（考虑尺寸缩放）
-        4. 使用匹配的区域执行修复和渲染
-        
+        Replace-translation mode: extract the OCR result from the translated image and apply it to the raw image
+
+        Flow:
+        1. Run detection + OCR on the raw image and filter out low-confidence regions
+        2. Find the matching translated image and run detection + OCR on it
+        3. Match the regions (taking size scaling into account)
+        4. Inpaint and render with the matched regions
+
         Args:
             images_with_configs: List of (image, config) tuples
-            save_info: 保存配置
-            global_offset: 全局偏移量
-            global_total: 全局总图片数
+            save_info: the save settings
+            global_offset: global offset
+            global_total: global total number of images
         """
         from .utils.replace_translation import translate_batch_replace_translation
         return await translate_batch_replace_translation(self, images_with_configs, save_info, global_offset, global_total)
@@ -6081,15 +6077,15 @@ class MangaTranslator:
         skipped_count: int = 0,
     ) -> List[Context]:
         """
-        高质量翻译模式：按批次滚动处理，每批独立完成预处理、翻译、渲染全流程。
-        如果提供了save_info，则在每批处理后直接保存。
-        
+        High-quality translation mode: rolling batches, each of which runs the whole flow of preprocessing, translation and rendering on its own.
+        When save_info is given, each batch is saved right after it is processed.
+
         Args:
             images_with_configs: List of (image, config) tuples
-            save_info: 保存配置
-            global_offset: 全局偏移量，用于显示正确的图片编号
-            global_total: 全局总图片数，用于显示正确的总批次数
-            batch_size: 批量大小
+            save_info: the save settings
+            global_offset: global offset, used to show the correct image number
+            global_total: global total number of images, used to show the correct total number of batches
+            batch_size: batch size
         """
         # batch_size=1 is a valid request to translate HQ pages one at a time.
         resolved_batch_size = max(1, batch_size if batch_size is not None else self.batch_size)
