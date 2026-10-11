@@ -1,7 +1,7 @@
-"""一次性检查:重构后由 OPEN_TO_CLOSE 派生的字符表必须覆盖旧版手抄字面量。
+"""One-off check: the character tables derived from OPEN_TO_CLOSE after the refactor must cover the hand-copied literals of the old version.
 
-旧集合内容取自重构前的 chinese_linebreak.py(commit 899c316)。
-预期差异只有两类:1) STRUCTURAL_BREAK_CHARS 新增空白;2) 派生表补上旧表漏抄的括号。
+The content of the old sets comes from chinese_linebreak.py before the refactor (commit 899c316).
+Only two kinds of difference are expected: 1) whitespace added to STRUCTURAL_BREAK_CHARS; 2) the derived tables add the brackets the old tables missed.
 """
 
 from __future__ import annotations

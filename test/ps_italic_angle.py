@@ -1,14 +1,14 @@
-"""实测 Photoshop 仿斜体（faux italic）的倾斜角与剪切原点。
+"""Measure the slant angle and the shear origin of Photoshop's faux italic.
 
-前置：先用 Photoshop 跑 test/ps_italic_probe.jsx 生成 test/ps_spacing/ps_it_*.png
-（基线在 y=400，字号 100px，SimHei「国」）。
+Prerequisite: run test/ps_italic_probe.jsx in Photoshop first to produce test/ps_spacing/ps_it_*.png
+(baseline at y=400, size 100px, the SimHei CJK test character U+56FD).
 
-方法：同一字形的正常版与仿斜体版逐行求墨迹质心，行位移 dx(y) 做最小二乘
-线性拟合：dx = a*y + b。倾斜角 = atan(-a)（图像 y 向下，顶端右倾为正），
-dx=0 的行 y0 = -b/a 即剪切原点（对比已知基线 y=400 判断是否绕基线剪切）。
-另用三连字测仿斜体是否改变 advance。
+Method: the ink centroid of the normal and the faux italic version of the same glyph is taken row by row, and the row displacement dx(y) gets a least-squares
+linear fit: dx = a*y + b. Slant angle = atan(-a) (image y points down; leaning right at the top is positive), and
+the row with dx=0, y0 = -b/a, is the shear origin (compared with the known baseline y=400 to judge whether the shear is about the baseline).
+Three characters in a row are also used to measure whether faux italic changes the advance.
 
-运行（repo 包根）：python test/ps_italic_angle.py
+Run (repository package root): python test/ps_italic_angle.py
 """
 import math
 import os

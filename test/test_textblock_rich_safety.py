@@ -1,12 +1,12 @@
-"""TextBlock 富文本安全性测试（F04a/F19/F02/F30）。
+"""Safety tests of rich text in TextBlock (F04a/F19/F02/F30).
 
-覆盖：
-- 非法 translation_rich 不炸构造函数：丢样式、保区域（F04a）
-- 合法富文本正常入库
-- translation setter 等值赋值不清 translation_rich（F02）
-- 旧 'hr' 方向 BR→rich 转换与字符串路径均保留 Unicode 逻辑顺序（F30）
+Covered:
+- an invalid translation_rich does not blow up the constructor: the style is dropped and the region is kept (F04a)
+- valid rich text is stored normally
+- assigning an equal value through the translation setter does not clear translation_rich (F02)
+- for the old 'hr' direction, the BR→rich conversion and the string path both keep the Unicode logical order (F30)
 
-运行：uv run --no-sync pytest test/test_textblock_rich_safety.py
+Run: uv run --no-sync pytest test/test_textblock_rich_safety.py
 """
 
 import unittest
@@ -63,7 +63,7 @@ _MALFORMED_DOCUMENTS = [
 
 
 class MalformedRichTranslationTest(unittest.TestCase):
-    """F04a：非法 translation_rich 只丢样式，绝不丢区域。"""
+    """F04a: an invalid translation_rich only loses the style and never the region."""
 
     def test_malformed_translation_rich_keeps_region(self):
         for malformed in _MALFORMED_DOCUMENTS:
@@ -88,7 +88,7 @@ class MalformedRichTranslationTest(unittest.TestCase):
         self.assertEqual(region.text, "原文")
 
     def test_load_style_kwargs_survive_malformed_rich(self):
-        """load_text 场景：rich 解析失败后其余字段照常构造。"""
+        """The load_text case: after rich parsing fails, the other fields are constructed as usual."""
         with self.assertLogs("manga-translator.textblock", level="WARNING"):
             region = _make_block(
                 translation="译文",
@@ -102,7 +102,7 @@ class MalformedRichTranslationTest(unittest.TestCase):
         self.assertEqual(region.target_lang, "CHS")
 
     def test_removed_apis_are_gone(self):
-        """F19：零调用 API 已删除。"""
+        """F19: the API with zero callers has been removed."""
         self.assertFalse(hasattr(TextBlock, "clear_translation_rich"))
         region = _make_block(translation="x")
         with self.assertRaises(TypeError):
@@ -156,7 +156,7 @@ class ValidRichTranslationTest(unittest.TestCase):
 
 
 class TranslationSetterRichInvalidationTest(unittest.TestCase):
-    """F02：等值赋值不视为编辑，不清 translation_rich。"""
+    """F02: assigning an equal value is not an edit and does not clear translation_rich."""
 
     def test_equal_assignment_keeps_rich(self):
         region = _make_block(translation_rich=_valid_document())
@@ -183,7 +183,7 @@ class TranslationSetterRichInvalidationTest(unittest.TestCase):
 
 
 class RtlLegacyBreakConversionTest(unittest.TestCase):
-    """F30：旧 'hr' 方向 BR→rich 转换与字符串渲染路径均保留逻辑顺序。"""
+    """F30: for the old 'hr' direction, the BR→rich conversion and the string render path both keep the logical order."""
 
     @staticmethod
     def _paragraph_texts(document):

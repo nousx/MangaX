@@ -57,7 +57,7 @@ def _paired_export_base(base, mask, inpainted):
 
 
 def test_payload_parsing_matches_file_parsing():
-    """载荷直通解析与临时 JSON 落盘再读回，得到等价的 regions 与 mask。"""
+    """Parsing the payload directly and writing a temporary JSON to disk and reading it back give equivalent regions and mask."""
     from services.export_service import ExportService
 
     from manga_translator.config import Config, TranslatorConfig
@@ -143,7 +143,7 @@ def _run_export(regions, mask, inpainted, tmp, output_name):
 
 
 def test_export_end_to_end_inmemory():
-    """带区域+蒙版+编辑器修复图：导出成功、复用修复图、无工作目录副作用。"""
+    """With regions + mask + the editor's inpainted image: the export succeeds, the inpainted image is reused, and there are no side effects in the working folder."""
     with tempfile.TemporaryDirectory() as tmp:
         inpainted = np.full((240, 320, 3), 200, dtype=np.uint8)
         _source_path, output_path, outcome = _run_export(
@@ -163,7 +163,7 @@ def test_export_end_to_end_inmemory():
 
 
 def test_export_no_regions_no_mask_returns_original():
-    """无区域无蒙版：导出原图，不触发 closed-image 崩溃（2026-05 回归）。"""
+    """No regions and no mask: the original image is exported, without the closed-image crash (regression of 2026-05)."""
     with tempfile.TemporaryDirectory() as tmp:
         source_path, output_path, outcome = _run_export([], None, None, tmp, "out.png")
         assert outcome.error is None, f"export failed: {outcome.error}"
@@ -176,7 +176,7 @@ def test_export_no_regions_no_mask_returns_original():
 
 
 def test_project_json_marks_replacements_done():
-    """编辑器工程 JSON 应带 skip_text_replacements=True（译文已是替换后终稿）。"""
+    """The editor project JSON should carry skip_text_replacements=True (the translation is already the final text after replacement)."""
     import json as jsonlib
 
     from services.export_service import ExportService
@@ -200,7 +200,7 @@ def test_project_json_marks_replacements_done():
 
 
 def test_project_json_omits_redundant_plain_rich_document():
-    """仅承载 BR 的无样式文档不写盘，带样式文档仍保留。"""
+    """An unstyled document that only carries BR is not written to disk, while a styled document is still kept."""
     from services.export_service import ExportService
 
     service = ExportService()
@@ -270,7 +270,7 @@ def test_project_json_write_is_atomic(monkeypatch):
 
 
 def test_backend_writeback_marks_replacements_only_after_render():
-    """后端回写：渲染过（img_rendered 非 None）才写 skip_text_replacements=True。"""
+    """Backend write-back: skip_text_replacements=True is only written when something was rendered (img_rendered is not None)."""
     import json as jsonlib
 
     from services.export_service import ExportService
@@ -329,7 +329,7 @@ def test_backend_writeback_marks_replacements_only_after_render():
 
 
 def test_empty_text_regions_do_not_persist_detector_mask():
-    """无文字区域时，检测器残留的 raw mask 不应写入工程 JSON。"""
+    """When there are no text regions, the raw mask left by the detector should not be written to the project JSON."""
     import json as jsonlib
 
     from manga_translator.config import Config, TranslatorConfig

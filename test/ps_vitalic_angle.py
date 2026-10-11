@@ -1,14 +1,14 @@
-"""实测 Photoshop 竖排仿斜体的变换语义（直立 CJK 与横躺拉丁两组）。
+"""Measure the transform semantics of Photoshop's faux italic in vertical text (two groups: upright CJK and Latin lying on its side).
 
-前置：先跑 test/ps_vitalic_probe.jsx 与 test/ps_vitalic2_probe.jsx 生成
-test/ps_spacing/ps_vit_*.png / ps_vith_*.png（竖排锚点 [350,150]，100px SimHei）。
+Prerequisite: run test/ps_vitalic_probe.jsx and test/ps_vitalic2_probe.jsx first to produce
+test/ps_spacing/ps_vit_*.png / ps_vith_*.png (vertical anchor [350,150], 100px SimHei).
 
-分析（每组）：
-1) 单字 normal vs italic：逐行 dx(y) 拟合（水平剪切分量与轴）、
-   逐列 dy(x) 拟合（垂直剪切分量与轴）。
-2) 三连列：按 y 投影切字，每字质心（漂移是否累计）、y 步进、每字局部 dx(y)。
+Analysis (for each group):
+1) single character, normal vs italic: fit of the row-by-row dx(y) (horizontal shear component and axis)
+   and of the column-by-column dy(x) (vertical shear component and axis).
+2) a column of three: characters cut by y projection, the centroid of each (whether the drift accumulates), the y step, and the local dx(y) of each.
 
-运行（repo 包根）：python test/ps_vitalic_angle.py
+Run (repository package root): python test/ps_vitalic_angle.py
 """
 import math
 import os
@@ -34,7 +34,7 @@ def ink_mask(path):
 
 
 def line_centroids(mask, axis, min_count=3):
-    """axis=0: 逐行 x 质心 {y: cx}；axis=1: 逐列 y 质心 {x: cy}。"""
+    """axis=0: x centroid per row {y: cx}; axis=1: y centroid per column {x: cy}."""
     out = {}
     n = mask.shape[0] if axis == 0 else mask.shape[1]
     for i in range(n):

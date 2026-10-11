@@ -1,13 +1,13 @@
-"""验证项目渲染器的 PS 对齐斜体：与 PS 探针同方法的逐行/逐列质心拟合。
+"""Verify the Photoshop-aligned italic of the project renderer: row-by-row / column-by-column centroid fitting, the same method as the Photoshop probe.
 
-检查点（全部对照 PS 实测基准，SimHei 100px）：
-1. 横排「国国国」normal vs italic=True：字符步进不变（100），逐行 dx(y)
-   斜率 ≈ tan10°（锚点无关，斜率即角度）。
-2. 竖排「国国国」：y 步进不变（100），每字局部 dx(y) 斜率 ≈ tan10°，
-   墨迹 cx 均匀右漂（PS 实测 +6px 量级）、无随列累计。
-3. 竖排「HHH」italic：逐列 dy(x) 斜率 ≈ +tan10°（横躺字 = R·S 的 y 剪切）。
+Checks (all against the measured Photoshop baseline, SimHei 100px):
+1. Horizontal, three copies of the CJK test character (U+56FD), normal vs italic=True: the character step is unchanged (100), and the slope of the
+   row-by-row dx(y) ≈ tan10° (independent of the anchor, the slope is the angle).
+2. Vertical, the same three characters: the y step is unchanged (100), the slope of the local dx(y) of each character ≈ tan10°,
+   and the ink cx drifts right evenly (on the order of +6px measured in Photoshop), without accumulating over the column.
+3. Vertical "HHH" italic: the slope of the column-by-column dy(x) ≈ +tan10° (a character lying on its side = the y shear of R·S).
 
-运行（repo 包根）：python test/proj_italic_check.py
+Run (repository package root): python test/proj_italic_check.py
 """
 import math
 import os
@@ -66,7 +66,7 @@ def line_centroids(mask, axis, min_count=3):
 
 
 def fit_slope(pairs_a, pairs_b, align_keys=True):
-    """对齐两图的行/列（按各自墨迹起点对齐）后拟合位移斜率。"""
+    """Align the rows/columns of the two images (by the start of the ink of each), then fit the slope of the displacement."""
     ka = sorted(pairs_a)
     kb = sorted(pairs_b)
     if not ka or not kb:

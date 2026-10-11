@@ -1,14 +1,14 @@
-"""渲染 golden 基准：dump / 对比 put_text_* 像素输出与 calc_box_from_font 测量。
+"""Render golden baseline: dump / compare the pixel output of put_text_* and the measurements of calc_box_from_font.
 
-用途：text_render 重构的回归安全网。重构前 --dump 存基线，重构各阶段 --check 对比。
+Purpose: the regression safety net for the text_render refactor. --dump stores the baseline before the refactor, and --check compares at each stage of it.
 
-运行（repo 包根）：
-    PYTHONUTF8=1 python test/render_golden.py --dump    # 生成基线到 test/golden/
-    PYTHONUTF8=1 python test/render_golden.py --check   # 与基线逐像素对比
-    PYTHONUTF8=1 python test/render_golden.py --check --save-diff  # 差异另存可视化 PNG
+Run (repository package root):
+    PYTHONUTF8=1 python test/render_golden.py --dump    # write the baseline to test/golden/
+    PYTHONUTF8=1 python test/render_golden.py --check   # compare with the baseline pixel by pixel
+    PYTHONUTF8=1 python test/render_golden.py --check --save-diff  # also save the differences as visual PNG files
 
-确定性条件：默认字体 Arial-Unicode、bold=False、显式 stroke_width、offscreen。
-基线目录 test/golden/ 不进 git（test/ 本身被忽略），本机回归用。
+Conditions for determinism: the default font Arial-Unicode, bold=False, an explicit stroke_width, offscreen.
+The baseline folder test/golden/ is not in git (test/ itself is ignored); it is for regression checks on this machine.
 """
 import argparse
 import json

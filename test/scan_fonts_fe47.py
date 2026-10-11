@@ -1,4 +1,4 @@
-"""扫描 fonts/ 目录所有字体：U+FE47 (﹇) 是否有字形、竖排 base 是否有位图。"""
+"""Scan all fonts in the fonts/ folder: whether U+FE47 (﹇) has a glyph, and whether the vertical base has a bitmap."""
 import os
 import sys
 from pathlib import Path

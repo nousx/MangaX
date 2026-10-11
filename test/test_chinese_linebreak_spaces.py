@@ -1,7 +1,7 @@
-"""中文语义断句空格处理回归测试。
+"""Regression tests for the handling of spaces in Chinese semantic line breaking.
 
-纯函数部分不依赖 HanLP 模型;端到端部分在本机模型缺失时打印 SKIP。
-直接运行:python test/test_chinese_linebreak_spaces.py
+The pure-function part does not depend on the HanLP model; the end-to-end part prints SKIP when the model is missing on this machine.
+Run directly: python test/test_chinese_linebreak_spaces.py
 """
 
 from __future__ import annotations

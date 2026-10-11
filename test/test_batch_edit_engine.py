@@ -1,8 +1,8 @@
-"""批量管理引擎回归测试（纯逻辑，无 Qt）。
+"""Regression tests of the batch edit engine (pure logic, no Qt).
 
-运行：
+Run:
     uv run python test/test_batch_edit_engine.py
-或：
+or:
     uv run python -m pytest test/test_batch_edit_engine.py
 """
 
@@ -147,8 +147,9 @@ def test_bool_and_derived_conditions():
 
 
 def test_dead_region_flags_are_not_exposed():
-    """region 级 bold/italic/underline/font_weight 没有任何 UI 会写、渲染也基本不读，
-    摆进批量表只会让人点了没反应 —— 真正生效的加粗/斜体在富文本样式里。"""
+    """No UI writes the region-level bold/italic/underline/font_weight and the renderer hardly reads them,
+    so putting them in the batch table would only give clicks without effect - the bold and italic that really work are in the rich-text style.
+    """
     for key in ("bold", "italic", "underline", "font_weight"):
         assert key not in engine.FIELDS_BY_KEY, key
 
@@ -245,7 +246,7 @@ def test_rich_text_action_styles_only_the_hit():
 
 
 def _styled_region(translation: str, text: str, style: dict) -> dict:
-    """整段带同一套样式的 region（正文与 translation 一致）。"""
+    """A region whose whole text carries one style (the body and translation agree)."""
     region = make_region(translation=translation)
     region["translation_rich"] = {"format": "richtext.v1", "blocks": [{"type": "paragraph", "inlines": [
         {"type": "text", "text": text, "style": dict(style)}]}]}
@@ -275,7 +276,7 @@ def test_rich_text_fill_yields_to_existing_key():
 
 
 def test_rich_text_fill_covers_unstyled_gaps():
-    """styled_segments_for_range 不报无样式文字，空白段要自己补回来。"""
+    """styled_segments_for_range does not report unstyled text, so the blank stretches have to be filled back in."""
     region = make_region(translation="abc")
     region["translation_rich"] = {"format": "richtext.v1", "blocks": [{"type": "paragraph", "inlines": [
         {"type": "text", "text": "a", "style": {"bold": True}},
@@ -373,7 +374,7 @@ def test_multiple_rich_text_actions_run_in_authoring_order():
 
 
 def test_replace_text_carries_style_onto_new_text():
-    """加了样式的词被替换后样式不该消失（取命中区间首字的样式）。"""
+    """A styled word should not lose its style when it is replaced (the style of the first character of the matched range is taken)."""
     region = make_region(translation="他说爱丽丝很强")
     region["translation_rich"] = {"format": "richtext.v1", "blocks": [{"type": "paragraph", "inlines": [
         {"type": "text", "text": "他说", "style": {}},
@@ -390,7 +391,7 @@ def test_replace_text_carries_style_onto_new_text():
 
 
 def test_replace_text_carries_style_across_collapsed_line_breaks():
-    """ops 坐标压过换行，读原文档样式却要用原下标 —— 两套下标不能串。"""
+    """ops coordinates have line breaks collapsed, while the styles of the original document are read with the original indexes - the two index systems must not be mixed."""
     region = make_region(translation="a")
     region["translation_rich"] = {"format": "richtext.v1", "blocks": [
         {"type": "paragraph", "inlines": [{"type": "text", "text": "a", "style": {}}]},
@@ -443,7 +444,7 @@ def test_action_order_is_forced_regardless_of_authoring_order():
 
 
 def test_set_fields_translation_drops_stale_rich_text():
-    """回归：改 translation 却留着旧 translation_rich，渲染仍走旧文字（"翻译有的会绕过"）。"""
+    """Regression: translation was changed but the old translation_rich stayed, so rendering still used the old text (the report that some translations were bypassed)."""
     region = make_region(translation="爱丽丝[BR]你稍微")
     region["translation_rich"] = {"format": "richtext.v1", "blocks": [
         {"type": "paragraph", "inlines": [{"type": "text", "text": "爱丽丝", "style": {"bold": True}}]},
@@ -474,7 +475,7 @@ def test_set_fields_keeps_explicit_translation_raw():
 
 
 def test_replace_text_replays_ops_across_paragraphs():
-    """局部替换走 ops 回放：未改动段落的样式与段落结构都要原样保住。"""
+    """A partial replacement replays ops: the styles and the paragraph structure of unchanged paragraphs must be kept as they are."""
     region = make_region(translation="爱丽丝[BR]你稍微[BR]等一下")
     region["translation_rich"] = {"format": "richtext.v1", "blocks": [
         {"type": "paragraph", "inlines": [{"type": "text", "text": "爱丽丝", "style": {"bold": True}}]},

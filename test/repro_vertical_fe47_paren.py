@@ -1,4 +1,4 @@
-"""复现两问题：竖排末尾 ﹇ 不渲染；竖排 () 不居中。"""
+"""Reproduce two problems: ﹇ at the end of vertical text is not rendered; () in vertical text is not centred."""
 import os
 import sys
 from pathlib import Path
@@ -58,7 +58,7 @@ def render_vertical(label: str, raw: str):
 
 
 def ink_rows(img, label):
-    """按行聚类墨迹段，输出每段的 y 范围与 x 中心，用于看居中。"""
+    """Cluster the ink segments by row and print the y range and x centre of each, to inspect the centring."""
     alpha = img[:, :, 3]
     rows_has = (alpha > 0).any(axis=1)
     segs = []

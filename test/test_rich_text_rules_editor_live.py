@@ -1,11 +1,11 @@
-"""编辑器实时富文本规则回归：新旧匹配对比、手工痕迹跳过、同步管道第三级、IME 收窄。
+"""Regression of the live rich-text rules in the editor: comparison of old and new matches, skipping manual traces, the third level of the sync pipeline, IME narrowing.
 
-核心语义（用户拍板）：
-- 只应用"编辑前不存在"的新命中（打「你」后补「好」→ 整个「你好」上样式）；
-- 未改动文字上的老命中永不重复应用（清掉的样式不会被顶回）；
-- 命中区间带本规则给不出的富文本（手工痕迹）→ 整段跳过；
-  只有本规则自己的残留样式 → 允许整体补齐；
-- 整段替换（无操作记录）按渲染管线全量语义。
+Core semantics (decided by the user):
+- only new hits that "did not exist before the edit" are applied (typing the first character of a two-character word and then adding the second → the whole word gets the style);
+- old hits on unchanged text are never applied again (a style that was cleared is not put back);
+- a matched range that carries rich text this rule cannot produce (a manual trace) → the whole range is skipped;
+  when it only carries leftover styles of this rule itself → it may be completed as a whole;
+- a whole-text replacement (no operation record) follows the full semantics of the render pipeline.
 """
 
 import sys

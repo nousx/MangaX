@@ -1,12 +1,12 @@
-"""排版模式公共流程回归：入口单次 BR 判断 + strict 按框适配 + balloon_fill 降级 strict。
+"""Regression of the common flow of the layout modes: a single BR decision at the entry + strict fitting by box + balloon_fill falling back to strict.
 
-回归点（2026-07 公共流程重整）：
-1. strict 无 BR / 有 BR 都用最终文本 + OCR 框重新适配字号，不再直接用候选大字号。
-2. font_size_offset 在适配字号之后只应用一次。
-3. balloon_fill 无 original_img / 无气泡蒙版 / 区域未被包裹时降级 strict，与 strict 结果一致。
-4. 替换翻译模式强制单行区域豁免按框缩字，清除 BR 后按候选字号渲染。
+Regression points (reorganisation of the common flow, 2026-07):
+1. strict, with or without BR, fits the font size again from the final text + the OCR box, and no longer uses the large candidate size directly.
+2. font_size_offset is applied only once, after the font size is fitted.
+3. balloon_fill falls back to strict without original_img, without a balloon mask or when the region is not enclosed, with the same result as strict.
+4. A region forced to a single line in replace-translation mode is exempt from shrinking by box, and is rendered at the candidate size after BR is removed.
 
-运行（repo 包根）：
+Run (repository package root):
     PYTHONUTF8=1 python test/test_layout_mode_common_flow.py
 """
 import os
@@ -72,7 +72,7 @@ def run_layout(layout_mode, translation, box=(100, 100, 220, 160), font_size=48,
 
 
 def expected_strict_font(region, config, extra_offset=0):
-    """独立复算：最终文本 + OCR 框 → 适配字号（strict 上限），floor 8，再加一次 offset。"""
+    """Independent recalculation: final text + OCR box → fitted font size (the strict upper limit), floor 8, then offset added once."""
     w, h = region.unrotated_size
     fit = calc_font_from_box(
         width=float(w),

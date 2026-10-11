@@ -32,14 +32,14 @@ def _write_image(directory: Path, name: str, shade: int) -> str:
 
 
 def _assert_usable(image, label: str) -> None:
-    """能 copy 就说明没被 close——closed image 会抛 ValueError。"""
+    """Being able to copy shows it was not closed - a closed image raises ValueError."""
     assert image is not None, f"{label}: image is None"
     duplicate = image.copy()
     assert duplicate.size == image.size, label
 
 
 def test_evicted_images_stay_usable_for_other_holders(tmp_path):
-    """被 LRU 淘汰的图，其它持有者（如 model）手里的引用必须仍然可用。"""
+    """For an image evicted by the LRU, the references other holders (such as the model) have must still be usable."""
     manager = ResourceManager()
     paths = [_write_image(tmp_path, f"page{i}.png", i * 20) for i in range(manager._cache_limit + 3)]
 
@@ -54,7 +54,7 @@ def test_evicted_images_stay_usable_for_other_holders(tmp_path):
 
 
 def test_current_image_survives_revisit_then_prefetch(tmp_path):
-    """复现用户日志的翻页序列：回头翻页后当前页不得被自己触发的预读挤掉。"""
+    """Reproduce the page-turning sequence of the user's log: after turning back, the current page must not be pushed out by the read-ahead it triggered itself."""
     manager = ResourceManager()
     paths = [_write_image(tmp_path, f"page{i}.png", i * 15) for i in range(manager._cache_limit + 2)]
 
@@ -77,7 +77,7 @@ def test_current_image_survives_revisit_then_prefetch(tmp_path):
 
 
 def test_session_document_switch_does_not_close_previous(tmp_path):
-    """换图时 session 只丢引用，旧图对其它持有者仍然可用。"""
+    """On an image switch the session only drops its reference; the old image is still usable for other holders."""
     manager = ResourceManager()
     session = EditorSession()
     first = manager.load_image(_write_image(tmp_path, "first.png", 30)).image
@@ -90,7 +90,7 @@ def test_session_document_switch_does_not_close_previous(tmp_path):
 
 
 def test_unload_image_keeps_external_reference_usable(tmp_path):
-    """卸载文档后，导出任务等外部持有者手里的快照来源仍然可用。"""
+    """After the document is unloaded, the snapshot source held by outside holders such as an export task is still usable."""
     manager = ResourceManager()
     base = manager.load_image(_write_image(tmp_path, "page.png", 45)).image
 
@@ -100,7 +100,7 @@ def test_unload_image_keeps_external_reference_usable(tmp_path):
 
 
 def test_loaded_image_holds_no_file_handle(tmp_path):
-    """eager 打开后不占文件句柄：Windows 上能直接替换源文件。"""
+    """After an eager open no file handle is held: on Windows the source file can be replaced directly."""
     manager = ResourceManager()
     path = _write_image(tmp_path, "page.png", 120)
     resource = manager.load_image(path)

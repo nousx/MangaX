@@ -1,20 +1,20 @@
-"""测试公共前置：sys.path、offscreen、torch/PyQt6 加载顺序。
+"""Common test set-up: sys.path, offscreen, and the loading order of torch and PyQt6.
 
-任何要用到 Qt 或本仓代码的测试脚本，**第一句** import 就写：
+Any test script that uses Qt or the code of this repository writes this as its **first** import:
 
     import _bootstrap  # noqa: F401
 
-它把三件每个测试都得自己记一遍的事收在一处：
+It gathers three things every test would otherwise have to remember by itself:
 
-1. ``sys.path`` —— 仓库根 + ``desktop_qt_ui``（不然 ``No module named 'editor'``）；
-2. ``QT_QPA_PLATFORM=offscreen`` —— 必须早于任何 PyQt6 导入；
-3. **torch 必须在 PyQt6 之前加载**。这条是 Windows 上的硬约束：PyQt6 的
-   Qt DLL 搜索路径会顶掉 ``c10.dll`` 的依赖解析，反过来导入会得到
-   ``OSError: [WinError 1114] 动态链接库(DLL)初始化例程失败``。
-   桌面端正式入口 ``desktop_qt_ui/main.py`` 里做的就是这件事（见那里引用的
-   https://github.com/pytorch/pytorch/issues/166628），测试沿用同一套。
+1. ``sys.path`` - the repository root + ``desktop_qt_ui`` (otherwise ``No module named 'editor'``);
+2. ``QT_QPA_PLATFORM=offscreen`` - must come before any PyQt6 import;
+3. **torch must be loaded before PyQt6**. This is a hard constraint on Windows: the Qt DLL
+   search path of PyQt6 displaces the dependency resolution of ``c10.dll``, and importing the other way round gives
+   ``OSError: [WinError 1114]`` (a dynamic link library (DLL) initialisation routine failed).
+   The real entry point of the desktop app, ``desktop_qt_ui/main.py``, does exactly this (see the issue quoted there,
+   https://github.com/pytorch/pytorch/issues/166628), and the tests follow the same approach.
 
-没装 torch 的环境照常跑 —— 预载失败就跳过，不影响纯 Qt 测试。
+An environment without torch runs as usual - when the preload fails it is skipped, and pure Qt tests are not affected.
 """
 
 from __future__ import annotations

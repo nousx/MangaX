@@ -1,10 +1,10 @@
-"""对比 Photoshop 与项目 text_render 的默认字距（advance 步进）。
+"""Compare the default letter spacing (the advance step) of Photoshop and of the project's text_render.
 
-前置：先用 Photoshop 跑 test/ps_spacing_ps_script.jsx 生成 test/ps_spacing/ps_*.png。
-本脚本：用项目渲染器渲染同字体（SimHei）同字号（100px）同文本，
-按墨迹投影切出每个字形，比较相邻字形的质心步进（= advance + 默认字距）。
+Prerequisite: run test/ps_spacing_ps_script.jsx in Photoshop first to produce test/ps_spacing/ps_*.png.
+This script renders the same text in the same font (SimHei) at the same size (100px) with the project renderer,
+cuts out each glyph by ink projection, and compares the centroid step of adjacent glyphs (= advance + default spacing).
 
-运行（repo 包根）：python test/ps_font_spacing.py
+Run (repository package root): python test/ps_font_spacing.py
 """
 import os
 import sys
@@ -45,7 +45,7 @@ def render_project(kind, text):
 
 
 def ink_mask(img):
-    """PS 导出是白底 RGB，项目输出是 RGBA；统一成半覆盖阈值的墨迹掩码。"""
+    """The Photoshop export is RGB on white and the project output is RGBA; both become an ink mask with a half-coverage threshold."""
     if img.ndim == 3 and img.shape[2] == 4:
         return img[..., 3] >= 128
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY) if img.ndim == 3 else img
@@ -53,7 +53,7 @@ def ink_mask(img):
 
 
 def glyph_runs(mask, vertical):
-    """沿书写方向做投影，按空隙切成每字形一段，返回 [(start, end, centroid)]。"""
+    """Project along the writing direction and cut at the gaps into one segment per glyph; returns [(start, end, centroid)]."""
     axis = 1 if vertical else 0
     prof = mask.any(axis=0 if not vertical else 1)
     idx = np.flatnonzero(prof)

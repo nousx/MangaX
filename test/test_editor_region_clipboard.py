@@ -10,7 +10,7 @@ from services.history_service import EditorStateManager
 
 
 def _region(center, left):
-    """与画布新建文本框一致：lines 和 polygons 共用同一批顶点。"""
+    """As for a text box created on the canvas: lines and polygons share the same set of vertices."""
     top = center[1] - 10.0
     bottom = center[1] + 10.0
     points = [

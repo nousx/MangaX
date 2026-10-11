@@ -1,4 +1,4 @@
-"""rich_text_sync 回归:编辑操作回放、样式继承策略、raw 链路替换同步。"""
+"""rich_text_sync regression: replaying edit operations, the style inheritance policy, and replacement sync on the raw chain."""
 
 import re
 import sys

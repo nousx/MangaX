@@ -1,8 +1,8 @@
-"""AI断句单区域 BR 自动清理回归测试。
+"""Regression test for the automatic BR clean-up of a single region under AI line breaking.
 
-`_validate_br_markers` 在 AI 断句（disable_auto_wrap）开启时，会把单区域
-（region_count < 2）翻译结果里多余的 [BR]/<br>/【BR】 标记清理成单行；
-该清理与「AI断句检查」（check_br_and_retry）开关无关。
+When AI line breaking (disable_auto_wrap) is on, `_validate_br_markers` cleans the surplus [BR]/<br>/【BR】 markers
+out of the translation result of a single region (region_count < 2), making it one line;
+this clean-up is independent of the "AI line break check" (check_br_and_retry) switch.
 """
 
 from types import MethodType, SimpleNamespace
