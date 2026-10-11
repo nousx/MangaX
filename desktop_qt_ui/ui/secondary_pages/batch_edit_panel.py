@@ -59,6 +59,7 @@ from ui.secondary_pages.themed_message_box import (
 )
 from ui.secondary_pages.themed_progress_dialog import create_progress_dialog
 from ui.secondary_pages.themed_text_input_dialog import themed_get_text
+from ui.widgets.table_headers import fit_fixed_columns_to_header_text
 from ui.widgets.wheel_filter import TopLevelComboBox as ComboBox
 
 
@@ -441,7 +442,7 @@ class BatchEditPanel(CardWidget):
         )
         self.table.setColumnWidth(self.COL_CHECK, 40)
         self.table.setColumnWidth(self.COL_IMAGE, 180)
-        self.table.setColumnWidth(self.COL_REGION, 70)
+        fit_fixed_columns_to_header_text(self.table, {self.COL_REGION: 70})
         self.table.setColumnWidth(self.COL_SUMMARY, 140)
         layout.addWidget(self.table, 1)
 
@@ -1038,6 +1039,7 @@ class BatchEditPanel(CardWidget):
             self._t("Roll every file in scope back to its .bak, then delete the .bak")
         )
         self._table_model.set_headers(self._table_headers())
+        fit_fixed_columns_to_header_text(self.table, {self.COL_REGION: 70})
         for row in self._condition_rows:
             row.refresh_ui_texts()
         for action_card in (

@@ -31,6 +31,7 @@ from qfluentwidgets import (
     ToolButton,
 )
 from ui.secondary_pages.themed_message_box import themed_question, themed_warning
+from ui.widgets.table_headers import fit_fixed_columns_to_header_text
 
 
 def _fixed_width_font(size: int = 11) -> QFont:
@@ -353,6 +354,10 @@ class BaseYamlRuleEditorPanel(CardWidget):
 
     # ─── 表格创建与基本事件 ───
 
+    def _fit_flag_columns(self, table: TableWidget) -> None:
+        """Size the two yes/no columns; their translated titles can be longer than 55 pixels."""
+        fit_fixed_columns_to_header_text(table, {self.COL_ENABLED: 55, self.COL_REGEX: 55})
+
     def _create_table(self) -> TableWidget:
         table = TableWidget()
         table.setColumnCount(self.COL_COUNT)
@@ -365,8 +370,7 @@ class BaseYamlRuleEditorPanel(CardWidget):
         header.setSectionResizeMode(self.COL_MIDDLE, QHeaderView.ResizeMode.Stretch)
         header.setSectionResizeMode(self.COL_REGEX, QHeaderView.ResizeMode.Fixed)
         header.setSectionResizeMode(self.COL_COMMENT, QHeaderView.ResizeMode.Stretch)
-        table.setColumnWidth(self.COL_ENABLED, 55)
-        table.setColumnWidth(self.COL_REGEX, 55)
+        self._fit_flag_columns(table)
 
         table.cellChanged.connect(self._on_cell_changed)
         table.cellDoubleClicked.connect(self._handle_cell_double_clicked)
@@ -858,6 +862,7 @@ class BaseYamlRuleEditorPanel(CardWidget):
         header_labels = self._get_header_labels()
         for table in self.tables.values():
             table.setHorizontalHeaderLabels(header_labels)
+            self._fit_flag_columns(table)
         self._on_selection_changed()
         self._refresh_ui_texts_extra()
         self._update_status()
