@@ -1,13 +1,13 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-检测虚拟环境中安装的 PyTorch 版本类型（CPU/GPU）
+Detect the type (CPU/GPU) of the PyTorch build installed in the virtual environment
 """
 
 import sys
 
 def detect_torch_type():
-    """检测当前环境的 PyTorch 类型"""
+    """Detect the PyTorch type of the current environment"""
     try:
         import torch
         
@@ -38,7 +38,7 @@ def detect_torch_type():
         return None, None
 
 def get_dependency_group():
-    """获取对应的 pyproject dependency group"""
+    """Get the matching pyproject dependency group"""
     torch_type, variant = detect_torch_type()
     
     if torch_type == "GPU":
@@ -55,7 +55,7 @@ def get_dependency_group():
 
 
 def get_requirements_file():
-    """兼容旧调用；现在返回 dependency group 名称。"""
+    """For old callers; it now returns the dependency group name."""
     return get_dependency_group()
 
 if __name__ == "__main__":

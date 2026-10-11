@@ -1,6 +1,6 @@
 """
-自定义JSON编码器
-用于处理numpy数组和其他特殊数据类型的序列化
+Custom JSON encoder.
+Used to serialise numpy arrays and other special data types
 """
 import json
 
@@ -8,7 +8,7 @@ import numpy as np
 
 
 class CustomJSONEncoder(json.JSONEncoder):
-    """自定义JSON编码器，支持numpy数组等特殊数据类型"""
+    """Custom JSON encoder that supports numpy arrays and other special data types"""
 
     def default(self, obj):
         if isinstance(obj, np.ndarray):

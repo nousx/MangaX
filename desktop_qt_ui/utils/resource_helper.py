@@ -1,6 +1,6 @@
 """
-资源路径辅助函数
-用于处理开发环境和 PyInstaller 打包环境的资源路径
+Helper functions for resource paths.
+Used to handle resource paths in development and in a PyInstaller build
 """
 import os
 import sys
@@ -34,10 +34,10 @@ def resource_path(relative_path):
     Get an absolute external-resource path for dev and PyInstaller builds.
 
     Args:
-        relative_path: 相对于项目根目录的路径
+        relative_path: path relative to the project root
 
     Returns:
-        绝对路径
+        The absolute path
     """
     return os.path.join(_resource_base_candidates()[0], relative_path)
 

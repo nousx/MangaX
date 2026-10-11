@@ -69,7 +69,7 @@ from ui.secondary_pages.themed_message_box import install_themed_message_boxes
 
 # Global exception handler: catches unhandled exceptions and writes them to the log
 def global_exception_handler(exc_type, exc_value, exc_traceback):
-    """全局异常处理器，防止程序静默崩溃"""
+    """Global exception handler, so the program does not crash silently"""
     import traceback
     
     # Ignore KeyboardInterrupt
@@ -95,7 +95,7 @@ sys.excepthook = global_exception_handler
 
 
 def _set_windows_app_user_model_id():
-    """确保 Windows 将直接脚本启动识别为独立应用，而不是 python.exe。"""
+    """Make sure Windows treats a direct script launch as an application of its own, not as python.exe."""
     try:
         import ctypes
 
@@ -106,7 +106,7 @@ def _set_windows_app_user_model_id():
         logging.exception("Failed to set Windows AppUserModelID")
 
 def _apply_windows_window_class_icon(window, icon_path: str):
-    """在首次显示前设置窗口类图标，供任务栏初始化时读取。"""
+    """Set the window class icon before the first show, for the taskbar to read when it initialises."""
     if not icon_path:
         return False
 
@@ -158,7 +158,7 @@ def _apply_windows_window_class_icon(window, icon_path: str):
 
 
 def _apply_macos_native_app_icon(icon_path: str):
-    """为 macOS Dock/原生应用层设置 .icns 图标。"""
+    """Set the .icns icon for the macOS Dock and native application layer."""
     if not icon_path:
         return False
 
@@ -182,7 +182,7 @@ def _apply_macos_native_app_icon(icon_path: str):
 
 def main():
     """
-    应用主入口
+    Main entry point of the application
     """
     # --- Logging setup: all formatting and all console/file/recent writes happen in the listener thread ---
     import atexit
@@ -258,7 +258,7 @@ def main():
     
     # Install the Qt message handler (catches exceptions in signals and slots)
     def qt_message_handler(mode, context, message):
-        """Qt 消息处理器，捕获 Qt 内部错误"""
+        """Qt message handler; catches internal Qt errors"""
         from PyQt6.QtCore import QtMsgType
         if mode == QtMsgType.QtFatalMsg:
             logging.critical(f"Qt Fatal: {message} (file: {context.file}, line: {context.line})")
@@ -330,13 +330,14 @@ def main():
     from PyQt6.QtCore import QTimer
 
     def finalize_window_activation():
-        """启动置前的最小集合。
+        """The minimum needed to bring the window to the front at start-up.
 
-        Windows 上普通进程直接调 SetForegroundWindow 常被系统拒绝
-        （前台锁定），因此保留 AttachThreadInput 技巧：临时挂接到当前
-        前台窗口所在线程的输入队列后再置前。TOPMOST/NOTOPMOST 往返、
-        重复 ShowWindow、SetActiveWindow/SetFocus 等冗余调用已移除——
-        它们对已完成首帧的窗口只产生一轮 z-order 抖动（启动闪烁）。"""
+        On Windows a direct SetForegroundWindow call from an ordinary process is often refused by the system
+        (foreground lock), so the AttachThreadInput trick is kept: attach temporarily to the input queue of the thread
+        that owns the current foreground window, then bring the window to the front. The TOPMOST/NOTOPMOST round trip,
+        the repeated ShowWindow and redundant calls such as SetActiveWindow/SetFocus were removed -
+        for a window that has finished its first frame they only cause one round of z-order jitter (flicker at start-up).
+        """
         try:
             if main_window.isMinimized():
                 main_window.showNormal()

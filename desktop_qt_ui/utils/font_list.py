@@ -1,11 +1,11 @@
-"""Qt 字体数据库共享 helper。
+"""Shared helpers for the Qt font database.
 
-系统字体和应用字体按具体 family/style 展示，同一物理字体的多个入口合并。
-项目 ``fonts/`` 中的文件注册进 Qt，编辑器保存明确的家族和样式。
+System fonts and application fonts are shown by their specific family/style, and several entries for the same physical font are merged.
+The files in the project's ``fonts/`` folder are registered with Qt, and the editor saves an explicit family and style.
 
-注册统一走 ``text_render.register_font_file``：家族名以 ``[`` 开头的字体
-（如 "[工具箱]xxx-简繁"）会被 Qt 的 "Family [Foundry]" 语法解析成空家族名，
-QFont 匹配固定落到同一字体；注册层会自动改写为去掉方括号的内存副本。
+Registration always goes through ``text_render.register_font_file``: a font whose family name starts with ``[``
+(a bracketed tag in front of the name) would be parsed by Qt's "Family [Foundry]" syntax as an empty family name,
+and QFont matching would always land on the same font; the registration layer rewrites it automatically as an in-memory copy without the square brackets.
 """
 
 import hashlib
@@ -145,7 +145,7 @@ def _clear_font_catalog_caches() -> None:
 
 
 def fonts_directory() -> str:
-    """字体目录绝对路径（打包后位于 app.exe 同级）。"""
+    """Absolute path of the fonts folder (next to app.exe when packaged)."""
     return resource_path("fonts")
 
 
@@ -692,10 +692,10 @@ def font_text_coverage(value: str, text: str) -> str:
 def populate_font_combo(
     combo, current: str | None = None, locale_code: str = "en_US"
 ) -> None:
-    """清空并填充字体下拉框：显示本地化名称，userData 保留 family/style。
+    """Clear and fill the font drop-down: localised names are shown, and userData keeps the family/style.
 
-    ``current`` 传当前 font value 时选中对应条目；
-    条目不在列表里则追加一条（userData 保留原值）再选中。
+    When ``current`` is given the current font value, the matching entry is selected;
+    when it is not in the list, an entry is appended (userData keeps the original value) and selected.
     """
     combo.clear()
     combo._font_search_terms = {}

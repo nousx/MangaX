@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 """
-依赖包检查工具
 Package checking utilities
 """
 
@@ -38,7 +37,7 @@ from packaging.version import Version
 
 
 def package_version(name: str) -> Optional[Version]:
-    """获取已安装包的版本"""
+    """Get the version of an installed package"""
     try:
         return Version(importlib_metadata.distribution(canonicalize_name(name)).version)
     except importlib_metadata.PackageNotFoundError:
@@ -46,12 +45,12 @@ def package_version(name: str) -> Optional[Version]:
 
 
 def _nonblank(text):
-    """过滤空行和注释行"""
+    """Leave out empty lines and comment lines"""
     return text and not text.startswith('#')
 
 
 def _is_requirement(line):
-    """判断是否是依赖包行（过滤 pip 选项）"""
+    """Whether a line is a dependency line (pip options are left out)"""
     line = line.strip()
     # Leave out empty lines and comments
     if not line or line.startswith('#'):
@@ -66,7 +65,7 @@ def _is_requirement(line):
 
 @functools.singledispatch
 def yield_lines(iterable):
-    """提取有效行"""
+    """Extract the meaningful lines"""
     return itertools.chain.from_iterable(map(yield_lines, iterable))
 
 
@@ -76,12 +75,12 @@ def _(text):
 
 
 def drop_comment(line):
-    """去除注释"""
+    """Remove comments"""
     return line.partition(' #')[0]
 
 
 def join_continuation(lines):
-    """合并续行"""
+    """Join continuation lines"""
     lines = iter(lines)
     for item in lines:
         while item.endswith('\\'):
@@ -93,7 +92,7 @@ def join_continuation(lines):
 
 
 def load_req_file(requirements_file: str) -> List[str]:
-    """加载requirements文件"""
+    """Load a requirements file"""
     with pathlib.Path(requirements_file).open(encoding='utf-8') as reqfile:
         lines = join_continuation(map(drop_comment, yield_lines(reqfile)))
         # Leave out pip options (such as --extra-index-url)
@@ -102,7 +101,7 @@ def load_req_file(requirements_file: str) -> List[str]:
 
 
 def _yield_reqs_to_install(req: Requirement, current_extra: str = ''):
-    """检查需要安装的依赖"""
+    """Check which dependencies need installing"""
     if req.marker and not req.marker.evaluate({'extra': current_extra}):
         return
 
@@ -160,12 +159,12 @@ def _yield_reqs_to_install(req: Requirement, current_extra: str = ''):
 
 
 def _check_req(req: Requirement):
-    """检查单个依赖是否满足"""
+    """Check whether a single dependency is satisfied"""
     return not bool(list(itertools.islice(_yield_reqs_to_install(req), 1)))
 
 
 def get_missing_packages(reqs: List[str]) -> List[str]:
-    """获取缺失或需要更新的包列表"""
+    """Get the list of packages that are missing or need updating"""
     missing = []
     for req_str in reqs:
         req = Requirement(req_str)
@@ -175,12 +174,12 @@ def get_missing_packages(reqs: List[str]) -> List[str]:
 
 
 def check_reqs(reqs: List[str]) -> bool:
-    """检查所有依赖是否满足"""
+    """Check whether all dependencies are satisfied"""
     return all(map(lambda x: _check_req(Requirement(x)), reqs))
 
 
 def check_req_file(requirements_file: str) -> bool:
-    """检查requirements文件中的依赖是否满足"""
+    """Check whether the dependencies in a requirements file are satisfied"""
     try:
         return check_reqs(load_req_file(requirements_file))
     except Exception as e:
@@ -189,7 +188,7 @@ def check_req_file(requirements_file: str) -> bool:
 
 
 def get_missing_packages_from_file(requirements_file: str) -> List[str]:
-    """获取requirements文件中缺失或需要更新的包列表"""
+    """Get the list of packages in a requirements file that are missing or need updating"""
     try:
         reqs = load_req_file(requirements_file)
         return get_missing_packages(reqs)

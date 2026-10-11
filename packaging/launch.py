@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 """
-漫画翻译器启动脚本
 Manga Translator UI Launcher
 """
 
@@ -99,7 +98,7 @@ PYTORCH_OFFICIAL_INDEX_HOST = "download.pytorch.org"
 
 
 def normalize_index_url(url):
-    """统一 index-url 格式，便于做去重和映射。"""
+    """Normalise the index-url format, for de-duplication and mapping."""
     return (url or "").strip().rstrip("/")
 
 
@@ -122,7 +121,7 @@ PIP_TRUST_ALL_INDEX_HOSTS_ENV = "MT_PIP_TRUST_ALL_INDEX_HOSTS"
 
 def build_trusted_host_args(urls):
     """
-    根据 URL 列表构建 pip 的 trusted-host 参数。
+    Build pip's trusted-host arguments from a list of URLs.
 
     `--trusted-host` makes pip skip TLS certificate verification for a host,
     so it is only emitted for plain-HTTP indexes (which pip refuses to use
@@ -143,7 +142,7 @@ def build_trusted_host_args(urls):
 
 
 def get_pytorch_index_candidates(primary_index_url):
-    """返回 PyTorch 包安装时应尝试的专用源列表。"""
+    """Return the list of dedicated sources to try when installing PyTorch packages."""
     normalized_primary = normalize_index_url(primary_index_url)
     candidates = []
     seen = set()
@@ -177,7 +176,7 @@ _pyproject_cache = None
 
 
 def normalize_variant(name):
-    """校验并规范化依赖方案。"""
+    """Validate and normalise the dependency variant."""
     if not name:
         return None
     name = str(name).strip().lower()
@@ -194,7 +193,7 @@ def _load_pyproject():
 
 
 def _dep_base_name(dep):
-    """从依赖串中取出包名（去掉版本约束/extras/@url）"""
+    """Take the package name out of a dependency string (dropping version constraints, extras and @url)"""
     import re
     m = re.match(r'^\s*([A-Za-z0-9._-]+)', dep or '')
     return m.group(1) if m else (dep or '').strip()
@@ -224,10 +223,10 @@ def _dependency_applies(dep):
 
 
 def _resolve_platform_source(name, sources):
-    """把 tool.uv.sources 中按平台区分的 url/git 来源转成 pip 可用的依赖串。
+    """Turn the per-platform url/git sources in tool.uv.sources into dependency strings pip can use.
 
-    仅处理 url/git 类型来源（如 pydensecrf）；index 类型来源（torch 等）返回 None，
-    交给 PyTorch 专用源逻辑处理。
+    Only url/git sources are handled (such as pydensecrf); index sources (torch and the like) return None
+    and are left to the logic for dedicated PyTorch sources.
     """
     entries = sources.get(name)
     if not entries:
@@ -246,9 +245,9 @@ def _resolve_platform_source(name, sources):
 
 
 def get_variant_packages(variant):
-    """从 pyproject.toml 取出公共依赖和指定 dependency group 的依赖列表。
+    """Get the common dependencies and the dependencies of the given dependency group from pyproject.toml.
 
-    返回公共依赖与指定后端依赖组的完整包列表。
+    Returns the full package list of the common dependencies and the given backend dependency group.
     """
     variant = normalize_variant(variant)
     if variant is None:
@@ -276,7 +275,7 @@ def get_variant_packages(variant):
 
 
 def get_variant_index_url(variant):
-    """获取变体对应的 PyTorch 主源。"""
+    """Get the primary PyTorch source of a variant."""
     variant = normalize_variant(variant)
     if variant is None:
         return None
@@ -298,7 +297,7 @@ def get_variant_index_url(variant):
 
 
 def is_python_version_valid():
-    """检查Python版本是否符合要求"""
+    """Check whether the Python version meets the requirement"""
     if sys.version_info < PYTHON_VERSION_MIN:
         print(L(f'错误: 需要 Python {PYTHON_VERSION_MIN[0]}.{PYTHON_VERSION_MIN[1]}+ ', f'Error: Python {PYTHON_VERSION_MIN[0]}.{PYTHON_VERSION_MIN[1]}+ is required'))
         print(L(f'当前版本: Python {sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}', f'Current version: Python {sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}'))
@@ -312,16 +311,16 @@ def is_python_version_valid():
 
 
 def run(command, desc=None, errdesc=None, custom_env=None, live=False, timeout=None, capture_output=True):
-    """执行系统命令
-    
+    """Run a system command
+
     Args:
-        command: 要执行的命令
-        desc: 描述信息
-        errdesc: 错误描述
-        custom_env: 自定义环境变量
-        live: 是否实时显示输出（不捕获）
-        timeout: 超时时间（秒），None 表示无超时
-        capture_output: 是否捕获输出，False 时丢弃输出避免死锁
+        command: the command to run
+        desc: description
+        errdesc: error description
+        custom_env: custom environment variables
+        live: whether output is shown as it arrives (not captured)
+        timeout: timeout (seconds); None means no timeout
+        capture_output: whether output is captured; when False it is discarded to avoid a deadlock
     """
     if desc is not None:
         print(desc)
@@ -414,11 +413,11 @@ Timeout: {timeout} s"""))
 
 
 def run_pip(args, desc=None):
-    """使用pip安装包，支持多镜像源自动回退"""
+    """Install a package with pip, falling back through several mirrors automatically"""
     import urllib.parse
     
     def build_pip_command(pip_args, mirror_url=None):
-        """构建pip命令"""
+        """Build the pip command"""
         index_url_line = f' --index-url {mirror_url}' if mirror_url else ''
         trusted_host_line = ''
         
@@ -493,7 +492,7 @@ PYTORCH_SOURCE_EXCLUDED = ['torchsummary', 'torchmetrics']
 
 
 def is_pytorch_source_package(pkg_name):
-    """检查是否是需要从 PyTorch 源下载的包"""
+    """Check whether a package has to be downloaded from a PyTorch source"""
     pkg_lower = (pkg_name or '').lower()
     if pkg_lower in PYTORCH_SOURCE_EXCLUDED:
         return False
@@ -504,9 +503,9 @@ def is_pytorch_source_package(pkg_name):
 
 
 def find_uv():
-    """查找 uv 命令（返回可直接拼进命令行的字符串），找不到返回 None
+    """Find the uv command (returns a string that can go straight into a command line), or None when it is not found
 
-    查找顺序: 打包目录自带 uv -> 系统 PATH -> 当前环境已安装的 uv 模块
+    Search order: uv bundled in the package folder -> the system PATH -> the uv module installed in the current environment
     """
     for candidate in (PATH_ROOT / 'packaging' / 'uv.exe', PATH_ROOT / 'uv.exe'):
         if candidate.exists():
@@ -525,7 +524,7 @@ def find_uv():
 
 
 def run_pip_packages_fallback(packages, primary_index_url, desc=None):
-    """pip 逐包安装（未检测到 uv 时的回退路径），失败时从失败的包开始切换镜像重试"""
+    """Install package by package with pip (the fallback path when uv is not found); on failure switch mirror and retry from the package that failed"""
     import urllib.parse
 
     def build_pip_command(pip_args, index_source=None):
@@ -584,10 +583,10 @@ def run_pip_packages_fallback(packages, primary_index_url, desc=None):
 
 
 def run_uv_packages(uv, packages, primary_index_url, desc=None):
-    """使用 uv 批量安装包（快速路径）。
+    """Install packages in one go with uv (the fast path).
 
-    PyTorch 相关包走 PyTorch 专用源（含镜像回退），其余包走 PyPI 镜像（含回退）。
-    任一批次所有源都失败时抛异常，由调用方回退到 pip 逐包安装。
+    PyTorch packages use the dedicated PyTorch sources (with mirror fallback), and the other packages use the PyPI mirrors (with fallback).
+    When every source fails for a batch, an exception is raised and the caller falls back to installing package by package with pip.
     """
     import urllib.parse
 
@@ -652,12 +651,12 @@ def run_uv_packages(uv, packages, primary_index_url, desc=None):
 
 
 def run_pip_requirements(variant, desc=None, exclude_packages=None):
-    """安装指定 dependency group 中的包，失败时从失败的包开始切换镜像重试
+    """Install the packages of the given dependency group; on failure switch mirror and retry from the package that failed
 
     Args:
-        variant: 依赖方案 (cpu/gpu/amd/metal)
-        desc: 描述信息
-        exclude_packages: 需要排除的包名列表（小写），如 AMD 模式下跳过 PyTorch 生态包
+        variant: the dependency variant (cpu/gpu/amd/metal)
+        desc: description
+        exclude_packages: list of package names to leave out (lower case), such as skipping the PyTorch ecosystem packages in AMD mode
     """
     # Read the package list and the primary PyTorch source from pyproject.toml
     packages = get_variant_packages(variant)
@@ -670,7 +669,7 @@ def run_pip_requirements(variant, desc=None, exclude_packages=None):
 
 
 def run_pip_packages(packages, primary_index_url, desc=None):
-    """安装包列表：检测到 uv 用 uv 批量安装（快），否则用 pip 逐包安装（兼容）"""
+    """Install a list of packages: in one go with uv when it is found (fast), otherwise package by package with pip (compatible)"""
     if not packages:
         print(L(f"[警告] {desc or '依赖列表'} 中没有找到有效的依赖包", f"[WARNING] No valid packages found in {desc or 'the dependency list'}"))
         return
@@ -683,7 +682,7 @@ def run_pip_packages(packages, primary_index_url, desc=None):
 
 
 def ensure_git_safe_directory():
-    """确保当前目录在 Git safe.directory 列表中，解决所有权问题"""
+    """Make sure the current folder is in Git's safe.directory list, which solves ownership problems"""
     try:
         # Add the project root to Git safe.directory
         subprocess.run(
@@ -761,7 +760,7 @@ def restart_desktop_ui():
 
 
 def classify_gpu_line(line):
-    """对单行显卡名称进行分类，返回 GPU 类型或 None"""
+    """Classify a single line with a graphics card name; returns the GPU type or None"""
     if not line:
         return None
     upper = line.upper()
@@ -775,7 +774,7 @@ def classify_gpu_line(line):
 
 
 def parse_all_gpus(output):
-    """从多行输出中解析所有显卡，返回 [(type, name), ...] 列表"""
+    """Parse all graphics cards from multi-line output; returns a list [(type, name), ...]"""
     if not output:
         return []
     results = []
@@ -799,12 +798,12 @@ def parse_all_gpus(output):
 
 
 def normalize_gpu_name(gpu_name):
-    """标准化显卡名称，用于跨检测方式去重。"""
+    """Normalise a graphics card name, for de-duplication across detection methods."""
     return ' '.join((gpu_name or '').strip().split()).upper()
 
 
 def add_gpu_results(all_gpus, gpu_results):
-    """合并多种检测方式的结果，避免第一个 API 只返回核显。"""
+    """Merge the results of several detection methods, so the first API returning only the integrated card does not win."""
     seen_names = {normalize_gpu_name(name) for _, name in all_gpus}
     for gpu_type, gpu_name in gpu_results:
         key = normalize_gpu_name(gpu_name)
@@ -814,7 +813,7 @@ def add_gpu_results(all_gpus, gpu_results):
 
 
 def is_integrated_gpu(gpu_type, gpu_name):
-    """判断是否为核显/低性能显示适配器。"""
+    """Whether it is an integrated or low-performance display adapter."""
     upper = (gpu_name or '').upper()
 
     # Rule out the usual discrete card markers first, so "Radeon RX ... Graphics" is not mistaken for integrated graphics.
@@ -838,7 +837,7 @@ def is_integrated_gpu(gpu_type, gpu_name):
 
 
 def check_nvidia_cuda_version():
-    """检查 NVIDIA CUDA 驱动版本"""
+    """Check the CUDA version of the NVIDIA driver"""
     try:
         # Try to run nvidia-smi to get the driver version
         cmd = 'nvidia-smi --query-gpu=driver_version --format=csv,noheader'
@@ -868,7 +867,7 @@ def check_nvidia_cuda_version():
 
 
 def prompt_user_choose_gpu(all_gpus, interactive=True):
-    """选择多显卡中的计算设备；非交互模式直接采用默认设备。"""
+    """Choose the compute device among several graphics cards; in non-interactive mode the default device is taken directly."""
     # Only one graphics card: return it directly
     if len(all_gpus) <= 1:
         return all_gpus[0]
@@ -1115,12 +1114,12 @@ def _gpu_details(all_gpus, interactive):
 
 
 def detect_gpu(interactive=True):
-    """检测GPU类型 - 使用多种方法以提高兼容性
-    
-    支持双显卡笔记本（如 NVIDIA 独显 + AMD 核显）：
-    - 先列出所有检测到的显卡
-    - 如果检测到多张显卡，让用户选择使用哪张
-    - 每张显卡的类型和名称严格对应，不会张冠李戴
+    """Detect the GPU type - several methods are used, for better compatibility
+
+    Supports laptops with two graphics cards (such as a discrete NVIDIA card + integrated AMD graphics):
+    - every detected card is listed first
+    - when several cards are found, the user chooses which one to use
+    - the type and the name of each card stay strictly paired, so they are never mixed up
     """
     try:
         if sys.platform == 'win32':
@@ -1140,9 +1139,9 @@ def detect_gpu(interactive=True):
 
 
 def detect_amd_gfx_version(gpu_name):
-    """根据 AMD 显卡名称检测对应的 gfx 版本
-    
-    返回: (gfx_version, architecture_name, has_torch_support) 或 (None, None, False)
+    """Detect the gfx version that matches an AMD graphics card name
+
+    Returns: (gfx_version, architecture_name, has_torch_support) or (None, None, False)
     """
     if not gpu_name:
         return None, None, False
@@ -1231,7 +1230,7 @@ def detect_amd_gfx_version(gpu_name):
 
 
 def print_supported_amd_gpu_types():
-    """打印当前支持的 AMD 显卡类型"""
+    """Print the AMD graphics card types currently supported"""
     print(L('当前支持的 AMD 显卡类型:', 'AMD graphics cards currently supported:'))
     print('  - MI300A / MI300X (gfx94X-dcgpu)')
     print('  - MI350X / MI355X (gfx950-dcgpu)')
@@ -1242,7 +1241,7 @@ def print_supported_amd_gpu_types():
 
 
 def choose_when_amd_unsupported():
-    """AMD 不支持时给用户选择，默认 CPU"""
+    """Let the user choose when the AMD card is not supported; CPU by default"""
     print()
     print(L('⚠️  当前显卡不在 AMD ROCm PyTorch 支持列表中。', '⚠️  This graphics card is not on the AMD ROCm PyTorch support list.'))
     print_supported_amd_gpu_types()
@@ -1271,7 +1270,7 @@ PYTORCH_RUNTIME_BROKEN_MARKERS = ("installation broken", "安装损坏", "WinErr
 
 
 def detect_installed_pytorch_version():
-    """检测当前安装的PyTorch版本类型(CPU/GPU/Metal)"""
+    """Detect the type (CPU/GPU/Metal) of the installed PyTorch build"""
     try:
         # Detect in a subprocess, to avoid loading the torch DLLs in the main process,
         # so that torch can be uninstalled when needed
@@ -1329,7 +1328,7 @@ except OSError as e:
 
 
 def dependency_variant_from_pytorch(pytorch_type, detail):
-    """把已安装 PyTorch 类型映射到精确 dependency group。"""
+    """Map the type of the installed PyTorch to the exact dependency group."""
     if pytorch_type == "GPU":
         return 'cuda12.6' if "CUDA 12." in (detail or "") else 'cuda13.0'
     if pytorch_type == "Metal":
@@ -1342,7 +1341,7 @@ def dependency_variant_from_pytorch(pytorch_type, detail):
 
 
 def get_requirements_file_from_env():
-    """从当前虚拟环境检测应该使用哪个依赖方案。"""
+    """Detect from the current virtual environment which dependency variant should be used."""
     pytorch_type, detail = detect_installed_pytorch_version()
     variant = dependency_variant_from_pytorch(pytorch_type, detail)
     return variant, pytorch_type if variant else None, detail
@@ -1434,7 +1433,7 @@ def repair_broken_pytorch_runtime(pytorch_type, detail, *, allow_reinstall=True)
     return None, detected_detail, False
 
 def detect_nvidia_compute_capability(gpu_name=None):
-    """用 nvidia-smi 获取指定 NVIDIA 显卡的计算能力。"""
+    """Get the compute capability of the given NVIDIA card with nvidia-smi."""
     try:
         output = subprocess.check_output(
             [
@@ -1478,7 +1477,7 @@ def detect_nvidia_compute_capability(gpu_name=None):
 
 
 def is_nvidia_10_series_gpu(gpu_name):
-    """识别常见 GeForce 10 系 Pascal 显卡，避免依赖计算能力查询。"""
+    """Recognise the common GeForce 10 series Pascal cards, without relying on a compute capability query."""
     import re
 
     normalized = ' '.join((gpu_name or '').upper().split())
@@ -1486,7 +1485,7 @@ def is_nvidia_10_series_gpu(gpu_name):
 
 
 def is_nvidia_50_series_gpu(gpu_name):
-    """识别 GeForce RTX 50 系；该架构不支持项目的 CUDA 12.6 构建。"""
+    """Recognise the GeForce RTX 50 series; that architecture does not support the project's CUDA 12.6 build."""
     import re
 
     normalized = ' '.join((gpu_name or '').upper().split())
@@ -1494,11 +1493,11 @@ def is_nvidia_50_series_gpu(gpu_name):
 
 
 def select_nvidia_dependency_variant(cuda_major, compute_capability=None, gpu_name=None):
-    """根据驱动 CUDA 上限和 GPU 架构选择 NVIDIA 依赖组。
+    """Choose the NVIDIA dependency group from the CUDA limit of the driver and the GPU architecture.
 
-    GeForce 10 系显卡显式强制使用 cuda12.6。RTX 50 系必须使用 cuda13.0；
-    驱动尚未支持 CUDA 13 时返回 None，要求用户先升级驱动。其余显卡中，
-    只有计算能力 7.5 及以上的 Turing 或更新架构才能使用 cuda13.0。
+    GeForce 10 series cards are explicitly forced to cuda12.6. The RTX 50 series must use cuda13.0;
+    when the driver does not support CUDA 13 yet, None is returned and the user has to upgrade the driver first. Among the other cards,
+    only Turing or newer architectures with a compute capability of 7.5 or above can use cuda13.0.
     """
     if is_nvidia_50_series_gpu(gpu_name):
         return 'cuda13.0' if cuda_major is not None and cuda_major >= 13 else None
@@ -2107,9 +2106,9 @@ def _install_amd_rocm_for_windows(amd_gfx_version):
 
 
 def prepare_environment(args):
-    """准备运行环境
-    
-    返回: (use_amd_pytorch, amd_gfx_version) - 是否使用AMD PyTorch及其gfx版本
+    """Prepare the runtime environment
+
+    Returns: (use_amd_pytorch, amd_gfx_version) - whether AMD PyTorch is used, and its gfx version
     """
 
     # A broken torch DLL must be fixed before GPU detection and variant
@@ -2280,12 +2279,12 @@ def save_maint_config(**updates):
 
 
 def L(zh, en):
-    """双语文案：按当前语言返回中文或英文"""
+    """Two-language text: returns the Chinese or the English version by the current language"""
     return zh if LANG == 'zh' else en
 
 
 def _detect_system_language():
-    """检测系统语言：中文环境返回 zh，其他返回 en"""
+    """Detect the system language: zh in a Chinese environment, en otherwise"""
     lang = ''
     try:
         import locale
@@ -2306,7 +2305,7 @@ def _detect_system_language():
 
 
 def init_language():
-    """首次运行按系统语言自动选择并保存，之后从配置文件读取（菜单可随时切换）"""
+    """On first run the language is chosen from the system language and saved; afterwards it is read from the configuration file (the menu can switch it at any time)"""
     global LANG
     lang = load_maint_config().get('language')
     if lang in ('zh', 'en'):
@@ -2317,7 +2316,7 @@ def init_language():
 
 
 def switch_language():
-    """中英文互切并持久化"""
+    """Switch between Chinese and English and save the choice"""
     global LANG
     LANG = 'en' if LANG == 'zh' else 'zh'
     save_maint_config(language=LANG)
@@ -2331,12 +2330,12 @@ def _git_output(cmd_args, timeout=15):
 
 
 def get_remote_url():
-    """获取当前 origin 远程地址"""
+    """Get the current origin remote address"""
     return _git_output(["config", "--get", "remote.origin.url"]) or ""
 
 
 def get_mirror_display_name(url=None):
-    """把远程地址转成可读的镜像源名称"""
+    """Turn a remote address into a readable mirror name"""
     url = (url if url is not None else get_remote_url()).strip()
     normalized = url.removesuffix(".git")
     for zh_name, en_name, mirror_url in GIT_MIRRORS:
@@ -2346,12 +2345,12 @@ def get_mirror_display_name(url=None):
 
 
 def get_current_branch():
-    """返回 (分支名或tag名, 是否游离状态)"""
+    """Returns (branch or tag name, whether HEAD is detached)"""
     return shared_current_branch(PATH_ROOT, executable=git)
 
 
 def get_update_branch():
-    """获取更新分支，自动模式可显式指定 main 或 beta。"""
+    """Get the update branch; automatic mode can name main or beta explicitly."""
     if UPDATE_BRANCH_OVERRIDE in SUPPORTED_BRANCHES:
         return UPDATE_BRANCH_OVERRIDE
     return shared_update_branch(
@@ -2362,7 +2361,7 @@ def get_update_branch():
 
 
 def switch_mirror():
-    """切换 git 镜像源，返回是否切换成功"""
+    """Switch the git mirror; returns whether the switch succeeded"""
     current = get_remote_url().removesuffix('.git')
     print()
     print("=" * 40)
@@ -2413,7 +2412,7 @@ def _run_git_fetch(fetch_args=None, *, capture_output=False, timeout=300):
 
 
 def git_fetch_with_mirror_prompt(fetch_args=None, desc=None):
-    """git fetch，失败时推荐切换到另一条线路并重试"""
+    """git fetch; on failure, recommend switching to the other route and retry"""
     while True:
         print((desc or L('获取远程更新', 'Fetching remote updates')) + '...')
         try:
@@ -2450,7 +2449,7 @@ def git_fetch_with_mirror_prompt(fetch_args=None, desc=None):
 
 
 def switch_branch():
-    """切换分支 (main/beta)，切换后强制同步到远程"""
+    """Switch branch (main/beta), then force a sync to the remote"""
     branch, detached = get_current_branch()
     print()
     print("=" * 40)
@@ -2492,7 +2491,7 @@ def switch_branch():
 
 
 def switch_version_by_tag():
-    """按 tag 切换版本（切换后处于游离状态）"""
+    """Switch version by tag (HEAD is detached afterwards)"""
     print()
     print("=" * 40)
     print(L("切换版本 (按 tag)", "Switch Version (by tag)"))
@@ -2543,7 +2542,7 @@ def switch_version_by_tag():
 
 
 def check_version_info():
-    """检查版本信息（基于当前分支/镜像源）"""
+    """Check the version information (based on the current branch and mirror)"""
     ensure_git_safe_directory()  # Make sure safe.directory is set
     print()
     print(L("正在检查版本...", "Checking version..."))
@@ -2619,11 +2618,11 @@ def check_version_info():
 
 
 def update_code_force(skip_confirm=False, target_branch=None):
-    """强制更新代码（同步到远程分支），同步失败时提示切换镜像源重试
+    """Force-update the code (sync to the remote branch); when the sync fails, suggest switching mirror and retrying
 
     Args:
-        skip_confirm: 是否跳过确认提示（用于完整更新流程中）
-        target_branch: 目标分支（默认当前分支，游离状态回落 main）
+        skip_confirm: whether the confirmation prompt is skipped (used inside the full update flow)
+        target_branch: target branch (the current branch by default; falls back to main when HEAD is detached)
     """
     ensure_git_safe_directory()  # Make sure safe.directory is set
     branch = target_branch or get_update_branch()
@@ -2700,7 +2699,7 @@ def update_code_force(skip_confirm=False, target_branch=None):
 
 
 def update_dependencies(args, *, select_cuda_variant=False):
-    """更新依赖"""
+    """Update the dependencies"""
     print()
     print("=" * 40)
     print(L("更新/安装依赖", "Update / install dependencies"))
@@ -2744,10 +2743,10 @@ def update_dependencies(args, *, select_cuda_variant=False):
 
 
 def update_dependencies_selective(args, missing_packages):
-    """只更新/安装缺失的依赖包
-    
-    正确处理 PyTorch 相关包需要从专门源下载的逻辑
-    安装前会检查包是否已安装，避免重复安装
+    """Only update or install the missing dependency packages
+
+    Handles correctly that PyTorch packages have to be downloaded from dedicated sources.
+    Before installing, it checks whether a package is already installed, to avoid installing it twice
     """
     print()
     print("=" * 40)
@@ -2816,7 +2815,7 @@ def update_dependencies_selective(args, missing_packages):
 
 
 def check_all_updates():
-    """检查所有更新（代码+依赖）并返回检查结果"""
+    """Check all updates (code + dependencies) and return the result"""
     ensure_git_safe_directory()
     update_branch = get_update_branch()
     print()
@@ -2970,7 +2969,7 @@ def check_all_updates():
 
 
 def cleanup_caches():
-    """清理 uv/pip 下载缓存，释放磁盘空间（自动执行，不询问）"""
+    """Clear the uv/pip download caches to free disk space (runs automatically, without asking)"""
     print()
     print(L('正在清理下载缓存...', 'Clearing the download cache...'))
     os.environ.setdefault('UV_CACHE_DIR', str(PATH_ROOT / 'packaging' / 'uv_cache'))
@@ -2984,13 +2983,13 @@ def cleanup_caches():
 
 
 def run_deps_with_retry(task, action_label_zh, action_label_en):
-    """执行依赖安装任务，失败时询问是否重试（安装/更新共用）
+    """Run a dependency installation task and ask whether to retry on failure (shared by install and update)
 
     Args:
-        task: 无参函数，返回 False 或抛异常表示失败
-        action_label_zh/en: 动作名称，用于提示文案
+        task: function without arguments; returning False or raising means failure
+        action_label_zh/en: name of the action, for the prompt text
     Returns:
-        bool: 是否最终成功
+        bool: whether it succeeded in the end
     """
     while True:
         try:
@@ -3103,7 +3102,7 @@ def resume_updated_code(args, action):
 
 
 def run_install(args):
-    """安装：选择线路 → 同步代码 → 检测显卡并选择 CPU/GPU 版本 → 安装依赖"""
+    """Install: choose the route → sync the code → detect the graphics card and choose the CPU/GPU variant → install the dependencies"""
     print()
     print("=" * 40)
     print(L("安装", "Install"))
@@ -3145,7 +3144,7 @@ def run_install(args):
 
 
 def run_full_update(args, automatic=False):
-    """更新代码和依赖；桌面端自动更新时跳过二次确认。"""
+    """Update the code and the dependencies; an automatic update from the desktop app skips the second confirmation."""
     code_needs_update, deps_needs_update, _, _, req_file, missing_packages = check_all_updates()
     if not code_needs_update and not deps_needs_update:
         if not cleanup_runtime_dependencies(req_file):
@@ -3205,7 +3204,7 @@ def run_full_update(args, automatic=False):
 
 
 def maintenance_menu(resume_action=None, automatic=False):
-    """运行交互式维护菜单或桌面端确认后的自动更新。"""
+    """Run the interactive maintenance menu, or the automatic update confirmed in the desktop app."""
     init_language()
     print()
     print("=" * 40)

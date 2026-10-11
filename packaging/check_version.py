@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-版本检查脚本 - 从launch.py合并而来
-检查当前版本和远程版本
+Version check script - merged in from launch.py.
+Checks the current version and the remote version
 """
 import subprocess
 import sys
@@ -18,14 +18,14 @@ from desktop_qt_ui.core.git_update_helpers import non_interactive_git_env
 
 # Git path
 def get_git_command():
-    """获取git命令路径"""
+    """Get the path of the git command"""
     portable_git = PATH_ROOT / "PortableGit" / "cmd" / "git.exe"
     if portable_git.exists():
         return str(portable_git)
     return os.environ.get('GIT', "git")
 
 def get_current_version():
-    """获取当前版本"""
+    """Get the current version"""
     version_file = Path(__file__).parent / "VERSION"
     try:
         if version_file.exists():
@@ -36,7 +36,7 @@ def get_current_version():
         return "unknown"
 
 def get_remote_version():
-    """获取远程版本"""
+    """Get the remote version"""
     git_cmd = get_git_command()
     try:
         # Get the content of the remote VERSION file with git show
@@ -54,7 +54,7 @@ def get_remote_version():
         return "unknown"
 
 def fetch_remote_refs(git_cmd):
-    """同步远程引用，失败时返回 False。"""
+    """Sync the remote references; returns False on failure."""
     try:
         result = subprocess.run(
             [git_cmd, 'fetch', 'origin'],
@@ -68,7 +68,7 @@ def fetch_remote_refs(git_cmd):
         return False
 
 def main():
-    """主函数"""
+    """Main function"""
     parser = argparse.ArgumentParser(description='版本检查脚本')
     parser.add_argument('--brief', action='store_true', help='简洁模式：仅显示版本和更新提示')
     parser.add_argument('--export-vars', action='store_true', help='导出环境变量格式（用于bat脚本）')

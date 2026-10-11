@@ -1,6 +1,6 @@
 """
-应用版本号辅助函数。
-统一处理开发环境和 PyInstaller 打包环境下的版本读取与显示格式。
+Helper functions for the application version.
+One place for reading the version and formatting it for display, in development and in a PyInstaller build.
 """
 from __future__ import annotations
 
@@ -8,7 +8,7 @@ from utils.resource_helper import iter_existing_resource_paths
 
 
 def get_app_version(default: str = "unknown") -> str:
-    """从唯一版本文件 packaging/VERSION 读取应用版本号。"""
+    """Read the application version from the single version file, packaging/VERSION."""
     for version_path in iter_existing_resource_paths(("packaging/VERSION",)):
         try:
             with open(version_path, "r", encoding="utf-8") as version_file:
@@ -21,7 +21,7 @@ def get_app_version(default: str = "unknown") -> str:
 
 
 def format_app_title(base_title: str, version: str | None) -> str:
-    """生成带版本号的窗口标题。"""
+    """Build the window title with the version number."""
     normalized_version = (version or "").strip()
     if not normalized_version or normalized_version == "unknown":
         return base_title
@@ -29,7 +29,7 @@ def format_app_title(base_title: str, version: str | None) -> str:
 
 
 def format_version_label(version: str | None) -> str:
-    """生成侧边栏显示用的版本标签。"""
+    """Build the version label shown in the sidebar."""
     normalized_version = (version or "").strip()
     if not normalized_version or normalized_version == "unknown":
         return ""

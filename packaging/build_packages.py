@@ -11,7 +11,7 @@ sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8')
 
 def run_command_realtime(cmd, cwd=None):
-    """实时执行一个 shell 命令并打印输出。"""
+    """Run a shell command and print its output as it arrives."""
     use_shell = isinstance(cmd, str)
     print(f"\nExecuting: {cmd}")
     try:
@@ -48,7 +48,7 @@ def run_command_realtime(cmd, cwd=None):
 
 
 class Builder:
-    """封装了构建和打包逻辑的类"""
+    """Class that wraps the build and packaging logic"""
 
     def __init__(self, app_version=None):
         # Strip 'v' prefix from version string, if present
@@ -56,7 +56,7 @@ class Builder:
         self.version_file = Path("packaging/VERSION")
 
     def get_effective_version(self):
-        """获取当前构建应使用的版本号。"""
+        """Get the version number the current build should use."""
         if self.app_version:
             return self.app_version.strip()
 
@@ -70,7 +70,7 @@ class Builder:
         return None
 
     def sync_version_file(self):
-        """将传入的构建版本写回 packaging/VERSION，便于本地构建与调试。"""
+        """Write the build version passed in back to packaging/VERSION, for local builds and debugging."""
         effective_version = self.get_effective_version()
         if not effective_version:
             print("Warning: no application version available.")
@@ -85,7 +85,7 @@ class Builder:
 
 
     def build_executables(self, version_type):
-        """使用 PyInstaller 构建指定版本 (cpu 或 gpu)"""
+        """Build the given variant (cpu or gpu) with PyInstaller"""
         print("=" * 60)
         print(f"Building {version_type.upper()} Executable")
         print("=" * 60)

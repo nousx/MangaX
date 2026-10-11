@@ -1,7 +1,7 @@
 
 """
-应用业务逻辑层
-处理应用的核心业务逻辑，与UI层分离
+Business logic layer of the application.
+Holds the core business logic of the app, separate from the UI layer
 """
 import asyncio
 import base64
@@ -77,7 +77,7 @@ from utils.font_list import fonts_directory
 
 @dataclass
 class AppConfig:
-    """应用配置信息"""
+    """Application configuration information"""
     window_size: tuple = (1200, 800)
     theme: str = "dark"
     language: str = "zh_CN"
@@ -93,8 +93,8 @@ _GEMINI_BROWSER_HEADERS = GEMINI_CURL_HEADERS
 
 def _resolve_archive_output_dir_from_extracted_image(image_path: str, output_folder: str) -> Optional[str]:
     """
-    如果 image_path 指向输出目录中的压缩包解压图片，返回对应压缩包输出目录。
-    例如: <output>/A/B/1/original_images/page.png -> <output>/A/B/1
+    If image_path points to an image extracted from an archive inside the output folder, return the output folder of that archive.
+    For example: <output>/A/B/1/original_images/page.png -> <output>/A/B/1
     """
     if not image_path or not output_folder:
         return None
@@ -123,7 +123,7 @@ def _resolve_archive_output_dir_from_extracted_image(image_path: str, output_fol
 
 
 class MainAppLogic(QObject):
-    """主页面业务逻辑控制器"""
+    """Business logic controller of the main page"""
     files_added = pyqtSignal(list)
     files_cleared = pyqtSignal()
     file_removed = pyqtSignal(str)
@@ -190,15 +190,15 @@ class MainAppLogic(QObject):
             return False
 
     def _t(self, key: str, **kwargs) -> str:
-        """翻译辅助方法"""
+        """Translation helper methods"""
         if self.i18n:
             return self.i18n.translate(key, **kwargs)
         return key
     
     def _ui_log(self, message: str, level: str = "INFO"):
         """
-        输出到日志文件
-        使用 root logger 确保写入 main.py 配置的日志文件
+        Write to the log file.
+        The root logger is used, so the record goes to the log file set up by main.py
         """
         try:
             root_logger = logging.getLogger()
@@ -440,16 +440,16 @@ class MainAppLogic(QObject):
 
     # region Preset management
     def get_presets_list(self) -> List[str]:
-        """获取所有预设名称列表"""
+        """Get the list of all preset names"""
         return self.preset_service.get_presets_list()
     
     @pyqtSlot(str)
     def save_preset(self, preset_name: str, copy_current: bool = False) -> bool:
-        """保存预设
-        
+        """Save a preset
+
         Args:
-            preset_name: 预设名称
-            copy_current: 是否复制当前配置。False=创建空白预设，True=复制当前配置
+            preset_name: name of the preset
+            copy_current: whether the current configuration is copied. False = create a blank preset, True = copy the current configuration
         """
         try:
             preset_env_keys = self.config_service.get_all_preset_env_vars()
@@ -481,7 +481,7 @@ class MainAppLogic(QObject):
     
     @pyqtSlot(str)
     def load_preset(self, preset_name: str) -> bool:
-        """加载预设并完全替换.env文件"""
+        """Load a preset and replace the .env file completely"""
         try:
             # Load the preset file
             preset_env_vars = self.preset_service.load_preset(preset_name)
@@ -503,7 +503,7 @@ class MainAppLogic(QObject):
     
     @pyqtSlot(str)
     def delete_preset(self, preset_name: str) -> bool:
-        """删除预设"""
+        """Delete a preset"""
         try:
             success = self.preset_service.delete_preset(preset_name)
             if success:
@@ -878,7 +878,7 @@ class MainAppLogic(QObject):
             return await asyncio.get_running_loop().run_in_executor(None, sync_test)
 
     async def test_api_connection_async(self, translator_key: str, api_key: str, api_base: str = None, model: str = None) -> tuple[bool, str]:
-        """异步测试API连接（如果指定了模型，会测试该模型是否可用）"""
+        """Test the API connection asynchronously (when a model is given, that model is tested for availability)"""
         try:
             normalized_key = self._normalize_api_test_target(translator_key)
             if self._is_openai_compatible_target(normalized_key) or "gemini" in normalized_key:
@@ -942,7 +942,7 @@ class MainAppLogic(QObject):
             return False, self._t("api_test_error_connection_failed", error=str(e))
     
     async def get_available_models_async(self, translator_key: str, api_key: str, api_base: str = None) -> tuple[bool, List[str], str]:
-        """异步获取可用模型列表"""
+        """Get the list of available models asynchronously"""
         try:
             normalized_key = self._normalize_api_test_target(translator_key)
             if self._is_openai_compatible_target(normalized_key) or "gemini" in normalized_key:
@@ -1477,7 +1477,7 @@ class MainAppLogic(QObject):
         return options_map.get(key)
     @pyqtSlot()
     def export_config(self):
-        """导出配置（排除敏感信息）"""
+        """Export the configuration (without sensitive information)"""
         import json
 
         from PyQt6.QtWidgets import QFileDialog, QMessageBox
@@ -1532,7 +1532,7 @@ class MainAppLogic(QObject):
     
     @pyqtSlot()
     def import_config(self):
-        """导入配置（保留现有的敏感信息）"""
+        """Import a configuration (the existing sensitive information is kept)"""
         import json
 
         from PyQt6.QtWidgets import QFileDialog, QMessageBox
@@ -1801,7 +1801,7 @@ class MainAppLogic(QObject):
 
     # region Core task logic
     def start_file_scanning(self, task_config: dict):
-        """启动后台文件扫描任务"""
+        """Start the background file scan task"""
         self.state_manager.set_translating(True)
         self.state_manager.set_status_message("正在准备文件...")
 
@@ -1850,7 +1850,7 @@ class MainAppLogic(QObject):
         excluded_subfolders,
         excluded_files,
     ):
-        """文件扫描完成，启动翻译任务"""
+        """The file scan is done; start the translation task"""
         if request_id != self._scan_request_id or self._shutdown_started:
             return
 
@@ -1892,7 +1892,7 @@ class MainAppLogic(QObject):
         QMessageBox.critical(None, "扫描失败", f"扫描文件时出错:\n{error_msg}")
 
     def _start_translation_worker(self, files_to_process, task_config):
-        """启动翻译工作线程（内部方法，由扫描完成后调用）"""
+        """Start the translation worker (internal method, called after the scan is done)"""
         cli = task_config.get('cli', {})
         if cli.get('export_from_local_json') and (cli.get('original') or cli.get('save_text')):
             from manga_translator.utils.path_manager import find_json_path
@@ -2043,7 +2043,7 @@ class MainAppLogic(QObject):
         self.start_file_scanning(task_config)
 
     def on_task_finished(self, results, task_id):
-        """处理后端已经保存完成的任务结果。"""
+        """Handle the results of tasks the backend has already saved."""
         # Check that the task ID matches, so a stopped task cannot update the state
         if task_id != self.current_task_id:
             return
@@ -2154,7 +2154,7 @@ class MainAppLogic(QObject):
                 self._ui_log(f"Failed to clean up temporary archive files: {exc}", "WARNING")
 
     def _cleanup_after_task(self):
-        """在后台清理临时文件；GUI 线程只交接引用。"""
+        """Remove temporary files in the background; the GUI thread only hands over the references."""
         try:
             if self._cleanup_future is not None and not self._cleanup_future.done():
                 return self._cleanup_future
@@ -2208,7 +2208,7 @@ class MainAppLogic(QObject):
             self.main_view.update_progress(current, total, message)
 
     def stop_task(self) -> bool:
-        """停止翻译任务"""
+        """Stop the translation task"""
         if self.current_worker and hasattr(self.current_worker, 'stop'):
             self._stop_requested = True
             self.state_manager.set_status_message("正在停止...")
@@ -2244,7 +2244,7 @@ class MainAppLogic(QObject):
     
     @pyqtSlot()
     def _finish_stop_task(self):
-        """后台任务真正结束后恢复 UI。"""
+        """Restore the UI once the background task has really ended."""
         self._stop_requested = False
         self.state_manager.set_translating(False)
         self.state_manager.set_status_message("任务已停止")
@@ -2302,7 +2302,7 @@ class MainAppLogic(QObject):
             return False
     
     def shutdown(self):
-        """应用关闭时的清理"""
+        """Clean-up when the application closes"""
         if self._shutdown_started:
             return
 
@@ -2399,7 +2399,7 @@ class TranslationWorker(QObject):
         self.file_service = get_file_service()
     
     def _t(self, key: str, **kwargs) -> str:
-        """翻译辅助方法"""
+        """Translation helper methods"""
         if self.i18n:
             return self.i18n.translate(key, **kwargs)
         return key
@@ -2505,14 +2505,14 @@ class TranslationWorker(QObject):
     
     def _calculate_output_path(self, image_path: str, save_info: dict) -> str:
         """
-        计算输出文件的完整路径（用于预检查文件是否存在）
-        
+        Work out the full path of the output file (used to check in advance whether the file exists)
+
         Args:
-            image_path: 输入图片的路径
-            save_info: 包含输出配置的字典
-                
+            image_path: path of the input image
+            save_info: dictionary with the output settings
+
         Returns:
-            str: 计算后的输出文件完整路径
+            str: the full path of the output file
         """
         output_folder = save_info.get('output_folder')
         output_format = save_info.get('format')
@@ -2922,7 +2922,7 @@ class TranslationWorker(QObject):
 # ============================================================================
 
 class WorkerSignals(QObject):
-    """信号包装器，因为QRunnable不能直接发送信号"""
+    """Signal wrapper, because a QRunnable cannot emit signals directly"""
     finished = pyqtSignal(object)
     error = pyqtSignal(str)
     progress = pyqtSignal(str)
@@ -2930,7 +2930,7 @@ class WorkerSignals(QObject):
 
 
 class FileScannerRunnable(QRunnable):
-    """文件扫描任务（线程池版本）"""
+    """File scan task (thread pool version)"""
 
     def __init__(self, source_files, excluded_subfolders, excluded_files, file_service,
                  output_base_dir, overwrite_extract,
@@ -2963,7 +2963,7 @@ class FileScannerRunnable(QRunnable):
         self._is_running = False
 
     def run(self):
-        """在线程池中执行"""
+        """Run in the thread pool"""
         try:
             if not self._is_running:
                 return
@@ -3132,21 +3132,21 @@ class FileScannerRunnable(QRunnable):
                 self._emit_error(str(e))
     
     def _emit_finished(self, *args):
-        """线程安全地发送完成信号"""
+        """Emit the finished signal in a thread-safe way"""
         self.signals.finished.emit(args)
     
     def _emit_error(self, msg):
-        """线程安全地发送错误信号"""
+        """Emit the error signal in a thread-safe way"""
         self.signals.error.emit(msg)
     
     def _emit_progress(self, msg):
-        """线程安全地发送进度信号"""
+        """Emit the progress signal in a thread-safe way"""
         if self._is_running:
             self.signals.progress.emit(msg)
 
 
 class TranslationRunnable(QRunnable):
-    """翻译任务（线程池版本）"""
+    """Translation task (thread pool version)"""
     
     def __init__(self, files, config_dict, output_folder, root_dir, file_to_folder_map,
                  finished_callback, error_callback, progress_callback):
@@ -3180,7 +3180,7 @@ class TranslationRunnable(QRunnable):
             self.signals.translation_progress.connect(progress_callback, type=Qt.ConnectionType.QueuedConnection)
     
     def stop(self):
-        """停止任务"""
+        """Stop the task"""
         self._is_running = False
         if self._worker is not None:
             self._worker._is_running = False
@@ -3193,7 +3193,7 @@ class TranslationRunnable(QRunnable):
                 pass
     
     def run(self):
-        """在线程池中执行"""
+        """Run in the thread pool"""
         loop = None
         try:
             import asyncio
@@ -3271,17 +3271,17 @@ class TranslationRunnable(QRunnable):
             self._loop = None
     
     def _emit_finished(self, results):
-        """线程安全地发送完成信号"""
+        """Emit the finished signal in a thread-safe way"""
         if self._is_running:
             self.signals.finished.emit((results,))
     
     def _emit_error(self, msg):
-        """线程安全地发送错误信号"""
+        """Emit the error signal in a thread-safe way"""
         if self._is_running:
             self.signals.error.emit(msg)
     
     def _emit_progress(self, current, total, message):
-        """线程安全地发送进度信号"""
+        """Emit the progress signal in a thread-safe way"""
         if not self._is_running:
             return
         now = time.monotonic()

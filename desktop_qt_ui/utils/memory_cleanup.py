@@ -1,8 +1,8 @@
 """
-内存清理工具模块
+Memory clean-up module
 
-提供统一的内存清理功能，用于翻译完成后释放模型占用的内存。
-特别针对CPU模式进行优化，因为CPU模式下模型权重直接占用RAM。
+One place for memory clean-up, used to free the memory the models hold once translation is done.
+Tuned for CPU mode in particular, where the model weights take up RAM directly.
 """
 import logging
 
@@ -11,15 +11,15 @@ logger = logging.getLogger(__name__)
 
 def cleanup_all_model_caches(unload_models: bool = False) -> int:
     """
-    清理所有模块的模型缓存，并可选择显式卸载模型实例
-    
+    Clear the model caches of all modules, and optionally unload the model instances explicitly
+
     Args:
-        unload_models: 是否显式卸载模型实例（默认False）
-                      - True: 卸载模型并清理缓存（释放内存更彻底，但下次使用需要重新加载）
-                      - False: 只清理缓存字典（保留模型实例，下次使用更快）
-    
+        unload_models: whether the model instances are unloaded explicitly (False by default)
+                      - True: unload the models and clear the caches (frees more memory, but they have to be loaded again next time)
+                      - False: only clear the cache dictionaries (the model instances are kept, so the next use is faster)
+
     Returns:
-        清理的缓存数量
+        The number of caches cleared
     """
     cleanup_count = 0
     
@@ -155,7 +155,7 @@ def cleanup_all_model_caches(unload_models: bool = False) -> int:
 
 def cleanup_gpu_memory():
     """
-    清理GPU显存和PyTorch内部缓存
+    Free GPU memory and the internal caches of PyTorch
     """
     try:
         import torch
@@ -178,11 +178,11 @@ def cleanup_gpu_memory():
 
 def cleanup_physical_memory():
     """
-    释放物理内存（Windows特定）
-    
-    在Windows上优先调用 EmptyWorkingSet 强制释放物理内存，
-    再回退到 SetProcessWorkingSetSize。
-    对CPU模式特别重要。
+    Release physical memory (Windows only)
+
+    On Windows EmptyWorkingSet is called first to force the physical memory to be released,
+    then it falls back to SetProcessWorkingSetSize.
+    Especially important in CPU mode.
     """
     try:
         import ctypes
@@ -208,16 +208,16 @@ def cleanup_physical_memory():
 
 def full_memory_cleanup(log_callback=None, unload_models: bool = False):
     """
-    执行完整的内存清理
-    
+    Run the full memory clean-up
+
     Args:
-        log_callback: 日志回调函数，接收字符串消息（已弃用，保留参数兼容性）
-        unload_models: 是否显式卸载模型实例（默认False）
-                      - True: 卸载模型并清理缓存（释放内存更彻底，但下次使用需要重新加载）
-                      - False: 只清理缓存字典（保留模型实例，下次使用更快）
-    
+        log_callback: log callback that receives string messages (deprecated; the parameter is kept for compatibility)
+        unload_models: whether the model instances are unloaded explicitly (False by default)
+                      - True: unload the models and clear the caches (frees more memory, but they have to be loaded again next time)
+                      - False: only clear the cache dictionaries (the model instances are kept, so the next use is faster)
+
     Returns:
-        dict: 包含清理结果的字典
+        dict: a dictionary with the clean-up results
     """
     result = {
         'caches_cleared': 0,

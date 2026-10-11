@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
 """
-构建 pydensecrf wheel 文件的脚本
-用于在本地编译 pydensecrf,然后上传到 GitHub Release 供用户下载
+Script that builds the pydensecrf wheel file.
+Used to compile pydensecrf locally and then upload it to a GitHub Release for users to download
 
-使用方法:
-1. 确保安装了 C++ 编译工具
-2. 运行: python build_utils/build_pydensecrf_wheel.py
-3. wheel 文件会生成在 dist/wheels/ 目录
+Usage:
+1. Make sure a C++ build toolchain is installed
+2. Run: python build_utils/build_pydensecrf_wheel.py
+3. The wheel file is written to the dist/wheels/ folder
 """
 
 import subprocess
@@ -23,7 +23,7 @@ from desktop_qt_ui.core.git_update_helpers import non_interactive_git_env
 
 
 def run_command(cmd, description, *, env=None):
-    """执行命令并显示输出"""
+    """Run a command and show its output"""
     print(f"\n{'='*60}")
     print(f"{description}")
     print(f"{'='*60}")
@@ -53,7 +53,7 @@ def run_command(cmd, description, *, env=None):
 
 
 def build_wheel():
-    """构建 pydensecrf wheel 文件"""
+    """Build the pydensecrf wheel file"""
     
     # Check the Python version
     print(f"当前 Python 版本: {sys.version}")
@@ -71,7 +71,7 @@ def build_wheel():
             # On Windows, files of a Git repository may be locked and need special handling
             if sys.platform == "win32":
                 def handle_remove_readonly(func, path, exc):
-                    """处理只读文件删除错误"""
+                    """Handle the error of deleting a read-only file"""
                     import stat
                     if not os.access(path, os.W_OK):
                         os.chmod(path, stat.S_IWUSR)
@@ -183,7 +183,7 @@ def build_wheel():
 
 
 def main():
-    """主函数"""
+    """Main function"""
     print("="*60)
     print("pydensecrf Wheel 构建脚本")
     print("="*60)

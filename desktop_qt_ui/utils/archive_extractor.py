@@ -1,6 +1,6 @@
 """
-压缩包/文档格式图片提取工具
-支持 PDF、EPUB、CBZ 格式
+Tool for extracting images from archives and documents.
+Supports the PDF, EPUB and CBZ formats
 """
 import json
 import os
@@ -173,23 +173,23 @@ def _read_member_bounded(zf, name: str, limit: Optional[int] = None) -> bytes:
 
 
 def is_archive_file(file_path: str) -> bool:
-    """检查文件是否是支持的压缩包/文档格式"""
+    """Check whether a file is a supported archive or document format"""
     ext = os.path.splitext(file_path)[1].lower()
     return ext in ARCHIVE_EXTENSIONS
 
 
 def get_output_extract_dir(output_base_dir: str, archive_path: str) -> str:
-    """获取解压到输出目录下的目录：<输出目录>/<文件名>/original_images"""
+    """Get the extraction folder under the output folder: <output folder>/<file name>/original_images"""
     archive_name = os.path.splitext(os.path.basename(archive_path))[0]
     return os.path.join(output_base_dir, archive_name, ORIGINAL_IMAGE_DIRNAME)
 
 def get_output_extract_root(output_base_dir: str, archive_path: str) -> str:
-    """获取解压根目录：<输出目录>/<文件名>"""
+    """Get the extraction root folder: <output folder>/<file name>"""
     archive_name = os.path.splitext(os.path.basename(archive_path))[0]
     return os.path.join(output_base_dir, archive_name)
 
 def get_output_extract_marker_path(output_base_dir: str, archive_path: str) -> str:
-    """获取压缩包来源标记文件路径。"""
+    """Get the path of the file that marks the source archive."""
     return os.path.join(
         get_output_extract_root(output_base_dir, archive_path),
         ARCHIVE_SOURCE_MARKER_FILENAME
@@ -234,8 +234,8 @@ def _clear_extract_output_dir(output_dir: str) -> None:
 
 def check_output_extract_conflict(output_base_dir: str, archive_path: str) -> bool:
     """
-    检查同名解压目录是否和当前压缩包冲突。
-    True 表示存在冲突（同名目录但来源不是当前 archive_path）。
+    Check whether an extraction folder of the same name conflicts with the current archive.
+    True means there is a conflict (a folder of the same name whose source is not the current archive_path).
     """
     root_dir = get_output_extract_root(output_base_dir, archive_path)
     if not os.path.isdir(root_dir):
@@ -263,13 +263,13 @@ def check_output_extract_conflict(output_base_dir: str, archive_path: str) -> bo
     return _normalize_abs_path(recorded_source) != _normalize_abs_path(archive_path)
 
 def clear_output_extract_root(output_base_dir: str, archive_path: str) -> None:
-    """删除同名解压根目录（用于覆盖模式下的冲突处理）。"""
+    """Delete the extraction root folder of the same name (for handling a conflict in overwrite mode)."""
     root_dir = get_output_extract_root(output_base_dir, archive_path)
     if os.path.exists(root_dir):
         shutil.rmtree(root_dir, ignore_errors=True)
 
 def write_output_extract_marker(output_base_dir: str, archive_path: str) -> None:
-    """写入压缩包来源标记，用于识别同名目录冲突。"""
+    """Write the source marker of the archive, used to recognise conflicts between folders of the same name."""
     marker_path = get_output_extract_marker_path(output_base_dir, archive_path)
     os.makedirs(os.path.dirname(marker_path), exist_ok=True)
     with open(marker_path, 'w', encoding='utf-8') as f:
@@ -277,7 +277,7 @@ def write_output_extract_marker(output_base_dir: str, archive_path: str) -> None
 
 
 def get_temp_extract_dir(archive_path: str) -> str:
-    """获取压缩包的临时解压目录"""
+    """Get the temporary extraction folder of an archive"""
     # Use a fixed subfolder of the system temporary folder, which is easier to manage
     base_temp = os.path.join(tempfile.gettempdir(), 'manga_translator_archives')
     os.makedirs(base_temp, exist_ok=True)
@@ -291,7 +291,7 @@ def get_temp_extract_dir(archive_path: str) -> str:
 
 
 def extract_images_from_pdf(pdf_path: str, output_dir: str) -> List[str]:
-    """从 PDF 文件中提取图片（优先提取嵌入原图，无嵌入图时回退渲染）"""
+    """Extract the images from a PDF file (the embedded originals are preferred; a page without one is rendered instead)"""
     try:
         import fitz  # PyMuPDF
     except ImportError:
@@ -348,12 +348,12 @@ def extract_images_from_pdf(pdf_path: str, output_dir: str) -> List[str]:
 
 def extract_images_from_epub(epub_path: str, output_dir: str) -> List[str]:
     """
-    从 EPUB 文件中按书籍实际阅读顺序提取图片。
-    1. 解析 EPUB 清单文件（<spine> + <manifest>），保证严格按阅读顺序排列；
-    2. 优先直接提取每页引用的原始高清图片（零损耗保留原图分辨率与格式）；
-    3. 若页面为纯文字/SVG/无独立原图页，回退使用 PyMuPDF (fitz) 渲染当前页为 PNG；
-    4. 统一命名为 page_{count:04d}.{ext}，与 PDF 处理逻辑完全对齐；
-    5. 异常情况自动兜底处理，确保绝对不漏页、不乱序。
+    Extract the images from an EPUB file in the actual reading order of the book.
+    1. Parse the EPUB manifest (<spine> + <manifest>), so the order is strictly the reading order;
+    2. Prefer extracting the original high-resolution image each page refers to directly (no loss; the resolution and format of the original are kept);
+    3. For a text-only / SVG page, or a page without an image file of its own, fall back to rendering the page as PNG with PyMuPDF (fitz);
+    4. Everything is named page_{count:04d}.{ext}, exactly as in the PDF handling;
+    5. Errors are handled with a fallback automatically, so no page is ever missed or out of order.
     """
     os.makedirs(output_dir, exist_ok=True)
     extracted_images = []
@@ -556,7 +556,7 @@ def _extract_image_members(archive, archive_path: str, output_dir: str) -> List[
 
 
 def extract_images_from_cbz(cbz_path: str, output_dir: str) -> List[str]:
-    """从 CBZ (Comic Book ZIP) 文件中提取图片"""
+    """Extract the images from a CBZ (Comic Book ZIP) file"""
     os.makedirs(output_dir, exist_ok=True)
 
     with zipfile.ZipFile(cbz_path, 'r') as zf:
@@ -564,7 +564,7 @@ def extract_images_from_cbz(cbz_path: str, output_dir: str) -> List[str]:
 
 
 def extract_images_from_cbr(cbr_path: str, output_dir: str) -> List[str]:
-    """从 CBR (Comic Book RAR) 文件中提取图片"""
+    """Extract the images from a CBR (Comic Book RAR) file"""
     try:
         import rarfile
     except ImportError:
@@ -577,7 +577,7 @@ def extract_images_from_cbr(cbr_path: str, output_dir: str) -> List[str]:
 
 
 def natural_sort_key(s: str):
-    """自然排序键，支持数字排序"""
+    """Natural sort key; numbers sort as numbers"""
     import re
     return [int(text) if text.isdigit() else text.lower() 
             for text in re.split(r'(\d+)', s)]
@@ -585,14 +585,14 @@ def natural_sort_key(s: str):
 
 def extract_images_from_archive(archive_path: str, output_dir: Optional[str] = None) -> Tuple[List[str], str]:
     """
-    从压缩包/文档中提取图片
-    
+    Extract the images from an archive or a document
+
     Args:
-        archive_path: 压缩包/文档路径
-        output_dir: 输出目录，如果为 None 则使用临时目录
-    
+        archive_path: path of the archive or document
+        output_dir: output folder; a temporary folder is used when None
+
     Returns:
-        (提取的图片路径列表, 输出目录)
+        (list of the extracted image paths, output folder)
     """
     if output_dir is None:
         output_dir = get_temp_extract_dir(archive_path)
@@ -638,14 +638,14 @@ def extract_images_from_archive(archive_path: str, output_dir: Optional[str] = N
 
 
 def cleanup_temp_archives():
-    """清理所有临时解压目录"""
+    """Remove all temporary extraction folders"""
     base_temp = os.path.join(tempfile.gettempdir(), 'manga_translator_archives')
     if os.path.exists(base_temp):
         shutil.rmtree(base_temp, ignore_errors=True)
 
 
 def cleanup_archive_temp(archive_path: str):
-    """清理指定压缩包的临时解压目录"""
+    """Remove the temporary extraction folder of the given archive"""
     temp_dir = get_temp_extract_dir(archive_path)
     if os.path.exists(temp_dir):
         shutil.rmtree(temp_dir, ignore_errors=True)

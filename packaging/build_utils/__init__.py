@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 """
-工具函数包
 Utility functions package
 """
 
