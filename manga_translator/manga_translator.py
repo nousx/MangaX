@@ -1507,6 +1507,104 @@ class MangaTranslator:
             f"Composited {len(overlays)} paint/stamp/paste overlay layer(s) onto render base"
         )
 
+    @staticmethod
+    def _normalise_saved_region_fields(region_data: dict, config: Config) -> None:
+        """Rename and convert the fields of a saved region to what TextBlock expects."""
+        # Convert literal '\\n' to newline characters for the rendering engine
+        if 'text' in region_data and isinstance(region_data['text'], str):
+            region_data['text'] = region_data['text'].replace('\\n', '\n')
+        if 'translation' in region_data and isinstance(region_data['translation'], str):
+            region_data['translation'] = region_data['translation'].replace('\\n', '\n')
+
+        # If target_lang is missing or empty, set it from the config.
+        if not region_data.get('target_lang'):
+            if config and config.translator and config.translator.target_lang:
+                region_data['target_lang'] = config.translator.target_lang
+                logger.debug(f"Region target_lang missing in JSON, falling back to config's target_lang: {config.translator.target_lang}")
+
+        # Convert hex font_color from editor to an 'fg_color' tuple for TextBlock
+        if 'font_color' in region_data and isinstance(region_data['font_color'], str):
+            hex_color = region_data.pop('font_color') # Use pop to remove the old key
+            if hex_color.startswith('#') and len(hex_color) == 7:
+                try:
+                    r = int(hex_color[1:3], 16)
+                    g = int(hex_color[3:5], 16)
+                    b = int(hex_color[5:7], 16)
+                    region_data['fg_color'] = (r, g, b)
+                except (ValueError, TypeError) as e:
+                    logger.warning(f"Could not parse font_color '{hex_color}': {e}")
+
+        # Map 'fg_colors' (list) to 'fg_color' (tuple) if present
+        if 'fg_colors' in region_data:
+            fg_val = region_data.pop('fg_colors')
+            if isinstance(fg_val, list):
+                region_data['fg_color'] = tuple(fg_val)
+
+        # Map 'bg_colors' or 'text_stroke_color' to 'bg_color'
+        if 'bg_colors' in region_data:
+            bg_val = region_data.pop('bg_colors')
+            if isinstance(bg_val, list):
+                region_data['bg_color'] = tuple(bg_val)
+        elif 'text_stroke_color' in region_data: # Handle UI specific name
+            bg_val = region_data.pop('text_stroke_color')
+            if isinstance(bg_val, list): # List RGB
+                 region_data['bg_color'] = tuple(bg_val)
+            elif isinstance(bg_val, str) and bg_val.startswith('#'): # Hex string
+                try:
+                    r = int(bg_val[1:3], 16)
+                    g = int(bg_val[3:5], 16)
+                    b = int(bg_val[5:7], 16)
+                    region_data['bg_color'] = (r, g, b)
+                except (ValueError, TypeError):
+                     pass
+
+
+        # 描边宽度 - stroke_width 优先级高于 default_stroke_width
+        # 用户在编辑器中设置的 stroke_width 应该覆盖原始的 default_stroke_width
+        if 'stroke_width' in region_data:
+            region_data['default_stroke_width'] = region_data.pop('stroke_width')
+
+    @staticmethod
+    def _text_block_from_saved_region(region_data: dict, text_file_path: str):
+        """Build the TextBlock of a saved region, giving up its rich styling when that is what fails."""
+        try:
+            region = TextBlock(**region_data)
+        except Exception as construct_err:
+            # 保险丝：解析失败不应吞掉整个区域（否则回写 JSON 时该区域连同
+            # 原文、坐标一起永久丢失）。先剥掉 translation_rich 降级重试一次
+            # ——丢样式可以，丢区域不行；仍失败才计数跳过。
+            if isinstance(region_data, dict) and 'translation_rich' in region_data:
+                degraded_data = {k: v for k, v in region_data.items() if k != 'translation_rich'}
+                region = TextBlock(**degraded_data)
+                logger.warning(
+                    f"Region in {text_file_path} failed to load with translation_rich, "
+                    f"discarded rich styling and kept the region: {construct_err}"
+                )
+            else:
+                raise
+        return region
+
+    @staticmethod
+    def _decode_saved_mask(mask_raw_data):
+        """Turn the mask stored with a page (array, base64 PNG or list) into an array, or None."""
+        mask_raw = None
+        if isinstance(mask_raw_data, np.ndarray):
+            # 内存直通载荷直接携带 ndarray 蒙版，跳过 base64/PNG 编解码
+            mask_raw = mask_raw_data.astype(np.uint8, copy=False)
+        elif isinstance(mask_raw_data, str):
+            try:
+                import base64
+
+                import cv2
+                img_bytes = base64.b64decode(mask_raw_data)
+                img_array = np.frombuffer(img_bytes, dtype=np.uint8)
+                mask_raw = cv2.imdecode(img_array, cv2.IMREAD_UNCHANGED)
+            except Exception as e:
+                logger.error(f"Failed to decode base64 mask: {e}")
+        elif isinstance(mask_raw_data, list):
+            mask_raw = np.array(mask_raw_data, dtype=np.uint8)
+        return mask_raw
+
     def _load_text_and_regions_from_file(self, image_path: str, config: Config):
         """加载翻译数据，支持新的目录结构和向后兼容"""
         self._loaded_render_overlays = None
@@ -1594,59 +1692,7 @@ class MangaTranslator:
         parse_failure_count = 0
         for region_data in regions_data:
             try:
-                # Convert literal '\\n' to newline characters for the rendering engine
-                if 'text' in region_data and isinstance(region_data['text'], str):
-                    region_data['text'] = region_data['text'].replace('\\n', '\n')
-                if 'translation' in region_data and isinstance(region_data['translation'], str):
-                    region_data['translation'] = region_data['translation'].replace('\\n', '\n')
-
-                # If target_lang is missing or empty, set it from the config.
-                if not region_data.get('target_lang'):
-                    if config and config.translator and config.translator.target_lang:
-                        region_data['target_lang'] = config.translator.target_lang
-                        logger.debug(f"Region target_lang missing in JSON, falling back to config's target_lang: {config.translator.target_lang}")
-
-                # Convert hex font_color from editor to an 'fg_color' tuple for TextBlock
-                if 'font_color' in region_data and isinstance(region_data['font_color'], str):
-                    hex_color = region_data.pop('font_color') # Use pop to remove the old key
-                    if hex_color.startswith('#') and len(hex_color) == 7:
-                        try:
-                            r = int(hex_color[1:3], 16)
-                            g = int(hex_color[3:5], 16)
-                            b = int(hex_color[5:7], 16)
-                            region_data['fg_color'] = (r, g, b)
-                        except (ValueError, TypeError) as e:
-                            logger.warning(f"Could not parse font_color '{hex_color}': {e}")
-                
-                # Map 'fg_colors' (list) to 'fg_color' (tuple) if present
-                if 'fg_colors' in region_data:
-                    fg_val = region_data.pop('fg_colors')
-                    if isinstance(fg_val, list):
-                        region_data['fg_color'] = tuple(fg_val)
-                
-                # Map 'bg_colors' or 'text_stroke_color' to 'bg_color'
-                if 'bg_colors' in region_data:
-                    bg_val = region_data.pop('bg_colors')
-                    if isinstance(bg_val, list):
-                        region_data['bg_color'] = tuple(bg_val)
-                elif 'text_stroke_color' in region_data: # Handle UI specific name
-                    bg_val = region_data.pop('text_stroke_color')
-                    if isinstance(bg_val, list): # List RGB
-                         region_data['bg_color'] = tuple(bg_val)
-                    elif isinstance(bg_val, str) and bg_val.startswith('#'): # Hex string
-                        try:
-                            r = int(bg_val[1:3], 16)
-                            g = int(bg_val[3:5], 16)
-                            b = int(bg_val[5:7], 16)
-                            region_data['bg_color'] = (r, g, b)
-                        except (ValueError, TypeError):
-                             pass
-                
-
-                # 描边宽度 - stroke_width 优先级高于 default_stroke_width
-                # 用户在编辑器中设置的 stroke_width 应该覆盖原始的 default_stroke_width
-                if 'stroke_width' in region_data:
-                    region_data['default_stroke_width'] = region_data.pop('stroke_width')
+                self._normalise_saved_region_fields(region_data, config)
                 
                 # 确保 line_spacing 和 default_stroke_width 被正确传递
                 # 这些参数已经在 region_data 中，会被 TextBlock 构造函数接收
@@ -1667,43 +1713,14 @@ class MangaTranslator:
 
                 # 导入翻译模式：颜色已由用户确认，不需要自动调整描边颜色
                 region_data['adjust_bg_color'] = False
-                try:
-                    region = TextBlock(**region_data)
-                except Exception as construct_err:
-                    # 保险丝：解析失败不应吞掉整个区域（否则回写 JSON 时该区域连同
-                    # 原文、坐标一起永久丢失）。先剥掉 translation_rich 降级重试一次
-                    # ——丢样式可以，丢区域不行；仍失败才计数跳过。
-                    if isinstance(region_data, dict) and 'translation_rich' in region_data:
-                        degraded_data = {k: v for k, v in region_data.items() if k != 'translation_rich'}
-                        region = TextBlock(**degraded_data)
-                        logger.warning(
-                            f"Region in {text_file_path} failed to load with translation_rich, "
-                            f"discarded rich styling and kept the region: {construct_err}"
-                        )
-                    else:
-                        raise
+                region = self._text_block_from_saved_region(region_data, text_file_path)
                 regions.append(region)
             except Exception as e:
                 parse_failure_count += 1
                 logger.error(f"Failed to parse a region in {text_file_path}: {e}")
                 continue
         
-        mask_raw = None
-        if isinstance(mask_raw_data, np.ndarray):
-            # 内存直通载荷直接携带 ndarray 蒙版，跳过 base64/PNG 编解码
-            mask_raw = mask_raw_data.astype(np.uint8, copy=False)
-        elif isinstance(mask_raw_data, str):
-            try:
-                import base64
-
-                import cv2
-                img_bytes = base64.b64decode(mask_raw_data)
-                img_array = np.frombuffer(img_bytes, dtype=np.uint8)
-                mask_raw = cv2.imdecode(img_array, cv2.IMREAD_UNCHANGED)
-            except Exception as e:
-                logger.error(f"Failed to decode base64 mask: {e}")
-        elif isinstance(mask_raw_data, list):
-            mask_raw = np.array(mask_raw_data, dtype=np.uint8)
+        mask_raw = self._decode_saved_mask(mask_raw_data)
         
         logger.info(f"Loaded {len(regions)} regions from {text_file_path}")
         if parse_failure_count:
