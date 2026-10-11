@@ -3628,6 +3628,454 @@ class MangaTranslator:
 
         self.add_progress_hook(ph)
 
+    @staticmethod
+    def _close_batch_images(batch_images, keep_ids=frozenset()):
+        """Close the input images of a batch, except the ones a result still refers to."""
+        for image, _ in batch_images:
+            if id(image) in keep_ids:
+                continue
+            if hasattr(image, 'close'):
+                try:
+                    image.close()
+                except Exception as ignored_error:
+                    note_ignored_error(ignored_error, "manga_translator/manga_translator.py:MangaTranslator._close_batch_images")
+
+    @staticmethod
+    def _load_text_failure_context(image, error):
+        """Build the result of a page whose saved text could not be rendered: the error plus the original image."""
+        ctx = Context()
+        ctx.input = image
+        ctx.text_regions = []
+        if hasattr(image, 'name'):
+            ctx.image_name = image.name
+        ctx.translation_error = str(error)
+        fallback_result = None
+        try:
+            fallback_result = image.copy()
+        except Exception as copy_error:
+            logger.warning(f"Failed to copy fallback image for load_text error: {copy_error}")
+            image_name = getattr(image, 'name', None)
+            if image_name:
+                try:
+                    reopened_image = open_pil_image(image_name, eager=True)
+                    fallback_result = reopened_image.copy()
+                    reopened_image.close()
+                except Exception as reopen_error:
+                    logger.warning(f"Failed to reopen fallback image for load_text error: {reopen_error}")
+        ctx.result = fallback_result
+        return ctx
+
+    async def _render_page_from_saved_text(self, image, config):
+        """load_text mode: render one page from its saved JSON. Returns None when the image cannot be read."""
+        self._set_image_context(config, image)
+        image_name = image.name if hasattr(image, 'name') else None
+
+        # 直接处理 load_text 模式，不调用 translate() 避免无限循环
+        ctx = Context()
+        ctx.input = image
+        ctx.image_name = image_name
+        ctx.verbose = self.verbose
+        ctx.save_quality = self.save_quality
+        ctx.config = config
+        ctx.inpainted_regenerated = False
+
+        # 统一标志：注册过内存载荷 == 编辑器导出。
+        # 后端视为授权终稿，只做纯渲染（不回写 JSON、不做文本替换、
+        # 蒙版已精炼、修复图直接复用）。
+        preloaded_payload = self._preloaded_load_text_payloads.get(image_name) if image_name else None
+        ctx.editor_export = preloaded_payload is not None
+        editor_export_kind = (
+            preloaded_payload.get('editor_export_base_kind')
+            if preloaded_payload is not None
+            else None
+        )
+        if ctx.editor_export and editor_export_kind not in {
+            'source', 'paired', 'backend_inpaint'
+        }:
+            raise ValueError(
+                f"Invalid editor export base kind: {editor_export_kind!r}"
+            )
+
+        # 加载翻译数据
+        loaded_regions, loaded_mask, mask_is_refined, skip_font_scaling, skip_text_replacements, region_parse_failures = self._load_text_and_regions_from_file(image_name, config)
+        if loaded_regions is None:
+            json_path = os.path.splitext(image_name)[0] + '_translations.json' if image_name else 'unknown'
+            raise FileNotFoundError(f"Translation file not found or invalid: {json_path}")
+
+        # 如果regions是空列表，记录日志但继续处理（渲染原图）
+        if not loaded_regions:
+            logger.info(f"No text regions found in JSON for {os.path.basename(image_name)}, will render original image")
+
+        self._prepare_loaded_regions(loaded_regions, use_text_as_translation=True)
+
+        ctx.text_regions = loaded_regions
+        ctx.skip_font_scaling = skip_font_scaling
+        ctx.skip_text_replacements = skip_text_replacements
+        # 有区域解析失败时禁止回写 JSON，避免把丢失的区域覆盖进工程文件
+        ctx.load_text_parse_failures = region_parse_failures
+
+        preloaded_inpainted_raw = preloaded_payload.get('inpainted_rgb') if preloaded_payload else None
+        # Strict editor export never consults an unverified historical sidecar.
+        existing_inpainted_path = None
+        if preloaded_payload is None and image_name:
+            existing_inpainted_path = find_inpainted_path(image_name)
+
+        # load_text 始终基于原图处理，不走上色/超分，也不把已有修复图塞进 img_colorized/upscaled
+        ctx.img_colorized = ctx.input
+        ctx.upscaled = ctx.input
+
+        ctx.img_rgb, ctx.img_alpha = load_image(ctx.upscaled)
+        ctx.bubble_mask = None
+
+        # 验证加载的图片
+        if ctx.img_rgb is None or ctx.img_rgb.size == 0:
+            logger.error("[Batch] Failed to load image: img_rgb is empty or invalid")
+            return None
+
+        if len(ctx.img_rgb.shape) < 2 or ctx.img_rgb.shape[0] == 0 or ctx.img_rgb.shape[1] == 0:
+            logger.error(f"[Batch] Invalid loaded image dimensions: {ctx.img_rgb.shape}")
+            return None
+
+        import_yolo_labels = bool(getattr(config.detector, 'import_yolo_labels', False))
+        if loaded_mask is not None or not import_yolo_labels:
+            # load_text 不跑 OCR；skip_font_scaling（编辑器授权布局）恒用
+            # center_box 锚点，气泡蒙版不参与摆放，渲染侧也不消费气泡缓存。
+            # 只有自动布局（balloon_fill/气泡内居中）或仍需蒙版精炼且开启
+            # 气泡范围优化时才预热。
+            # 导入 YOLO 框且需要重新跑检测生成 mask 的场景，后续 _run_detection 会自行预热。
+            mask_refinement_will_run = not (loaded_mask is not None and mask_is_refined)
+            render_needs_bubble_cache = (
+                not skip_font_scaling
+                and (
+                    getattr(config.render, 'layout_mode', None) == 'balloon_fill'
+                    or bool(getattr(config.render, 'center_text_in_bubble', False))
+                )
+            )
+            needs_bubble_cache = render_needs_bubble_cache or (
+                (
+                    bool(getattr(config.ocr, 'limit_mask_dilation_to_bubble_mask', False))
+                    or bool(getattr(config.ocr, 'use_model_bubble_repair_intersection', False))
+                )
+                and mask_refinement_will_run
+            )
+            if needs_bubble_cache:
+                self._prime_bubble_detection_cache(config, ctx)
+
+        # 处理 mask
+        if editor_export_kind == 'source':
+            ctx.mask = np.zeros_like(ctx.img_rgb[:, :, 0])
+        elif loaded_mask is not None:
+            if mask_is_refined:
+                ctx.mask = loaded_mask
+            else:
+                ctx.mask_raw = loaded_mask
+        else:
+            if import_yolo_labels:
+                try:
+                    mask_ctx = Context()
+                    # load_text uses the original image already; share its
+                    # array so the bubble mask stays with the same context.
+                    mask_ctx.img_rgb = ctx.img_rgb
+                    mask_ctx.bubble_mask = ctx.bubble_mask
+                    mask_ctx.image_name = image_name
+                    _, generated_mask_raw, generated_mask = await self._run_detection(config, mask_ctx)
+                    ctx.bubble_mask = mask_ctx.bubble_mask
+                    if generated_mask_raw is not None:
+                        ctx.mask_raw = generated_mask_raw
+                    if generated_mask is not None:
+                        ctx.mask = generated_mask
+                    if ctx.mask_raw is not None or ctx.mask is not None:
+                        logger.info("Load text mode: generated mask from detection because JSON has no mask")
+                except Exception as e:
+                    logger.warning(f"Load text mode: detection-based mask generation failed, fallback to region mask ({e})")
+
+            if ctx.mask_raw is None and ctx.mask is None:
+                mask = np.zeros_like(ctx.img_rgb[:, :, 0])
+                # fillPoly only accepts integer points; saved outlines are floats.
+                polygons = [
+                    np.round(p).astype(np.int32).reshape((-1, 1, 2))
+                    for r in ctx.text_regions for p in r.lines
+                ]
+                cv2.fillPoly(mask, polygons, 255)
+                ctx.mask_raw = mask
+
+        # load_text 模式下：无论是否超分，都强制对齐 mask 到当前图像尺寸，
+        # 避免 ONNX inpainting 因 image/mask 维度不一致而报错。
+        target_h, target_w = ctx.img_rgb.shape[:2]
+        for mask_attr in ('mask_raw', 'mask'):
+            mask_val = getattr(ctx, mask_attr, None)
+            if mask_val is None:
+                continue
+
+            mask_arr = np.asarray(mask_val)
+            if mask_arr.ndim == 3:
+                mask_arr = mask_arr[:, :, 0]
+            elif mask_arr.ndim != 2:
+                squeezed = np.squeeze(mask_arr)
+                if squeezed.ndim == 2:
+                    mask_arr = squeezed
+                else:
+                    logger.warning(
+                        f"[load_text] {mask_attr} shape invalid ({mask_arr.shape}), fallback to zero mask {target_h}x{target_w}"
+                    )
+                    mask_arr = np.zeros((target_h, target_w), dtype=np.uint8)
+
+            if mask_arr.shape[0] != target_h or mask_arr.shape[1] != target_w:
+                logger.warning(
+                    f"[load_text] Resizing {mask_attr} from {mask_arr.shape[:2]} to {(target_h, target_w)}"
+                )
+                mask_arr = cv2.resize(mask_arr, (target_w, target_h), interpolation=cv2.INTER_NEAREST)
+
+            if mask_arr.dtype != np.uint8:
+                mask_arr = mask_arr.astype(np.uint8, copy=False)
+
+            setattr(ctx, mask_attr, mask_arr)
+
+        # 编辑器修复图对齐到工作图尺寸，供后续分支直接复用
+        preloaded_inpainted = self._align_preloaded_inpainted(preloaded_inpainted_raw, ctx.img_rgb)
+
+        # load_text 支持“仅修复”模式：即使没有文字区域，只要 JSON 里有可用蒙版，也执行修复。
+        if not ctx.text_regions:
+            mask_for_inpainting = ctx.mask if ctx.mask is not None else ctx.mask_raw
+            has_mask_for_inpainting = False
+            if mask_for_inpainting is not None:
+                try:
+                    has_mask_for_inpainting = np.count_nonzero(mask_for_inpainting) > 0
+                except Exception as mask_count_err:
+                    logger.warning(
+                        f"Load text mode: failed to inspect imported mask for {os.path.basename(image_name)} "
+                        f"({mask_count_err}), falling back to original image"
+                    )
+
+            if has_mask_for_inpainting:
+                logger.info(
+                    f"No text regions found in JSON for {os.path.basename(image_name)}, "
+                    "using imported mask for inpaint-only output"
+                )
+                mask_injected_from_raw = ctx.mask is None
+                if ctx.mask is None:
+                    ctx.mask = np.asarray(mask_for_inpainting, dtype=np.uint8)
+
+                generated_inpainted_in_load_text = False
+                if preloaded_inpainted is not None:
+                    ctx.img_inpainted = preloaded_inpainted
+                    logger.info("Load text mode: using editor-provided paired inpainted image for mask-only import.")
+                elif editor_export_kind == 'paired':
+                    raise RuntimeError("Paired export is missing its in-memory inpainted image")
+                elif existing_inpainted_path and loaded_mask is not None:
+                    try:
+                        existing_inpainted_image = open_pil_image(existing_inpainted_path, eager=False)
+                        existing_inpainted_rgb, _ = load_image(existing_inpainted_image)
+                        ctx.img_inpainted = existing_inpainted_rgb
+                        logger.info("Load text mode: Using existing inpainted image for mask-only import.")
+                    except Exception as existing_inpaint_err:
+                        logger.warning(
+                            f"Load text mode: failed to load existing inpainted image for mask-only import, "
+                            f"rerunning inpainting ({existing_inpaint_err})"
+                        )
+                        await self._report_progress('inpainting')
+                        ctx.img_inpainted = await self._run_inpainting(config, ctx)
+                        generated_inpainted_in_load_text = True
+                else:
+                    await self._report_progress('inpainting')
+                    ctx.img_inpainted = await self._run_inpainting(config, ctx)
+                    generated_inpainted_in_load_text = True
+
+                if ctx.img_inpainted is None:
+                    raise RuntimeError("Inpainting completed without an image")
+                if editor_export_kind == 'backend_inpaint':
+                    if not generated_inpainted_in_load_text:
+                        raise RuntimeError("Backend inpaint export did not run inpainting")
+                    ctx.editor_export_generated_inpainted = np.array(
+                        ctx.img_inpainted, dtype=np.uint8, copy=True
+                    )
+                ctx.inpainted_regenerated = generated_inpainted_in_load_text
+                if (
+                    generated_inpainted_in_load_text
+                    and image_name
+                    and ctx.img_inpainted is not None
+                    and self.save_text
+                ):
+                    self._save_inpainted_image(
+                        image_name,
+                        ctx.img_inpainted,
+                    )
+
+                # 画笔/印章层合成（放在保存 inpainted 之后，避免涂层被烤进修复图文件）
+                self._compose_render_overlays_on_inpainted(ctx)
+
+                await self._report_progress('finished', True)
+                ctx.result = dump_image(ctx.input, ctx.img_inpainted, ctx.img_alpha, mask=ctx.mask)
+                if mask_injected_from_raw:
+                    ctx.mask = None
+                ctx = await self._revert_upscale(config, ctx)
+            else:
+                logger.info(
+                    f"No text regions or usable mask found in JSON for {os.path.basename(image_name)}, "
+                    "returning original image"
+                )
+                # 页面可能只有贴片/画笔层：先合成再返回，避免贴片被丢弃
+                self._compose_render_overlays_on_inpainted(ctx)
+                await self._report_progress('finished', True)
+                ctx.result = ctx.upscaled  # 返回上采样后的原图
+                ctx = await self._revert_upscale(config, ctx)
+        else:
+            # Mask refinement
+            if ctx.mask is None:
+                await self._report_progress('mask-generation')
+                ctx.mask = await self._run_mask_refinement(config, ctx)
+
+            # Inpainting
+            generated_inpainted_in_load_text = False
+            if editor_export_kind == 'source':
+                ctx.img_inpainted = ctx.img_rgb
+            elif preloaded_inpainted is not None:
+                ctx.img_inpainted = preloaded_inpainted
+                logger.info("Load text mode: using editor-provided paired inpainted image, skipping inpainting.")
+            elif editor_export_kind == 'paired':
+                raise RuntimeError("Paired export is missing its in-memory inpainted image")
+            elif editor_export_kind == 'backend_inpaint':
+                await self._report_progress('inpainting')
+                ctx.img_inpainted = await self._run_inpainting(config, ctx)
+                generated_inpainted_in_load_text = True
+            elif self._should_skip_inpainting_for_ai_renderer(config):
+                logger.info("AI renderer selected: skipping inpainting outside strict editor export.")
+                ctx.img_inpainted = ctx.img_rgb
+            elif existing_inpainted_path and loaded_mask is not None:
+                try:
+                    existing_inpainted_image = open_pil_image(existing_inpainted_path, eager=False)
+                    existing_inpainted_rgb, _ = load_image(existing_inpainted_image)
+                    ctx.img_inpainted = existing_inpainted_rgb
+                    logger.info("Load text mode: Using existing inpainted image, skipping inpainting.")
+                except Exception as existing_inpaint_err:
+                    logger.warning(
+                        f"Load text mode: failed to load existing inpainted image, rerunning inpainting ({existing_inpaint_err})"
+                    )
+                    await self._report_progress('inpainting')
+                    ctx.img_inpainted = await self._run_inpainting(config, ctx)
+                    generated_inpainted_in_load_text = True
+            else:
+                await self._report_progress('inpainting')
+                ctx.img_inpainted = await self._run_inpainting(config, ctx)
+                generated_inpainted_in_load_text = True
+
+            if ctx.img_inpainted is None:
+                raise RuntimeError("Inpainting completed without an image")
+            if editor_export_kind == 'backend_inpaint':
+                if not generated_inpainted_in_load_text:
+                    raise RuntimeError("Backend inpaint export did not run inpainting")
+                ctx.editor_export_generated_inpainted = np.array(
+                    ctx.img_inpainted, dtype=np.uint8, copy=True
+                )
+
+            ctx.inpainted_regenerated = generated_inpainted_in_load_text
+            if (
+                generated_inpainted_in_load_text
+                and image_name
+                and ctx.img_inpainted is not None
+                and self.save_text
+            ):
+                self._save_inpainted_image(
+                    image_name,
+                    ctx.img_inpainted,
+                )
+
+            # 画笔/印章层合成（放在保存 inpainted 之后，避免涂层被烤进修复图文件）
+            self._compose_render_overlays_on_inpainted(ctx)
+
+            # Rendering - load_text按JSON中的skip_font_scaling控制：True=跳过字体缩放，False=执行字体缩放
+            await self._report_progress('rendering')
+            ctx.img_rendered = await self._run_text_rendering(
+                config,
+                ctx,
+                skip_font_scaling=skip_font_scaling,
+                skip_text_replacements=skip_text_replacements,
+            )
+
+            await self._report_progress('finished', True)
+            ctx.result = dump_image(
+                ctx.input,
+                ctx.img_rendered,
+                ctx.img_alpha,
+                mask=ctx.mask,
+                render_alpha=getattr(ctx, 'img_render_alpha', None),
+            )
+            ctx = await self._revert_upscale(config, ctx)
+
+        # load_text模式：渲染后回写JSON（同步最新regions，包含translation/font_size等字段）
+        # 编辑器导出（编辑器已自行持久化工程 JSON）时跳过回写
+        if (
+            hasattr(ctx, 'text_regions') and ctx.text_regions is not None
+            and hasattr(ctx, 'image_name') and ctx.image_name
+            and not getattr(ctx, 'editor_export', False)
+        ):
+            parse_failures = getattr(ctx, 'load_text_parse_failures', 0)
+            if parse_failures:
+                # 保险丝：有区域解析失败时跳过覆盖回写，否则这些区域会
+                # 连同原文、坐标从工程 JSON 中永久消失（无备份）。
+                logger.error(
+                    f"{parse_failures} region(s) failed to parse for "
+                    f"{os.path.basename(ctx.image_name)}; skipped JSON write-back to protect the project file"
+                )
+            else:
+                try:
+                    self._save_text_to_file(ctx.image_name, ctx, config)
+                except Exception as save_json_err:
+                    logger.error(f"Error updating JSON in load_text mode for {os.path.basename(ctx.image_name)}: {save_json_err}")
+        return ctx
+
+    def _load_page_for_json_translation(self, image, config):
+        """translate_json_only mode: build the context of one page from the original text in its JSON."""
+        self._set_image_context(config, image)
+        image_name = image.name if hasattr(image, 'name') else None
+
+        ctx = Context()
+        ctx.input = image
+        ctx.image_name = image_name
+        ctx.verbose = self.verbose
+        ctx.save_quality = self.save_quality
+        ctx.config = config
+        ctx.from_lang = 'auto'
+
+        loaded_regions, loaded_mask, mask_is_refined, skip_font_scaling, _skip_text_replacements, region_parse_failures = self._load_text_and_regions_from_file(image_name, config)
+        if loaded_regions is None:
+            json_path = find_json_path(image_name) if image_name else None
+            if not json_path and image_name:
+                json_path = get_json_path(image_name, create_dir=False)
+            raise FileNotFoundError(f"JSON translation data not found or invalid: {json_path}")
+
+        self._prepare_loaded_regions(loaded_regions, use_text_as_translation=False)
+        ctx.text_regions = loaded_regions
+        ctx.skip_font_scaling = skip_font_scaling
+        # 有区域解析失败时禁止回写 JSON，避免把丢失的区域覆盖进工程文件
+        ctx.load_text_parse_failures = region_parse_failures
+
+        if loaded_mask is not None:
+            if mask_is_refined:
+                ctx.mask = loaded_mask
+            else:
+                ctx.mask_raw = loaded_mask
+
+        self._apply_pre_dictionary_to_regions(ctx)
+        return ctx
+
+    def _save_translated_json(self, ctx, config):
+        """translate_json_only mode: write the translated regions of one page back to its JSON."""
+        parse_failures = getattr(ctx, 'load_text_parse_failures', 0)
+        if parse_failures:
+            # 保险丝：回写会以当前 regions 全量重建 JSON，解析失败的
+            # 区域会被永久删除，这里改为显式失败并保留原文件。
+            raise IOError(
+                f"{parse_failures} region(s) failed to parse from JSON; "
+                "skipped saving to protect the project file"
+            )
+        save_success = self._save_text_to_file(ctx.image_name, ctx, config)
+        if not save_success:
+            raise IOError(f"Failed to save JSON for {os.path.basename(ctx.image_name)}")
+        self._delete_original_txt_after_json_translation(ctx.image_name)
+        ctx.success = True
+        ctx.output_path = get_json_path(ctx.image_name, create_dir=False)
+
     async def translate_batch(self, images_with_configs: List[tuple], batch_size: int = None, image_names: List[str] = None, save_info: dict = None, global_offset: int = 0, global_total: int = None) -> List[Context]:
         """Translate a complete ordered input list and return processed and skipped results."""
         if self.filter_text_enabled:
@@ -3825,361 +4273,9 @@ class MangaTranslator:
                         await asyncio.sleep(0)
                         self._check_cancelled()  # 检查取消标志
                         try:
-                            self._set_image_context(config, image)
-                            image_name = image.name if hasattr(image, 'name') else None
-                            
-                            # 直接处理 load_text 模式，不调用 translate() 避免无限循环
-                            ctx = Context()
-                            ctx.input = image
-                            ctx.image_name = image_name
-                            ctx.verbose = self.verbose
-                            ctx.save_quality = self.save_quality
-                            ctx.config = config
-                            ctx.inpainted_regenerated = False
-
-                            # 统一标志：注册过内存载荷 == 编辑器导出。
-                            # 后端视为授权终稿，只做纯渲染（不回写 JSON、不做文本替换、
-                            # 蒙版已精炼、修复图直接复用）。
-                            preloaded_payload = self._preloaded_load_text_payloads.get(image_name) if image_name else None
-                            ctx.editor_export = preloaded_payload is not None
-                            editor_export_kind = (
-                                preloaded_payload.get('editor_export_base_kind')
-                                if preloaded_payload is not None
-                                else None
-                            )
-                            if ctx.editor_export and editor_export_kind not in {
-                                'source', 'paired', 'backend_inpaint'
-                            }:
-                                raise ValueError(
-                                    f"Invalid editor export base kind: {editor_export_kind!r}"
-                                )
-                            
-                            # 加载翻译数据
-                            loaded_regions, loaded_mask, mask_is_refined, skip_font_scaling, skip_text_replacements, region_parse_failures = self._load_text_and_regions_from_file(image_name, config)
-                            if loaded_regions is None:
-                                json_path = os.path.splitext(image_name)[0] + '_translations.json' if image_name else 'unknown'
-                                raise FileNotFoundError(f"Translation file not found or invalid: {json_path}")
-
-                            # 如果regions是空列表，记录日志但继续处理（渲染原图）
-                            if not loaded_regions:
-                                logger.info(f"No text regions found in JSON for {os.path.basename(image_name)}, will render original image")
-
-                            self._prepare_loaded_regions(loaded_regions, use_text_as_translation=True)
-
-                            ctx.text_regions = loaded_regions
-                            ctx.skip_font_scaling = skip_font_scaling
-                            ctx.skip_text_replacements = skip_text_replacements
-                            # 有区域解析失败时禁止回写 JSON，避免把丢失的区域覆盖进工程文件
-                            ctx.load_text_parse_failures = region_parse_failures
-                            
-                            preloaded_inpainted_raw = preloaded_payload.get('inpainted_rgb') if preloaded_payload else None
-                            # Strict editor export never consults an unverified historical sidecar.
-                            existing_inpainted_path = None
-                            if preloaded_payload is None and image_name:
-                                existing_inpainted_path = find_inpainted_path(image_name)
-
-                            # load_text 始终基于原图处理，不走上色/超分，也不把已有修复图塞进 img_colorized/upscaled
-                            ctx.img_colorized = ctx.input
-                            ctx.upscaled = ctx.input
-                            
-                            ctx.img_rgb, ctx.img_alpha = load_image(ctx.upscaled)
-                            ctx.bubble_mask = None
-                            
-                            # 验证加载的图片
-                            if ctx.img_rgb is None or ctx.img_rgb.size == 0:
-                                logger.error("[Batch] Failed to load image: img_rgb is empty or invalid")
+                            ctx = await self._render_page_from_saved_text(image, config)
+                            if ctx is None:
                                 continue
-                            
-                            if len(ctx.img_rgb.shape) < 2 or ctx.img_rgb.shape[0] == 0 or ctx.img_rgb.shape[1] == 0:
-                                logger.error(f"[Batch] Invalid loaded image dimensions: {ctx.img_rgb.shape}")
-                                continue
-
-                            import_yolo_labels = bool(getattr(config.detector, 'import_yolo_labels', False))
-                            if loaded_mask is not None or not import_yolo_labels:
-                                # load_text 不跑 OCR；skip_font_scaling（编辑器授权布局）恒用
-                                # center_box 锚点，气泡蒙版不参与摆放，渲染侧也不消费气泡缓存。
-                                # 只有自动布局（balloon_fill/气泡内居中）或仍需蒙版精炼且开启
-                                # 气泡范围优化时才预热。
-                                # 导入 YOLO 框且需要重新跑检测生成 mask 的场景，后续 _run_detection 会自行预热。
-                                mask_refinement_will_run = not (loaded_mask is not None and mask_is_refined)
-                                render_needs_bubble_cache = (
-                                    not skip_font_scaling
-                                    and (
-                                        getattr(config.render, 'layout_mode', None) == 'balloon_fill'
-                                        or bool(getattr(config.render, 'center_text_in_bubble', False))
-                                    )
-                                )
-                                needs_bubble_cache = render_needs_bubble_cache or (
-                                    (
-                                        bool(getattr(config.ocr, 'limit_mask_dilation_to_bubble_mask', False))
-                                        or bool(getattr(config.ocr, 'use_model_bubble_repair_intersection', False))
-                                    )
-                                    and mask_refinement_will_run
-                                )
-                                if needs_bubble_cache:
-                                    self._prime_bubble_detection_cache(config, ctx)
-
-                            # 处理 mask
-                            if editor_export_kind == 'source':
-                                ctx.mask = np.zeros_like(ctx.img_rgb[:, :, 0])
-                            elif loaded_mask is not None:
-                                if mask_is_refined:
-                                    ctx.mask = loaded_mask
-                                else:
-                                    ctx.mask_raw = loaded_mask
-                            else:
-                                if import_yolo_labels:
-                                    try:
-                                        mask_ctx = Context()
-                                        # load_text uses the original image already; share its
-                                        # array so the bubble mask stays with the same context.
-                                        mask_ctx.img_rgb = ctx.img_rgb
-                                        mask_ctx.bubble_mask = ctx.bubble_mask
-                                        mask_ctx.image_name = image_name
-                                        _, generated_mask_raw, generated_mask = await self._run_detection(config, mask_ctx)
-                                        ctx.bubble_mask = mask_ctx.bubble_mask
-                                        if generated_mask_raw is not None:
-                                            ctx.mask_raw = generated_mask_raw
-                                        if generated_mask is not None:
-                                            ctx.mask = generated_mask
-                                        if ctx.mask_raw is not None or ctx.mask is not None:
-                                            logger.info("Load text mode: generated mask from detection because JSON has no mask")
-                                    except Exception as e:
-                                        logger.warning(f"Load text mode: detection-based mask generation failed, fallback to region mask ({e})")
-
-                                if ctx.mask_raw is None and ctx.mask is None:
-                                    mask = np.zeros_like(ctx.img_rgb[:, :, 0])
-                                    # fillPoly only accepts integer points; saved outlines are floats.
-                                    polygons = [
-                                        np.round(p).astype(np.int32).reshape((-1, 1, 2))
-                                        for r in ctx.text_regions for p in r.lines
-                                    ]
-                                    cv2.fillPoly(mask, polygons, 255)
-                                    ctx.mask_raw = mask
-                            
-                            # load_text 模式下：无论是否超分，都强制对齐 mask 到当前图像尺寸，
-                            # 避免 ONNX inpainting 因 image/mask 维度不一致而报错。
-                            target_h, target_w = ctx.img_rgb.shape[:2]
-                            for mask_attr in ('mask_raw', 'mask'):
-                                mask_val = getattr(ctx, mask_attr, None)
-                                if mask_val is None:
-                                    continue
-
-                                mask_arr = np.asarray(mask_val)
-                                if mask_arr.ndim == 3:
-                                    mask_arr = mask_arr[:, :, 0]
-                                elif mask_arr.ndim != 2:
-                                    squeezed = np.squeeze(mask_arr)
-                                    if squeezed.ndim == 2:
-                                        mask_arr = squeezed
-                                    else:
-                                        logger.warning(
-                                            f"[load_text] {mask_attr} shape invalid ({mask_arr.shape}), fallback to zero mask {target_h}x{target_w}"
-                                        )
-                                        mask_arr = np.zeros((target_h, target_w), dtype=np.uint8)
-
-                                if mask_arr.shape[0] != target_h or mask_arr.shape[1] != target_w:
-                                    logger.warning(
-                                        f"[load_text] Resizing {mask_attr} from {mask_arr.shape[:2]} to {(target_h, target_w)}"
-                                    )
-                                    mask_arr = cv2.resize(mask_arr, (target_w, target_h), interpolation=cv2.INTER_NEAREST)
-
-                                if mask_arr.dtype != np.uint8:
-                                    mask_arr = mask_arr.astype(np.uint8, copy=False)
-
-                                setattr(ctx, mask_attr, mask_arr)
-
-                            # 编辑器修复图对齐到工作图尺寸，供后续分支直接复用
-                            preloaded_inpainted = self._align_preloaded_inpainted(preloaded_inpainted_raw, ctx.img_rgb)
-
-                            # load_text 支持“仅修复”模式：即使没有文字区域，只要 JSON 里有可用蒙版，也执行修复。
-                            if not ctx.text_regions:
-                                mask_for_inpainting = ctx.mask if ctx.mask is not None else ctx.mask_raw
-                                has_mask_for_inpainting = False
-                                if mask_for_inpainting is not None:
-                                    try:
-                                        has_mask_for_inpainting = np.count_nonzero(mask_for_inpainting) > 0
-                                    except Exception as mask_count_err:
-                                        logger.warning(
-                                            f"Load text mode: failed to inspect imported mask for {os.path.basename(image_name)} "
-                                            f"({mask_count_err}), falling back to original image"
-                                        )
-
-                                if has_mask_for_inpainting:
-                                    logger.info(
-                                        f"No text regions found in JSON for {os.path.basename(image_name)}, "
-                                        "using imported mask for inpaint-only output"
-                                    )
-                                    mask_injected_from_raw = ctx.mask is None
-                                    if ctx.mask is None:
-                                        ctx.mask = np.asarray(mask_for_inpainting, dtype=np.uint8)
-
-                                    generated_inpainted_in_load_text = False
-                                    if preloaded_inpainted is not None:
-                                        ctx.img_inpainted = preloaded_inpainted
-                                        logger.info("Load text mode: using editor-provided paired inpainted image for mask-only import.")
-                                    elif editor_export_kind == 'paired':
-                                        raise RuntimeError("Paired export is missing its in-memory inpainted image")
-                                    elif existing_inpainted_path and loaded_mask is not None:
-                                        try:
-                                            existing_inpainted_image = open_pil_image(existing_inpainted_path, eager=False)
-                                            existing_inpainted_rgb, _ = load_image(existing_inpainted_image)
-                                            ctx.img_inpainted = existing_inpainted_rgb
-                                            logger.info("Load text mode: Using existing inpainted image for mask-only import.")
-                                        except Exception as existing_inpaint_err:
-                                            logger.warning(
-                                                f"Load text mode: failed to load existing inpainted image for mask-only import, "
-                                                f"rerunning inpainting ({existing_inpaint_err})"
-                                            )
-                                            await self._report_progress('inpainting')
-                                            ctx.img_inpainted = await self._run_inpainting(config, ctx)
-                                            generated_inpainted_in_load_text = True
-                                    else:
-                                        await self._report_progress('inpainting')
-                                        ctx.img_inpainted = await self._run_inpainting(config, ctx)
-                                        generated_inpainted_in_load_text = True
-
-                                    if ctx.img_inpainted is None:
-                                        raise RuntimeError("Inpainting completed without an image")
-                                    if editor_export_kind == 'backend_inpaint':
-                                        if not generated_inpainted_in_load_text:
-                                            raise RuntimeError("Backend inpaint export did not run inpainting")
-                                        ctx.editor_export_generated_inpainted = np.array(
-                                            ctx.img_inpainted, dtype=np.uint8, copy=True
-                                        )
-                                    ctx.inpainted_regenerated = generated_inpainted_in_load_text
-                                    if (
-                                        generated_inpainted_in_load_text
-                                        and image_name
-                                        and ctx.img_inpainted is not None
-                                        and self.save_text
-                                    ):
-                                        self._save_inpainted_image(
-                                            image_name,
-                                            ctx.img_inpainted,
-                                        )
-
-                                    # 画笔/印章层合成（放在保存 inpainted 之后，避免涂层被烤进修复图文件）
-                                    self._compose_render_overlays_on_inpainted(ctx)
-
-                                    await self._report_progress('finished', True)
-                                    ctx.result = dump_image(ctx.input, ctx.img_inpainted, ctx.img_alpha, mask=ctx.mask)
-                                    if mask_injected_from_raw:
-                                        ctx.mask = None
-                                    ctx = await self._revert_upscale(config, ctx)
-                                else:
-                                    logger.info(
-                                        f"No text regions or usable mask found in JSON for {os.path.basename(image_name)}, "
-                                        "returning original image"
-                                    )
-                                    # 页面可能只有贴片/画笔层：先合成再返回，避免贴片被丢弃
-                                    self._compose_render_overlays_on_inpainted(ctx)
-                                    await self._report_progress('finished', True)
-                                    ctx.result = ctx.upscaled  # 返回上采样后的原图
-                                    ctx = await self._revert_upscale(config, ctx)
-                            else:
-                                # Mask refinement
-                                if ctx.mask is None:
-                                    await self._report_progress('mask-generation')
-                                    ctx.mask = await self._run_mask_refinement(config, ctx)
-                                
-                                # Inpainting
-                                generated_inpainted_in_load_text = False
-                                if editor_export_kind == 'source':
-                                    ctx.img_inpainted = ctx.img_rgb
-                                elif preloaded_inpainted is not None:
-                                    ctx.img_inpainted = preloaded_inpainted
-                                    logger.info("Load text mode: using editor-provided paired inpainted image, skipping inpainting.")
-                                elif editor_export_kind == 'paired':
-                                    raise RuntimeError("Paired export is missing its in-memory inpainted image")
-                                elif editor_export_kind == 'backend_inpaint':
-                                    await self._report_progress('inpainting')
-                                    ctx.img_inpainted = await self._run_inpainting(config, ctx)
-                                    generated_inpainted_in_load_text = True
-                                elif self._should_skip_inpainting_for_ai_renderer(config):
-                                    logger.info("AI renderer selected: skipping inpainting outside strict editor export.")
-                                    ctx.img_inpainted = ctx.img_rgb
-                                elif existing_inpainted_path and loaded_mask is not None:
-                                    try:
-                                        existing_inpainted_image = open_pil_image(existing_inpainted_path, eager=False)
-                                        existing_inpainted_rgb, _ = load_image(existing_inpainted_image)
-                                        ctx.img_inpainted = existing_inpainted_rgb
-                                        logger.info("Load text mode: Using existing inpainted image, skipping inpainting.")
-                                    except Exception as existing_inpaint_err:
-                                        logger.warning(
-                                            f"Load text mode: failed to load existing inpainted image, rerunning inpainting ({existing_inpaint_err})"
-                                        )
-                                        await self._report_progress('inpainting')
-                                        ctx.img_inpainted = await self._run_inpainting(config, ctx)
-                                        generated_inpainted_in_load_text = True
-                                else:
-                                    await self._report_progress('inpainting')
-                                    ctx.img_inpainted = await self._run_inpainting(config, ctx)
-                                    generated_inpainted_in_load_text = True
-
-                                if ctx.img_inpainted is None:
-                                    raise RuntimeError("Inpainting completed without an image")
-                                if editor_export_kind == 'backend_inpaint':
-                                    if not generated_inpainted_in_load_text:
-                                        raise RuntimeError("Backend inpaint export did not run inpainting")
-                                    ctx.editor_export_generated_inpainted = np.array(
-                                        ctx.img_inpainted, dtype=np.uint8, copy=True
-                                    )
-
-                                ctx.inpainted_regenerated = generated_inpainted_in_load_text
-                                if (
-                                    generated_inpainted_in_load_text
-                                    and image_name
-                                    and ctx.img_inpainted is not None
-                                    and self.save_text
-                                ):
-                                    self._save_inpainted_image(
-                                        image_name,
-                                        ctx.img_inpainted,
-                                    )
-
-                                # 画笔/印章层合成（放在保存 inpainted 之后，避免涂层被烤进修复图文件）
-                                self._compose_render_overlays_on_inpainted(ctx)
-
-                                # Rendering - load_text按JSON中的skip_font_scaling控制：True=跳过字体缩放，False=执行字体缩放
-                                await self._report_progress('rendering')
-                                ctx.img_rendered = await self._run_text_rendering(
-                                    config,
-                                    ctx,
-                                    skip_font_scaling=skip_font_scaling,
-                                    skip_text_replacements=skip_text_replacements,
-                                )
-                                
-                                await self._report_progress('finished', True)
-                                ctx.result = dump_image(
-                                    ctx.input,
-                                    ctx.img_rendered,
-                                    ctx.img_alpha,
-                                    mask=ctx.mask,
-                                    render_alpha=getattr(ctx, 'img_render_alpha', None),
-                                )
-                                ctx = await self._revert_upscale(config, ctx)
-
-                            # load_text模式：渲染后回写JSON（同步最新regions，包含translation/font_size等字段）
-                            # 编辑器导出（编辑器已自行持久化工程 JSON）时跳过回写
-                            if (
-                                hasattr(ctx, 'text_regions') and ctx.text_regions is not None
-                                and hasattr(ctx, 'image_name') and ctx.image_name
-                                and not getattr(ctx, 'editor_export', False)
-                            ):
-                                parse_failures = getattr(ctx, 'load_text_parse_failures', 0)
-                                if parse_failures:
-                                    # 保险丝：有区域解析失败时跳过覆盖回写，否则这些区域会
-                                    # 连同原文、坐标从工程 JSON 中永久消失（无备份）。
-                                    logger.error(
-                                        f"{parse_failures} region(s) failed to parse for "
-                                        f"{os.path.basename(ctx.image_name)}; skipped JSON write-back to protect the project file"
-                                    )
-                                else:
-                                    try:
-                                        self._save_text_to_file(ctx.image_name, ctx, config)
-                                    except Exception as save_json_err:
-                                        logger.error(f"Error updating JSON in load_text mode for {os.path.basename(ctx.image_name)}: {save_json_err}")
                             
                             preprocessed_contexts.append((ctx, config))
 
@@ -4195,26 +4291,7 @@ class MangaTranslator:
                             
                         except Exception as e:
                             logger.error(f"Error loading text for image {i+1} in batch: {e}")
-                            ctx = Context()
-                            ctx.input = image
-                            ctx.text_regions = []
-                            if hasattr(image, 'name'):
-                                ctx.image_name = image.name
-                            ctx.translation_error = str(e)
-                            fallback_result = None
-                            try:
-                                fallback_result = image.copy()
-                            except Exception as copy_error:
-                                logger.warning(f"Failed to copy fallback image for load_text error: {copy_error}")
-                                image_name = getattr(image, 'name', None)
-                                if image_name:
-                                    try:
-                                        reopened_image = open_pil_image(image_name, eager=True)
-                                        fallback_result = reopened_image.copy()
-                                        reopened_image.close()
-                                    except Exception as reopen_error:
-                                        logger.warning(f"Failed to reopen fallback image for load_text error: {reopen_error}")
-                            ctx.result = fallback_result
+                            ctx = self._load_text_failure_context(image, e)
                             preprocessed_contexts.append((ctx, config))
                     
                     # load_text模式下已经完成了所有处理（包括渲染），直接保存并返回
@@ -4234,15 +4311,7 @@ class MangaTranslator:
                     if current_batch_images:
                         # 收集所有仍被 result 引用的 image 对象
                         result_ids = {id(ctx.result) for ctx, _ in preprocessed_contexts if ctx.result is not None}
-                        for i, (image, _) in enumerate(current_batch_images):
-                            if id(image) in result_ids:
-                                continue  # 该 image 仍被 ctx.result 引用，不能关闭
-                            if hasattr(image, 'close'):
-                                try:
-                                    image.close()
-                                except Exception as ignored_error:
-                                    note_ignored_error(ignored_error, "manga_translator/manga_translator.py:MangaTranslator.translate_batch")
-                                    pass
+                        self._close_batch_images(current_batch_images, keep_ids=result_ids)
                     
                     # 清空列表，防止 finally 中的 _cleanup_batch_memory 再次关闭这些 image
                     current_batch_images.clear()
@@ -4257,37 +4326,7 @@ class MangaTranslator:
                         await asyncio.sleep(0)
                         self._check_cancelled()
                         try:
-                            self._set_image_context(config, image)
-                            image_name = image.name if hasattr(image, 'name') else None
-
-                            ctx = Context()
-                            ctx.input = image
-                            ctx.image_name = image_name
-                            ctx.verbose = self.verbose
-                            ctx.save_quality = self.save_quality
-                            ctx.config = config
-                            ctx.from_lang = 'auto'
-
-                            loaded_regions, loaded_mask, mask_is_refined, skip_font_scaling, _skip_text_replacements, region_parse_failures = self._load_text_and_regions_from_file(image_name, config)
-                            if loaded_regions is None:
-                                json_path = find_json_path(image_name) if image_name else None
-                                if not json_path and image_name:
-                                    json_path = get_json_path(image_name, create_dir=False)
-                                raise FileNotFoundError(f"JSON translation data not found or invalid: {json_path}")
-
-                            self._prepare_loaded_regions(loaded_regions, use_text_as_translation=False)
-                            ctx.text_regions = loaded_regions
-                            ctx.skip_font_scaling = skip_font_scaling
-                            # 有区域解析失败时禁止回写 JSON，避免把丢失的区域覆盖进工程文件
-                            ctx.load_text_parse_failures = region_parse_failures
-
-                            if loaded_mask is not None:
-                                if mask_is_refined:
-                                    ctx.mask = loaded_mask
-                                else:
-                                    ctx.mask_raw = loaded_mask
-
-                            self._apply_pre_dictionary_to_regions(ctx)
+                            ctx = self._load_page_for_json_translation(image, config)
                             preprocessed_contexts.append((ctx, config))
                         except Exception as e:
                             logger.error(f"Error loading JSON translation data for image {i+1} in batch: {e}")
@@ -4313,20 +4352,7 @@ class MangaTranslator:
                             continue
 
                         try:
-                            parse_failures = getattr(ctx, 'load_text_parse_failures', 0)
-                            if parse_failures:
-                                # 保险丝：回写会以当前 regions 全量重建 JSON，解析失败的
-                                # 区域会被永久删除，这里改为显式失败并保留原文件。
-                                raise IOError(
-                                    f"{parse_failures} region(s) failed to parse from JSON; "
-                                    "skipped saving to protect the project file"
-                                )
-                            save_success = self._save_text_to_file(ctx.image_name, ctx, config)
-                            if not save_success:
-                                raise IOError(f"Failed to save JSON for {os.path.basename(ctx.image_name)}")
-                            self._delete_original_txt_after_json_translation(ctx.image_name)
-                            ctx.success = True
-                            ctx.output_path = get_json_path(ctx.image_name, create_dir=False)
+                            self._save_translated_json(ctx, config)
                         except Exception as save_err:
                             logger.error(f"Error saving translated JSON for {os.path.basename(ctx.image_name)}: {save_err}")
                             ctx = self._mark_context_failure(ctx, save_err, stage='saving')
@@ -4336,13 +4362,7 @@ class MangaTranslator:
                         self._cleanup_context_memory(ctx, keep_result=True)
 
                     if current_batch_images:
-                        for image, _ in current_batch_images:
-                            if hasattr(image, 'close'):
-                                try:
-                                    image.close()
-                                except Exception as ignored_error:
-                                    note_ignored_error(ignored_error, "manga_translator/manga_translator.py:MangaTranslator.translate_batch")
-                                    pass
+                        self._close_batch_images(current_batch_images)
 
                     continue
 
@@ -4406,13 +4426,7 @@ class MangaTranslator:
                     
                     # ✅ 批次完成后清理批次数据（图片已在循环内清理）
                     if current_batch_images:
-                        for i, (image, _) in enumerate(current_batch_images):
-                            if hasattr(image, 'close'):
-                                try:
-                                    image.close()
-                                except Exception as ignored_error:
-                                    note_ignored_error(ignored_error, "manga_translator/manga_translator.py:MangaTranslator.translate_batch")
-                                    pass
+                        self._close_batch_images(current_batch_images)
                     
                     continue  # 跳过渲染，继续下一批次
                 
@@ -4435,13 +4449,7 @@ class MangaTranslator:
                     
                     # ✅ 批次完成后清理批次数据（图片已在循环内清理）
                     if current_batch_images:
-                        for i, (image, _) in enumerate(current_batch_images):
-                            if hasattr(image, 'close'):
-                                try:
-                                    image.close()
-                                except Exception as ignored_error:
-                                    note_ignored_error(ignored_error, "manga_translator/manga_translator.py:MangaTranslator.translate_batch")
-                                    pass
+                        self._close_batch_images(current_batch_images)
                     
                     continue  # 跳过渲染，继续下一批次
 
