@@ -8,6 +8,7 @@ import subprocess
 import tempfile
 from pathlib import Path
 
+from ..cli_translator_options import CODEX_EFFORT_LEVELS, DEFAULT_EFFORT, safe_effort, safe_model_name
 from ..codex_account import codex_child_env, find_codex_cli
 from .common import CommonTranslator, InvalidServerResponse, VALID_LANGUAGES
 from .manga_context import bounded_context
@@ -32,6 +33,7 @@ class CodexCLITranslator(CommonTranslator):
         self.model = ""
         self.timeout = 300
         self.batch_size = 30
+        self.effort = DEFAULT_EFFORT
         self._manga_context = {}
         self._style_guide = ""
 
@@ -39,7 +41,8 @@ class CodexCLITranslator(CommonTranslator):
         super().parse_args(config)
         settings = self._resolve_translator_config(config)
         self.cli_path = self._get_config_value(settings, "codex_cli_path", "") or ""
-        self.model = self._get_config_value(settings, "codex_model", "") or ""
+        self.model = safe_model_name(self._get_config_value(settings, "codex_model", ""))
+        self.effort = safe_effort(self._get_config_value(settings, "codex_effort", DEFAULT_EFFORT), CODEX_EFFORT_LEVELS)
         self.timeout = max(10, min(3600, int(self._get_config_value(settings, "codex_timeout", 300))))
         self.batch_size = max(1, min(100, int(self._get_config_value(settings, "codex_batch_size", 30))))
 
@@ -156,7 +159,7 @@ class CodexCLITranslator(CommonTranslator):
                             "browser_use", "computer_use", "image_generation", "multi_agent",
                             "skill_search", "skill_mcp_dependency_install", "view_image"):
                 command.extend(["--disable", feature])
-            command.extend(["-c", 'web_search="disabled"', "-c", 'model_reasoning_effort="low"'])
+            command.extend(["-c", 'web_search="disabled"', "-c", f'model_reasoning_effort="{self.effort}"'])
             if self.model:
                 command.extend(["--model", self.model])
             command.append("-")

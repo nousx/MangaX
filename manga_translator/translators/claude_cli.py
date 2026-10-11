@@ -9,6 +9,7 @@ import tempfile
 import time
 
 from ..claude_account import claude_child_env, find_claude_cli
+from ..cli_translator_options import CLAUDE_EFFORT_LEVELS, DEFAULT_EFFORT, safe_effort, safe_model_name
 from .codex_cli import _ERROR_DETAIL_LIMIT, CodexCLITranslator
 from .common import InvalidServerResponse
 from ..utils.log_redaction import redact_secrets
@@ -66,7 +67,8 @@ class ClaudeCLITranslator(CodexCLITranslator):
         super(CodexCLITranslator, self).parse_args(config)
         settings = self._resolve_translator_config(config)
         self.cli_path = self._get_config_value(settings, "claude_cli_path", "") or ""
-        self.model = self._get_config_value(settings, "claude_model", "sonnet") or ""
+        self.model = safe_model_name(self._get_config_value(settings, "claude_model", "sonnet"))
+        self.effort = safe_effort(self._get_config_value(settings, "claude_effort", DEFAULT_EFFORT), CLAUDE_EFFORT_LEVELS)
         self.timeout = max(10, min(3600, int(self._get_config_value(settings, "claude_timeout", 300))))
         self.batch_size = max(1, min(100, int(self._get_config_value(settings, "claude_batch_size", 30))))
 
@@ -115,7 +117,7 @@ class ClaudeCLITranslator(CodexCLITranslator):
             # saved sessions: the model only turns text into text.
             "--tools", "", "--strict-mcp-config", "--setting-sources", "",
             "--disable-slash-commands", "--no-session-persistence",
-            "--effort", "low",
+            "--effort", self.effort,
         ]
         if self.model:
             command.extend(["--model", self.model])

@@ -282,10 +282,14 @@ class TranslatorFields(BaseModel):
     codex_model: str = ""
     codex_timeout: int = Field(default=300, ge=10, le=3600)
     codex_batch_size: int = Field(default=30, ge=1, le=100)
+    codex_effort: str = "low"
+    """Reasoning effort for Codex requests: low, medium, high, xhigh or max."""
     claude_cli_path: str = ""
     claude_model: str = "sonnet"
     claude_timeout: int = Field(default=300, ge=10, le=3600)
     claude_batch_size: int = Field(default=30, ge=1, le=100)
+    claude_effort: str = "low"
+    """Reasoning effort for Claude requests: low, medium, high, xhigh or max."""
     keep_lang: str = 'none'
     """After text merging, keep only regions detected as this source language for later processing. Filtered regions remain unchanged. Use 'none' to disable."""
     enable_streaming: bool = True

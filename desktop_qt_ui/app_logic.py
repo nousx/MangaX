@@ -27,6 +27,13 @@ from manga_translator.config import (
     Translator,
     Upscaler,
 )
+from manga_translator.cli_translator_options import (
+    CLAUDE_EFFORT_LEVELS,
+    CLAUDE_MODEL_ALIASES,
+    CODEX_EFFORT_LEVELS,
+    list_codex_models,
+    safe_model_name,
+)
 from manga_translator.image_formats import (
     OUTPUT_IMAGE_FORMATS,
 )
@@ -1128,7 +1135,30 @@ class MainAppLogic(QObject):
     # endregion
 
     # region UI数据提供
+    def _cli_model_choices(self, setting: str, listed: List[tuple]) -> Dict[str, str]:
+        """Choices for a CLI translator's model: the CLI default, the known models and the saved one."""
+        choices = {"": self._t("cli_model_default")}
+        choices.update(dict(listed))
+        try:
+            saved = safe_model_name(getattr(self.config_service.get_config().translator, setting, ""))
+        except Exception:
+            saved = ""
+        if saved and saved not in choices:
+            # A model typed into the settings file by hand stays selectable.
+            choices[saved] = saved
+        return choices
+
+    def _cli_model_display_mapping(self, key: str) -> Optional[Dict[str, str]]:
+        if key == "claude_model":
+            return self._cli_model_choices(key, [(name, name.capitalize()) for name in CLAUDE_MODEL_ALIASES])
+        if key == "codex_model":
+            return self._cli_model_choices(key, list_codex_models())
+        return None
+
     def get_display_mapping(self, key: str) -> Optional[Dict[str, str]]:
+        cli_models = self._cli_model_display_mapping(key)
+        if cli_models is not None:
+            return cli_models
         # 每次都动态生成翻译映射，确保语言切换时能正确更新
         display_name_maps = {
             "alignment": {
@@ -1231,10 +1261,12 @@ class MainAppLogic(QObject):
                     "codex_model": self._t("label_codex_model"),
                     "codex_timeout": self._t("label_codex_timeout"),
                     "codex_batch_size": self._t("label_codex_batch_size"),
+                    "codex_effort": self._t("label_codex_effort"),
                     "claude_cli_path": self._t("label_claude_cli_path"),
                     "claude_model": self._t("label_claude_model"),
                     "claude_timeout": self._t("label_claude_timeout"),
                     "claude_batch_size": self._t("label_claude_batch_size"),
+                    "claude_effort": self._t("label_claude_effort"),
                     "target_lang": self._t("label_target_lang"),
                     "keep_lang": self._t("label_keep_lang"),
                     "enable_streaming": self._t("label_enable_streaming"),
@@ -1410,6 +1442,8 @@ class MainAppLogic(QObject):
                 "4x-denoise3x",
             ],
             "translator": [member.value for member in Translator],
+            "codex_effort": list(CODEX_EFFORT_LEVELS),
+            "claude_effort": list(CLAUDE_EFFORT_LEVELS),
             "keep_lang": ["none"] + list(self.translation_service.get_keep_languages().keys()),
             "detector": [member.value for member in Detector],
             "colorizer": [member.value for member in Colorizer],
