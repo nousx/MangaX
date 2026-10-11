@@ -69,9 +69,9 @@ def fetch_remote_refs(git_cmd):
 
 def main():
     """Main function"""
-    parser = argparse.ArgumentParser(description='版本检查脚本')
-    parser.add_argument('--brief', action='store_true', help='简洁模式：仅显示版本和更新提示')
-    parser.add_argument('--export-vars', action='store_true', help='导出环境变量格式（用于bat脚本）')
+    parser = argparse.ArgumentParser(description='Version check script')
+    parser.add_argument('--brief', action='store_true', help='Brief mode: only show the version and the update hint')
+    parser.add_argument('--export-vars', action='store_true', help='Export in environment variable format (for bat scripts)')
     args = parser.parse_args()
     
     current_version = get_current_version()
@@ -90,42 +90,42 @@ def main():
         # Brief mode - for script 3 (the launcher)
         print("")
         print("========================================")
-        print("漫画翻译器 - 启动中")
+        print("Manga Translator - starting")
         print("========================================")
-        print(f"当前版本 - {current_version}")
+        print(f"Current version - {current_version}")
         
         if remote_version == "unknown":
             print("")
-            print("[警告] 无法获取远程版本信息,可能网络问题")
+            print("[WARNING] Cannot get the remote version information; possibly a network problem")
             print("")
             return 1
         if current_version != remote_version:
-            print(f"远程版本 - {remote_version}")
+            print(f"Remote version - {remote_version}")
             print("")
-            print("[提示] 发现新版本可用！")
-            print("请运行 步骤4-更新维护.bat 进行更新")
+            print("[NOTICE] A new version is available!")
+            print("Run Win-Install-or-Update.bat to update")
             print("")
         else:
             print("")
-            print("[信息] 已是最新版本")
+            print("[INFO] Already up to date")
             print("")
     else:
         # Detailed mode - for script 4 (update and maintenance)
-        print(f"当前版本 - {current_version}")
-        print(f"远程版本 - {remote_version}")
+        print(f"Current version - {current_version}")
+        print(f"Remote version - {remote_version}")
         
         # Check whether there is an update
         if remote_version == "unknown":
             print("")
-            print("[警告] 无法获取远程版本信息,可能网络问题")
+            print("[WARNING] Cannot get the remote version information; possibly a network problem")
             return 1
         elif current_version == remote_version:
             print("")
-            print("[信息] 当前已是最新版本")
+            print("[INFO] Already up to date")
             return 0
         else:
             print("")
-            print("[发现新版本]")
+            print("[New version found]")
             print("")
             
             # Try to read the remote CHANGELOG
@@ -139,17 +139,17 @@ def main():
             if changelog_file.exists():
                 try:
                     changelog_content = changelog_file.read_text(encoding='utf-8')
-                    print(f"版本 {version_clean} 更新内容:")
+                    print(f"Version {version_clean} changes:")
                     print("========================================")
                     print(changelog_content)
                     print("========================================")
                     changelog_shown = True
                 except Exception as e:
-                    print(f"[警告] 无法读取更新文档: {e}")
+                    print(f"[WARNING] Cannot read the update notes: {e}")
             
             # Without a CHANGELOG file, show git log
             if not changelog_shown:
-                print("最新更新内容 (最近10条):")
+                print("Latest changes (last 10):")
                 print("----------------------------------------")
                 
                 try:
@@ -164,9 +164,9 @@ def main():
                     if result.returncode == 0 and result.stdout:
                         print(result.stdout.strip())
                     else:
-                        print("(无法获取更新日志)")
+                        print("(cannot get the change log)")
                 except Exception:
-                    print("(无法获取更新日志)")
+                    print("(cannot get the change log)")
                 
                 print("----------------------------------------")
             

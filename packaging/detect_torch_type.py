@@ -62,17 +62,17 @@ if __name__ == "__main__":
     torch_type, variant = detect_torch_type()
     
     if torch_type:
-        print(f"检测到 PyTorch 类型: {torch_type}")
+        print(f"Detected PyTorch type: {torch_type}")
         if variant:
-            print(f"变体: {variant}")
+            print(f"Variant: {variant}")
         
         group = get_dependency_group()
-        print(f"对应的依赖组: {group}")
+        print(f"Matching dependency group: {group}")
         
         # --file-only is kept as an alias for old callers
         if len(sys.argv) > 1 and sys.argv[1] in ("--group-only", "--file-only"):
             print(group, end="")
     else:
-        print("未检测到 PyTorch，无法确定版本类型")
-        print("将在安装依赖时重新选择")
+        print("PyTorch was not detected; the build type cannot be determined")
+        print("It will be chosen again when the dependencies are installed")
         sys.exit(1)

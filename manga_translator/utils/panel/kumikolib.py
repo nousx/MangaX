@@ -62,7 +62,7 @@ class Kumiko:
 			subprocess.run(args = ['pdftoppm', '--help'], check = True, capture_output = True)
 		except FileNotFoundError:
 			print("Please `apt install pdftoppm` if you give PDF --input files to Kumiko", file = sys.stderr)
-			print("跳过PDF文件处理", file = sys.stderr)
+			print("Skipping PDF file processing", file = sys.stderr)
 			return
 
 		self.temp_folder = tempfile.mkdtemp(prefix = "kumiko-pdf-pages-")
@@ -72,8 +72,8 @@ class Kumiko:
 			subprocess.run(args = ['pdftoppm', '-jpeg', pdf_filename, f"{self.temp_folder}/"], check = True)
 			self.parse_dir(self.temp_folder)
 		except Exception as e:
-			print(f"无法处理PDF文件 '{pdf_filename}': {e}", file = sys.stderr)
-			print("跳过此PDF文件", file = sys.stderr)
+			print(f"Cannot process PDF file '{pdf_filename}': {e}", file = sys.stderr)
+			print("Skipping this PDF file", file = sys.stderr)
 			# Remove the temporary folder
 			try:
 				if os.path.exists(self.temp_folder):

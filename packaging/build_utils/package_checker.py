@@ -183,7 +183,7 @@ def check_req_file(requirements_file: str) -> bool:
     try:
         return check_reqs(load_req_file(requirements_file))
     except Exception as e:
-        print(f'检查依赖文件失败: {e}')
+        print(f'Checking the dependency file failed: {e}')
         return False
 
 
@@ -193,6 +193,6 @@ def get_missing_packages_from_file(requirements_file: str) -> List[str]:
         reqs = load_req_file(requirements_file)
         return get_missing_packages(reqs)
     except Exception as e:
-        print(f'检查依赖文件失败: {e}')
+        print(f'Checking the dependency file failed: {e}')
         return []
 

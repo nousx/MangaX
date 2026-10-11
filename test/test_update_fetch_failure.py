@@ -217,5 +217,5 @@ def test_check_version_brief_fetch_failure_reports_warning(monkeypatch, capsys):
     out = capsys.readouterr().out
 
     assert rc == 1
-    assert "[警告] 无法获取远程版本信息" in out
-    assert "[信息] 已是最新版本" not in out
+    assert "[WARNING] Cannot get the remote version information" in out
+    assert "[INFO] Already up to date" not in out

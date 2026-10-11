@@ -24,8 +24,8 @@ DEFAULT_ROTATION_STRATEGY = "failover"
 DEFAULT_RATE_LIMIT_COOLDOWN_SECONDS = 60
 MAX_RATE_LIMIT_COOLDOWN_SECONDS = 600
 ROTATION_STRATEGIES = {
-    "failover": "按顺序故障切换",
-    "round_robin": "轮询",
+    "failover": "Ordered failover",
+    "round_robin": "Round robin",
 }
 
 _STATUS_RE = re.compile(r"\b(400|402|404|429)\b")

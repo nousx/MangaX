@@ -27,7 +27,7 @@ def run_command(cmd, description, *, env=None):
     print(f"\n{'='*60}")
     print(f"{description}")
     print(f"{'='*60}")
-    print(f"命令: {' '.join(cmd)}")
+    print(f"Command: {' '.join(cmd)}")
     
     result = subprocess.run(
         cmd,
@@ -45,10 +45,10 @@ def run_command(cmd, description, *, env=None):
         print(result.stderr)
     
     if result.returncode != 0:
-        print(f"❌ 错误: {description} 失败 (退出码: {result.returncode})")
+        print(f"❌ Error: {description} failed (exit code: {result.returncode})")
         return False
     
-    print(f"✓ {description} 完成")
+    print(f"✓ {description} done")
     return True
 
 
@@ -56,7 +56,7 @@ def build_wheel():
     """Build the pydensecrf wheel file"""
     
     # Check the Python version
-    print(f"当前 Python 版本: {sys.version}")
+    print(f"Current Python version: {sys.version}")
     python_version = f"cp{sys.version_info.major}{sys.version_info.minor}"
     
     # Create the output folder
@@ -66,7 +66,7 @@ def build_wheel():
     # Create a temporary build folder
     build_dir = Path("build/pydensecrf_build")
     if build_dir.exists():
-        print(f"清理旧的构建目录: {build_dir}")
+        print(f"Removing the old build folder: {build_dir}")
         try:
             # On Windows, files of a Git repository may be locked and need special handling
             if sys.platform == "win32":
@@ -83,20 +83,20 @@ def build_wheel():
             else:
                 shutil.rmtree(build_dir)
         except Exception as e:
-            print(f"⚠️  警告: 无法完全清理构建目录: {e}")
-            print(f"   尝试使用备用构建目录...")
+            print(f"⚠️  Warning: the build folder could not be removed completely: {e}")
+            print(f"   Trying a fallback build folder...")
             import time
             build_dir = Path(f"build/pydensecrf_build_{int(time.time())}")
     
     build_dir.mkdir(parents=True, exist_ok=True)
     
-    print(f"\n✓ 输出目录: {wheels_dir.absolute()}")
-    print(f"✓ 构建目录: {build_dir.absolute()}")
+    print(f"\n✓ Output folder: {wheels_dir.absolute()}")
+    print(f"✓ Build folder: {build_dir.absolute()}")
     
     # Install the build tools
     if not run_command(
         [sys.executable, "-m", "pip", "install", "--upgrade", "pip", "wheel", "setuptools", "build"],
-        "安装构建工具"
+        "Install the build tools"
     ):
         return False
     
@@ -106,7 +106,7 @@ def build_wheel():
     
     if not run_command(
         ["git", "clone", repo_url, str(repo_dir)],
-        "克隆 pydensecrf 仓库",
+        "Clone the pydensecrf repository",
         env=non_interactive_git_env(),
     ):
 
@@ -120,34 +120,34 @@ def build_wheel():
         # Build the wheel with python -m build
         if not run_command(
             [sys.executable, "-m", "build", "--wheel"],
-            "构建 wheel 文件"
+            "Build the wheel file"
         ):
             return False
         
         # build writes to ./dist by default; move the files to the target folder
         build_dist = repo_dir / "dist"
-        print(f"\n尝试从 {build_dist} 移动文件到 {wheels_dir}")
+        print(f"\nTrying to move files from {build_dist} to {wheels_dir}")
         
         if not build_dist.exists():
-            print(f"❌ 构建输出目录不存在: {build_dist}")
+            print(f"❌ The build output folder does not exist: {build_dist}")
             return False
         
         wheel_files_found = list(build_dist.glob("*.whl"))
         if not wheel_files_found:
-            print(f"❌ 在 {build_dist} 中没有找到 .whl 文件")
+            print(f"❌ In {build_dist}, no .whl file was found")
             return False
         
-        print(f"找到 {len(wheel_files_found)} 个 wheel 文件")
+        print(f"Found {len(wheel_files_found)} wheel files")
         for wheel_file in wheel_files_found:
             target_file = wheels_dir / wheel_file.name
-            print(f"  移动: {wheel_file.name}")
-            print(f"    从: {wheel_file}")
-            print(f"    到: {target_file}")
+            print(f"  Moving: {wheel_file.name}")
+            print(f"    from: {wheel_file}")
+            print(f"    to: {target_file}")
             try:
                 shutil.move(str(wheel_file), str(target_file))
-                print(f"  ✓ 已移动: {wheel_file.name}")
+                print(f"  ✓ Moved: {wheel_file.name}")
             except Exception as e:
-                print(f"  ❌ 移动失败: {e}")
+                print(f"  ❌ Moving failed: {e}")
                 return False
         
     finally:
@@ -155,13 +155,13 @@ def build_wheel():
     
     # List the wheel files that were built
     print(f"\n{'='*60}")
-    print("生成的 wheel 文件:")
+    print("Wheel files produced:")
     print(f"{'='*60}")
     
     wheel_files = list(wheels_dir.glob("*.whl"))
     if not wheel_files:
-        print("❌ 没有找到生成的 wheel 文件")
-        print(f"   目标目录: {wheels_dir.absolute()}")
+        print("❌ No produced wheel file was found")
+        print(f"   Target folder: {wheels_dir.absolute()}")
         return False
     
     for wheel_file in wheel_files:
@@ -169,15 +169,15 @@ def build_wheel():
         print(f"✓ {wheel_file.name} ({file_size:.1f} KB)")
     
     print(f"\n{'='*60}")
-    print("✅ 构建完成!")
+    print("✅ Build finished!")
     print(f"{'='*60}")
-    print(f"\n下一步:")
-    print(f"1. 上传 wheel 文件到 GitHub Release:")
+    print(f"\nNext steps:")
+    print(f"1. Upload the wheel file to a GitHub Release:")
     print(f"   gh release upload <tag> {wheels_dir.absolute()}/*.whl")
-    print(f"\n2. 在 requirements.txt 中添加下载链接:")
-    print(f"   # 从 GitHub Release 下载预编译的 wheel (Python {python_version})")
+    print(f"\n2. Add the download link to requirements.txt:")
+    print(f"   # Download the prebuilt wheel from the GitHub Release (Python {python_version})")
     print(f"   # https://github.com/hgmzhn/manga-translator-ui/releases/download/<tag>/pydensecrf-*-{python_version}-*.whl")
-    print(f"   git+https://github.com/lucasb-eyer/pydensecrf.git  # fallback 到源码安装")
+    print(f"   git+https://github.com/lucasb-eyer/pydensecrf.git  # fall back to installing from source")
     
     return True
 
@@ -185,21 +185,21 @@ def build_wheel():
 def main():
     """Main function"""
     print("="*60)
-    print("pydensecrf Wheel 构建脚本")
+    print("pydensecrf wheel build script")
     print("="*60)
     
     # Check for git
     if not shutil.which("git"):
-        print("❌ 错误: 未找到 git,请先安装 Git")
+        print("❌ Error: git was not found; install Git first")
         return 1
     
     # Check for a C++ build toolchain
     if sys.platform == "win32":
         if not shutil.which("cl.exe"):
-            print("⚠️  警告: 未找到 cl.exe (Microsoft C++ 编译器)")
-            print("   请确保已安装 Visual Studio Build Tools")
-            print("   下载地址: https://visualstudio.microsoft.com/visual-cpp-build-tools/")
-            response = input("\n是否继续? (y/n): ")
+            print("⚠️  Warning: cl.exe (the Microsoft C++ compiler) was not found")
+            print("   Make sure Visual Studio Build Tools is installed")
+            print("   Download: https://visualstudio.microsoft.com/visual-cpp-build-tools/")
+            response = input("\nContinue? (y/n): ")
             if response.lower() != 'y':
                 return 1
     
