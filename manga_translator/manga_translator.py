@@ -1882,6 +1882,122 @@ class MangaTranslator:
         
         return result
 
+    def _save_detection_debug_images(self, config: Config, ctx: Context, result):
+        """Write the debug images a detector returned and drop them from its result."""
+        third_elem = result[2]
+        # 检查是否是tuple（包含三张图）
+        if isinstance(third_elem, tuple) and len(third_elem) == 3:
+            try:
+                logger.info(f'[DEBUG] Processing 3-element tuple: {[type(x) for x in third_elem]}')
+                bbox_img, binary_mask_img, raw_mask_mask = third_elem
+                # 保存边框调试图
+                bbox_debug_path = self._result_path('bboxes_with_scores.png')
+                imwrite_unicode(bbox_debug_path, bbox_img, logger)
+                logger.info(f'Saved bbox debug image to {bbox_debug_path}')
+                # 保存二值化mask
+                binary_mask_path = self._result_path('mask_binary.png')
+                imwrite_unicode(binary_mask_path, binary_mask_img, logger)
+                logger.info(f'Saved binary mask to {binary_mask_path}')
+                # 暂存raw_mask_mask到ctx以便后续生成对比图
+                ctx.raw_mask_mask = raw_mask_mask
+                logger.info(f'[DEBUG] Stored raw_mask_mask for later comparison (shape: {raw_mask_mask.shape})')
+                result = (result[0], result[1], None)
+            except Exception as e:
+                logger.error(f'Failed to save bbox debug images: {e}')
+        # 兼容2张图的情况
+        elif isinstance(third_elem, tuple) and len(third_elem) == 2:
+            try:
+                bbox_img, binary_mask_img = third_elem
+                bbox_debug_path = self._result_path('bboxes_with_scores.png')
+                imwrite_unicode(bbox_debug_path, bbox_img, logger)
+                logger.info(f'Saved bbox debug image to {bbox_debug_path}')
+                binary_mask_path = self._result_path('mask_binary.png')
+                imwrite_unicode(binary_mask_path, binary_mask_img, logger)
+                logger.info(f'Saved binary mask to {binary_mask_path}')
+                result = (result[0], result[1], None)
+            except Exception as e:
+                logger.error(f'Failed to save bbox debug images: {e}')
+        # 兼容单张图的情况（包括混合检测调试图）
+        elif isinstance(third_elem, np.ndarray) and len(third_elem.shape) == 3:
+            try:
+                # 如果启用了YOLO辅助检测，优先保存为混合检测调试图
+                if config.detector.use_yolo_obb:
+                    # 保存混合检测调试图
+                    hybrid_debug_path = self._result_path('hybrid_detection_boxes.png')
+                    imwrite_unicode(hybrid_debug_path, cv2.cvtColor(third_elem, cv2.COLOR_RGB2BGR), logger)
+                    logger.info(f'✅ Saved hybrid detection debug image: {hybrid_debug_path}')
+                else:
+                    # 保存普通bbox调试图
+                    bbox_debug_path = self._result_path('bboxes_with_scores.png')
+                    imwrite_unicode(bbox_debug_path, third_elem, logger)
+                    logger.info(f'Saved bbox debug image to {bbox_debug_path}')
+                result = (result[0], result[1], None)
+            except Exception as e:
+                logger.error(f'Failed to save bbox debug image: {e}')
+        return result
+
+    @staticmethod
+    def _remove_duplicate_textlines(result):
+        """Non-maximum suppression: of text lines that overlap almost completely, keep the most probable."""
+        try:
+            from shapely.geometry import Polygon
+
+            def calculate_iou(box_1, box_2):
+                poly_1 = Polygon(box_1.pts)
+                poly_2 = Polygon(box_2.pts)
+                if not poly_1.is_valid or not poly_2.is_valid:
+                    return 0.0
+                intersection_area = poly_1.intersection(poly_2).area
+                union_area = poly_1.union(poly_2).area
+                if union_area == 0:
+                    return 0.0
+                return intersection_area / union_area
+
+            textlines = result[0][:] # Work on a copy
+            textlines.sort(key=lambda x: x.prob, reverse=True)
+
+            kept_textlines = []
+            while textlines:
+                current_box = textlines.pop(0)
+                kept_textlines.append(current_box)
+                remaining_textlines = []
+                for box in textlines:
+                    iou = calculate_iou(current_box, box)
+                    if iou < 0.9: # IoU threshold, 0.9 means very high overlap
+                        remaining_textlines.append(box)
+                textlines = remaining_textlines
+
+            if len(result[0]) != len(kept_textlines):
+                logger.info(f"Removed {len(result[0]) - len(kept_textlines)} duplicate lines via NMS.")
+                result = (kept_textlines, result[1], result[2])
+
+        except Exception as e:
+            logger.error(f"An error occurred during Non-Maximum Suppression: {e}")
+            pass
+        return result
+
+    @staticmethod
+    def _split_off_other_textlines(ctx: Context, result):
+        """Keep text lines labelled "other" out of OCR, but remember them on the context for merging."""
+        all_textlines = result[0]
+        forward_textlines = []
+        other_textlines = []
+        for txtln in all_textlines:
+            det_label = getattr(txtln, 'det_label', None) or getattr(txtln, 'yolo_label', None)
+            if isinstance(det_label, str) and det_label.strip().lower() == 'other':
+                other_textlines.append(txtln)
+            else:
+                forward_textlines.append(txtln)
+        ctx.model_assisted_other_textlines = other_textlines
+        ctx.all_detected_textlines = all_textlines
+        if other_textlines:
+            logger.info(
+                f"Detection split: total={len(all_textlines)}, "
+                f"forward={len(forward_textlines)}, other_for_model_assisted_merge={len(other_textlines)}"
+            )
+        result = (forward_textlines, result[1], result[2])
+        return result
+
     async def _run_detection(self, config: Config, ctx: Context):
         # ✅ 检查停止标志
         await asyncio.sleep(0)
@@ -1950,56 +2066,7 @@ class MangaTranslator:
         
             # 处理bbox调试图（如果检测器返回了）
             if self.verbose and result and len(result) == 3 and result[2] is not None:
-                third_elem = result[2]
-                # 检查是否是tuple（包含三张图）
-                if isinstance(third_elem, tuple) and len(third_elem) == 3:
-                    try:
-                        logger.info(f'[DEBUG] Processing 3-element tuple: {[type(x) for x in third_elem]}')
-                        bbox_img, binary_mask_img, raw_mask_mask = third_elem
-                        # 保存边框调试图
-                        bbox_debug_path = self._result_path('bboxes_with_scores.png')
-                        imwrite_unicode(bbox_debug_path, bbox_img, logger)
-                        logger.info(f'Saved bbox debug image to {bbox_debug_path}')
-                        # 保存二值化mask
-                        binary_mask_path = self._result_path('mask_binary.png')
-                        imwrite_unicode(binary_mask_path, binary_mask_img, logger)
-                        logger.info(f'Saved binary mask to {binary_mask_path}')
-                        # 暂存raw_mask_mask到ctx以便后续生成对比图
-                        ctx.raw_mask_mask = raw_mask_mask
-                        logger.info(f'[DEBUG] Stored raw_mask_mask for later comparison (shape: {raw_mask_mask.shape})')
-                        result = (result[0], result[1], None)
-                    except Exception as e:
-                        logger.error(f'Failed to save bbox debug images: {e}')
-                # 兼容2张图的情况
-                elif isinstance(third_elem, tuple) and len(third_elem) == 2:
-                    try:
-                        bbox_img, binary_mask_img = third_elem
-                        bbox_debug_path = self._result_path('bboxes_with_scores.png')
-                        imwrite_unicode(bbox_debug_path, bbox_img, logger)
-                        logger.info(f'Saved bbox debug image to {bbox_debug_path}')
-                        binary_mask_path = self._result_path('mask_binary.png')
-                        imwrite_unicode(binary_mask_path, binary_mask_img, logger)
-                        logger.info(f'Saved binary mask to {binary_mask_path}')
-                        result = (result[0], result[1], None)
-                    except Exception as e:
-                        logger.error(f'Failed to save bbox debug images: {e}')
-                # 兼容单张图的情况（包括混合检测调试图）
-                elif isinstance(third_elem, np.ndarray) and len(third_elem.shape) == 3:
-                    try:
-                        # 如果启用了YOLO辅助检测，优先保存为混合检测调试图
-                        if config.detector.use_yolo_obb:
-                            # 保存混合检测调试图
-                            hybrid_debug_path = self._result_path('hybrid_detection_boxes.png')
-                            imwrite_unicode(hybrid_debug_path, cv2.cvtColor(third_elem, cv2.COLOR_RGB2BGR), logger)
-                            logger.info(f'✅ Saved hybrid detection debug image: {hybrid_debug_path}')
-                        else:
-                            # 保存普通bbox调试图
-                            bbox_debug_path = self._result_path('bboxes_with_scores.png')
-                            imwrite_unicode(bbox_debug_path, third_elem, logger)
-                            logger.info(f'Saved bbox debug image to {bbox_debug_path}')
-                        result = (result[0], result[1], None)
-                    except Exception as e:
-                        logger.error(f'Failed to save bbox debug image: {e}')
+                result = self._save_detection_debug_images(config, ctx, result)
 
             if import_yolo_labels and imported_textlines and not self.load_text:
                 detector_box_count = len(result[0]) if result and result[0] else 0
@@ -2015,64 +2082,14 @@ class MangaTranslator:
         
         # --- BEGIN NON-MAXIMUM SUPPRESSION (NMS) FOR DE-DUPLICATION ---
         if result and result[0]:
-            try:
-                from shapely.geometry import Polygon
-
-                def calculate_iou(box_1, box_2):
-                    poly_1 = Polygon(box_1.pts)
-                    poly_2 = Polygon(box_2.pts)
-                    if not poly_1.is_valid or not poly_2.is_valid:
-                        return 0.0
-                    intersection_area = poly_1.intersection(poly_2).area
-                    union_area = poly_1.union(poly_2).area
-                    if union_area == 0:
-                        return 0.0
-                    return intersection_area / union_area
-
-                textlines = result[0][:] # Work on a copy
-                textlines.sort(key=lambda x: x.prob, reverse=True)
-                
-                kept_textlines = []
-                while textlines:
-                    current_box = textlines.pop(0)
-                    kept_textlines.append(current_box)
-                    remaining_textlines = []
-                    for box in textlines:
-                        iou = calculate_iou(current_box, box)
-                        if iou < 0.9: # IoU threshold, 0.9 means very high overlap
-                            remaining_textlines.append(box)
-                    textlines = remaining_textlines
-
-                if len(result[0]) != len(kept_textlines):
-                    logger.info(f"Removed {len(result[0]) - len(kept_textlines)} duplicate lines via NMS.")
-                    result = (kept_textlines, result[1], result[2])
-
-            except Exception as e:
-                logger.error(f"An error occurred during Non-Maximum Suppression: {e}")
-                pass
+            result = self._remove_duplicate_textlines(result)
         # --- END NON-MAXIMUM SUPPRESSION (NMS) ---
 
         # 拆分检测框：
         # - 前向流程（OCR/翻译）不包含 other
         # - 保留 other 供 textline_merge 的模型辅助合并阶段使用
         if result and result[0]:
-            all_textlines = result[0]
-            forward_textlines = []
-            other_textlines = []
-            for txtln in all_textlines:
-                det_label = getattr(txtln, 'det_label', None) or getattr(txtln, 'yolo_label', None)
-                if isinstance(det_label, str) and det_label.strip().lower() == 'other':
-                    other_textlines.append(txtln)
-                else:
-                    forward_textlines.append(txtln)
-            ctx.model_assisted_other_textlines = other_textlines
-            ctx.all_detected_textlines = all_textlines
-            if other_textlines:
-                logger.info(
-                    f"Detection split: total={len(all_textlines)}, "
-                    f"forward={len(forward_textlines)}, other_for_model_assisted_merge={len(other_textlines)}"
-                )
-            result = (forward_textlines, result[1], result[2])
+            result = self._split_off_other_textlines(ctx, result)
 
         return result
 
