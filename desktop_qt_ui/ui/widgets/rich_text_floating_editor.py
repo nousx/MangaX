@@ -326,7 +326,7 @@ class RichTextFloatingEditor(SimpleCardWidget):
         self.layout_size_changed.emit(True)
 
     def _auto_rich_text_rules_enabled(self) -> bool:
-        """编辑时自动应用富文本规则的开关（与编辑器菜单/配置共用）。"""
+        """Switch for applying the rich-text rules automatically while editing (shared with the editor menu and the configuration)."""
         service = self.config_service
         if service is None:
             return False
@@ -893,7 +893,7 @@ class RichTextFloatingEditor(SimpleCardWidget):
         self.setCursor(Qt.CursorShape.SizeAllCursor)
 
     def _end_drag(self) -> None:
-        """复位拖拽状态并恢复光标；隐藏/关闭时左键 release 不会再来。"""
+        """Reset the drag state and restore the cursor; after a hide or close the left button release will not arrive any more."""
         self._dragging = False
         self.unsetCursor()
         for handle in self._drag_handles:

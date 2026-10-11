@@ -13,7 +13,7 @@ if TYPE_CHECKING:
 
 
 class PixmapOverlayLayer:
-    """单个透明 pixmap 覆盖层。"""
+    """A single transparent pixmap overlay layer."""
 
     def __init__(
         self,
@@ -112,7 +112,7 @@ class PixmapOverlayLayer:
         return self.item
 
     def set_layer_visible(self, visible: bool) -> None:
-        """仅切换显示，不清数据；重新 set_image 时也遵循该标志。"""
+        """Only switches visibility and does not clear the data; a new set_image follows this flag too."""
         self.layer_visible = bool(visible)
         if self.item is not None and not self.item.pixmap().isNull():
             self.item.setVisible(self.layer_visible)
@@ -129,7 +129,7 @@ class PixmapOverlayLayer:
 
 
 class OverlayLayerManager:
-    """管理修复图和画笔图层。"""
+    """Manages the inpainted image and the brush layers."""
 
     def __init__(self, view: "GraphicsView"):
         self.view = view

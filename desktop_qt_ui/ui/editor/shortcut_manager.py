@@ -1,6 +1,6 @@
 """
-快捷键管理模块
-负责统一管理Qt UI的所有快捷键设置和处理
+Shortcut management module.
+Responsible for setting up and handling all shortcuts of the Qt UI in one place
 """
 
 from functools import partial
@@ -13,16 +13,16 @@ from PyQt6.QtWidgets import QApplication, QLineEdit, QTextEdit, QWidget
 
 class ShortcutManager(QObject):
     """
-    快捷键管理器
-    统一管理应用程序的所有快捷键
+    Shortcut manager.
+    Manages all shortcuts of the application in one place
     """
 
     def __init__(self, parent: QWidget):
         """
-        初始化快捷键管理器
+        Initialise the shortcut manager
 
         Args:
-            parent: 父窗口部件
+            parent: the parent widget
         """
         super().__init__(parent)
         self.parent_widget = parent
@@ -36,16 +36,16 @@ class ShortcutManager(QObject):
         context_aware: bool = False,
     ) -> QShortcut:
         """
-        注册一个快捷键
+        Register a shortcut
 
         Args:
-            name: 快捷键名称（用于标识）
-            key_sequence: 按键序列
-            callback: 回调函数
-            context_aware: 是否需要上下文感知（检查焦点控件）
+            name: name of the shortcut (used to identify it)
+            key_sequence: the key sequence
+            callback: the callback function
+            context_aware: whether it is context aware (checks the focused widget)
 
         Returns:
-            创建的QShortcut对象
+            The QShortcut object that was created
         """
         shortcut = QShortcut(key_sequence, self.parent_widget)
 
@@ -72,42 +72,42 @@ class ShortcutManager(QObject):
 
     def get_shortcut(self, name: str) -> Optional[QShortcut]:
         """
-        获取快捷键对象
+        Get a shortcut object
 
         Args:
-            name: 快捷键名称
+            name: name of the shortcut
 
         Returns:
-            QShortcut对象，如果不存在则返回None
+            The QShortcut object, or None when it does not exist
         """
         return self.shortcuts.get(name)
 
     @staticmethod
     def is_text_widget(widget) -> bool:
         """
-        检查控件是否为文本编辑控件
+        Check whether a widget is a text editing widget
 
         Args:
-            widget: 要检查的控件
+            widget: the widget to check
 
         Returns:
-            是否为文本编辑控件
+            Whether it is a text editing widget
         """
         return isinstance(widget, (QTextEdit, QLineEdit))
 
 
 class EditorShortcutManager(ShortcutManager):
     """
-    编辑器快捷键管理器
-    专门用于编辑器视图的快捷键管理
+    Editor shortcut manager.
+    Manages the shortcuts of the editor view specifically
     """
 
     def __init__(self, editor_view):
         """
-        初始化编辑器快捷键管理器
+        Initialise the editor shortcut manager
 
         Args:
-            editor_view: 编辑器视图对象
+            editor_view: the editor view object
         """
         super().__init__(editor_view)
         self.editor_view = editor_view
@@ -256,7 +256,7 @@ class EditorShortcutManager(ShortcutManager):
         )
 
     def _handle_undo(self, focused_widget):
-        """处理撤销快捷键"""
+        """Handle the undo shortcut"""
         if self.is_text_widget(focused_widget):
             # When the focus is on a text control, let it handle undo
             focused_widget.undo()
@@ -265,7 +265,7 @@ class EditorShortcutManager(ShortcutManager):
             self.controller.undo()
 
     def _handle_redo(self, focused_widget):
-        """处理重做快捷键"""
+        """Handle the redo shortcut"""
         if self.is_text_widget(focused_widget):
             # When the focus is on a text control, let it handle redo
             focused_widget.redo()
@@ -274,7 +274,7 @@ class EditorShortcutManager(ShortcutManager):
             self.controller.redo()
 
     def _handle_copy(self, focused_widget):
-        """处理复制快捷键"""
+        """Handle the copy shortcut"""
         if self.is_text_widget(focused_widget):
             # When the focus is on a text control, let it handle copy
             focused_widget.copy()
@@ -293,7 +293,7 @@ class EditorShortcutManager(ShortcutManager):
                 self.controller.copy_regions(selected_regions)
 
     def _handle_paste(self, focused_widget):
-        """处理粘贴快捷键"""
+        """Handle the paste shortcut"""
         if self.is_text_widget(focused_widget):
             # When the focus is on a text control, let it handle paste
             focused_widget.paste()
@@ -328,9 +328,9 @@ class EditorShortcutManager(ShortcutManager):
                     self._paste_new_region_at_cursor()
 
     def _paste_paste_overlay_at_cursor(self) -> None:
-        """无选中区域且有贴片剪贴板：粘贴贴片到鼠标位置。
+        """No region selected and the overlay clipboard holds something: paste the overlay at the mouse position.
 
-        贴片几何是场景坐标（源图像素），不能走 _cursor_image_position 的图像局部坐标。
+        Overlay geometry is in scene coordinates (source image pixels), so the image-local coordinates of _cursor_image_position cannot be used.
         """
         mouse_scene_pos = self._cursor_scene_position()
         if self.controller.paste_paste_overlay(mouse_scene_pos):
@@ -341,7 +341,7 @@ class EditorShortcutManager(ShortcutManager):
                     graphics_view.select_paste_overlay(overlays[-1]["id"])
 
     def _cursor_image_position(self):
-        """把当前鼠标位置换算成图像（场景）坐标；无画布时返回 None。"""
+        """Convert the current mouse position to image (scene) coordinates; None when there is no canvas."""
         from PyQt6.QtGui import QCursor
 
         graphics_view = getattr(self.editor_view, "graphics_view", None)
@@ -353,7 +353,7 @@ class EditorShortcutManager(ShortcutManager):
         return graphics_view._image_item.mapFromScene(mouse_pos_scene)
 
     def _cursor_scene_position(self):
-        """把当前鼠标位置换算成场景坐标（贴片坐标系）；无画布时返回 None。"""
+        """Convert the current mouse position to scene coordinates (the overlay coordinate system); None when there is no canvas."""
         from PyQt6.QtGui import QCursor
 
         graphics_view = getattr(self.editor_view, "graphics_view", None)
@@ -362,7 +362,7 @@ class EditorShortcutManager(ShortcutManager):
         return graphics_view.mapToScene(graphics_view.mapFromGlobal(QCursor.pos()))
 
     def _paste_new_region_at_cursor(self):
-        """无选中区域时粘贴新区域到鼠标位置（贴片分支外的原行为）。"""
+        """Paste a new region at the mouse position when no region is selected (the original behaviour outside the overlay branch)."""
         mouse_pos_image = self._cursor_image_position()
         if mouse_pos_image is not None:
             self.controller.paste_region(mouse_pos_image)
@@ -370,7 +370,7 @@ class EditorShortcutManager(ShortcutManager):
             self.controller.paste_region()
 
     def _handle_select_all(self, focused_widget):
-        """处理全选快捷键"""
+        """Handle the select-all shortcut"""
         if self.is_text_widget(focused_widget):
             focused_widget.selectAll()
         else:
@@ -381,7 +381,7 @@ class EditorShortcutManager(ShortcutManager):
             self.editor_view.model.set_selection(list(range(len(regions))))
 
     def _handle_delete(self, focused_widget):
-        """处理删除快捷键"""
+        """Handle the delete shortcut"""
         if not self.is_text_widget(focused_widget):
             # When a paste overlay is selected on the canvas, delete the overlay first
             graphics_view = getattr(self.editor_view, "graphics_view", None)
@@ -398,16 +398,16 @@ class EditorShortcutManager(ShortcutManager):
                 return
 
     def _handle_save(self, focused_widget):
-        """处理保存快捷键 (Ctrl+S)。"""
+        """Handle the save shortcut (Ctrl+S)."""
         self.editor_view.save_editor_state()
 
     def _handle_export(self, focused_widget):
-        """处理导出快捷键 (Ctrl+Q)"""
+        """Handle the export shortcut (Ctrl+Q)"""
         # Shares one entry point with the toolbar, so the rich-text body and the ruby are flushed before the model is read.
         self.editor_view.export_image()
 
     def _handle_toggle_rich_text_popup(self):
-        """切换富文本浮动编辑器显示状态 (Ctrl+Shift+R)。"""
+        """Toggle the floating rich-text editor (Ctrl+Shift+R)."""
         if not self.editor_view.isVisible():
             return
         toolbar = getattr(self.editor_view, "toolbar", None)
@@ -446,7 +446,7 @@ class EditorShortcutManager(ShortcutManager):
             activate(index)
 
     def _handle_toggle_text_direction(self, focused_widget):
-        """按 V 在横排与竖排之间切换选中文本框。"""
+        """Press V to switch the selected text boxes between horizontal and vertical."""
         if self.is_text_widget(focused_widget):
             self._forward_key_to_widget(
                 focused_widget, Qt.Key.Key_V, "v", "toggle_text_direction"
@@ -486,7 +486,7 @@ class EditorShortcutManager(ShortcutManager):
             navigate()
 
     def _setup_wheel_shortcuts(self):
-        """设置鼠标滚轮快捷键（通过事件过滤器实现）"""
+        """Set up the mouse wheel shortcuts (implemented with an event filter)"""
         # Install an event filter on the viewport of graphics_view
         if hasattr(self.editor_view, "graphics_view"):
             # Wheel events reach the viewport first
@@ -494,11 +494,11 @@ class EditorShortcutManager(ShortcutManager):
 
     def eventFilter(self, obj, event):
         """
-        事件过滤器，用于处理鼠标滚轮快捷键
+        Event filter that handles the mouse wheel shortcuts
 
-        支持的快捷键：
-        - Ctrl + 滚轮：等比例缩放选中文本框（包括框的大小和字体）
-        - Shift + 滚轮：调整蒙版画笔大小
+        Supported shortcuts:
+        - Ctrl + wheel: scale the selected text boxes proportionally (both the box size and the font)
+        - Shift + wheel: adjust the size of the mask brush
         """
         if event.type() == QEvent.Type.Wheel:
             # Check whether it is the viewport of graphics_view

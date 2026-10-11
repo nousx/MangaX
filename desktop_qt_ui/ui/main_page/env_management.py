@@ -416,7 +416,7 @@ def _add_env_action_button(self, layout, row: int, env_key: str, action_key: str
 
 
 def create_env_widgets(self, keys: list, current_values: dict):
-    """为给定的键创建标签和输入框。"""
+    """Create the label and the input box for the given key."""
     from PyQt6.QtWidgets import QGridLayout
 
     is_grid_layout = isinstance(self.env_layout, QGridLayout)
@@ -695,7 +695,7 @@ def _refresh_api_groups_after_dialog(self) -> None:
 
 
 def refresh_api_slot_status_styles(self) -> None:
-    """主题切换后按各状态条自带的 state 重算样式（_api_slot_status_style 每次取当前主题色）。"""
+    """After a theme switch, recompute the style of each status bar from its own state (_api_slot_status_style takes the current theme colours every time)."""
     alive = []
     for widget in getattr(self, "_api_slot_status_widgets", []):
         try:
@@ -782,7 +782,7 @@ def _add_api_slot_status_notice(self, slot_card_layout, endpoint: APIEndpoint | 
 
 
 def get_env_default_placeholder(self, key: str) -> str:
-    """返回环境变量输入框应显示的默认占位符。"""
+    """Return the default placeholder the input box of an environment variable should show."""
     key_placeholder = self._t("placeholder_paste_key")
     token_placeholder = self._t("placeholder_paste_token")
     normalized_key = key.upper()
@@ -834,16 +834,16 @@ def get_env_default_placeholder(self, key: str) -> str:
 
 
 def debounced_save_env_var(self, key: str, text: str):
-    """立即更新内存；ConfigService 统一负责 250ms 合并落盘。"""
+    """Update memory at once; ConfigService is responsible for the write to disk, merged over 250ms."""
     self.env_var_changed.emit(key, text)
 
 
 def flush_env_var_immediately(self, key: str):
-    """兼容既有 editingFinished 接线；值已在 textChanged 时提交内存。"""
+    """For the existing editingFinished wiring; the value was already committed to memory on textChanged."""
 
 
 def flush_all_pending_env_vars(self, wait: bool = True):
-    """先提交当前控件值，再按需等待 ConfigService 原子落盘。"""
+    """Commit the values of the current controls first, then wait for the atomic write of ConfigService if needed."""
     config_service = getattr(self.controller, "config_service", None)
     save_many = getattr(config_service, "save_env_vars", None)
     if callable(save_many):
@@ -953,7 +953,7 @@ def on_api_feature_combo_changed(self, combo):
 
 
 def _schedule_api_feature_refresh(self) -> None:
-    """合并 API 分组 + 功能选择器刷新为一个可重启的去抖定时器。"""
+    """Merge the refresh of the API groups and of the feature selectors into one restartable debounce timer."""
     timer = getattr(self, "_api_feature_refresh_timer", None)
     if timer is None:
         timer = QTimer(self)
@@ -1558,7 +1558,7 @@ def on_test_current_api_section_clicked(self, section_key: str):
 
 
 def on_open_custom_api_params_file(self):
-    """打开自定义 API 参数编辑器。"""
+    """Open the editor for custom API parameters."""
     from manga_translator.custom_api_params import (
         ensure_custom_api_params_file,
         get_custom_api_params_path,
@@ -1586,7 +1586,7 @@ def on_open_custom_api_params_file(self):
 
 
 def on_test_api_clicked(self, key: str):
-    """测试API连接。"""
+    """Test the API connection."""
     flush_all_pending_env_vars(self)
 
     from ui.secondary_pages.themed_progress_dialog import create_progress_dialog
@@ -1648,7 +1648,7 @@ def on_test_api_clicked(self, key: str):
 
 
 def on_get_models_clicked(self, key: str):
-    """获取可用模型列表。"""
+    """Get the list of available models."""
     flush_all_pending_env_vars(self)
     from PyQt6.QtWidgets import QMessageBox
 
@@ -1708,7 +1708,7 @@ def on_get_models_clicked(self, key: str):
 
 
 def refresh_preset_list(self):
-    """刷新预设列表。"""
+    """Refresh the preset list."""
     if not hasattr(self, "preset_combo"):
         return
 
@@ -1747,7 +1747,7 @@ def refresh_preset_list(self):
 
 
 def on_add_preset_clicked(self):
-    """添加新预设。"""
+    """Add a new preset."""
     from PyQt6.QtWidgets import QMessageBox
 
     from ui.secondary_pages.themed_text_input_dialog import themed_get_text
@@ -1786,7 +1786,7 @@ def on_add_preset_clicked(self):
 
 
 def on_delete_preset_clicked(self):
-    """删除选中的预设。"""
+    """Delete the selected preset."""
     from PyQt6.QtWidgets import QMessageBox
 
     preset_name = self.preset_combo.currentText()
@@ -1814,7 +1814,7 @@ def on_delete_preset_clicked(self):
 
 
 def on_preset_changed(self, new_preset_name: str):
-    """切换预设时加载新预设。"""
+    """Load the new preset when the preset is switched."""
     flush_all_pending_env_vars(self)
     if not new_preset_name:
         return
@@ -1848,12 +1848,12 @@ def on_preset_changed(self, new_preset_name: str):
 
 
 def update_output_path_display(self, path: str):
-    """更新输出目录输入框显示。"""
+    """Update what the output folder input box shows."""
     self.output_folder_input.setText(path)
 
 
 def trigger_add_files(self):
-    """触发添加文件对话框。"""
+    """Open the add-files dialog."""
     last_dir = self.controller.get_last_open_dir()
     archive_patterns = "*.pdf *.epub *.cbz *.cbr *.zip"
     file_paths, _ = QFileDialog.getOpenFileNames(

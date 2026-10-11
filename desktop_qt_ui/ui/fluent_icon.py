@@ -57,7 +57,7 @@ class _ThemedFluentSvgIconEngine(QIconEngine):
         return self.scaledPixmap(size, mode, state, scale)
 
     def scaledPixmap(self, size, mode, state, scale):
-        """按目标 DPR 渲染大图并 setDevicePixelRatio，高 DPI 下不发糊。"""
+        """Render a large image at the target DPR and call setDevicePixelRatio, so it is not blurry at high DPI."""
         scale = max(1.0, float(scale))
         device_size = QSize(
             max(1, round(size.width() * scale)),

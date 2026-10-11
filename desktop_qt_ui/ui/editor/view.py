@@ -112,7 +112,7 @@ def _rich_editor_preferred_position(
 
 class EditorView(QWidget):
     """
-    编辑器主视图，包含文件列表、画布和属性面板。
+    Main view of the editor, with the file list, the canvas and the property panel.
     """
 
     LEFT_TRANSLATION_ROUTE = "editor_left_translation"
@@ -237,7 +237,7 @@ class EditorView(QWidget):
         self._apply_initial_splitter_sizes()
 
     def _t(self, key: str, **kwargs) -> str:
-        """翻译辅助方法"""
+        """Translation helper methods"""
         if self.i18n:
             return self.i18n.translate(key, **kwargs)
         return key
@@ -344,17 +344,17 @@ class EditorView(QWidget):
             self._apply_editor_setting(key, enabled)
 
     def force_save_property_panel_edits(self):
-        """强制保存property panel中的文本编辑"""
+        """Force the text edits in the property panel to be saved"""
         self.property_panel.force_save_text_edits()
 
     def _handle_copy_from_panel(self):
-        """处理属性面板的复制按钮"""
+        """Handle the copy button of the property panel"""
         selected_regions = self.model.get_selection()
         if selected_regions:
             self.controller.copy_regions(selected_regions)
 
     def _handle_paste_from_panel(self):
-        """处理属性面板的粘贴按钮"""
+        """Handle the paste button of the property panel"""
         selected_regions = self.model.get_selection()
         if selected_regions and len(selected_regions) == 1:
             # With a single selected region, paste the style
@@ -364,13 +364,13 @@ class EditorView(QWidget):
             self.controller.paste_region()
 
     def _handle_delete_from_panel(self):
-        """处理属性面板的删除按钮"""
+        """Handle the delete button of the property panel"""
         selected_regions = self.model.get_selection()
         if selected_regions:
             self.controller.delete_regions(selected_regions)
 
     def _create_left_panel(self) -> QWidget:
-        """创建左侧的标签页，包含区域列表和属性面板"""
+        """Create the tabs on the left, with the region list and the property panel"""
         left_panel = SimpleCardWidget(self)
         # setFixedWidth cannot be used: inside a QSplitter, min==max makes the splitter handle impossible to drag.
         # The initial width is set by _apply_initial_splitter_sizes from sizeHint.
@@ -496,7 +496,7 @@ class EditorView(QWidget):
         return self.left_stack is not None and self.left_stack.currentIndex() == 0
 
     def refresh_tab_titles(self):
-        """刷新标签页标题（用于语言切换）"""
+        """Refresh the tab titles (for a language switch)"""
         if self.left_segmented_widget is None:
             return
 
@@ -511,7 +511,7 @@ class EditorView(QWidget):
         )
 
     def refresh_ui_texts(self):
-        """刷新所有UI文本（用于语言切换）"""
+        """Refresh all UI texts (for a language switch)"""
         # Refresh the tab titles
         self.refresh_tab_titles()
 
@@ -560,7 +560,7 @@ class EditorView(QWidget):
             self.file_list.refresh_empty_state_text()
 
     def _apply_initial_splitter_sizes(self):
-        """用左栏的实际 sizeHint 作为初始宽度，而不是写死常量。"""
+        """Use the actual sizeHint of the left pane as the initial width, instead of a hard-coded constant."""
         if self.main_splitter is None or self.left_panel_widget is None:
             return
 
@@ -575,24 +575,24 @@ class EditorView(QWidget):
         self.main_splitter.setSizes([left_width, 860, right_width])
 
     def _on_apply_changes_clicked(self):
-        """应用所有在列表中修改的译文"""
+        """Apply all translations changed in the list"""
         translations = self.region_list_view.get_all_translations()
         self.controller.update_multiple_translations(translations)
 
     def save_editor_state(self):
-        """保存当前编辑器工程数据。"""
+        """Save the current editor project data."""
         if self.rich_text_editor is not None:
             self.rich_text_editor.flush_pending_changes()
         return self.controller.save_editor_state()
 
     def export_image(self):
-        """导出当前渲染图片，不保存工程数据。"""
+        """Export the current rendered image, without saving the project data."""
         if self.rich_text_editor is not None:
             self.rich_text_editor.flush_pending_changes()
         return self.controller.export_image()
 
     def _on_replace_all_clicked(self):
-        """在所有译文中执行查找和替换"""
+        """Run find and replace over all translations"""
         find_text = self.find_input.text()
         replace_text = self.replace_input.text()
 
@@ -604,16 +604,16 @@ class EditorView(QWidget):
         )
 
     def _on_align_requested(self, mode: str):
-        """处理对齐按钮点击。"""
+        """Handle a click on an align button."""
         reference = self.toolbar.get_align_reference()
         self.controller.align_regions(mode, reference)
 
     def _on_distribute_requested(self, mode: str):
-        """处理分布按钮点击。"""
+        """Handle a click on a distribute button."""
         self.controller.distribute_regions(mode)
 
     def _on_selection_changed_for_toolbar(self, selected_indices: list):
-        """根据选区数量更新对齐/分布按钮的启用状态。"""
+        """Update the enabled state of the align/distribute buttons from the number of selected items."""
         count = len(selected_indices) if selected_indices else 0
         self.toolbar.update_align_distribute_buttons(count)
 
@@ -1134,7 +1134,7 @@ class EditorView(QWidget):
             self.graphics_view.clear_region_style_preview()
 
     def _create_center_panel(self) -> QWidget:
-        """创建中心画布区域"""
+        """Create the central canvas area"""
         center_widget = QWidget()
         center_layout = QHBoxLayout(center_widget)
         center_layout.setContentsMargins(0, 0, 0, 0)
@@ -1172,7 +1172,7 @@ class EditorView(QWidget):
         return center_widget
 
     def _create_right_panel(self) -> QWidget:
-        """创建右侧的文件列表面板"""
+        """Create the file list panel on the right"""
         right_panel = QWidget()
         right_panel.setMinimumWidth(220)
         right_panel.setMaximumWidth(300)
@@ -1231,7 +1231,7 @@ class EditorView(QWidget):
 
     @pyqtSlot(str)
     def _on_file_remove_requested(self, file_path: str):
-        """处理文件移除请求：只处理编辑器自己的文件列表"""
+        """Handle a file removal request: only the editor's own file list is handled"""
         # Remove from the view first (to avoid rebuilding the list)
         self.file_list.remove_file(file_path)
 
@@ -1241,7 +1241,7 @@ class EditorView(QWidget):
         # The editor has its own file list and does not need to sync with app_logic of the main page
 
     def _apply_editor_style(self, theme: str | None = None):
-        """刷新画布和自定义颜色控件的主题。"""
+        """Refresh the theme of the canvas and the custom colour controls."""
         from ui.widgets.color_picker import ColorPickerWidget
 
         if self.toolbar is not None:

@@ -35,11 +35,11 @@ from ui.widgets.hover_hint import set_hover_hint
 
 
 class _LeadingIndicatorMenuStyle(QProxyStyle):
-    """给左侧选中标记腾出独立列，排列为：标记 → 图标 → 文字。
+    """Makes a separate column for the selection mark on the left, in the order: mark → icon → text.
 
-    QProxyStyle 会接管传入基类 style 的所有权，因此绝不能把全局共享的
-    QApplication.style() 实例交给它（菜单 view 销毁时会连带删掉全应用
-    style）。这里用 QStyleFactory 按同名重新创建一个私有实例作为基类。
+    QProxyStyle takes ownership of the base style passed in, so the globally shared
+    QApplication.style() instance must never be given to it (destroying the menu view would delete the style of the whole
+    application with it). Here QStyleFactory creates a private instance of the same name as the base.
     """
 
     CONTENT_OFFSET = 24
@@ -99,7 +99,7 @@ class _ScreenBoundMenuMixin:
 
 
 class _IconCheckableMenu(_ScreenBoundMenuMixin, CheckableMenu):
-    """带独立左侧选中标记列和语义图标列的 CheckableMenu。"""
+    """CheckableMenu with a separate selection mark column on the left and a semantic icon column."""
 
     def __init__(self, title="", parent=None, indicatorType=MenuIndicatorType.CHECK):
         super().__init__(title, parent, indicatorType)
@@ -113,11 +113,11 @@ class _ScreenBoundCheckableMenu(_ScreenBoundMenuMixin, CheckableMenu):
 
 
 class _StayOpenCheckableMenu(_IconCheckableMenu):
-    """点击选项后不关闭的单选菜单。
+    """Single-choice menu that does not close when an option is clicked.
 
-    排列菜单需要一次打开后连续操作（切参照、连续对齐/分布），
-    父类 _onItemClicked 会先 _hideMenu 再触发动作，这里跳过关闭。
-    菜单仍可通过点击外部/Esc 正常关闭。
+    The arrange menu needs several operations in a row after opening once (switching the reference, aligning and distributing repeatedly);
+    _onItemClicked of the parent class calls _hideMenu before triggering the action, and the closing is skipped here.
+    The menu still closes normally by a click outside or Esc.
     """
 
     def _onItemClicked(self, item):
@@ -129,11 +129,11 @@ class _StayOpenCheckableMenu(_IconCheckableMenu):
 
 class EditorToolbar(CardWidget):
     """
-    编辑器顶部工具栏。常驻控件只保留适应窗口、原图不透明度滑条，
-    其余操作分装进三个单级下拉菜单（不分级）：
-    「菜单」= 撤销重做/缩放 + 通用开关；「显示模式」= 画布显示单选；
-    「排列」= 参照单选 + 对齐/分布文字选项（点击不关闭，可连续操作）。
-    返回主页不设入口：主窗口侧边栏随时可切换页面。
+    Toolbar at the top of the editor. Only fit-to-window and the opacity slider of the original image stay as permanent controls;
+    the other operations go into three single-level drop-down menus (no nesting):
+    "Menu" = undo/redo/zoom + general switches; "Display mode" = single choice of the canvas display;
+    "Arrange" = single choice of the reference + align/distribute text options (a click does not close it, for repeated use).
+    There is no entry for returning to the main page: the sidebar of the main window can switch pages at any time.
     """
 
     save_requested = pyqtSignal()
@@ -197,7 +197,7 @@ class EditorToolbar(CardWidget):
         self._connect_signals()
 
     def _t(self, key: str, **kwargs) -> str:
-        """翻译辅助方法"""
+        """Translation helper methods"""
         if self.i18n:
             return self.i18n.translate(key, **kwargs)
         return key
@@ -296,7 +296,7 @@ class EditorToolbar(CardWidget):
     # ------------------------------------------------------------------
 
     def _build_menus(self):
-        """构建三个独立的单级下拉菜单。语言切换时整体重建，状态从字段恢复。"""
+        """Build the three independent single-level drop-down menus. On a language switch they are rebuilt as a whole, and the state is restored from the fields."""
         old_menus = [self.main_menu, self.display_menu, self.arrange_menu]
         # A popup menu must have a real top-level window as its QWidget parent. With the toolbar
         # (inside the QStackedWidget of FluentWindow) as the parent, Qt on Windows
@@ -549,7 +549,7 @@ class EditorToolbar(CardWidget):
         self.set_snap_enabled(checked, emit=True)
 
     def set_snap_enabled(self, enabled: bool, emit: bool = False):
-        """同步编辑器吸附开关；外部同步配置时默认不回发信号。"""
+        """Sync the snapping switch of the editor; when the configuration is synced from outside, no signal is sent back by default."""
         enabled = bool(enabled)
         changed = enabled != self._snap_enabled
         self._snap_enabled = enabled
@@ -570,7 +570,7 @@ class EditorToolbar(CardWidget):
         self.set_center_scale_enabled(checked, emit=True)
 
     def set_center_scale_enabled(self, enabled: bool, emit: bool = False):
-        """同步中心点缩放开关；外部配置同步时默认不回发信号。"""
+        """Sync the scale-about-centre switch; when the configuration is synced from outside, no signal is sent back by default."""
         enabled = bool(enabled)
         changed = enabled != self._center_scale_enabled
         self._center_scale_enabled = enabled
@@ -593,7 +593,7 @@ class EditorToolbar(CardWidget):
         self.set_rich_text_popup_enabled(checked, emit=True)
 
     def set_rich_text_popup_enabled(self, enabled: bool, emit: bool = False):
-        """同步富文本浮动编辑器开关；外部配置同步时默认不回发信号。"""
+        """Sync the floating rich-text editor switch; when the configuration is synced from outside, no signal is sent back by default."""
         enabled = bool(enabled)
         if not enabled and self._rich_text_popup_pinned:
             self.set_rich_text_popup_pinned(False, emit=emit)
@@ -618,7 +618,7 @@ class EditorToolbar(CardWidget):
         self.set_rich_text_popup_pinned(checked, emit=True)
 
     def set_rich_text_popup_pinned(self, pinned: bool, emit: bool = False):
-        """同步富文本浮窗固定开关；该状态仅在当前运行期间保留。"""
+        """Sync the pin switch of the floating rich-text window; this state is only kept for the current run."""
         pinned = bool(pinned)
         changed = pinned != self._rich_text_popup_pinned
         self._rich_text_popup_pinned = pinned
@@ -639,7 +639,7 @@ class EditorToolbar(CardWidget):
         self.set_auto_rich_text_rules(checked, emit=True)
 
     def set_auto_rich_text_rules(self, enabled: bool, emit: bool = False):
-        """同步编辑时自动应用富文本规则开关；外部配置同步时默认不回发信号。"""
+        """Sync the switch for applying the rich-text rules automatically while editing; when the configuration is synced from outside, no signal is sent back by default."""
         enabled = bool(enabled)
         changed = enabled != self._auto_rich_text_rules
         self._auto_rich_text_rules = enabled
@@ -660,7 +660,7 @@ class EditorToolbar(CardWidget):
         self.set_auto_save_on_switch(checked, emit=True)
 
     def set_auto_save_on_switch(self, enabled: bool, emit: bool = False):
-        """同步切图自动保存开关。"""
+        """Sync the switch for saving automatically when the image is switched."""
         enabled = bool(enabled)
         changed = enabled != self._auto_save_on_switch
         self._auto_save_on_switch = enabled
@@ -681,7 +681,7 @@ class EditorToolbar(CardWidget):
         self.set_auto_export_on_switch(checked, emit=True)
 
     def set_auto_export_on_switch(self, enabled: bool, emit: bool = False):
-        """同步切图自动导出开关。"""
+        """Sync the switch for exporting automatically when the image is switched."""
         enabled = bool(enabled)
         changed = enabled != self._auto_export_on_switch
         self._auto_export_on_switch = enabled
@@ -702,7 +702,7 @@ class EditorToolbar(CardWidget):
         self.set_suppress_unsaved_warning(checked, emit=True)
 
     def set_suppress_unsaved_warning(self, enabled: bool, emit: bool = False):
-        """同步切图时不再提醒未保存编辑的开关。"""
+        """Sync the switch for no longer warning about unsaved edits when the image is switched."""
         enabled = bool(enabled)
         changed = enabled != self._suppress_unsaved_warning
         self._suppress_unsaved_warning = enabled
@@ -723,7 +723,7 @@ class EditorToolbar(CardWidget):
         self.set_delete_and_recover(checked, emit=True)
 
     def set_delete_and_recover(self, enabled: bool, emit: bool = False):
-        """同步删除文本框时恢复原图的持久化开关。"""
+        """Sync the stored switch for restoring the original image when a text box is deleted."""
         enabled = bool(enabled)
         changed = enabled != self._delete_and_recover
         self._delete_and_recover = enabled
@@ -750,7 +750,7 @@ class EditorToolbar(CardWidget):
         return self._align_ref
 
     def update_align_distribute_buttons(self, selection_count: int):
-        """根据选中数量和参照模式更新对齐/分布选项的启用状态。"""
+        """Update the enabled state of the align/distribute options from the number of selected items and the reference mode."""
         self._last_selection_count = selection_count
         self._apply_align_button_states()
 
@@ -818,20 +818,20 @@ class EditorToolbar(CardWidget):
         self.redo_action.setEnabled(self._can_redo)
 
     def set_original_image_alpha_slider(self, alpha: float):
-        """将模型透明度投影到滑块，不回发用户输入。"""
+        """Project the model opacity onto the slider, without sending user input back."""
         slider_value = round(max(0.0, min(1.0, float(alpha))) * 100)
         self.original_image_alpha_slider.blockSignals(True)
         self.original_image_alpha_slider.setValue(slider_value)
         self.original_image_alpha_slider.blockSignals(False)
 
     def set_export_enabled(self, enabled: bool):
-        """设置保存和导出按钮的启用状态。"""
+        """Set the enabled state of the save and export buttons."""
         self._export_enabled = bool(enabled)
         self.save_button.setEnabled(self._export_enabled)
         self.export_button.setEnabled(self._export_enabled)
 
     def refresh_ui_texts(self):
-        """刷新所有UI文本（用于语言切换）。菜单整体重建，状态从字段恢复。"""
+        """Refresh all UI texts (for a language switch). The menus are rebuilt as a whole, and the state is restored from the fields."""
         self.menu_button.setText(self._t("Menu"))
         self.display_mode_button.setText(self._t("Display Mode"))
         self.arrange_button.setText(self._t("Arrange"))

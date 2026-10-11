@@ -36,11 +36,11 @@ from utils.app_version import get_app_version
 
 class MainView(QObject):
     """
-    主页面逻辑控制器（纯 QObject，不是控件）。
+    Logic controller of the main page (a plain QObject, not a widget).
 
-    各页面控件（translation_interface / settings_page / env_page 等）由本对象
-    创建后交给 FluentWindow.addSubInterface 托管；MainView 自身从不进入任何
-    布局，只负责信号、状态与页面构建逻辑。需要控件父级时用 _dialog_parent()。
+    The page widgets (translation_interface / settings_page / env_page and so on) are created by this object
+    and handed to FluentWindow.addSubInterface to manage; MainView itself never enters any
+    layout and is only responsible for signals, state and the logic that builds the pages. Where a widget parent is needed, _dialog_parent() is used.
     """
     setting_changed = pyqtSignal(str, object)
     env_var_changed = pyqtSignal(str, str)
@@ -212,7 +212,7 @@ class MainView(QObject):
         return interface
     
     def _t(self, key: str, **kwargs) -> str:
-        """翻译辅助方法"""
+        """Translation helper methods"""
         if self.i18n:
             return self.i18n.translate(key, **kwargs)
         return key
@@ -275,10 +275,10 @@ class MainView(QObject):
         return started
 
     def _dialog_parent(self) -> QWidget | None:
-        """返回可用作对话框/控件父级的 QWidget。
+        """Return a QWidget that can serve as parent of a dialog or widget.
 
-        MainView 是纯逻辑 QObject，不能充当控件父级；这里返回创建时传入的
-        父对象（主窗口）——若它不是 QWidget 则返回 None，让对话框顶层显示。
+        MainView is a pure-logic QObject and cannot be a widget parent; this returns the parent object passed in
+        at creation (the main window) - or None when that is not a QWidget, so the dialog is shown as a top-level window.
         """
         parent = self.parent()
         return parent if isinstance(parent, QWidget) else None
@@ -304,7 +304,7 @@ class MainView(QObject):
         main_view_dynamic.set_parameters(self, config)
 
     def _show_setting_description(self, key: str, name: str, description: str):
-        """更新右侧描述面板"""
+        """Update the description panel on the right"""
         if hasattr(self, 'settings_desc_name'):
             self.settings_desc_name.setText(name)
         if hasattr(self, 'settings_desc_key'):
@@ -313,7 +313,7 @@ class MainView(QObject):
             self.settings_desc_text.setText(description or self._t("Settings Desc No Description"))
 
     def refresh_tab_titles(self):
-        """刷新标签页标题（用于语言切换）。"""
+        """Refresh the tab titles (for a language switch)."""
         tab_title_by_route = getattr(self, "settings_tab_title_key_by_route", None)
         if tab_title_by_route:
             for route_key, title_key in tab_title_by_route.items():
@@ -379,7 +379,7 @@ class MainView(QObject):
                     pass
 
     def refresh_ui_texts(self):
-        """刷新所有UI文本（用于语言切换）。"""
+        """Refresh all UI texts (for a language switch)."""
         if hasattr(self, "about_page"):
             self._refresh_about_page_texts()
         self.refresh_tab_titles()
@@ -539,7 +539,7 @@ class MainView(QObject):
             self.batch_edit_panel.refresh_ui_texts()
 
     def _clear_dynamic_settings(self):
-        """清理所有动态创建的设置控件。"""
+        """Remove all setting controls that were created dynamically."""
         self._settings_ui_ready = False
         self._settings_rendered_signature = None
         self._settings_pending_signature = None

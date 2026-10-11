@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-现代化文件夹选择器对话框
-支持多选、快捷栏、路径导航等功能
+Modern folder picker dialog.
+Supports multiple selection, a shortcut bar, path navigation and more
 """
 
 import json
@@ -96,14 +96,14 @@ def _folder_sort_state(column: int, order: Qt.SortOrder) -> Optional[str]:
 
 
 class CaseInsensitiveSortProxyModel(QSortFilterProxyModel):
-    """按文件系统属性排序，名称比较不区分大小写。"""
+    """Sort by file system attributes; names are compared without regard to case."""
 
     def __init__(self, parent=None):
         super().__init__(parent)
         self.header_overrides = {}
 
     def lessThan(self, left: QModelIndex, right: QModelIndex) -> bool:
-        """使用原始文件属性比较，避免格式化文本造成日期和大小错序。"""
+        """Compare by the raw file attributes, so formatted text does not put dates and sizes in the wrong order."""
         source_model = self.sourceModel()
         if isinstance(source_model, QFileSystemModel):
             column = left.column()
@@ -124,11 +124,11 @@ class CaseInsensitiveSortProxyModel(QSortFilterProxyModel):
         return str(left_data).casefold() < str(right_data).casefold()
 
     def set_header_override(self, section: int, text: str):
-        """设置表头显示文本覆盖"""
+        """Set the overrides of the header texts"""
         self.header_overrides[section] = text
 
     def headerData(self, section, orientation, role=Qt.ItemDataRole.DisplayRole):
-        """优先返回自定义表头，避免 QFileSystemModel 使用系统默认列名"""
+        """Return the custom header first, so QFileSystemModel does not use the system's default column names"""
         if (
             orientation == Qt.Orientation.Horizontal
             and role == Qt.ItemDataRole.DisplayRole
@@ -139,11 +139,11 @@ class CaseInsensitiveSortProxyModel(QSortFilterProxyModel):
 
 
 class _FavoriteStarDelegate(TreeItemDelegate):
-    """在 Fluent 树样式之上叠加收藏星标的委托基类。
+    """Base class of the delegates that lay a favourite star over the Fluent tree style.
 
-    继承 qfluentwidgets 的 TreeItemDelegate（parent 必须是树视图），
-    保留原生悬停/选中样式；星标在悬停/选中/已收藏时显示，点击切换收藏。
-    收藏状态与配色实时读取对话框，避免持有过期引用。
+    Inherits TreeItemDelegate of qfluentwidgets (parent must be the tree view)
+    and keeps the native hover/selected styles; the star is shown on hover, when selected or when the item is a favourite, and a click toggles it.
+    The favourite state and the colours are read from the dialog live, so no stale reference is held.
     """
 
     STAR_SIZE = 16  # The same size as the icon
@@ -154,7 +154,7 @@ class _FavoriteStarDelegate(TreeItemDelegate):
         self._dialog = dialog
 
     def _folder_path(self, index: QModelIndex) -> str:
-        """由子类实现：从 index 解析出文件夹路径。"""
+        """Implemented by subclasses: resolve the folder path from index."""
         raise NotImplementedError
 
     def paint(self, painter: QPainter, option, index: QModelIndex):
@@ -198,7 +198,7 @@ class _FavoriteStarDelegate(TreeItemDelegate):
         painter.restore()
 
     def draw_star(self, painter: QPainter, rect: QRect):
-        """绘制五角星"""
+        """Draw a five-pointed star"""
         from math import cos, pi, sin
 
         from PyQt6.QtGui import QPolygon
@@ -218,13 +218,13 @@ class _FavoriteStarDelegate(TreeItemDelegate):
         painter.drawPolygon(QPolygon(points))
 
     def get_star_rect(self, item_rect: QRect) -> QRect:
-        """获取星星的绘制区域 - 在行右侧"""
+        """Get the area the star is drawn in - at the right of the row"""
         x = item_rect.right() - self.STAR_SIZE - self.STAR_MARGIN - 6
         y = item_rect.top() + (item_rect.height() - self.STAR_SIZE) // 2
         return QRect(x, y, self.STAR_SIZE, self.STAR_SIZE)
 
     def editorEvent(self, event, model, option, index):
-        """点击星标区域切换收藏状态"""
+        """A click in the star area toggles the favourite state"""
         from PyQt6.QtCore import QEvent
         from PyQt6.QtGui import QMouseEvent
 
@@ -245,7 +245,7 @@ class _FavoriteStarDelegate(TreeItemDelegate):
 
 
 class FavoriteDelegate(_FavoriteStarDelegate):
-    """目录树（QFileSystemModel + 排序代理）的收藏星标委托"""
+    """Favourite star delegate of the folder tree (QFileSystemModel + sort proxy)"""
 
     def __init__(self, tree: TreeView, dialog: "FolderDialog", fs_model, proxy_model):
         super().__init__(tree, dialog)
@@ -260,7 +260,7 @@ class FavoriteDelegate(_FavoriteStarDelegate):
 
 
 class ShortcutFavoriteDelegate(_FavoriteStarDelegate):
-    """左侧快捷栏的收藏星标委托"""
+    """Favourite star delegate of the shortcut bar on the left"""
 
     def __init__(self, tree: TreeView, dialog: "FolderDialog", shortcuts_model):
         super().__init__(tree, dialog)
@@ -276,7 +276,7 @@ class ShortcutFavoriteDelegate(_FavoriteStarDelegate):
 
 
 class FolderDialog(FluentSecondaryDialog):
-    """现代化文件夹选择对话框"""
+    """Modern folder selection dialog"""
 
     def __init__(
         self,
@@ -332,7 +332,7 @@ class FolderDialog(FluentSecondaryDialog):
             self.navigate_to(str(Path.home()), add_to_history=True)
 
     def _t(self, key: str, **kwargs) -> str:
-        """翻译辅助方法"""
+        """Translation helper methods"""
         if self.i18n:
             return self.i18n.translate(key, **kwargs)
         return key
@@ -357,7 +357,7 @@ class FolderDialog(FluentSecondaryDialog):
         tree.setAlternatingRowColors(False)
 
     def _init_ui(self):
-        """初始化UI"""
+        """Initialise the UI"""
         layout = QVBoxLayout(self)
         layout.setSpacing(10)
         layout.setContentsMargins(12, 12, 12, 12)
@@ -565,7 +565,7 @@ class FolderDialog(FluentSecondaryDialog):
         layout.addLayout(button_layout)
 
     def _create_shortcuts_panel(self) -> QWidget:
-        """创建左侧快捷栏 - 树形结构"""
+        """Create the shortcut bar on the left - a tree structure"""
         widget = CardWidget()
         widget.setMinimumWidth(180)
         widget.setMaximumWidth(280)
@@ -614,7 +614,7 @@ class FolderDialog(FluentSecondaryDialog):
         icon: Optional[QIcon] = None,
         selectable: bool = True,
     ) -> QStandardItem:
-        """创建快捷栏项（统一图标和数据）"""
+        """Create a shortcut bar item (icon and data set in one place)"""
         item = QStandardItem(text)
         if icon and not icon.isNull():
             item.setIcon(icon)
@@ -625,7 +625,7 @@ class FolderDialog(FluentSecondaryDialog):
         return item
 
     def _normalize_shortcut_name(self, name: str) -> str:
-        """移除名称前缀里的 emoji/符号，保留可读文本"""
+        """Remove emoji and symbols from the front of a name, keeping the readable text"""
         parts = name.split(" ", 1)
         if len(parts) == 2:
             prefix = parts[0]
@@ -634,7 +634,7 @@ class FolderDialog(FluentSecondaryDialog):
         return name
 
     def _build_shortcuts_tree(self):
-        """构建快捷访问树形结构"""
+        """Build the quick access tree structure"""
         home = Path.home()
         style = self.style()
         icon_provider = QFileIconProvider()
@@ -736,7 +736,7 @@ class FolderDialog(FluentSecondaryDialog):
             this_pc_root.appendRow(item)
 
     def _get_quick_access_folders(self):
-        """从 Windows 注册表获取真实的快速访问文件夹"""
+        """Get the real quick access folders from the Windows registry"""
         quick_access = []
 
         try:
@@ -844,7 +844,7 @@ class FolderDialog(FluentSecondaryDialog):
         return quick_access
 
     def _on_tree_shortcut_clicked(self, index: QModelIndex):
-        """树形快捷方式点击"""
+        """A click on a shortcut in the tree"""
         item = self.shortcuts_tree_model.itemFromIndex(index)
         if item:
             path = item.data(Qt.ItemDataRole.UserRole)
@@ -852,7 +852,7 @@ class FolderDialog(FluentSecondaryDialog):
                 self.navigate_to(path, add_to_history=True)
 
     def _show_folder_tree_context_menu(self, pos):
-        """右键菜单：目录树收藏操作"""
+        """Context menu: favourite actions of the folder tree"""
         index = self.folder_tree.indexAt(pos)
         if not index.isValid():
             return
@@ -873,7 +873,7 @@ class FolderDialog(FluentSecondaryDialog):
         menu.exec(self.folder_tree.viewport().mapToGlobal(pos))
 
     def _show_shortcuts_context_menu(self, pos):
-        """右键菜单：快捷栏收藏操作"""
+        """Context menu: favourite actions of the shortcut bar"""
         index = self.shortcuts_tree.indexAt(pos)
         if not index.isValid():
             return
@@ -897,7 +897,7 @@ class FolderDialog(FluentSecondaryDialog):
         menu.exec(self.shortcuts_tree.viewport().mapToGlobal(pos))
 
     def _connect_signals(self):
-        """连接信号"""
+        """Connect the signals"""
         self.ok_button.clicked.connect(self.accept)
         self.cancel_button.clicked.connect(self.reject)
 
@@ -928,18 +928,18 @@ class FolderDialog(FluentSecondaryDialog):
         )
 
     def _refresh_header_i18n(self):
-        """刷新目录表头文案（覆盖 QFileSystemModel 默认系统列名）"""
+        """Refresh the header texts of the folder view (overriding the default system column names of QFileSystemModel)"""
         self.proxy_model.set_header_override(0, self._t("Name"))
         self.proxy_model.set_header_override(3, self._t("Date Modified"))
         if hasattr(self, "folder_tree"):
             self.folder_tree.header().viewport().update()
 
     def _on_breadcrumb_item_changed(self, route_key: str):
-        """导航到 BreadcrumbBar item 对应的路径。"""
+        """Navigate to the path of a BreadcrumbBar item."""
         self.navigate_to(route_key, add_to_history=True)
 
     def navigate_to(self, path: str, add_to_history: bool = True):
-        """导航到指定路径"""
+        """Navigate to the given path"""
         if not os.path.isdir(path):
             return
 
@@ -973,7 +973,7 @@ class FolderDialog(FluentSecondaryDialog):
             self._on_selection_changed()
 
     def _update_breadcrumb(self, path: str):
-        """更新面包屑导航"""
+        """Update the breadcrumb navigation"""
         parts = []
         current = Path(path)
 
@@ -996,26 +996,26 @@ class FolderDialog(FluentSecondaryDialog):
             self.breadcrumb_bar.blockSignals(False)
 
     def _update_navigation_buttons(self):
-        """更新导航按钮状态"""
+        """Update the state of the navigation buttons"""
         self.back_button.setEnabled(self.history_index > 0)
         self.forward_button.setEnabled(self.history_index < len(self.history) - 1)
 
     def _go_back(self):
-        """后退"""
+        """Back"""
         if self.history_index > 0:
             self.history_index -= 1
             path = self.history[self.history_index]
             self.navigate_to(path, add_to_history=False)
 
     def _go_forward(self):
-        """前进"""
+        """Forward"""
         if self.history_index < len(self.history) - 1:
             self.history_index += 1
             path = self.history[self.history_index]
             self.navigate_to(path, add_to_history=False)
 
     def _go_parent(self):
-        """返回上级目录"""
+        """Go to the parent folder"""
         if self.history:
             current_path = self.history[self.history_index]
             parent_path = str(Path(current_path).parent)
@@ -1023,7 +1023,7 @@ class FolderDialog(FluentSecondaryDialog):
                 self.navigate_to(parent_path, add_to_history=True)
 
     def _refresh_current(self):
-        """刷新当前目录"""
+        """Refresh the current folder"""
         if self.history:
             current_path = self.history[self.history_index]
             # Refresh the file system model
@@ -1033,7 +1033,7 @@ class FolderDialog(FluentSecondaryDialog):
                 self.folder_tree.setRootIndex(proxy_index)
 
     def _on_sort_changed(self, index: int):
-        """排序方式改变"""
+        """The sort order changed"""
         # 0: name ascending, 1: name descending
         # 2: date modified ascending, 3: date modified descending
         # 4: size ascending, 5: size descending
@@ -1059,7 +1059,7 @@ class FolderDialog(FluentSecondaryDialog):
         self._save_folder_sort_state()
 
     def _toggle_path_edit(self):
-        """切换路径编辑模式"""
+        """Toggle path edit mode"""
         if self.path_edit_container.isVisible():
             # Hide the input and show the breadcrumbs
             self._cancel_path_edit()
@@ -1073,7 +1073,7 @@ class FolderDialog(FluentSecondaryDialog):
             self.path_edit.selectAll()
 
     def _on_path_edit_confirmed(self):
-        """确认路径输入"""
+        """Confirm the path that was typed"""
         path = self.path_edit.text().strip()
         if path and os.path.isdir(path):
             self.navigate_to(path, add_to_history=True)
@@ -1098,7 +1098,7 @@ class FolderDialog(FluentSecondaryDialog):
             self.path_edit.selectAll()
 
     def eventFilter(self, obj, event):
-        """事件过滤器：处理 Esc 键取消路径编辑和点击外部区域"""
+        """Event filter: handles the Esc key cancelling the path edit, and clicks outside"""
         from PyQt6.QtCore import QEvent
 
         if obj == self.path_edit:
@@ -1116,20 +1116,20 @@ class FolderDialog(FluentSecondaryDialog):
         return super().eventFilter(obj, event)
 
     def _cancel_path_edit(self):
-        """取消路径编辑，恢复面包屑显示"""
+        """Cancel the path edit and show the breadcrumb again"""
         if self.path_edit_container.isVisible():
             self.path_edit_container.hide()
             self.breadcrumb_container.show()
 
     def _on_folder_double_clicked(self, index: QModelIndex):
-        """文件夹双击：进入该文件夹"""
+        """Double-click on a folder: enter that folder"""
         source_index = self.proxy_model.mapToSource(index)
         path = self.fs_model.filePath(source_index)
         if os.path.isdir(path):
             self.navigate_to(path, add_to_history=True)
 
     def _on_selection_changed(self):
-        """选择改变时更新状态"""
+        """Update the state when the selection changes"""
         # Only the selected rows of the first column (the name column) are taken, to avoid counting twice
         selected_rows = self.folder_tree.selectionModel().selectedRows(0)
         self.selected_folders = [
@@ -1161,25 +1161,25 @@ class FolderDialog(FluentSecondaryDialog):
             self.ok_button.setEnabled(True)
 
     def get_selected_folders(self) -> List[str]:
-        """获取选中的文件夹列表"""
+        """Get the list of selected folders"""
         # When no folder is selected, return the current folder
         if not self.selected_folders and self.history and self.history_index >= 0:
             return [self.history[self.history_index]]
         return self.selected_folders
 
     def _get_config_path(self) -> str:
-        """获取配置文件路径，支持打包和开发环境"""
+        """Get the configuration file path, in a packaged build and in development"""
         return get_config_path("config.json")
 
     def _get_favorites_config_path(self) -> str:
-        """获取收藏文件夹配置文件路径（用户目录）"""
+        """Get the path of the favourite folders configuration file (in the user folder)"""
         # Favourites are stored in the user folder, so the template file is not polluted
         user_config_dir = Path.home() / ".manga-translator-ui"
         user_config_dir.mkdir(exist_ok=True)
         return str(user_config_dir / "favorites.json")
 
     def _load_favorite_folders(self):
-        """从配置文件加载收藏文件夹"""
+        """Load the favourite folders from the configuration file"""
         try:
             if self.config_service:
                 # Load through config_service
@@ -1249,7 +1249,7 @@ class FolderDialog(FluentSecondaryDialog):
             print(f"保存文件夹排序方式失败: {e}")
 
     def _save_favorite_folders(self):
-        """保存收藏文件夹到配置文件"""
+        """Save the favourite folders to the configuration file"""
         try:
             if self.config_service:
                 # Save through config_service
@@ -1291,7 +1291,7 @@ class FolderDialog(FluentSecondaryDialog):
             # No dialog, so the user is not disturbed
 
     def _toggle_favorite(self):
-        """切换当前文件夹的收藏状态"""
+        """Toggle the favourite state of the current folder"""
         if not self.history or self.history_index < 0:
             return
 
@@ -1303,26 +1303,26 @@ class FolderDialog(FluentSecondaryDialog):
             self._add_favorite(current_path)
 
     def _add_favorite(self, folder_path: str):
-        """添加文件夹到收藏"""
+        """Add a folder to the favourites"""
         if folder_path not in self.favorite_folders:
             self.favorite_folders.append(folder_path)
             self._save_favorite_folders()
             self._update_favorites_in_tree()
 
     def _remove_favorite(self, item):
-        """从收藏中移除指定项（通过树项）"""
+        """Remove the given item from the favourites (by tree item)"""
         path = item.data(Qt.ItemDataRole.UserRole)
         self._remove_favorite_by_path(path)
 
     def _remove_favorite_by_path(self, folder_path: str):
-        """从收藏中移除指定路径"""
+        """Remove the given path from the favourites"""
         if folder_path in self.favorite_folders:
             self.favorite_folders.remove(folder_path)
             self._save_favorite_folders()
             self._update_favorites_in_tree()
 
     def _refresh_shortcuts_tree(self):
-        """刷新快捷栏树"""
+        """Refresh the shortcut bar tree"""
         self.shortcuts_tree_model.clear()
         self._build_shortcuts_tree()
         self.shortcuts_tree.expandAll()
@@ -1331,7 +1331,7 @@ class FolderDialog(FluentSecondaryDialog):
         self.folder_tree.viewport().update()
 
     def _update_favorites_in_tree(self):
-        """只更新收藏夹部分，不重建整个树"""
+        """Update only the favourites part, without rebuilding the whole tree"""
         # Find the root node of the favourites
         favorite_root = None
         favorite_root_index = -1
@@ -1394,16 +1394,16 @@ def select_folders(
     parent=None, start_dir: str = "", multi_select: bool = True, config_service=None
 ) -> Optional[List[str]]:
     """
-    显示文件夹选择对话框
+    Show the folder selection dialog
 
     Args:
-        parent: 父窗口
-        start_dir: 起始目录
-        multi_select: 是否支持多选
-        config_service: 配置服务实例
+        parent: the parent window
+        start_dir: the starting folder
+        multi_select: whether multiple selection is supported
+        config_service: the configuration service instance
 
     Returns:
-        选中的文件夹路径列表，如果取消则返回 None
+        The list of selected folder paths, or None when cancelled
     """
     # parent is normalised to the top-level window; with parent=None it falls back to the active window
     # (the FluentSecondaryDialog base class has the same fallback; here the contract on the dialog side is stated explicitly)

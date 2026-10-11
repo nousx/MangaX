@@ -239,7 +239,7 @@ _LEGACY_SETTING_SECTIONS = (
 
 
 def _drop_cached_settings_widget_refs(view):
-    """丢弃随设置页重建而销毁的控件缓存引用，避免重建窗口期悬空访问。"""
+    """Drop the cached references to controls destroyed when the settings page is rebuilt, to avoid dangling access during the rebuild window."""
     for attr in _CACHED_SETTINGS_WIDGET_ATTRS:
         if hasattr(view, attr):
             delattr(view, attr)
@@ -247,7 +247,7 @@ def _drop_cached_settings_widget_refs(view):
 
 
 def _clear_layout_widgets(layout, *, restore_stretch: bool = False):
-    """递归隐藏并延迟删除布局内容；可补回设置页末尾 stretch。"""
+    """Hide and delete later the content of a layout, recursively; the stretch at the end of the settings page can be added back."""
     clear_layout(layout, restore_stretch=restore_stretch)
 
 
@@ -380,7 +380,7 @@ def _refresh_env_api_groups(self, *, force: bool = False):
 
 
 def _get_setting_description(view, full_key: str) -> str:
-    """通过 i18n 获取设置项描述，key 格式为 desc_{full_key} (. 替换为 _)"""
+    """Get the description of a setting through i18n; the key format is desc_{full_key} (with . replaced by _)"""
     desc_key = "desc_" + full_key.replace(".", "_")
     if hasattr(view, '_t'):
         result = view._t(desc_key)
@@ -405,7 +405,7 @@ def _insert_settings_row(parent_layout, index: int, row: QWidget):
 
 
 def _open_filter_list(self):
-    """打开过滤列表编辑器"""
+    """Open the filter list editor"""
     from manga_translator.utils.text_filter import ensure_filter_list_exists
 
     filter_path = ensure_filter_list_exists()
@@ -816,7 +816,7 @@ def _populate_settings_by_reclassify_layout(self, config: dict):
 def _process_next_setting_chunk(self, build_seq: int):
     """
     Processes one section of the settings UI and schedules the next one.
-    build_seq 与当前构建代号不一致时说明本链已过期，直接终止。
+    When build_seq does not match the current build generation, this chain is stale and stops at once.
     """
     if build_seq != getattr(self, "_settings_build_seq", None):
         return
@@ -954,7 +954,7 @@ def _finalize_settings_ui(self, build_seq: int | None = None):
     self._settings_ui_ready = True
 
 def _create_dynamic_settings(self):
-    """读取配置文件并动态创建所有设置控件"""
+    """Read the configuration file and create all setting controls dynamically"""
     try:
         config = self.config_service.get_config().model_dump() # Get default config
         self.set_parameters(config)
@@ -989,7 +989,7 @@ def _on_setting_changed(self, value, full_key, display_map=None):
         QTimer.singleShot(100, lambda: _refresh_env_api_groups(self))
 
 def _on_upscale_ratio_changed(self, text, full_key):
-    """处理 upscale_ratio 动态下拉框的变化"""
+    """Handle a change of the dynamic upscale_ratio drop-down"""
     config = self.config_service.get_config()
     
     if config.upscale.upscaler == "realcugan":
@@ -1038,7 +1038,7 @@ def _on_upscale_ratio_changed(self, text, full_key):
                 self.setting_changed.emit(full_key, None)
 
 def _on_numeric_input_changed(self, text, full_key, value_type):
-    """统一处理数值类型输入框的变化（支持 int 和 float）"""
+    """Handle a change of a numeric input box in one place (int and float are supported)"""
     if not text or not text.strip():
         # Empty = use the default (None)
         self.setting_changed.emit(full_key, None)
@@ -1051,7 +1051,7 @@ def _on_numeric_input_changed(self, text, full_key, value_type):
             self.setting_changed.emit(full_key, None)
 
 def _update_upscale_ratio_options(self, upscaler):
-    """当 upscaler 变化时，更新 upscale_ratio 下拉框的选项"""
+    """Update the options of the upscale_ratio drop-down when upscaler changes"""
     upscale_ratio_widget = getattr(self, "upscale_ratio_combo", None)
     if not upscale_ratio_widget:
         return
@@ -1065,7 +1065,7 @@ def _update_upscale_ratio_options(self, upscaler):
 
 
 def _repopulate_upscale_ratio_options(self, upscale_ratio_widget, upscaler):
-    """清空并按当前 upscaler 重新填充 upscale_ratio 下拉框（调用方负责 blockSignals）。"""
+    """Clear the upscale_ratio drop-down and fill it again for the current upscaler (the caller is responsible for blockSignals)."""
     upscale_ratio_widget.clear()
 
     if upscaler == "realcugan":
@@ -1429,7 +1429,7 @@ class _ClickableRow(SimpleCardWidget):
         return False  # The event is not consumed, so the child controls work normally
 
     def _activate(self):
-        """激活此行：更新描述面板和当前行标记。"""
+        """Activate this row: update the description panel and the current-row marker."""
         desc = _get_setting_description(self._view, self._full_key)
         if hasattr(self._view, '_show_setting_description'):
             self._view._show_setting_description(self._full_key, self._title, desc)

@@ -17,7 +17,7 @@ from .selection_manager import SelectionManager
 
 
 def canvas_background_color(theme: str | None = None) -> QColor:
-    """画布底色。深浅判定统一走 ui.theme（gray/forest/sunset/rose 也是深色主题）。"""
+    """Canvas background colour. Dark or light is always decided through ui.theme (gray/forest/sunset/rose are dark themes too)."""
     return QColor("#1A1C20" if is_dark_theme(theme) else "#F7F7F7")
 
 
@@ -28,7 +28,7 @@ class GraphicsView(
     GraphicsViewPasteOverlayMixin,
     QGraphicsView,
 ):
-    """编辑画布：主文件只保留初始化、信号接线和共享状态。"""
+    """Edit canvas: the main file only keeps initialisation, signal wiring and shared state."""
 
     region_geometry_changed = pyqtSignal(int, dict)
     view_state_changed = pyqtSignal(object, object)
@@ -119,7 +119,7 @@ class GraphicsView(
         self.controller = controller
 
     def set_snap_enabled(self, enabled: bool) -> None:
-        """同步画布现有文本框，并作为后续新建文本框的默认吸附状态。"""
+        """Sync the existing text boxes on the canvas, and use the value as the default snapping state of text boxes created later."""
         self._snap_enabled = bool(enabled)
         for item in self._region_items:
             if item is not None:
@@ -127,7 +127,7 @@ class GraphicsView(
         self.scene.update()
 
     def set_center_scale_enabled(self, enabled: bool) -> None:
-        """设置文本框边/角拖拽是否围绕中心对称缩放。"""
+        """Set whether dragging an edge or corner of a text box scales symmetrically about the centre."""
         self._center_scale_enabled = bool(enabled)
 
     def clear_pending_geometry_edits(self) -> None:
@@ -147,7 +147,7 @@ class GraphicsView(
         return patch
 
     def get_image_scene_rect(self) -> QRectF | None:
-        """返回图片 item 在场景中的包围矩形，供对齐的"画布"参照模式使用。"""
+        """Return the bounding rectangle of the image item in the scene, for the "canvas" reference mode of alignment."""
         if self._image_item is not None:
             r = self._image_item.sceneBoundingRect()
             if r.isValid() and not r.isNull():
@@ -155,7 +155,7 @@ class GraphicsView(
         return None
 
     def get_view_scene_rect(self) -> QRectF | None:
-        """返回当前视图实际使用的场景范围，供双栏视图同步平移边界。"""
+        """Return the scene range the current view really uses, for the two-pane view to sync the panning limits."""
         rect = self.scene.sceneRect()
         if rect.isValid() and not rect.isNull():
             return QRectF(rect)

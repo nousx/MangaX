@@ -1,12 +1,12 @@
 """
-贴片（paste overlay）画布层：显示项、选中装饰、交互与拖放导入。
+Canvas layer of paste overlays: display items, selection decoration, interaction and drag-and-drop import.
 
-坐标系约定：场景单位 == 源图像素（基图 item 未缩放）；贴片的 ``center_x/y``、
-``width/height`` 均为源图分辨率数值，直接用于场景摆放。
-z 序：贴片基值 50（在基图 2 / 修复预览之上、region 文本框 100 之下）。
+Coordinate conventions: scene unit == source image pixel (the base image item is not scaled); ``center_x/y`` and
+``width/height`` of an overlay are values at the resolution of the source image and are used directly for placing it in the scene.
+z order: overlays start at 50 (above the base image at 2 and the inpaint preview, below the region text boxes at 100).
 
-选中装饰（虚线框 + 四角手柄 + 旋转手柄）由单个自绘 child item 一次性绘制，
-样式对齐文本框（RegionTextItem）。改动数据一律走 EditorController（可撤销）。
+The selection decoration (dashed frame + four corner handles + rotation handle) is drawn in one go by a single custom-painted child item,
+in the style of the text box (RegionTextItem). Every data change goes through EditorController (undoable).
 """
 
 from __future__ import annotations
@@ -64,7 +64,7 @@ def _rgba_to_qimage(rgba):
 
 
 def _view_lod_of(item) -> float:
-    """场景视图缩放（屏幕像素 / 场景单位）。"""
+    """Scale of the scene view (screen pixels / scene unit)."""
     try:
         scene = item.scene()
         if scene is not None and scene.views():
@@ -75,7 +75,7 @@ def _view_lod_of(item) -> float:
 
 
 class _PasteOverlaySelectionItem(QGraphicsItem):
-    """贴片选中装饰：虚线框 + 文本框同款四角/旋转手柄（一次自绘，不闪烁）。"""
+    """Selection decoration of a paste overlay: dashed frame + the same corner and rotation handles as a text box (painted in one go, no flicker)."""
 
     def __init__(self, overlay_item: "PasteOverlayItem"):
         super().__init__(overlay_item)
@@ -182,7 +182,7 @@ class _PasteOverlaySelectionItem(QGraphicsItem):
 
 
 class PasteOverlayItem(QGraphicsPixmapItem):
-    """单个贴片：由 overlay 字典驱动 pixmap/几何/透明度；自带选择与拖拽交互。"""
+    """A single paste overlay: pixmap, geometry and opacity are driven by the overlay dictionary; it has its own selection and drag interaction."""
 
     def __init__(self, overlay: dict, view=None):
         super().__init__()
@@ -368,7 +368,7 @@ class PasteOverlayItem(QGraphicsPixmapItem):
     # ------------------------------------------------------------------
 
     def _hover_cursor_for(self, local_pos: QPointF):
-        """命中判定对应的 Qt 光标（对齐文本框：角=对角拉伸, 旋转=移动四向）。"""
+        """The Qt cursor for a hit result (as for text boxes: corner = diagonal resize, rotation = four-way move)."""
         if self._selection_item is None:
             return None
         pixmap = self.pixmap()
@@ -448,7 +448,7 @@ class PasteOverlayItem(QGraphicsPixmapItem):
         return model is None or model.get_active_tool() == "select"
 
     def _hit_mode(self, local_pos: QPointF) -> str | None:
-        """按局部坐标命中判定：旋转手柄 / 四角缩放手柄 / 内部移动。"""
+        """Hit test in local coordinates: rotation handle / four corner scale handles / move inside."""
         pixmap = self.pixmap()
         width = float(pixmap.width())
         height = float(pixmap.height())
@@ -562,7 +562,7 @@ class PasteOverlayItem(QGraphicsPixmapItem):
 
 
 class GraphicsViewPasteOverlayMixin:
-    """画布贴片同步：监听模型信号重建可视项，并支持 PNG 拖放导入。"""
+    """Sync of paste overlays on the canvas: listens to the model signals to rebuild the visible items, and supports importing a PNG by drag and drop."""
 
     def _rebuild_paste_overlay_items(self) -> None:
         items = getattr(self, "_paste_overlay_items", None)
@@ -641,7 +641,7 @@ class GraphicsViewPasteOverlayMixin:
         self._selected_paste_overlay_id = None
 
     def select_paste_overlay(self, overlay_id: str) -> None:
-        """选中唯一贴片（画布级状态，不进入 region 选择体系）。"""
+        """Select a single paste overlay (canvas-level state, outside the region selection system)."""
         self._selected_paste_overlay_id = overlay_id
         if hasattr(self, "model") and self.model:
             self.model.set_selection([])
@@ -660,12 +660,12 @@ class GraphicsViewPasteOverlayMixin:
     def _on_model_selection_changed_for_paste_overlays(
         self, selected_indices: list
     ) -> None:
-        """模型中文本区域选中集非空时，自动清空贴片选中，保持交互互斥。"""
+        """When the selection of text regions in the model is not empty, clear the overlay selection automatically, keeping the two interactions exclusive."""
         if selected_indices:
             self.clear_paste_overlay_selection()
 
     def clear_paste_overlay_selection_for_press(self, event) -> None:
-        """点按命中目标不是贴片（文本框/空白等）时，隐藏贴片手柄。"""
+        """When a click hits something that is not a paste overlay (a text box, empty space and so on), hide the overlay handles."""
         if not getattr(self, "_selected_paste_overlay_id", None):
             return
         try:

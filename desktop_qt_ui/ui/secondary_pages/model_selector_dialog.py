@@ -19,7 +19,7 @@ def _default_t(text: str, **kwargs) -> str:
 
 
 class ModelSelectorDialog(FluentSecondaryDialog):
-    """带搜索功能的模型选择对话框"""
+    """Model selection dialog with search"""
 
     model_selected = pyqtSignal(str)
 

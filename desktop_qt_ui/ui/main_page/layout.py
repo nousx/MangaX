@@ -218,7 +218,7 @@ def apply_selected_prompt(self):
 
 
 def on_prompt_selection_changed(self, current, previous):
-    """Prompt 列表选中变化时加载预览。"""
+    """Load the preview when the selection in the prompt list changes."""
     if not hasattr(self, "prompt_preview_panel"):
         return
     if not current:
@@ -234,7 +234,7 @@ def on_prompt_selection_changed(self, current, previous):
 
 
 def open_prompt_editor(self, file_path: str):
-    """弹出编辑器对话框，关闭后刷新预览。"""
+    """Show the editor dialog and refresh the preview after it closes."""
     from ui.secondary_pages.ai_colorizer_prompt_editor import (
         AIColorizerPromptEditorDialog,
         is_ai_colorizer_prompt_file,
@@ -273,7 +273,7 @@ def _prompt_file_path(filename: str) -> str:
 
 
 def create_new_prompt(self):
-    """弹出输入框，创建新的 YAML 提示词文件。"""
+    """Show an input box and create a new YAML prompt file."""
     from ui.secondary_pages.themed_text_input_dialog import themed_get_text
     name, ok = themed_get_text(
         self._dialog_parent(),
@@ -342,7 +342,7 @@ def create_new_prompt(self):
 
 
 def copy_selected_prompt(self):
-    """复制选中的提示词文件。"""
+    """Copy the selected prompt file."""
     from ui.secondary_pages.themed_text_input_dialog import themed_get_text
 
     filename = _get_selected_prompt_filename(self)
@@ -390,7 +390,7 @@ def copy_selected_prompt(self):
 
 
 def rename_selected_prompt(self):
-    """重命名选中的提示词文件。"""
+    """Rename the selected prompt file."""
     from ui.secondary_pages.themed_text_input_dialog import themed_get_text
 
     filename = _get_selected_prompt_filename(self)
@@ -446,7 +446,7 @@ def rename_selected_prompt(self):
 
 
 def delete_selected_prompt(self):
-    """删除选中的提示词文件。"""
+    """Delete the selected prompt file."""
     filename = _get_selected_prompt_filename(self)
     if not filename:
         QMessageBox.warning(self._dialog_parent(), self._t("Warning"), self._t("Please select a prompt file first."))

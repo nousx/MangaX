@@ -23,7 +23,7 @@ from utils.resource_helper import resource_path
 
 
 def _resolve_settings_tab_layout_file() -> str:
-    """打包/开发环境通用地定位 settings_tab_layout.json。"""
+    """Locate settings_tab_layout.json, in a packaged build and in development alike."""
     return resource_path("desktop_qt_ui/ui/main_page/settings_tab_layout.json")
 
 
@@ -39,7 +39,7 @@ def _make_settings_route_key(raw_key: str) -> str:
 
 
 def _load_reclassify_settings_layout():
-    """从 ui/main_page/settings_tab_layout.json 加载设置页分类排序布局。"""
+    """Load the category order layout of the settings page from ui/main_page/settings_tab_layout.json."""
     try:
         with open(_SETTINGS_TAB_LAYOUT_FILE, "r", encoding="utf-8") as f:
             data = json.load(f)

@@ -26,9 +26,9 @@ from utils.app_version import format_app_title, get_app_version
 
 class MainWindow(FluentWindow):
     """
-    应用主窗口。
-    负责承载所有UI组件、侧边导航、页面切换等。
-    侧边栏默认收起为窄图标条，点左上角汉堡按钮可展开（参照 AiNiee 的配置）。
+    Main window of the application.
+    Hosts all UI components, the side navigation, page switching and so on.
+    The sidebar is collapsed to a narrow icon strip by default, and the hamburger button at the top left expands it (following the configuration of AiNiee).
     """
 
     def __init__(self):
@@ -77,7 +77,7 @@ class MainWindow(FluentWindow):
         self.app_logic.initialize()
 
     def _t(self, key: str, **kwargs) -> str:
-        """翻译辅助方法"""
+        """Translation helper methods"""
         if self.i18n:
             return self.i18n.translate(key, **kwargs)
         return key
@@ -87,7 +87,7 @@ class MainWindow(FluentWindow):
         self.setWindowTitle(format_app_title("MangaX", self.app_version))
 
     def _setup_logic_and_models(self):
-        """实例化所有逻辑和数据模型"""
+        """Create all logic and data models"""
         self.config_service = get_config_service()
         self.state_manager = get_state_manager()
         config = self.config_service.get_config()
@@ -121,7 +121,7 @@ class MainWindow(FluentWindow):
         self.editor_view = None
 
     def _setup_ui(self):
-        """初始化UI组件"""
+        """Initialise the UI components"""
         # No menu bar at the top; the menu functions are all in the settings area
         self._create_ui_actions()
 
@@ -275,7 +275,7 @@ class MainWindow(FluentWindow):
             )
 
     def _create_ui_actions(self):
-        """创建内部动作对象（无顶部菜单栏）"""
+        """Create the internal action objects (there is no menu bar at the top)"""
         self.add_files_action = QAction(self._t("&Add Files..."), self)
         self.undo_action = QAction(self._t("&Undo"), self)
         self.redo_action = QAction(self._t("&Redo"), self)
@@ -288,7 +288,7 @@ class MainWindow(FluentWindow):
             setattr(self, f"{theme_key}_theme_action", action)
 
     def _load_theme(self):
-        """根据配置初始化 qfluentwidgets 主题。"""
+        """Initialise the qfluentwidgets theme from the configuration."""
         from services import get_config_service
 
         config_service = get_config_service()
@@ -299,7 +299,7 @@ class MainWindow(FluentWindow):
         self._apply_theme(theme)
 
     def _apply_theme(self, theme: str):
-        """应用指定的主题"""
+        """Apply the given theme"""
 
         # System theme logic: 'system' is resolved to the actual theme
         if theme == "system":
@@ -336,13 +336,13 @@ class MainWindow(FluentWindow):
         )
 
     def _apply_native_title_bar_theme(self, theme: str):
-        """同步 Windows 原生标题栏颜色，避免深色内容区配浅色系统标题栏。"""
+        """Sync the colour of the native Windows title bar, so a dark content area does not get a light system title bar."""
         from ui.theme import apply_native_title_bar_theme
 
         apply_native_title_bar_theme(self, theme, logger=self.logger)
 
     def _detect_system_theme(self) -> str | None:
-        """通过 Qt 检测系统主题；平台未提供外观信息时返回 None。"""
+        """Detect the system theme through Qt; None when the platform gives no appearance information."""
         scheme = QApplication.styleHints().colorScheme()
         if scheme == Qt.ColorScheme.Dark:
             return "dark"
@@ -351,7 +351,7 @@ class MainWindow(FluentWindow):
         return None
 
     def _on_system_theme_changed(self, scheme: Qt.ColorScheme):
-        """响应系统外观通知，仅更新跟随系统模式下的界面。"""
+        """Respond to a system appearance notification; only the interface in follow-system mode is updated."""
         config = self.config_service.get_config()
         if config.app.theme != "system":
             return
@@ -369,7 +369,7 @@ class MainWindow(FluentWindow):
             self._apply_theme(theme)
 
     def _change_theme(self, theme: str):
-        """切换主题并保存到配置"""
+        """Switch the theme and save it to the configuration"""
         from services import get_config_service
 
         config_service = get_config_service()
@@ -542,7 +542,7 @@ class MainWindow(FluentWindow):
         self.enter_editor_mode(file_to_load=file_path)
 
     def _on_file_removed_update_editor(self, file_path: str):
-        """当主页文件被移除时，更新编辑器（如果编辑器正在显示该文件）"""
+        """When a file is removed on the main page, update the editor (if the editor is showing that file)"""
         if not self.editor_view or not self.editor_controller:
             return
         if self.stacked_widget.currentWidget() == self.editor_view:
@@ -575,14 +575,14 @@ class MainWindow(FluentWindow):
             # The editor list is only cleared when the main page has no files left at all
 
     def _on_files_cleared_update_editor(self):
-        """当文件列表被清空时，清空编辑器"""
+        """When the file list is cleared, clear the editor"""
         if not self.editor_view or not self.editor_logic:
             return
         self.logger.info("Files cleared. Clearing editor.")
         self.editor_logic.clear_list()
 
     def _change_language(self, locale_code: str):
-        """切换语言"""
+        """Switch the language"""
         if self.i18n and self.i18n.set_locale(locale_code):
             self._apply_qt_translator(locale_code)
             # Save the language setting to the configuration
@@ -596,7 +596,7 @@ class MainWindow(FluentWindow):
             self.logger.info(f"Language switched to: {locale_code}")
 
     def _apply_qt_translator(self, locale_code: str):
-        """加载 Qt 内建控件翻译（如 QColorDialog），使其跟随应用语言。"""
+        """Load the translations of Qt's built-in controls (such as QColorDialog), so they follow the application language."""
         app = QApplication.instance()
         if app is None:
             return
@@ -626,7 +626,7 @@ class MainWindow(FluentWindow):
             self._qt_translator = translator
 
     def _refresh_ui_texts(self):
-        """刷新UI文本"""
+        """Refresh the UI texts"""
         self._update_window_title()
         self._refresh_action_texts()
 
@@ -641,7 +641,7 @@ class MainWindow(FluentWindow):
                 self.editor_view.refresh_ui_texts()
 
     def _refresh_action_texts(self):
-        """刷新内部动作文本（菜单栏隐藏时仍保留动作对象）"""
+        """Refresh the texts of the internal actions (the action objects are kept even while the menu bar is hidden)"""
         if hasattr(self, "add_files_action"):
             self.add_files_action.setText(self._t("&Add Files..."))
         if hasattr(self, "undo_action"):
@@ -738,7 +738,7 @@ class MainWindow(FluentWindow):
 
     @pyqtSlot(str)
     def _show_error_dialog(self, error_message: str):
-        """弹出翻译错误提示框"""
+        """Show the translation error box"""
         try:
             log_dir = self._resolve_log_folder_from_message(error_message)
             show_error_dialog(
@@ -775,7 +775,7 @@ class MainWindow(FluentWindow):
 
     @pyqtSlot(str)
     def _show_warning_dialog(self, message: str):
-        """弹出任务提示框"""
+        """Show the task notice box"""
         try:
             show_error_dialog(
                 self,
@@ -788,7 +788,7 @@ class MainWindow(FluentWindow):
 
     @pyqtSlot(str)
     def _show_config_write_failed(self, error: str):
-        """明确提示配置写入失败，避免用户误以为 API Key 已保存。"""
+        """Say clearly that writing the configuration failed, so the user does not think the API key was saved."""
         try:
             guidance = self._t(
                 "Configuration save failed. Changes were not saved. Check file permissions and antivirus or security software blocking access."
@@ -812,8 +812,8 @@ class MainWindow(FluentWindow):
     def enter_editor_mode(self, file_to_load: str = None, files_to_load: list = None):
         """
         Switches to the editor view and loads the necessary files.
-        file_to_load: 单个文件路径（双击文件时使用）
-        files_to_load: 保存结果列表（从翻译完成进入时使用，用于定位要打开的原图）
+        file_to_load: path of a single file (used when a file is double-clicked)
+        files_to_load: list of saved results (used when entering after a translation finished, to locate the original image to open)
         """
         try:
             self._ensure_editor_initialized()
@@ -885,7 +885,7 @@ class MainWindow(FluentWindow):
                 item.setToolTip(text)
 
     def closeEvent(self, event):
-        """处理窗口关闭事件"""
+        """Handle the window close event"""
         if hasattr(self, "main_view") and hasattr(self.main_view, "update_checker"):
             self.main_view.update_checker.stop()
         unfinished_exports = 0

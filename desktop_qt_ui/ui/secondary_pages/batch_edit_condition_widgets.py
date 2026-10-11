@@ -1,8 +1,8 @@
-"""批量管理页的条件行与动作块控件。
+"""Condition row and action block widgets of the batch edit page.
 
-条件负责筛 region，动作各自带 pattern 负责在译文里定位子串 —— 两者分开，不存在
-"哪条条件的命中区间才是目标"的歧义。值编辑器按字段类型现造（``build_value_editor``），
-条件行和"改 region 属性"动作共用同一套，避免两处各写一遍类型分支。
+Conditions filter regions, and each action has its own pattern for locating substrings in the translation - the two are separate, so there is no
+ambiguity about "which condition's matched range is the target". Value editors are built on the spot by field type (``build_value_editor``),
+and the condition rows and the "change region properties" action share the same set, so the type branches are not written twice.
 """
 
 from __future__ import annotations
@@ -58,7 +58,7 @@ from utils.font_list import FontComboBox
 
 
 class _ValueEditor(QWidget):
-    """统一契约：``value()`` 取值、``set_value()`` 回填、``changed`` 通知。"""
+    """One contract: ``value()`` reads the value, ``set_value()`` fills it in, ``changed`` notifies."""
 
     changed = pyqtSignal()
 
@@ -286,7 +286,7 @@ def build_value_editor(
     locale_getter=None,
     parent: QWidget | None = None,
 ) -> Optional[_ValueEditor]:
-    """按字段类型 + 运算符造值编辑器；``None`` 表示该运算符不需要值。"""
+    """Build a value editor by field type + operator; ``None`` means the operator needs no value."""
     if op in VALUELESS_OPS:
         return None
     if spec.kind == KIND_NUMBER:
@@ -309,7 +309,7 @@ def build_value_editor(
 
 
 class ConditionRow(QWidget):
-    """``[字段 ▼] [运算符 ▼] [值] [×]``。"""
+    """``[field ▼] [operator ▼] [value] [×]``."""
 
     changed = pyqtSignal()
     remove_requested = pyqtSignal(object)
@@ -429,7 +429,7 @@ class ConditionRow(QWidget):
 
 
 class _ActionCard(SimpleCardWidget):
-    """带启用开关的动作块基类。"""
+    """Base class of an action block with an enable switch."""
 
     changed = pyqtSignal()
     action_type = ""
@@ -460,7 +460,7 @@ class _ActionCard(SimpleCardWidget):
         self.body.setEnabled(bool(enabled))
 
     def to_actions(self) -> list[dict]:
-        """本块产出的动作；一张卡可以出多条（替换/富文本都是条目列表）。"""
+        """The actions this block produces; one card can give several (replacement and rich text are both lists of entries)."""
         raise NotImplementedError
 
     def load_actions(self, actions: list[dict]) -> None:
@@ -471,7 +471,7 @@ class _ActionCard(SimpleCardWidget):
 
 
 class _EntryListActionCard(_ActionCard):
-    """条目可增删的动作块：一条条目 = 一个动作，列表顺序 = 执行顺序。"""
+    """Action block whose entries can be added and removed: one entry = one action, list order = execution order."""
 
     add_label_key = ""
     _loading_entries = False
@@ -547,7 +547,7 @@ class _EntryListActionCard(_ActionCard):
 
 
 class _PatternRow(QWidget):
-    """``pattern`` + ``regex`` 两个动作共用的头一行。"""
+    """The first row shared by the two actions with ``pattern`` + ``regex``."""
 
     changed = pyqtSignal()
 
@@ -573,7 +573,7 @@ class _PatternRow(QWidget):
 
 
 class SetFieldsActionCard(_ActionCard):
-    """批量改 region 属性：一行一个字段。"""
+    """Change region properties as a batch: one field per row."""
 
     action_type = ACTION_SET_FIELDS
 
@@ -689,7 +689,7 @@ class SetFieldsActionCard(_ActionCard):
 
 
 class _ActionEntry(QWidget):
-    """条目列表里的一条。左边内容、右边一个删除按钮。"""
+    """One entry of an entry list. Content on the left, a delete button on the right."""
     changed = pyqtSignal()
     remove_requested = pyqtSignal()
 
@@ -760,7 +760,7 @@ class _ReplaceEntry(_ActionEntry):
 
 
 class _RichTextEntry(_ActionEntry):
-    """一条富文本条目：文字匹配 AND 现有富文本匹配 → 应用目标样式。"""
+    """One rich-text entry: text match AND existing rich-text match → apply the target style."""
 
     _MODES = (
         (RICH_MODE_OVERWRITE, "Overwrite", "Your properties win; the rest of the hit keeps what it has"),
@@ -918,7 +918,7 @@ class ReplaceTextActionCard(_EntryListActionCard):
 
 
 class RichTextActionCard(_EntryListActionCard):
-    """富文本条目列表；样式编辑直接复用规则页的 ``RichTextStyleDialog``。"""
+    """List of rich-text entries; style editing reuses ``RichTextStyleDialog`` of the rules page directly."""
 
     action_type = ACTION_RICH_TEXT
     add_label_key = "Add style entry"

@@ -8,19 +8,19 @@ from services import get_logger
 
 class SelectionManager(QObject):
     """
-    集中管理编辑器的选择逻辑：
-    - 正向同步：Qt scene.selectionChanged → model.set_selection
-    - 反向同步：model.selection_changed → Qt items setSelected
-    - 框选：start/update/finish/cancel
-    - _syncing 标志：防止循环同步，仅在本类内部管理
+    One place for the selection logic of the editor:
+    - forward sync: Qt scene.selectionChanged → model.set_selection
+    - reverse sync: model.selection_changed → Qt items setSelected
+    - rubber-band selection: start/update/finish/cancel
+    - the _syncing flag: prevents a sync loop, and is managed only inside this class
     """
 
     def __init__(self, model, scene, get_region_items_fn):
         """
         Args:
-            model: EditorModel 实例
-            scene: QGraphicsScene 实例
-            get_region_items_fn: Callable，返回当前 region items 列表
+            model: the EditorModel instance
+            scene: the QGraphicsScene instance
+            get_region_items_fn: Callable that returns the current list of region items
         """
         super().__init__(model)
         self._model = model
@@ -100,7 +100,7 @@ class SelectionManager(QObject):
     # ------------------------------------------------------------------ #
 
     def start_box_select(self, scene_pos):
-        """开始框选"""
+        """Begin a rubber-band selection"""
         self._is_box_selecting = True
         self._box_select_start_pos = scene_pos
 
@@ -133,7 +133,7 @@ class SelectionManager(QObject):
         self._box_select_rect_item.setVisible(True)
 
     def update_box_select(self, scene_pos):
-        """更新框选矩形"""
+        """Update the rubber-band rectangle"""
         if not self._is_box_selecting or self._box_select_start_pos is None:
             return False
         try:
@@ -145,7 +145,7 @@ class SelectionManager(QObject):
             return False
 
     def finish_box_select(self, ctrl_pressed):
-        """完成框选，计算相交区域并更新选择"""
+        """Finish the rubber-band selection: compute the intersecting regions and update the selection"""
         select_rect = self._end_box_select()
         if select_rect is None:
             return
@@ -196,7 +196,7 @@ class SelectionManager(QObject):
     # ------------------------------------------------------------------ #
 
     def _on_scene_selection_changed(self):
-        """正向同步：Qt scene → model"""
+        """Forward sync: Qt scene → model"""
         if self._syncing:
             return
 
@@ -206,7 +206,7 @@ class SelectionManager(QObject):
             self._model.set_selection(selected_indices)
 
     def _sync_qt_from_model(self, selected_indices):
-        """反向同步：model → Qt items"""
+        """Reverse sync: model → Qt items"""
         self._syncing = True
         try:
             region_items = self._region_items()
@@ -229,17 +229,17 @@ class SelectionManager(QObject):
     # ------------------------------------------------------------------ #
 
     def suppress_forward_sync(self, suppress):
-        """批量操作时暂停/恢复正向同步"""
+        """Pause or resume the forward sync during a batch operation"""
         self._syncing = suppress
 
     def restore_selection_after_rebuild(self):
-        """items 重建后恢复选择状态（从 model 同步到 Qt）"""
+        """Restore the selection state after the items were rebuilt (synced from the model to Qt)"""
         self._sync_qt_from_model(self._model.get_selection())
 
     def clear_state(self):
-        """清理所有框选状态（切换图片等场景）"""
+        """Clear all rubber-band state (when the image is switched and similar cases)"""
         self._end_box_select(remove_item=True)
 
     def on_scene_cleared(self):
-        """当 scene.clear() 被调用后，重置框选状态。"""
+        """Reset the rubber-band state after scene.clear() was called."""
         self._end_box_select()

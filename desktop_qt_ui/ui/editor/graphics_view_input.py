@@ -45,7 +45,7 @@ class GraphicsViewInputMixin:
         self._emit_view_state_changed()
 
     def _apply_zoom(self, factor: float):
-        """按倍率缩放视图，并钳制在 [MIN_VIEW_SCALE, MAX_VIEW_SCALE]。"""
+        """Scale the view by a factor, clamped to [MIN_VIEW_SCALE, MAX_VIEW_SCALE]."""
         current = abs(float(self.transform().m11()))
         if current <= 0.0:
             current = 1.0
@@ -112,7 +112,7 @@ class GraphicsViewInputMixin:
     # ------------------------- Middle-button panning (symmetric synthetic left button) -------------------------
 
     def _begin_hand_scroll(self, event):
-        """中键按下：切 ScrollHandDrag 并合成左键 press 喂给 QGraphicsView。"""
+        """Middle button pressed: switch to ScrollHandDrag and feed a synthetic left press to QGraphicsView."""
         if self._hand_scroll_active:
             return
         self._hand_scroll_active = True
@@ -128,8 +128,9 @@ class GraphicsViewInputMixin:
         super().mousePressEvent(press)
 
     def _end_hand_scroll(self, event=None):
-        """与 _begin_hand_scroll 对称：合成左键 release 喂给 QGraphicsView，
-        让内部 handScrolling 状态正常复位，然后才切回 NoDrag。"""
+        """Mirror of _begin_hand_scroll: feed a synthetic left release to QGraphicsView,
+        so its internal handScrolling state resets normally, and only then switch back to NoDrag.
+        """
         if not self._hand_scroll_active:
             return
         self._hand_scroll_active = False
@@ -621,7 +622,7 @@ class GraphicsViewInputMixin:
     # ------------------------- Clone stamp -------------------------
 
     def _set_clone_sample_point(self, view_pos):
-        """右键取样：记录取样点并清空偏移锁（再次落笔时重新锁定相对位移）。"""
+        """Right-click sampling: record the sample point and clear the offset lock (the relative offset is locked again at the next stroke)."""
         if self._image_item is None:
             return
         self._clone_sample_image_point = self._scene_to_image_point(
@@ -631,7 +632,7 @@ class GraphicsViewInputMixin:
         self._update_clone_marker(None)
 
     def _update_clone_marker(self, cursor_image_point):
-        """更新取样圈位置：偏移锁定后跟随光标（src = 光标 + offset），否则停在取样点。"""
+        """Update the position of the sample circle: once the offset is locked it follows the cursor (src = cursor + offset), otherwise it stays on the sample point."""
         if self._clone_sample_image_point is None or self._image_item is None:
             self._clear_clone_marker()
             return
@@ -682,7 +683,7 @@ class GraphicsViewInputMixin:
             self._clone_marker_item = None
 
     def _start_clone_stroke(self, view_pos):
-        """左键按下：偏移未锁定时用（取样点 - 落笔点）锁定；随后逐点实时盖印。"""
+        """Left button pressed: when the offset is not locked, lock it with (sample point - stroke start); then stamp point by point, live."""
         if self._clone_sample_image_point is None or self._image_item is None:
             return
         pos = self._scene_to_image_point(self.mapToScene(view_pos))
@@ -711,7 +712,7 @@ class GraphicsViewInputMixin:
         self._clone_dab_segment(pos)
 
     def _build_clone_composite_rgb(self, shape: tuple[int, int], working_overlay):
-        """按当前双底图层和用户透明度构造仿制印章的可见取样源。"""
+        """Build the visible sample source of the clone stamp from the two current base layers and the user's opacity."""
         if self._image_item is None:
             return None
         layers = self.model.get_display_layers()
@@ -757,7 +758,7 @@ class GraphicsViewInputMixin:
         return np.clip(composite, 0, 255).astype(np.uint8)
 
     def _clone_dab_segment(self, image_pos):
-        """从上一个 dab 点插值到当前点，逐点盖印，并增量刷新预览。"""
+        """Interpolate from the previous dab point to the current point, stamping point by point, and refresh the preview incrementally."""
         if not self._clone_drawing or self._clone_composite is None:
             return
         px, py = float(image_pos.x()), float(image_pos.y())
@@ -785,7 +786,7 @@ class GraphicsViewInputMixin:
             self._refresh_clone_preview(dirty)
 
     def _clone_dab(self, px: float, py: float):
-        """单次盖印：硬边像素圆，从合成源按锁定偏移取样写入工作层与合成源。"""
+        """A single stamp: a hard-edged pixel circle, sampled from the composite source at the locked offset and written to the working layer and the composite source."""
         working = self._clone_working_overlay
         composite = self._clone_composite
         if working is None or composite is None or self._clone_offset is None:
@@ -827,7 +828,7 @@ class GraphicsViewInputMixin:
         return (x0, y0, x1, y1)
 
     def _refresh_clone_preview(self, dirty_rects):
-        """把工作层的脏区增量画进预览 pixmap 并提交显示。"""
+        """Draw the dirty area of the working layer into the preview pixmap incrementally and commit it for display."""
         if self._preview_item is None or self._clone_preview_pixmap is None:
             return
         working = self._clone_working_overlay
@@ -884,10 +885,10 @@ class GraphicsViewInputMixin:
             self._clear_preview()
 
     def _clear_preview(self):
-        """移除预览 item 并置 None，与两个创建路径（懒创建）保持对称。
+        """Remove the preview item and set it to None, symmetrical with the two creation paths (lazy creation).
 
-        注意不能 pixmap().fill()：QPixmap 隐式共享，fill 的是取出的副本，
-        item 上的真像素不变，下次 setVisible(True) 时旧笔迹会整条闪回。
+        Note that pixmap().fill() must not be used: QPixmap is implicitly shared, so fill would act on the copy taken out,
+        the real pixels on the item would stay, and the old strokes would flash back in full at the next setVisible(True).
         """
         if self._preview_item is None:
             return
@@ -1126,7 +1127,7 @@ class GraphicsViewInputMixin:
             self._textbox_preview_item.setRect(left, top, width, height)
 
     def _abort_textbox_drawing(self):
-        """丢弃进行中的文本框绘制：清状态 + 隐藏预览矩形。"""
+        """Discard a text box drawing in progress: clear the state and hide the preview rectangle."""
         self._is_drawing_textbox = False
         self._textbox_start_pos = None
         if self._textbox_preview_item is not None:

@@ -133,7 +133,7 @@ class _OptionalStyleField(QWidget):
 
 
 class RichTextStyleControls(SimpleCardWidget):
-    """规则页复用浮动富文本编辑器同口径的 Fluent 样式控件。"""
+    """The rules page reuses Fluent style controls with the same conventions as the floating rich-text editor."""
 
     def __init__(self, t_func: Callable, parent=None):
         super().__init__(parent)
@@ -376,7 +376,7 @@ class RichTextStyleControls(SimpleCardWidget):
             self.load_style(style)
 
     def refresh_saved_styles(self) -> None:
-        """重新读取共享的富文本预设，供规则页重新激活时调用。"""
+        """Read the shared rich-text presets again; called when the rules page is activated again."""
         self._refresh_saved_style_combo()
 
     def refresh_ui_texts(self) -> None:
@@ -542,7 +542,7 @@ class RichTextStyleDialog(FluentSecondaryDialog):
 
 
 class RichTextRulesEditorPanel(BaseYamlRuleEditorPanel):
-    """富文本规则可视化编辑面板"""
+    """Visual editing panel of the rich-text rules"""
 
     COL_STYLE = 2
 
@@ -609,7 +609,7 @@ class RichTextRulesEditorPanel(BaseYamlRuleEditorPanel):
 
     @staticmethod
     def _set_button_style(button: PushButton, style: dict) -> None:
-        """样式与它的搜索文本一起缓存，过滤时不再逐行序列化 JSON。"""
+        """A style is cached together with its search text, so filtering no longer serialises JSON row by row."""
         button.setProperty("richStyle", copy.deepcopy(style))
         button.setProperty(
             "styleHaystack", json.dumps(style, ensure_ascii=False).lower()

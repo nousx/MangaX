@@ -61,7 +61,7 @@ class _RegionDragHandle(ToolButton):
 
 class RegionListView(ListWidget):
     """
-    显示和管理当前图片中所有文本区域的列表。
+    Shows and manages the list of all text regions of the current image.
     """
     region_selected = pyqtSignal(list)
     region_move_requested = pyqtSignal(int, int)
@@ -143,7 +143,7 @@ class RegionListView(ListWidget):
             self.flush_pending_regions()
 
     def update_regions(self, regions):
-        """用新的区域列表填充UI,现在显示原文和可编辑的译文。"""
+        """Fill the UI with a new region list; it now shows the original text and an editable translation."""
         drafts = self._pending_drafts.copy()
         drafts.update(self._collect_dirty_translations())
         self._pending_regions = list(regions)
@@ -159,11 +159,11 @@ class RegionListView(ListWidget):
         self.flush_pending_regions()
 
     def flush_pending_regions(self):
-        """在「译文列表」标签页真正可见时按差量更新列表。
+        """Update the list by difference once the "translation list" tab is really visible.
 
-        按行位置复用现有行（只更新文本/数据），仅增删数量变化的行，
-        避免整表 clear+重建销毁正在输入的 TextEdit（丢焦点/光标/吃 IME
-        组合字）；持有焦点的译文框不覆盖文本。
+        Existing rows are reused by row position (only text and data are updated), and rows are only added or removed for a change in count,
+        which avoids a full clear+rebuild destroying a TextEdit that is being typed in (losing focus and cursor, and swallowing IME
+        composition); the text of a translation box that holds the focus is not overwritten.
         """
         if self._pending_regions is None:
             return
@@ -274,7 +274,7 @@ class RegionListView(ListWidget):
         self._sync_row_size(item, item_container)
 
     def _update_region_item(self, index: int, region: dict, draft_text: str | None) -> None:
-        """就地刷新已有行；正在编辑（持焦点）的译文框不覆盖文本。"""
+        """Refresh existing rows in place; the text of a translation box being edited (holding the focus) is not overwritten."""
         item = self.item(index)
         widget = self.itemWidget(item)
         if widget is None:
@@ -307,8 +307,9 @@ class RegionListView(ListWidget):
         self._sync_row_size(item, widget)
 
     def _sync_row_size(self, item: QListWidgetItem, widget) -> None:
-        """按当前视口宽度计算行高：原文 label 折行后高度会变化，
-        不能用加入列表前的 sizeHint 定死（那时 label 还没有真实宽度）。"""
+        """Compute the row height from the current viewport width: the height of the original-text label changes once it wraps,
+        so the sizeHint from before it was added to the list cannot be fixed (the label had no real width then).
+        """
         width = max(50, self.viewport().width())
         layout = widget.layout()
         if layout is not None and layout.hasHeightForWidth():
@@ -378,7 +379,7 @@ class RegionListView(ListWidget):
             self.region_move_requested.emit(source_row, target_row)
 
     def get_all_translations(self):
-        """获取列表中所有编辑后的译文"""
+        """Get all edited translations in the list"""
         translations = {}
         for i in range(self.count()):
             item = self.item(i)
@@ -391,7 +392,7 @@ class RegionListView(ListWidget):
         return translations
 
     def find_and_replace_in_all_translations(self, find_text, replace_text):
-        """在所有译文编辑框中执行查找和替换"""
+        """Run find and replace in all translation edit boxes"""
         for i in range(self.count()):
             item = self.item(i)
             widget = self.itemWidget(item)
@@ -404,7 +405,7 @@ class RegionListView(ListWidget):
                         translated_edit.setPlainText(new_text)
 
     def update_selection(self, selected_indices):
-        """根据外部变化（如画布点击）更新列表中的选中项"""
+        """Update the selected item in the list after a change from outside (such as a click on the canvas)"""
         self._pending_selection = list(selected_indices or [])
         if self._pending_regions is not None:
             return
@@ -427,7 +428,7 @@ class RegionListView(ListWidget):
                 item.setSelected(True)
 
     def _on_item_changed(self, current: QListWidgetItem, previous: QListWidgetItem):
-        """当用户在列表中点击一个项目时发出信号"""
+        """Emit the signal when the user clicks an item in the list"""
         if self._block_signals or not current:
             return
 

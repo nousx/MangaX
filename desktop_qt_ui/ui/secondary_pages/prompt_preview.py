@@ -1,5 +1,4 @@
 """
-提示词预览 & 编辑组件
 Prompt preview & editor components for the Prompt Management page.
 """
 import json
@@ -105,7 +104,7 @@ def _current_t(text):
 
 
 def _section_label(text: str, icon=None) -> QWidget:
-    """带主题自适应 Fluent 图标的小标题。"""
+    """Small heading with a Fluent icon that adapts to the theme."""
     container = QWidget()
     layout = QHBoxLayout(container)
     layout.setContentsMargins(0, 0, 0, 0)
@@ -139,11 +138,11 @@ def _divider() -> HorizontalSeparator:
 
 
 def _auto_size_table_height(table: QTableWidget, rows: int, cap: int, row_h: int = 28) -> None:
-    """按内容行数约束只读表格高度。
+    """Limit the height of a read-only table by its number of content rows.
 
-    以前用 horizontalHeader().height() 计算——控件未 polish 时该值不可信；
-    改用表头 sizeHint（不依赖 polish/显示时机），并用 min/max 高度交给布局
-    在区间内分配，替代 setFixedHeight。
+    It used to be computed with horizontalHeader().height() - a value that cannot be trusted before the widget is polished;
+    the sizeHint of the header is used now (independent of polish and show timing), and min/max heights let the layout
+    allocate within the range, in place of setFixedHeight.
     """
     table.verticalHeader().setDefaultSectionSize(row_h)
     header_h = max(table.horizontalHeader().sizeHint().height(), 24)
@@ -153,7 +152,7 @@ def _auto_size_table_height(table: QTableWidget, rows: int, cap: int, row_h: int
 
 
 def _make_glossary_table(entries: List[Dict[str, str]]) -> QTableWidget:
-    """生成一个只读的 original → translation 表。"""
+    """Build a read-only original → translation table."""
     table = QTableWidget()
     table.setBorderVisible(True)
     table.setBorderRadius(8)
@@ -311,9 +310,9 @@ def _is_colorizer_structured(data: Any) -> bool:
 # ─────────────────────────────────────────────────────────
 class PromptPreviewPanel(CardWidget):
     """
-    右侧预览面板。
-    - 如果 prompt 文件符合已知格式（有 glossary / project_data），展示结构化预览
-    - 否则展示原始文本内容
+    Preview panel on the right.
+    - when the prompt file matches a known format (it has glossary / project_data), a structured preview is shown
+    - otherwise the raw text content is shown
     """
     edit_requested = pyqtSignal(str)  # file_path
 
@@ -363,12 +362,12 @@ class PromptPreviewPanel(CardWidget):
         card_layout.addWidget(scroll, 1)
 
     def apply_theme(self):
-        """主题切换后重建本面板的局部样式。"""
+        """Rebuild the local styles of this panel after a theme switch."""
         if self._current_path:
             self.load_file(self._current_path)
 
     def refresh_ui_texts(self):
-        """语言切换后刷新固定文案，并按当前文件重绘内容。"""
+        """Refresh the fixed texts after a language switch, and redraw the content for the current file."""
         global _current_t
         _current_t = self._t
         self._title_label.setText(self._t("Prompt Preview"))
@@ -389,7 +388,7 @@ class PromptPreviewPanel(CardWidget):
 
     # ─── Called from outside: load a file ──────────────
     def load_file(self, file_path: str):
-        """加载 prompt 文件并展示预览。"""
+        """Load a prompt file and show its preview."""
         self._current_path = file_path
         self._clear_content()
         self._edit_btn.setEnabled(bool(file_path))
@@ -643,7 +642,7 @@ class PromptPreviewPanel(CardWidget):
 # Editable glossary table (rows can be added and removed)
 # ─────────────────────────────────────────────────────────
 def _make_editable_glossary_table(entries: List[Dict[str, str]]) -> QTableWidget:
-    """生成一个可编辑的 original → translation 表。"""
+    """Build an editable original → translation table."""
     table = QTableWidget()
     table.setBorderVisible(True)
     table.setBorderRadius(8)
@@ -684,7 +683,7 @@ def _get_basic_glossary_row(table: QTableWidget, row: int) -> Dict[str, str]:
 
 
 def _styled_text_edit(text: str = "", read_only: bool = False) -> QPlainTextEdit:
-    """统一风格的文本编辑框。"""
+    """Text edit box in the common style."""
     te = QPlainTextEdit()
     te.setPlainText(text)
     te.setReadOnly(read_only)
@@ -967,10 +966,10 @@ class GlossaryEntryDialog(FluentSecondaryDialog):
 
 class PromptEditorDialog(FluentSecondaryDialog):
     """
-    弹窗式编辑器，支持两种模式：
-    - 模板编辑 (Tab 1): 结构化表单编辑各字段
-    - 自由编辑 (Tab 2): 直接编辑原始文本
-    不符合格式的文件只显示自由编辑 Tab。
+    Pop-up editor with two modes:
+    - template editing (Tab 1): a structured form for editing each field
+    - free editing (Tab 2): edit the raw text directly
+    A file that does not match the format only shows the free editing tab.
     """
 
     def __init__(self, file_path: str, t_func: Callable = None, parent=None):
@@ -1158,7 +1157,7 @@ class PromptEditorDialog(FluentSecondaryDialog):
     }
 
     def _make_section_container(self, key: str) -> tuple:
-        """创建带操作栏的容器 Widget，返回 (container, body_layout)。"""
+        """Create a container widget with an action bar; returns (container, body_layout)."""
         label = self._SECTION_META.get(key, key)
         container = SimpleCardWidget(self)
         outer = QVBoxLayout(container)
@@ -1218,7 +1217,7 @@ class PromptEditorDialog(FluentSecondaryDialog):
         return self._SECTION_STRETCHES.get(key, 0)
 
     def _insert_section(self, key: str, idx: int = -1, **kwargs):
-        """创建并插入一个字段区域到 layout。"""
+        """Create a field section and insert it into layout."""
         container, body = self._make_section_container(key)
 
         # Fill the body by key
@@ -1576,7 +1575,7 @@ class PromptEditorDialog(FluentSecondaryDialog):
         )
 
     def _move_section(self, container: QWidget, direction: int):
-        """direction: -1=上移, +1=下移"""
+        """direction: -1=move up, +1=move down"""
         idx = None
         for i, (k, c) in enumerate(self._section_containers):
             if c is container:
@@ -1616,7 +1615,7 @@ class PromptEditorDialog(FluentSecondaryDialog):
         self._reflow_section_widgets()
 
     def _remove_section(self, container: QWidget, key: str):
-        """删除字段区域并清空对应控件引用。"""
+        """Delete a field section and clear the references to its controls."""
         # Remove from the list
         self._section_containers = [(k, c) for k, c in self._section_containers if c is not container]
 
@@ -1676,7 +1675,7 @@ class PromptEditorDialog(FluentSecondaryDialog):
         ))
 
     def _on_add_section(self, key: str):
-        """在"添加字段"按钮上方插入新的字段区域。"""
+        """Insert a new field section above the "add field" button."""
         self._insert_section(key)
 
     # ─── Free-form editing tab ─────────────────────────
@@ -1756,7 +1755,7 @@ class PromptEditorDialog(FluentSecondaryDialog):
 
     # ─── Collecting the data from the template ─────────
     def _collect_template_data(self) -> dict:
-        """从模板编辑控件收集数据，并按当前 section 顺序重建结构。"""
+        """Collect the data from the template editing controls and rebuild the structure in the current section order."""
         base_data = self._data if isinstance(self._data, dict) else {}
         managed_keys = {
             "system_prompt",

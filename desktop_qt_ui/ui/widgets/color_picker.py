@@ -47,10 +47,10 @@ logger = logging.getLogger('manga_translator')
 # ═══════════════════════════════════════════════════════════════
 
 class ScreenColorPicker(QWidget):
-    """全屏屏幕取色器：稳定十字光标 + 像素放大镜 + 实时颜色/RGB 预览。
+    """Full-screen screen colour picker: a steady cross cursor + a pixel magnifier + a live colour/RGB preview.
 
-    - 左键点击拾取颜色
-    - 右键 / ESC 取消
+    - left click picks the colour
+    - right click / ESC cancels
     """
 
     color_picked = pyqtSignal(QColor)
@@ -140,7 +140,7 @@ class ScreenColorPicker(QWidget):
             p.drawLine(x, y + gap, x, y + ln)
 
     def _panel_rect(self, cx, cy) -> QRect:
-        """预览面板的位置和尺寸（避免出屏）。"""
+        """Position and size of the preview panel (kept on screen)."""
         n, s = self.MAG_N, self.MAG_S
         mag = n * s
         pad = 12
@@ -427,7 +427,7 @@ class _ColorField(QWidget):
         self.color_changed.emit(self._current_color())
 
     def _base_image(self, width: int, height: int) -> QImage:
-        """明度为 1.0 的色相/饱和度底图，仅随尺寸变化重建。"""
+        """Hue/saturation base image at a value of 1.0, rebuilt only when the size changes."""
         key = (width, height)
         if self._cache_key == key and self._cache_image is not None:
             return self._cache_image
@@ -690,7 +690,7 @@ class _ColorPaletteView(FlyoutViewBase):
             grid.addWidget(swatch, row, column)
 
     def update_saved_colors(self, colors: list[str]) -> None:
-        """颜色被确认（记入最近使用）后刷新「最近使用」分组。"""
+        """Refresh the "recently used" group after a colour is confirmed (and recorded as recently used)."""
         self._saved_colors = list(colors)
         self._refresh_recent_swatches()
 
@@ -785,7 +785,7 @@ class _ColorPaletteView(FlyoutViewBase):
 # ═══════════════════════════════════════════════════════════════
 
 class ColorPickerWidget(QWidget):
-    """可复用的颜色选择器组件，包含颜色按钮和常用颜色菜单。"""
+    """Reusable colour picker component, with a colour button and a menu of common colours."""
 
     color_changed = pyqtSignal(str)  # Emit the hex colour value when the colour changes
 
@@ -844,26 +844,26 @@ class ColorPickerWidget(QWidget):
     # ── Public API ────────────────────────────────────────────────
 
     def set_color(self, hex_color: str):
-        """设置当前颜色（更新按钮样式和 RGB 标签），不发射信号。"""
+        """Set the current colour (updates the button style and the RGB label), without emitting a signal."""
         self._current_color = hex_color
         self._apply_component_theme()
         self._update_color_tooltips(hex_color)
 
     def get_color(self) -> str:
-        """获取当前颜色 hex 值。"""
+        """Get the hex value of the current colour."""
         return self._current_color
 
     def reset(self, default_color: str | None = None):
-        """重置为默认颜色，不发射信号。"""
+        """Reset to the default colour, without emitting a signal."""
         color = default_color or self._default_color
         self.set_color(color)
 
     def refresh_ui_texts(self):
-        """语言切换时刷新按钮文本。"""
+        """Refresh the button text on a language switch."""
         self.refresh_theme()
 
     def refresh_theme(self):
-        """主题切换时刷新组件自身和常用颜色菜单样式。"""
+        """Refresh the style of the component itself and of the common colours menu on a theme switch."""
         self._apply_component_theme()
         self._update_color_tooltips(self._current_color)
 
@@ -992,13 +992,13 @@ class ColorPickerWidget(QWidget):
         self._screen_picker = None
 
     def _apply_color(self, hex_color: str):
-        """应用颜色并发射信号。"""
+        """Apply a colour and emit the signal."""
         hex_color = _normalize_hex(hex_color) or hex_color
         self.set_color(hex_color)
         self.color_changed.emit(hex_color)
 
     def _remember_color(self, hex_color: str):
-        """保存最近使用颜色并刷新菜单。"""
+        """Save the recently used colours and refresh the menu."""
         normalized = _normalize_hex(hex_color)
         if not normalized:
             return
@@ -1056,10 +1056,10 @@ class ColorPickerWidget(QWidget):
             logger.error(f"Failed to save colors ({self._config_key}): {e}")
 
 def _show_color_flyout_above_target(view: FlyoutViewBase, target: QWidget, parent=None) -> Flyout:
-    """算好位置后只走一次 exec 显示弹层。
+    """Work out the position, then show the popup with a single exec.
 
-    先 show() 再 exec() 会在左上角闪一帧并两次抢焦点。布局边距已收为 0，
-    弹层矩形即内容矩形，无需再打 setMask（一次性 mask 在尺寸变化后会失效）。
+    show() followed by exec() would flash one frame at the top left and grab the focus twice. The layout margins are already 0,
+    so the popup rectangle is the content rectangle and no setMask is needed (a one-off mask becomes invalid after a size change).
     """
     flyout = Flyout(view, parent)
     # Keep the Fluent flyout animation, but remove the transparent shadow margin

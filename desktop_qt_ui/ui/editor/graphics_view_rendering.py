@@ -267,9 +267,9 @@ class GraphicsViewRenderingMixin:
         return geo_state.to_render_box_patch()
 
     def _build_derived_region(self, region_data: dict, dst_points) -> dict | None:
-        """基于渲染结果计算 region 的派生字段写回；无实际变化时返回 None。
+        """Compute the derived fields of a region to write back from the render result; None when nothing really changed.
 
-        不修改传入的 region_data；有变化时返回携带新 render_box 的深拷贝。
+        The region_data passed in is not modified; when something changed, a deep copy carrying the new render_box is returned.
         """
         patch = self._build_render_box_patch(region_data, dst_points)
         new_render_box = patch.get("render_box_rect_local")

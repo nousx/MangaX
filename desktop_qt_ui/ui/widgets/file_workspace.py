@@ -1,4 +1,4 @@
-"""单一文件工作区：文件夹占一行，展开后在原位排列图片缩略图。"""
+"""Single file workspace: a folder takes one row, and when expanded its image thumbnails are laid out in place."""
 
 from __future__ import annotations
 
@@ -22,7 +22,7 @@ from ui.widgets.file_list_view import (
 
 
 class _WorkspaceModel(QAbstractListModel):
-    """只投影展开的目录，复用原文件模型与缩略图缓存。"""
+    """Only expanded folders are projected, reusing the original file model and the thumbnail cache."""
 
     def __init__(self, source, parent):
         super().__init__(parent)

@@ -7,7 +7,7 @@ from qfluentwidgets import BodyLabel, CardWidget, FluentIcon as FIF, Transparent
 
 class FileListItemWidget(CardWidget):
     """
-    用于文件列表的自定义项小部件，包含缩略图和文件名。
+    Custom item widget for the file list, with a thumbnail and the file name.
     """
     remove_requested = pyqtSignal(str)
 

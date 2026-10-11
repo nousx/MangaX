@@ -1,4 +1,4 @@
-"""高容量文件树：完整后台快照 + 原生 Model/View + 可见缩略图。"""
+"""High-capacity file tree: a complete background snapshot + native Model/View + thumbnails for visible items."""
 
 from __future__ import annotations
 
@@ -73,7 +73,7 @@ def _catalog_service() -> FileListDataService:
 
 
 def shutdown_thumbnail_executor() -> None:
-    """兼容现有退出钩子，同时关闭文件索引与缩略图常驻池。"""
+    """For the existing exit hook; shuts down the long-lived pools of the file index and of the thumbnails together."""
     global _thumbnail_executor, _default_catalog_service
     if _thumbnail_executor is not None:
         _thumbnail_executor.shutdown(wait=False, cancel_futures=True)
@@ -92,7 +92,7 @@ def _single_shot(msec: int, owner: QObject, slot) -> None:
 
 
 def _load_thumbnail_worker(file_path: str, maximum_size: int = 40) -> tuple[str, QImage]:
-    """工作线程只返回 QImage；QPixmap 必须留在 GUI 线程创建。"""
+    """The worker thread only returns a QImage; the QPixmap must be created on the GUI thread."""
     reader = QImageReader(file_path)
     reader.setAutoTransform(True)
     source_size = reader.size()
@@ -173,7 +173,7 @@ def _translate(key: str, **kwargs) -> str:
 
 
 class FileCatalogModel(QAbstractItemModel):
-    """纯内存树模型；reset、导航和删除均不访问磁盘。"""
+    """Pure in-memory tree model; reset, navigation and deletion never touch the disk."""
 
     def __init__(self, parent: Optional[QObject] = None):
         super().__init__(parent)
@@ -276,7 +276,7 @@ class FileCatalogModel(QAbstractItemModel):
         return tuple(item.path for item in self._image_items)
 
     def visible_paths(self, expanded: set[str] | None = None) -> tuple[str, ...]:
-        """按树顺序返回可见路径，只访问已展开文件夹的子项。"""
+        """Return the visible paths in tree order, visiting only the children of expanded folders."""
         expanded = expanded or set()
         paths: list[str] = []
 
@@ -473,7 +473,7 @@ class FileCatalogDelegate(QStyledItemDelegate):
 
 
 class FileListView(TreeView):
-    """主页和编辑器共用的虚拟化文件树。"""
+    """Virtualised file tree shared by the main page and the editor."""
 
     file_remove_requested = pyqtSignal(str)
     file_selected = pyqtSignal(str)
@@ -735,7 +735,7 @@ class FileListView(TreeView):
             self._request_snapshot()
 
     def add_files_from_tree(self, folder_tree: dict) -> None:
-        """旧接口适配：只取树根并交给后台全量扫描；新调用应直接 set_snapshot。"""
+        """Adapter for the old interface: only the tree roots are taken and handed to the full background scan; new callers should call set_snapshot directly."""
         if not folder_tree:
             self.set_snapshot(FileCatalogSnapshot.empty())
             return

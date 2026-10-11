@@ -1,6 +1,6 @@
 """
-替换规则管理页面 - 可视化编辑 text_replacements.yaml
-基于 BaseYamlRuleEditorPanel 抽象基类实现，支持通用/横排/竖排三分组与表格/源码双模式。
+Replacement rules page - visual editing of text_replacements.yaml.
+Built on the abstract base class BaseYamlRuleEditorPanel, with the three groups general/horizontal/vertical and the two modes table/source.
 """
 
 from __future__ import annotations
@@ -28,14 +28,14 @@ from ui.secondary_pages.base_rule_editor import (
 
 
 def _get_replacements_path() -> str:
-    """获取 text_replacements.yaml 的路径"""
+    """Get the path of text_replacements.yaml"""
     from manga_translator.rendering.text_replacements import ensure_text_replacements_exists
 
     return ensure_text_replacements_exists()
 
 
 class ReplacementsEditorPanel(BaseYamlRuleEditorPanel):
-    """文本替换规则编辑面板"""
+    """Editing panel of the text replacement rules"""
 
     COL_REPLACE = 2
 
@@ -156,14 +156,14 @@ class ReplacementsEditorPanel(BaseYamlRuleEditorPanel):
     # ─── Extension interface for preset buttons ───
 
     def register_preset_button(self, label: str, callback: Callable) -> QPushButton:
-        """预设按钮接口（将来加'中文'、'全开'、'全关'等一键预设时使用）"""
+        """Preset button interface (for one-click presets to be added later, such as a Chinese preset, all on and all off)"""
         btn = QPushButton(label)
         btn.clicked.connect(callback)
         self._preset_slot_layout.addWidget(btn)
         return btn
 
     def clear_preset_buttons(self) -> None:
-        """清空所有预设按钮"""
+        """Remove all preset buttons"""
         while self._preset_slot_layout.count():
             item = self._preset_slot_layout.takeAt(0)
             w = item.widget()

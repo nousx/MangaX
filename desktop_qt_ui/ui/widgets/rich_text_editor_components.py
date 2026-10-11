@@ -627,7 +627,7 @@ class StyleRunCard(SimpleCardWidget):
     def _apply_control_value(
         control: QWidget, setter, value, *, preserve_focus: bool = True
     ) -> None:
-        """把新值写进控件；可选择保留正在编辑控件的本地值。"""
+        """Write a new value into the control; the local value of a control being edited can be kept."""
         focus_widget = QApplication.focusWidget()
         if (
             preserve_focus
@@ -665,11 +665,11 @@ class StyleRunCard(SimpleCardWidget):
     def update_values(
         self, segment: StyledTextSegment, ruby_draft_text: str | None = None
     ) -> None:
-        """结构签名相同时就地刷新：把新的样式值写进现有控件，不重建行。
+        """Refresh in place when the structure signature is the same: the new style values are written into the existing controls, without rebuilding the rows.
 
-        由 StyledRunList.set_segments 在签名比对通过后调用；start/end、
-        node 边界、key 集合都包含在签名里，所以构造时捕获的目标范围
-        （header/删除按钮等连接）在复用期间保持有效。
+        Called by StyledRunList.set_segments after the signature comparison passed; start/end,
+        the node boundaries and the key set are all part of the signature, so the target range captured at construction
+        (the connections of the header, the delete button and so on) stays valid while the row is reused.
         """
         self.segment = segment
         style = segment.style or {}

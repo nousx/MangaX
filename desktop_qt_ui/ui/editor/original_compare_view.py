@@ -8,7 +8,7 @@ from .graphics_view import canvas_background_color
 
 
 class OriginalCompareView(QGraphicsView):
-    """只读原图预览视图，用于和当前编辑画布做左右对比。"""
+    """Read-only preview of the original image, for a side-by-side comparison with the current edit canvas."""
 
     COMPARE_PREVIEW_MAX_PIXELS = 3_000_000
 
@@ -152,7 +152,7 @@ class OriginalCompareView(QGraphicsView):
         return self._source_view.get_view_scene_rect()
 
     def _sync_source_viewport_geometry(self) -> None:
-        """让只读栏的有效视口与可能显示滚动条的主画布完全等大。"""
+        """Make the effective viewport of the read-only pane exactly as large as that of the main canvas, which may show scroll bars."""
         if self._source_view is None:
             return
         source_viewport = self._source_view.viewport()

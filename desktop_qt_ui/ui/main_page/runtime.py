@@ -9,7 +9,7 @@ def _set_start_button_state(self, state: str):
 
 
 def update_workflow_mode_description(self, index: int | None = None):
-    """根据翻译流程模式更新翻译页标题下方的介绍文字。"""
+    """Update the introduction text under the title of the translation page from the translation workflow mode."""
     if not hasattr(self, "translation_page_subtitle"):
         return
 
@@ -63,7 +63,7 @@ def update_workflow_mode_description(self, index: int | None = None):
 
 
 def update_progress(self, current: int, total: int, message: str = ""):
-    """更新进度条。"""
+    """Update the progress bar."""
     progress_state = (int(current), int(total), str(message or ""))
     if getattr(self, "_last_progress_state", None) == progress_state:
         return
@@ -91,7 +91,7 @@ def update_progress(self, current: int, total: int, message: str = ""):
 
 
 def reset_progress(self):
-    """重置进度条为初始状态（灰色）。"""
+    """Reset the progress bar to its initial state (grey)."""
     self._last_progress_state = None
     self._progress_active = False
     self.progress_bar.setMaximum(100)
@@ -103,7 +103,7 @@ def reset_progress(self):
 
 
 def on_translation_state_changed(self, is_translating: bool):
-    """根据翻译状态更新开始/停止按钮。"""
+    """Update the start/stop button from the translation state."""
     # The file list stays selectable, so the editor can still be opened from the main page during translation; the controls that add and remove files
     # and the entry points of the business layer that modify them stay locked, so the input of the current task does not change.
     for name in (
@@ -138,7 +138,7 @@ def on_translation_state_changed(self, is_translating: bool):
 
 
 def enable_stop_button(self):
-    """启用停止按钮（延迟调用）。"""
+    """Enable the stop button (called with a delay)."""
     if (
         self.controller.state_manager.is_translating()
         and not getattr(self.controller, "_stop_requested", False)
@@ -154,7 +154,7 @@ def enable_stop_button(self):
 
 
 def set_stopping_state(self):
-    """设置按钮为“停止中...”状态，避免重复点击。"""
+    """Put the button in its "stopping..." state, to avoid repeated clicks."""
     self.start_button.setEnabled(False)
     self.start_button.setText(self._t("Stopping..."))
     _set_start_button_state(self, "stopping")
@@ -165,7 +165,7 @@ def set_stopping_state(self):
 
 
 def sync_workflow_mode_from_config(self):
-    """从配置同步下拉框的选择。"""
+    """Sync the selection of the drop-down from the configuration."""
     try:
         config = self.config_service.get_config()
         self.workflow_mode_combo.blockSignals(True)
@@ -196,7 +196,7 @@ def sync_workflow_mode_from_config(self):
 
 
 def on_workflow_mode_changed(self, index: int):
-    """处理翻译流程模式改变并持久化。"""
+    """Handle a change of the translation workflow mode and store it."""
     config = self.config_service.get_config()
 
     config.cli.load_text = False
@@ -232,7 +232,7 @@ def on_workflow_mode_changed(self, index: int):
 
 
 def update_start_button_text(self):
-    """根据当前模式更新开始按钮文案。"""
+    """Update the text of the start button from the current mode."""
     if self.controller.state_manager.is_translating():
         return
 

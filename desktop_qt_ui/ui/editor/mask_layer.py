@@ -13,7 +13,7 @@ if TYPE_CHECKING:
 
 
 class MaskLayer:
-    """管理 raw/refined mask 覆盖层，隐藏时只标脏，显示时再生成 pixmap。"""
+    """Manages the raw/refined mask overlay layers; while hidden they are only marked dirty, and the pixmap is produced when shown."""
 
     MASK_TYPES = {"raw", "refined"}
     Z_VALUES = {"raw": 10, "refined": 11}

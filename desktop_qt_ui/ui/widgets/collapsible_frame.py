@@ -11,7 +11,7 @@ from qfluentwidgets import CardWidget, FluentIcon as FIF, PushButton, SmoothScro
 
 class CollapsibleFrame(CardWidget):
     """
-    一个可折叠/展开的QWidget容器，借鉴自旧项目的CollapsibleFrame。
+    A QWidget container that can be collapsed and expanded, modelled on CollapsibleFrame of the old project.
     """
     def __init__(self, title: str = "", parent: QWidget = None):
         super().__init__(parent)
@@ -69,5 +69,5 @@ class CollapsibleFrame(CardWidget):
         self.animation.start() 
 
     def add_widget(self, widget: QWidget):
-        """向内容区域添加小部件"""
+        """Add a widget to the content area"""
         self.content_layout.addWidget(widget)

@@ -130,13 +130,13 @@ def _exec_fluent_dialog(
 
 
 def _apply_flexible_size(dialog: Dialog, min_width: int, min_height: int) -> None:
-    """按内容自适应尺寸，替代布局激活前的 setFixedSize。
+    """Size to the content, in place of the setFixedSize done before the layout is activated.
 
-    qfluentwidgets 的 Dialog 在构造末尾会 setFixedSize(布局激活前的尺寸)，
-    此时读到的 width/height 是无意义的初始值。这里先解除固定尺寸约束，
-    在内容装配完、布局激活之后取真实的内容 sizeHint，再与给定下限取大。
-    注意：Dialog 的 vBoxLayout 是 SetMinimumSize 约束，每次布局激活都会
-    重写控件 minimumSize，所以下限必须通过 resize 落地而不是 setMinimumSize。
+    Dialog of qfluentwidgets calls setFixedSize(the size before layout activation) at the end of its constructor,
+    when the width/height it reads are meaningless initial values. Here the fixed size constraint is lifted first,
+    the real content sizeHint is taken once the content is assembled and the layout is activated, and the larger of that and the given lower limit is used.
+    Note: the vBoxLayout of Dialog has the SetMinimumSize constraint and rewrites the minimumSize of the widget at every layout activation,
+    so the lower limit has to be applied with resize, not with setMinimumSize.
     """
     dialog.setMaximumSize(16777215, 16777215)
     layout = dialog.layout()

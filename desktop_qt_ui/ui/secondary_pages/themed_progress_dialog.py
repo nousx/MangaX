@@ -63,7 +63,7 @@ class ThemedProgressDialog(Dialog):
 
     @property
     def progress_bar(self):
-        """当前生效的进度条（兼容旧属性访问）。"""
+        """The progress bar currently in effect (for old attribute access)."""
         if self._determinate_bar.isVisibleTo(self):
             return self._determinate_bar
         return self._indeterminate_bar

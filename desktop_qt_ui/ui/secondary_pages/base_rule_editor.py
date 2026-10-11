@@ -45,7 +45,7 @@ def _fixed_width_font(size: int = 11) -> QFont:
 
 
 class YamlHighlighter(QSyntaxHighlighter):
-    """简单的 YAML 语法高亮"""
+    """Simple YAML syntax highlighting"""
 
     def highlightBlock(self, text: str):
         if text.lstrip().startswith("#"):
@@ -62,7 +62,7 @@ class YamlHighlighter(QSyntaxHighlighter):
 
 
 class _UniqueKeyYamlLoader(yaml.SafeLoader):
-    """自定义 SafeLoader，检测并拒绝直接声明的重复映射键，同时保留 YAML 合并覆盖（<<: *anchor）的合法语义。"""
+    """Custom SafeLoader that detects and rejects duplicate mapping keys declared directly, while keeping the legal meaning of a YAML merge override (<<: *anchor)."""
 
     def construct_mapping(self, node, deep=False):
         if isinstance(node, yaml.MappingNode):
@@ -83,7 +83,7 @@ class _UniqueKeyYamlLoader(yaml.SafeLoader):
 
 
 class BaseYamlRuleEditorPanel(CardWidget):
-    """通用 YAML 规则编辑面板基类，支持通用/横排/竖排三分组与表格/源码双模式。"""
+    """Base class of the general YAML rule editing panel, with the three groups general/horizontal/vertical and the two modes table/source."""
 
     data_changed = pyqtSignal()
     _AUTOSAVE_DELAY_MS = 600
@@ -99,7 +99,7 @@ class BaseYamlRuleEditorPanel(CardWidget):
 
     @classmethod
     def _safe_load_yaml(cls, raw_text: str) -> dict:
-        """统一 YAML 解析：确保根节点为 dict，空内容返回空字典，拒绝重复键与非 dict 根节点"""
+        """YAML parsing in one place: the root node must be a dict, empty content gives an empty dictionary, and duplicate keys and a non-dict root are rejected"""
         raw = yaml.load(raw_text, Loader=_UniqueKeyYamlLoader)
         if raw is None:
             return {}
@@ -331,7 +331,7 @@ class BaseYamlRuleEditorPanel(CardWidget):
         self.raw_editor.textChanged.connect(self._on_raw_changed)
 
     def _init_backward_compatibility_aliases(self) -> None:
-        """为保持历史调用/访问兼容提供的属性别名"""
+        """Property alias kept so that old calls and accesses keep working"""
         self._add_button = self.add_button
         self._delete_button = self.delete_button
         self._move_up_button = self.up_button
@@ -627,7 +627,7 @@ class BaseYamlRuleEditorPanel(CardWidget):
         self._update_status()
 
     def _on_select_all(self) -> None:
-        """切换全部选中 / 取消全选（只作用于当前可见行）"""
+        """Toggle select all / deselect all (acts on the currently visible rows only)"""
         if self._is_raw_mode():
             return
         table = self._current_table()

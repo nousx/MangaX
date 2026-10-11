@@ -11,7 +11,7 @@ from .graphics_items import RegionTextItem
 
 class GraphicsViewLayersMixin:
     def _scale_mask_item(self, mask_item: QGraphicsPixmapItem):
-        """将覆盖层缩放到与底图一致的场景尺寸。"""
+        """Scale an overlay layer to the same scene size as the base image."""
         if not self._image_item or not mask_item:
             return
 
@@ -26,7 +26,7 @@ class GraphicsViewLayersMixin:
             mask_item.setTransform(transform)
 
     def clear_all_state(self):
-        """清空所有状态,包括items、缓存、计时器"""
+        """Clear all state, including items, caches and timers"""
         self.selection_manager.suppress_forward_sync(True)
         try:
             self._end_stroke(commit=False)
@@ -75,10 +75,11 @@ class GraphicsViewLayersMixin:
             self.selection_manager.suppress_forward_sync(False)
 
     def _apply_image_scene_rect(self):
-        """换图时显式钉住 sceneRect（图片矩形适当外扩）。
+        """Pin sceneRect explicitly when the image changes (the image rectangle, enlarged a little).
 
-        不能依赖隐式 sceneRect：它取 itemsBoundingRect 且只增不减，
-        旋转辅助线等超长临时 item 会把滚动范围永久撑大。"""
+        The implicit sceneRect cannot be relied on: it takes itemsBoundingRect and only grows, never shrinks,
+        so very long temporary items such as rotation guide lines would enlarge the scroll range for good.
+        """
         if self._image_item is None:
             self.scene.setSceneRect(QRectF())
             return

@@ -7,12 +7,12 @@ from qframelesswindow import FramelessDialog
 
 
 def normalize_dialog_parent(parent):
-    """把任意控件父级归一化为其所属顶层窗口。
+    """Normalise any widget parent to the top-level window it belongs to.
 
-    Fluent 对话框是真正的顶层窗口。直接把嵌在堆叠页里的原生子控件
-    （例如 MSFluentWindow 里的页面）当 transient parent，会让 Qt 使用
-    非顶层的 QWidgetWindow，导致定位/模态异常。parent 无效或为 None
-    时回退到当前活动窗口。
+    A Fluent dialog is a real top-level window. Using a native child widget embedded in a stacked page
+    (for example a page inside MSFluentWindow) directly as transient parent would make Qt use
+    a QWidgetWindow that is not top-level, which breaks positioning and modality. When parent is invalid or None,
+    it falls back to the currently active window.
     """
     candidate = parent if isinstance(parent, QWidget) else QApplication.activeWindow()
     if candidate is None:
@@ -60,11 +60,11 @@ def center_dialog_on_owner(dialog: QWidget, owner: QWidget | None = None) -> Non
 class FluentSecondaryDialog(FramelessDialog):
     """Shared Fluent shell for secondary dialogs.
 
-    - 父级自动归一化到顶层窗口（parent=None 时回退 activeWindow）；
-    - 默认 TitleBar 隐藏，但按住背景空白区/纯展示控件可拖动窗口
-      （startSystemMove，无边框窗口拖动的正规做法）；
-    - 首次 show 前把最小尺寸/初始尺寸夹到屏幕可用区域的 90% 以内；
-    - 每次 show 时相对所属顶层窗口居中，并把位置夹在同一屏幕工作区内。
+    - the parent is normalised to the top-level window automatically (falling back to activeWindow when parent=None);
+    - the TitleBar is hidden by default, but the window can be dragged by holding the empty background or a display-only widget
+      (startSystemMove, the proper way to drag a frameless window);
+    - before the first show, the minimum and initial sizes are clamped to within 90% of the available screen area;
+    - at each show, the dialog is centred on its top-level window and its position is clamped to the work area of the same screen.
     """
 
     _SCREEN_CLAMP_RATIO = 0.9
@@ -94,10 +94,10 @@ class FluentSecondaryDialog(FramelessDialog):
         super().mousePressEvent(event)
 
     def _is_drag_region(self, pos: QPoint) -> bool:
-        """点在背景/纯展示控件上才允许拖动，交互控件保持原有行为。
+        """Dragging is only allowed from the background or a display-only widget; interactive widgets keep their behaviour.
 
-        从命中控件沿父链走到对话框本身，途中出现任何交互控件
-        （按钮、输入框、树视图等）即判定为非拖动区。
+        The parent chain is walked from the widget that was hit up to the dialog itself, and any interactive widget on the way
+        (a button, an input box, a tree view and so on) makes it a non-drag area.
         """
         widget = self.childAt(pos)
         while widget is not None and widget is not self:

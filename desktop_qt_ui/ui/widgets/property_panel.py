@@ -106,11 +106,11 @@ class PanelSettingCardGroup(QWidget):
 
 
 def strip_legacy_horizontal_tags(text: str) -> str:
-    """剥除已废除的 <H>...</H> 局部横排标记（保留内文）。
+    """Strip the abolished <H>...</H> markers for local horizontal text (the inner text is kept).
 
-    渲染管线已删除全部 <H> 消费方，字面标记会被当普通字符画上成品图；
-    局部横排改用富文本 tcy（旧 <H> 协议已废除，⇄→<H> 生产链已随
-    mark_horizontal_button 一并移除）。
+    The render pipeline has removed every consumer of <H>, so a literal marker would be drawn onto the finished image as ordinary characters;
+    local horizontal text now uses rich-text tcy (the old <H> protocol is abolished, and the chain that produced <H> from ⇄ was removed
+    together with mark_horizontal_button).
     """
     if "<H>" not in text and "</H>" not in text:
         return text
@@ -118,10 +118,10 @@ def strip_legacy_horizontal_tags(text: str) -> str:
 
 
 class CustomSlider(Slider):
-    """自定义滑块：持焦点时滚轮一格步进 1；无焦点时滚轮直通父级滚动。
+    """Custom slider: with focus, one wheel notch steps by 1; without focus, the wheel passes through to the parent for scrolling.
 
-    与 wheel_filter.install_wheel_filter 的约定一致：控件未获得键盘焦点时
-    不改值、不 accept，让滚动区域接管滚轮事件。
+    The same convention as wheel_filter.install_wheel_filter: while the control has no keyboard focus,
+    it does not change its value and does not accept, so the scroll area takes over the wheel event.
     """
 
     def wheelEvent(self, event: QWheelEvent):
@@ -151,7 +151,7 @@ def _spin_box() -> SpinBox:
 
 class PropertyPanel(QWidget):
     """
-    左侧属性面板，功能完整版。
+    Property panel on the left, full version.
     """
 
     MASK_ROUTE = "property_mask_page"
@@ -222,7 +222,7 @@ class PropertyPanel(QWidget):
         self.clear_and_disable_selection_dependent()
 
     def _t(self, key: str, **kwargs) -> str:
-        """翻译辅助方法"""
+        """Translation helper methods"""
         if self.i18n:
             return self.i18n.translate(key, **kwargs)
         return key
@@ -287,23 +287,23 @@ class PropertyPanel(QWidget):
         group.sync_content_height()
 
     def _set_selection_controls_blocked(self, blocked: bool):
-        """统一阻止/恢复与区域样式相关控件信号，避免切换选区时误写回。"""
+        """Block or restore the signals of the controls related to region style in one place, to avoid writing back by mistake when the selection changes."""
         for child in self.findChildren(QWidget):
             if isinstance(child, (TextEdit, ComboBox, Slider, QAbstractSpinBox)):
                 child.blockSignals(blocked)
 
     @staticmethod
     def _repopulate_combo(combo, items, *, current_text=None, current_index=None):
-        """clear+addItems 的统一入口：全程 blockSignals，并恢复选中项。
+        """Single entry point for clear+addItems: signals are blocked throughout, and the selected item is restored.
 
-        重新填充是纯 UI 刷新，绝不能触发 currentTextChanged/currentIndexChanged
-        把「变成第一项」当成用户操作写回所有选中 region。
+        Refilling is a pure UI refresh and must never trigger currentTextChanged/currentIndexChanged,
+        which would write "became the first item" back to all selected regions as if the user had done it.
 
         Args:
-            combo: 目标下拉框
-            items: 新选项列表
-            current_text: 优先按文本恢复选中；None 时保持原选中文本（仍存在才恢复）
-            current_index: 按索引恢复选中（用于语言切换后文本变化的场景）
+            combo: the target drop-down
+            items: the new list of options
+            current_text: restore the selection by text first; when None the previously selected text is kept (restored only if it still exists)
+            current_index: restore the selection by index (for a language switch, where the texts change)
         """
         items = list(items)
         if current_text is None and current_index is None:
@@ -626,13 +626,13 @@ class PropertyPanel(QWidget):
         return {1: self.PAINT_ROUTE, 2: self.STAMP_ROUTE}.get(index, self.MASK_ROUTE)
 
     def activate_image_edit_tab(self, index: int):
-        """切换图像编辑页；页签切换沿用现有逻辑回到该页的“不选择”。"""
+        """Switch the image editing page; switching tab follows the existing logic and goes back to "no selection" of that page."""
         if index not in (0, 1, 2):
             return
         self._set_paint_route(self._paint_route_for_index(index))
 
     def activate_image_edit_tool(self, position: int):
-        """按当前图像编辑页激活第 position 个工具按钮。"""
+        """Activate the tool button at position on the current image editing page."""
         page_buttons = (
             (self.select_button, self.brush_button, self.eraser_button),
             (
@@ -976,7 +976,7 @@ class PropertyPanel(QWidget):
         self.model.regions_changed.connect(self.on_regions_changed)
 
     def _on_display_mask_type_changed(self, mask_type: str):
-        """响应显示蒙版类型变化"""
+        """Respond to a change of the displayed mask type"""
         # Block signals to prevent recursive calls
         self.show_refined_mask_checkbox.blockSignals(True)
         self.show_refined_mask_checkbox.setChecked(mask_type == "refined")
@@ -1035,7 +1035,7 @@ class PropertyPanel(QWidget):
             )
 
     def refresh_ui_texts(self):
-        """刷新所有UI文本（用于语言切换）"""
+        """Refresh all UI texts (for a language switch)"""
         # Refresh the group box titles
         if hasattr(self, "mask_edit_frame"):
             self._set_group_title(self.mask_edit_frame, self._t("Image Editing"))
@@ -1180,7 +1180,7 @@ class PropertyPanel(QWidget):
         self.sync_sidebar_layout()
 
     def _refresh_combo_boxes(self):
-        """刷新所有下拉菜单的选项"""
+        """Refresh the options of all drop-down menus"""
         # Keep the selected index (not the text, because the text changes with the language)
         current_translator_index = self.translator_combo.currentIndex()
         current_target_lang_index = self.target_language_combo.currentIndex()
@@ -1620,7 +1620,7 @@ class PropertyPanel(QWidget):
         self._refresh_style_preset_combo()
 
     def on_regions_changed(self, change):
-        """选中 region 的数据变化时刷新面板；本面板发起的修改只跟进信息标签。"""
+        """Refresh the panel when the data of the selected region changes; for changes started by this panel only the info labels follow."""
         selected_indices = self.model.get_selection()
         if not selected_indices or len(selected_indices) > 1:
             return
@@ -1738,10 +1738,10 @@ class PropertyPanel(QWidget):
         representative style without exposing one region's text.
 
         Args:
-            region_data: 区域数据字典
-            region_index: 区域索引
-            update_focused_text: 是否覆盖正在编辑的文本框
-            update_text_fields: 是否刷新原文和译文文本框
+            region_data: the region data dictionary
+            region_index: the region index
+            update_focused_text: whether the text box being edited is overwritten
+            update_text_fields: whether the original-text and translation text boxes are refreshed
         """
         force_text_fields = force_text_fields or set()
         self.block_updates = True
@@ -1879,17 +1879,17 @@ class PropertyPanel(QWidget):
 
     @staticmethod
     def _editor_text_to_model_text(raw_text: str) -> str:
-        """把文本框的真实换行转换为模型存储形式（[BR]）。
+        """Convert the real line breaks of the text box to the form the model stores ([BR]).
 
-        不再从 ⇄ 生产 <H> 标记（旧局部横排协议已废除，改用富文本 tcy）；
-        存量/手输的字面 <H></H> 在此剥除（保留内文），避免被当普通字符
-        画上成品图。
+        <H> markers are no longer produced from ⇄ (the old local horizontal protocol is abolished in favour of rich-text tcy);
+        literal <H></H> left in old data or typed by hand is stripped here (the inner text is kept), so it is not drawn
+        onto the finished image as ordinary characters.
         """
         text_without_tags = strip_legacy_horizontal_tags(raw_text)
         return plain_text_to_storage_text(text_without_tags)
 
     def force_save_text_edits(self):
-        """强制保存当前文本框的编辑内容（在失去焦点前）"""
+        """Force the edits of the current text box to be saved (before it loses focus)"""
         if self.current_region_index == -1:
             return
 
@@ -1910,7 +1910,7 @@ class PropertyPanel(QWidget):
         self._save_translated_text()
 
     def _save_translated_text(self):
-        """保存译文编辑（内容有变化时按当前模式写回对应字段）"""
+        """Save the translation edit (when the content changed, it is written back to the field that matches the current mode)"""
         if self.current_region_index == -1:
             return
 
@@ -1942,7 +1942,7 @@ class PropertyPanel(QWidget):
             self.original_text_modified.emit(self.current_region_index, text)
 
     def _take_translation_edit_info(self) -> dict:
-        """取走累积的编辑操作记录(采集/收窄逻辑在后端 EditOpRecorder)。"""
+        """Take the accumulated edit operation records (the collecting and narrowing logic is in the backend, EditOpRecorder)."""
         return self._translation_edit_recorder.take_edit_info(
             self.translated_text_box.toPlainText()
         )
@@ -1950,7 +1950,7 @@ class PropertyPanel(QWidget):
     def _on_translated_contents_change(
         self, position: int, chars_removed: int, chars_added: int
     ):
-        """转发译文框的编辑事件(在 textChanged 之前触发);逻辑在后端。"""
+        """Forward the edit event of the translation box (fired before textChanged); the logic is in the backend."""
         current = self.translated_text_box.toPlainText()
         if getattr(self, "block_updates", True):
             # A programmatic setText: the operations are void; the baseline is reset in one place, _update_display
@@ -1982,7 +1982,7 @@ class PropertyPanel(QWidget):
                 )
 
     def _on_translation_raw_mode_toggled(self, checked: bool):
-        """复选框切换:重新刷新当前 region 的文本框内容(读取对应字段)。"""
+        """Checkbox toggled: refresh the text box content of the current region (reading the matching field)."""
         if self.current_region_index == -1:
             return
         region_data = self.model.get_region_by_index(self.current_region_index)
@@ -1992,16 +1992,16 @@ class PropertyPanel(QWidget):
             )
 
     def get_selected_ocr_model(self) -> str:
-        """获取当前选择的OCR模型"""
+        """Get the currently selected OCR model"""
         return self.ocr_model_combo.currentText()
 
     def get_selected_translator(self) -> str:
-        """获取当前选择的翻译器（返回key而不是display name）"""
+        """Get the currently selected translator (returns the key, not the display name)"""
         display_name = self.translator_combo.currentText()
         return self.translator_display_to_key.get(display_name, display_name)
 
     def get_selected_target_language(self) -> str:
-        """获取当前选择的目标语言（返回key而不是display name）"""
+        """Get the currently selected target language (returns the key, not the display name)"""
         display_name = self.target_language_combo.currentText()
         # Use the lang_name_to_code mapping (created in populate_options_from_config)
         if hasattr(self, "lang_name_to_code"):
@@ -2009,7 +2009,7 @@ class PropertyPanel(QWidget):
         return display_name
 
     def _set_font_size_controls(self, value: int) -> int:
-        """同步字号控件；滑块只显示自身范围内的值。"""
+        """Sync the font size controls; the slider only shows values within its own range."""
         try:
             value = int(value)
         except (TypeError, ValueError):
@@ -2103,31 +2103,31 @@ class PropertyPanel(QWidget):
             )
 
     def _on_font_color_changed(self, hex_color):
-        """字体颜色变化时的处理"""
+        """Handle a change of the font colour"""
         if self.block_updates:
             return
         self._emit_style_patch({"font_color": hex_color})
 
     def _on_stroke_color_changed(self, hex_color):
-        """描边颜色变化时的处理"""
+        """Handle a change of the stroke colour"""
         if self.block_updates:
             return
         self._emit_style_patch({"stroke_color": hex_color})
 
     def _on_stroke_width_changed(self, value):
-        """处理描边宽度变化"""
+        """Handle a change of the stroke width"""
         if self.block_updates:
             return
         self._emit_style_patch({"stroke_width": float(value)})
 
     def _on_line_spacing_changed(self, value):
-        """处理行间距倍率变化"""
+        """Handle a change of the line spacing multiplier"""
         if self.block_updates:
             return
         self._emit_style_patch({"line_spacing": float(value)})
 
     def _on_letter_spacing_changed(self, value):
-        """处理字间距倍率变化"""
+        """Handle a change of the letter spacing multiplier"""
         if self.block_updates:
             return
         self._emit_style_patch({"letter_spacing": float(value)})
@@ -2158,7 +2158,7 @@ class PropertyPanel(QWidget):
             self.mask_tool_changed.emit("stamp_erase")
 
     def _on_brush_size_changed(self, value):
-        """三个大小滑块共享同一个模型字段；同步其余滑块显示，避免循环触发。"""
+        """The three size sliders share one model field; the display of the other sliders is synced, avoiding a trigger loop."""
         sender = self.sender()
         for slider, label in (
             (self.brush_size_slider, self.brush_size_value_label),
@@ -2176,7 +2176,7 @@ class PropertyPanel(QWidget):
         self.brush_color_changed.emit(hex_color)
 
     def _on_paint_tab_changed(self, index: int):
-        """切换标签页时，自动把活跃工具切回当前页的选择工具，避免跨页工具冲突。"""
+        """On a tab switch, set the active tool back to the select tool of the current page automatically, to avoid tool conflicts across pages."""
         try:
             page_buttons = {
                 0: (self.select_button, self.brush_button, self.eraser_button),
@@ -2202,7 +2202,7 @@ class PropertyPanel(QWidget):
             pass
 
     def sync_brush_size_from_model(self, size: int):
-        """从模型同步画笔大小到 UI，并刷新当前工具对应的滑块外观。"""
+        """Sync the brush size from the model to the UI, and refresh the look of the slider of the current tool."""
         for slider, label in (
             (self.brush_size_slider, self.brush_size_value_label),
             (
@@ -2224,12 +2224,12 @@ class PropertyPanel(QWidget):
                 label.setText(str(size))
 
     def sync_brush_color_from_model(self, hex_color: str):
-        """从模型同步画笔颜色到 UI（不触发信号）"""
+        """Sync the brush colour from the model to the UI (without triggering signals)"""
         if hasattr(self, "paint_color_picker") and self.paint_color_picker is not None:
             self.paint_color_picker.set_color(hex_color or "#ffffff")
 
     def sync_active_tool_from_model(self, tool: str):
-        """当 model 的 active_tool 变化时，UI 同步高亮对应按钮并切换标签页。"""
+        """When active_tool of the model changes, the UI highlights the matching button and switches tab."""
         # 'select' has a button on both the mask tab and the drawing tab; the current tab decides which one lights up,
         # so clicking "select" on the drawing tab does not force a switch back to the mask tab.
         if tool == "select":
@@ -2283,7 +2283,7 @@ class PropertyPanel(QWidget):
         self._emit_style_patch({"direction": text})
 
     def _calculate_white_frame_info(self, region_data):
-        """计算白框中心世界坐标和宽高，返回 (cx, cy, w, h) 或 None。"""
+        """Compute the world coordinates of the white box centre and its width and height; returns (cx, cy, w, h) or None."""
         import math
 
         region_data = normalize_region_geometry_data(region_data)
@@ -2326,16 +2326,16 @@ class PropertyPanel(QWidget):
     # _mark_horizontal was removed: local horizontal text now uses rich-text tcy (the T button of the floating editor);
     # the old <H> protocol is abolished and nothing in the rendering pipeline consumes <H> any more.
     def _on_ocr_model_change(self, text):
-        """OCR模型变化时保存编辑器专用配置"""
+        """Save the editor-specific configuration when the OCR model changes"""
         self.app_logic.update_single_config("app.editor_ocr", text)
 
     def _on_translator_change(self, display_name):
-        """翻译器变化时保存编辑器专用配置"""
+        """Save the editor-specific configuration when the translator changes"""
         translator_key = self.translator_display_to_key.get(display_name, display_name)
         self.app_logic.update_single_config("app.editor_translator", translator_key)
 
     def _on_target_language_change(self, display_name):
-        """目标语言变化时保存配置"""
+        """Save the configuration when the target language changes"""
         lang_code = self.lang_name_to_code.get(display_name, "CHS")
         self.app_logic.update_single_config("translator.target_lang", lang_code)
         # Update the target language of the translation service as well

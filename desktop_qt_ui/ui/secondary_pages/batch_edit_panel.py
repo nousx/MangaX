@@ -1,11 +1,11 @@
-"""批量管理面板 —— 条件匹配 → 预览命中 → 批量写回。
+"""Batch edit panel - match by conditions → preview the hits → write back as a batch.
 
-作用范围跟随主页文件列表：``MainWindow`` 把 ``FileCatalogSnapshot`` 推进来，
-面板只消费其中的 ``json_by_file``（图片路径 → ``_translations.json`` 路径），
-不自己重扫磁盘。
+The scope follows the file list of the main page: ``MainWindow`` pushes a ``FileCatalogSnapshot`` in,
+and the panel only uses its ``json_by_file`` (image path → ``_translations.json`` path)
+and does not scan the disk again itself.
 
-预览是必经步骤，不提供"直接执行"。批量改写用户译文是不可逆操作，除了默认写前
-备份，还必须让用户先看到命中列表并能逐条取消勾选。
+The preview is a required step, and there is no "run directly". Rewriting the user's translations as a batch cannot be undone, so besides the default backup
+before writing, the user must first see the list of hits and be able to untick them one by one.
 """
 
 from __future__ import annotations
@@ -64,11 +64,11 @@ from ui.widgets.wheel_filter import TopLevelComboBox as ComboBox
 
 
 class BatchMatchTableModel(QAbstractTableModel):
-    """按需提供批量预览行，避免为每个单元格创建 Qt 对象。
+    """Provides batch preview rows on demand, so no Qt object is created for each cell.
 
-    文件列表使用同样的 Model/View 边界：命中数据可以完整保留在 Python
-    内存中，但只有可视区域会被 Qt 视图绘制。勾选状态采用默认值加例外行，
-    因此全选/全不选不会逐行触发数万次 UI 更新。
+    The file list uses the same Model/View boundary: the hit data can stay complete in Python
+    memory, but only the visible area is painted by the Qt view. The tick state is a default value plus exception rows,
+    so select all / select none does not trigger tens of thousands of UI updates row by row.
     """
 
     COLUMN_COUNT = 6
@@ -207,7 +207,7 @@ class BatchMatchTableModel(QAbstractTableModel):
 
 
 class BatchEditPanel(CardWidget):
-    """批量管理主面板。"""
+    """Main panel of batch editing."""
 
     data_changed = pyqtSignal()
     _AUTOSAVE_DELAY_MS = 600
@@ -478,7 +478,7 @@ class BatchEditPanel(CardWidget):
     # ─── Injected from outside ───
 
     def set_catalog_snapshot(self, snapshot) -> None:
-        """由 MainWindow 在主页文件列表快照就绪时推入。"""
+        """Pushed in by MainWindow when the file list snapshot of the main page is ready."""
         self._json_by_file = dict(getattr(snapshot, "json_by_file", {}) or {})
         self._update_scope_label()
 
@@ -487,7 +487,7 @@ class BatchEditPanel(CardWidget):
         current_image_getter: Optional[Callable[[], Optional[str]]] = None,
         reload_callback: Optional[Callable[[str], None]] = None,
     ) -> None:
-        """编辑器当前图与重载入口 —— 用来处理内存覆盖盘上修改的风险。"""
+        """The editor's current image and its reload entry - used to handle the risk of memory overwriting a change on disk."""
         self._editor_image_getter = current_image_getter
         self._editor_reload = reload_callback
 
@@ -794,10 +794,10 @@ class BatchEditPanel(CardWidget):
     # ─── Running ───
 
     def _conflicting_editor_image(self, target_paths) -> Optional[str]:
-        """编辑器正打开的图是否在本次写回范围内。
+        """Whether the image open in the editor is within the scope of this write-back.
 
-        编辑器把 region 常驻内存且没有任何文件监听，切图时的自动保存会用内存里
-        的旧数据全量覆盖 —— 不提示的话批量修改会被静默抹掉。
+        The editor keeps the regions in memory and watches no files, so the automatic save on switching image would overwrite everything with the old data
+        in memory - without a prompt, the batch change would be wiped out silently.
         """
         if self._editor_image_getter is None:
             return None
@@ -967,7 +967,7 @@ class BatchEditPanel(CardWidget):
         self._progress.show()
 
     def _on_cancelled(self, channel: str) -> None:
-        """取消后 worker 不再发结果信号，状态得在这里收尾。"""
+        """After a cancel the worker sends no more result signals, so the state has to be wrapped up here."""
         self._service.cancel(channel)
         self._progress = None
         self._set_status(self._t("Cancelled"))

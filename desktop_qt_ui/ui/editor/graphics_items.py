@@ -1,18 +1,18 @@
 """
-区域文本图形项 — Qt Graphics Item 层。
+Graphics item of a region's text - the Qt Graphics Item layer.
 
-核心设计：
-- RegionTextItem 的 pos() = 源区域中心（world），rotation() = angle
-- 局部坐标系：以源区域中心为原点，线段/白框均用局部坐标表示
-- 白框用于定义文字渲染边界，是用户可手动调整的矩形
-- 文字 pixmap 以 render_center（白框中心的世界坐标）为锚点定位
+Core design:
+- for a RegionTextItem, pos() = the centre of the source region (world) and rotation() = angle
+- local coordinate system: the centre of the source region is the origin, and line segments and the white box are in local coordinates
+- the white box defines the boundary of the text render, and is a rectangle the user can adjust by hand
+- the text pixmap is positioned with render_center (the world coordinates of the white box centre) as anchor
 
-旋转 bug 修复说明：
-  旧实现中 update_text_pixmap 用 mapFromScene(pos) 定位 pixmap 左上角。
-  但 pos 是世界坐标轴对齐矩形的左上角，经 mapFromScene（含逆旋转）后，
-  pixmap 中心在局部坐标中会偏离白框中心。
-  修复：以 render_center → mapFromScene → 局部中心 → 减半尺寸，
-  让 pixmap 始终以白框中心为定位基准。
+Note on the rotation bug fix:
+  In the old implementation, update_text_pixmap positioned the top-left corner of the pixmap with mapFromScene(pos).
+  But pos is the top-left corner of an axis-aligned rectangle in world coordinates, and after mapFromScene (which includes the inverse rotation)
+  the pixmap centre drifted away from the white box centre in local coordinates.
+  Fix: render_center → mapFromScene → local centre → minus half the size,
+  so the pixmap is always positioned from the white box centre.
 """
 
 import copy
@@ -105,7 +105,7 @@ def _editor_pen(color: QColor, width: float, style=Qt.PenStyle.SolidLine) -> QPe
 
 
 class TransparentPixmapItem(QGraphicsPixmapItem):
-    """对鼠标事件完全透明的 Pixmap item，不阻挡父 item 的选择。"""
+    """Pixmap item that is fully transparent to mouse events and does not block selection of the parent item."""
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -201,7 +201,7 @@ class RegionTextItem(QGraphicsItemGroup):
     # ------------------------------------------------------------------
 
     def _rebuild_qt_polygons(self):
-        """从 geo.polygons_local 重建 Qt QPolygonF 列表。"""
+        """Rebuild the list of Qt QPolygonF objects from geo.polygons_local."""
         self.polygons = []
         for local_poly_data in self.geo.polygons_local:
             poly = QPolygonF()
@@ -222,7 +222,7 @@ class RegionTextItem(QGraphicsItemGroup):
         self._image_item = item
 
     def set_snap_enabled(self, enabled: bool):
-        """启用或关闭移动/旋转吸附；关闭时立即清理吸附辅助线。"""
+        """Turn move/rotate snapping on or off; turning it off clears the snapping guide lines at once."""
         self._snap_enabled = bool(enabled)
         if not self._snap_enabled:
             self._clear_guide_lines()
@@ -232,7 +232,7 @@ class RegionTextItem(QGraphicsItemGroup):
     # ------------------------------------------------------------------
 
     def _apply_region_state(self, region_data: dict):
-        """将完整 region_data 同步到 item 本地状态。"""
+        """Sync the full region_data to the local state of the item."""
         self.region_data = copy.deepcopy(region_data)
         self.geo = RegionGeometryState.from_region_data(self.region_data)
 
@@ -251,7 +251,7 @@ class RegionTextItem(QGraphicsItemGroup):
         self._rebuild_qt_polygons()
 
     def update_from_data(self, region_data: dict):
-        """从新的 region_data 更新整个 item 状态。"""
+        """Update the whole item state from new region_data."""
         try:
             if self._is_dragging or self._in_callback:
                 return
@@ -284,10 +284,10 @@ class RegionTextItem(QGraphicsItemGroup):
     def update_text_pixmap(
         self, pixmap, pos, rotation=0.0, pivot_point=None, render_center=None
     ):
-        """更新文字 pixmap 位置。
+        """Update the position of the text pixmap.
 
-        当 render_center 可用时（白框中心世界坐标），以此为锚点居中放置 pixmap，
-        避免旋转变换导致 mapFromScene(pos) 引起的中心偏移。
+        When render_center is available (the world coordinates of the white box centre), the pixmap is centred on it as anchor,
+        which avoids the centre offset mapFromScene(pos) causes under the rotation transform.
         """
         self.text_item.setPixmap(pixmap)
 
@@ -309,7 +309,7 @@ class RegionTextItem(QGraphicsItemGroup):
         self.text_item.setRotation(0)  # The parent item is already rotated
 
     def set_dst_points(self, dst_points):
-        """设置渲染 dst_points，自动模式下同步到白框。"""
+        """Set the render dst_points; in automatic mode they are synced to the white box."""
         self.geo.set_render_box(dst_points)
         self.prepareGeometryChange()
         self._shape_path = None
@@ -590,7 +590,7 @@ class RegionTextItem(QGraphicsItemGroup):
         }
 
     def _rotation_pivot_local(self) -> QPointF:
-        """旋转支点：白框中心（回退到局部原点）。"""
+        """Rotation pivot: the white box centre (falling back to the local origin)."""
         if self.geo.white_frame_local is not None:
             left, top, right, bottom = self.geo.white_frame_local
             return QPointF((left + right) / 2, (top + bottom) / 2)
@@ -672,7 +672,7 @@ class RegionTextItem(QGraphicsItemGroup):
             self._drag_start_text_item_pos = QPointF(self.text_item.pos())
 
     def _capture_batch_drag_peers(self):
-        """批量移动：记录场景中其他选中 item 的初始状态，拖动时同步移动。"""
+        """Batch move: record the initial state of the other selected items in the scene, to move them along during the drag."""
         self._batch_drag_peers = []
         sc = self.scene()
         if sc is None:
@@ -696,7 +696,7 @@ class RegionTextItem(QGraphicsItemGroup):
             )
 
     def _move_batch_peers(self, scene_dx: float, scene_dy: float):
-        """对批量 peers 应用相同的场景位移。"""
+        """Apply the same scene displacement to the batch peers."""
         for peer in self._batch_drag_peers:
             item = peer["item"]
             if sip.isdeleted(item) or item.scene() is None:
@@ -715,9 +715,10 @@ class RegionTextItem(QGraphicsItemGroup):
             item._invalidate_scene_rect(peer["old_rect"])
 
     def _commit_batch_peers(self, event):
-        """提交批量 peers 的位置变更到模型。
+        """Commit the position changes of the batch peers to the model.
 
-        每个 peer 的提交回调都可能触发 item 重建，逐项做存活检查。"""
+        The commit callback of each peer may trigger a rebuild of the items, so each one is checked for being alive.
+        """
         for peer in self._batch_drag_peers:
             item = peer["item"]
             if sip.isdeleted(item) or item.scene() is None:
@@ -738,7 +739,7 @@ class RegionTextItem(QGraphicsItemGroup):
     # ------------------------------------------------------------------
 
     def _ensure_angle_label(self):
-        """确保角度标签存在（在场景中创建）。"""
+        """Make sure the angle label exists (it is created in the scene)."""
         if self._angle_label is not None:
             return
         scene = self.scene()
@@ -755,7 +756,7 @@ class RegionTextItem(QGraphicsItemGroup):
         self._angle_label.setVisible(False)
 
     def _show_angle_label(self, angle_deg: float, scene_pos: QPointF):
-        """在旋转位置显示当前的旋转角度标签。"""
+        """Show the label with the current rotation angle at the rotation position."""
         self._ensure_angle_label()
         if self._angle_label is None:
             return
@@ -774,12 +775,12 @@ class RegionTextItem(QGraphicsItemGroup):
         self._angle_label.setVisible(True)
 
     def _hide_angle_label(self):
-        """隐藏旋转角度标签。"""
+        """Hide the rotation angle label."""
         if self._angle_label is not None:
             self._angle_label.setVisible(False)
 
     def _remove_angle_label(self):
-        """从场景中移除角度标签。"""
+        """Remove the angle label from the scene."""
         if self._angle_label is not None:
             scene = self.scene()
             if scene is not None:
@@ -794,7 +795,7 @@ class RegionTextItem(QGraphicsItemGroup):
     # ------------------------------------------------------------------
 
     def _get_white_frame_world_points_from_local(self, wf_local) -> dict:
-        """根据给定的局部白框坐标，获取世界坐标中的对齐参考点。"""
+        """Get the alignment reference points in world coordinates for the given local white box coordinates."""
         if wf_local is None:
             return {}
         left, top, right, bottom = wf_local
@@ -809,11 +810,11 @@ class RegionTextItem(QGraphicsItemGroup):
         }
 
     def _get_white_frame_world_points(self) -> dict:
-        """获取当前白框在世界坐标中的对齐参考点。"""
+        """Get the alignment reference points of the current white box in world coordinates."""
         return self._get_white_frame_world_points_from_local(self.geo.white_frame_local)
 
     def _get_other_items_snap_targets(self) -> list:
-        """获取场景中其他 RegionTextItem 的对齐参考点。"""
+        """Get the alignment reference points of the other RegionTextItem objects in the scene."""
         targets = []
         scene = self.scene()
         if scene is None:
@@ -826,7 +827,7 @@ class RegionTextItem(QGraphicsItemGroup):
         return targets
 
     def _calculate_snap_offset(self, my_points: dict, targets: list) -> tuple:
-        """计算当前文本框与场景中其他项的对齐吸附偏移量及辅助线坐标。"""
+        """Compute the alignment snapping offset between the current text box and the other items in the scene, and the guide line coordinates."""
         threshold = self._snap_threshold  # Keep an absolute distance threshold of 1px that does not change with the zoom
         best_dx = None
         best_dy = None
@@ -872,7 +873,7 @@ class RegionTextItem(QGraphicsItemGroup):
         return snap_dx, snap_dy, guides
 
     def _visible_scene_rect(self, scene: QGraphicsScene) -> QRectF:
-        """返回当前视图联合后的可见场景区域。"""
+        """Return the visible scene area, united over the current views."""
         visible_rect = QRectF()
         has_visible_rect = False
         for view in scene.views():
@@ -894,7 +895,7 @@ class RegionTextItem(QGraphicsItemGroup):
         pen: QPen,
         guide_spec,
     ):
-        """根据辅助线描述创建场景线条，兼容显式方向和端点线段两种格式。"""
+        """Create scene lines from guide line descriptions; both the explicit-direction format and the end-point segment format are accepted."""
         if isinstance(guide_spec, dict):
             kind = guide_spec.get("kind")
             if kind == "vertical":
@@ -942,12 +943,12 @@ class RegionTextItem(QGraphicsItemGroup):
         )
 
     def _detect_spacing_snap(self, my_points: dict) -> tuple:
-        """智能间距吸附:检测与其它 item 对的等距关系。
+        """Smart spacing snap: detects equal-spacing relations with pairs of other items.
 
-        对每对 (pa, pb),规范化使较小 far 的为"左/上"框,在两个轴上分别尝试
-        两个吸附候选:
-          1. 拖到右框远侧:my_near 对齐到 right_far + gap
-          2. 拖到左框近侧:my_far  对齐到 left_near - gap
+        Each pair (pa, pb) is normalised so the one with the smaller far is the "left/top" box, and two
+        snap candidates are tried on each of the two axes:
+          1. dragged to the far side of the right box: my_near aligns to right_far + gap
+          2. dragged to the near side of the left box: my_far  aligns to left_near - gap
         """
         scene = self.scene()
         if scene is None:
@@ -1020,7 +1021,7 @@ class RegionTextItem(QGraphicsItemGroup):
         return snap[0], snap[1], guides
 
     def _show_guide_lines(self, guide_specs: list, is_rotation: bool = False):
-        """在场景中绘制全屏的对齐/旋转辅助虚线 + 间距标尺。"""
+        """Draw full-screen dashed alignment/rotation guide lines and spacing rulers in the scene."""
         self._clear_guide_lines()
         scene = self.scene()
         if scene is None or not guide_specs:
@@ -1112,7 +1113,7 @@ class RegionTextItem(QGraphicsItemGroup):
                 self._guide_lines.append(line)
 
     def _clear_guide_lines(self):
-        """清除所有辅助线和间距标签。"""
+        """Clear all guide lines and spacing labels."""
         scene = self.scene()
         for line in self._guide_lines:
             try:
@@ -1277,7 +1278,7 @@ class RegionTextItem(QGraphicsItemGroup):
             )
 
     def _save_drag_start_state(self, event, local_pos, handle, indices):
-        """保存拖动开始时的所有状态。"""
+        """Save all state at the start of a drag."""
         self._clear_drag_context()
         self._is_dragging = bool(handle)
         self._drag_start_pos = local_pos
@@ -1372,7 +1373,7 @@ class RegionTextItem(QGraphicsItemGroup):
     # ------------------------------------------------------------------
 
     def _handle_rotate_drag(self, event):
-        """执行旋转拖拽逻辑，包含角度实时显示与吸附计算。"""
+        """Run the rotation drag logic, with live angle display and snapping."""
         center_scene = self._drag_start_pivot_scene
         vec = event.scenePos() - center_scene
         new_angle_rad = np.arctan2(vec.y(), vec.x())
@@ -1585,7 +1586,7 @@ class RegionTextItem(QGraphicsItemGroup):
             )
 
     def _handle_white_frame_move(self, event: QGraphicsSceneMouseEvent):
-        """执行白框平移逻辑，包含位置对齐吸附与辅助线显示。"""
+        """Run the white box move logic, with position alignment snapping and guide lines."""
         try:
             if self._drag_start_white_frame_local is None:
                 return

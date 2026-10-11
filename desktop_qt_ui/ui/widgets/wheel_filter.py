@@ -1,8 +1,8 @@
 """
-滚轮事件过滤器
+Wheel event filter
 
-统一约定：滑块 / 数值框 / 下拉框在未获得键盘焦点时不响应滚轮，
-事件直通父级滚动区域；获得键盘焦点（点击 / Tab）后保持控件默认滚轮行为。
+One convention: a slider, spin box or drop-down does not respond to the wheel while it has no keyboard focus,
+and the event passes through to the parent scroll area; once it has keyboard focus (click / Tab), the control keeps its default wheel behaviour.
 """
 
 from PyQt6.QtCore import QAbstractAnimation, QEvent, QObject, Qt
@@ -82,7 +82,7 @@ class TopLevelComboBox(ComboBox):
 
 
 class NoWheelComboBox(TopLevelComboBox):
-    """禁用滚轮事件的下拉框"""
+    """Drop-down with wheel events disabled"""
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -111,16 +111,16 @@ class NoWheelComboBox(TopLevelComboBox):
         self._closeComboMenu()
 
     def wheelEvent(self, event):
-        """完全忽略滚轮事件"""
+        """Ignore wheel events completely"""
         event.ignore()
 
 
 class WheelEventFilter(QObject):
     """
-    滚轮事件过滤器
+    Wheel event filter
 
-    无焦点时拦下控件自身的滚轮处理并保持事件未接受状态——Qt 的滚轮
-    传播机制会把未接受的事件继续交给父级（滚动区域）；有焦点时不干预。
+    Without focus, the control's own wheel handling is stopped and the event is left unaccepted - Qt's wheel
+    propagation passes an unaccepted event on to the parent (the scroll area); with focus nothing is done.
     """
 
     def eventFilter(self, obj, event):
@@ -135,20 +135,20 @@ class WheelEventFilter(QObject):
 
 
 def _demote_wheel_focus(widget: QWidget):
-    """WheelFocus → StrongFocus：滚轮不再夺取焦点，点击 / Tab 仍可聚焦。"""
+    """WheelFocus → StrongFocus: the wheel no longer takes the focus, while click / Tab still can."""
     if widget.focusPolicy() == Qt.FocusPolicy.WheelFocus:
         widget.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
 
 
 def install_wheel_filter(widget: QWidget) -> WheelEventFilter:
     """
-    为指定控件及其所有滑块 / 数值框 / 下拉框子控件安装滚轮事件过滤器
+    Install the wheel event filter on the given widget and all its slider, spin box and drop-down children
 
     Args:
-        widget: 需要安装过滤器的顶层控件
+        widget: the top-level widget the filter is installed on
 
     Returns:
-        安装好的过滤器实例（父对象为 widget，随其销毁）
+        The installed filter instance (its parent is widget, and it is destroyed with it)
     """
     wheel_filter = WheelEventFilter(widget)
 
