@@ -4587,6 +4587,223 @@ class MangaTranslator:
         logger.info(f"Batch translation completed: processed {len(results)} images")
         return plan.merge_results(results)
 
+    async def _preload_models(self, config: Config) -> None:
+        """Load every model the configured pipeline needs before the first page."""
+        logger.info('Loading models')
+
+        # ✅ 检查停止标志
+        await asyncio.sleep(0)
+        self._check_cancelled()
+
+        if config.upscale.upscale_ratio:
+            # 传递超分配置参数
+            upscaler_kwargs = {}
+            if config.upscale.upscaler == 'realcugan':
+                if config.upscale.realcugan_model:
+                    upscaler_kwargs['model_name'] = config.upscale.realcugan_model
+                if config.upscale.tile_size is not None:
+                    upscaler_kwargs['tile_size'] = config.upscale.tile_size
+            elif config.upscale.upscaler == 'mangajanai':
+                # mangajanai 的 upscale_ratio 可以是字符串 (x2, x4, DAT2 x4) 或数字
+                ratio = config.upscale.upscale_ratio
+                if isinstance(ratio, str):
+                    upscaler_kwargs['model_name'] = ratio
+                elif ratio == 2:
+                    upscaler_kwargs['model_name'] = 'x2'
+                else:
+                    upscaler_kwargs['model_name'] = 'x4'
+                if config.upscale.tile_size is not None:
+                    upscaler_kwargs['tile_size'] = config.upscale.tile_size
+            await prepare_upscaling(config.upscale.upscaler, **upscaler_kwargs)
+
+        await prepare_detection(config.detector.detector)
+
+        await prepare_ocr(config.ocr.ocr, self.device)
+
+        await prepare_inpainting(config.inpainter.inpainter, self.device)
+
+        await prepare_translation(config.translator.translator_gen)
+
+        if config.colorizer.colorizer != Colorizer.none:
+            await prepare_colorization(config.colorizer.colorizer)
+
+        self._models_loaded = True  # 标记模型已加载
+
+    async def _run_inpaint_only_pipeline(self, config: Config, ctx: Context) -> Context:
+        """inpaint_only mode: detect the text of a page, build its mask and erase the text."""
+        logger.info("=== Inpaint Only Mode ===")
+        logger.info("Pipeline: Detection → Fill Text → Textline Merge → Mask Refinement → Inpainting")
+
+        ctx.img_rgb, ctx.img_alpha = load_image(ctx.upscaled)
+        ctx.bubble_mask = None
+
+        # 验证加载的图片
+        if ctx.img_rgb is None or ctx.img_rgb.size == 0:
+            logger.error("[Batch] Failed to load image: img_rgb is empty or invalid")
+            raise Exception("Failed to load image: img_rgb is empty or invalid")
+
+        if len(ctx.img_rgb.shape) < 2 or ctx.img_rgb.shape[0] == 0 or ctx.img_rgb.shape[1] == 0:
+            logger.error(f"[Batch] Invalid loaded image dimensions: {ctx.img_rgb.shape}")
+            raise Exception(f"Invalid loaded image dimensions: {ctx.img_rgb.shape}")
+
+        # Step 1: 检测 - 获取textlines（检测框）和mask_raw（原始蒙版）
+        await self._report_progress('detection')
+        try:
+            ctx.textlines, ctx.mask_raw, ctx.mask = await self._run_detection(config, ctx)
+            logger.info(f"✓ Step 1 - Detection: Found {len(ctx.textlines) if ctx.textlines else 0} textlines")
+            logger.info(f"  - mask_raw: {ctx.mask_raw.shape if ctx.mask_raw is not None else 'None'}")
+            if ctx.mask_raw is not None:
+                logger.info(f"  - mask_raw non-zero pixels: {np.count_nonzero(ctx.mask_raw)}")
+        except Exception as e:
+            logger.error(f"Error during detection:\n{traceback.format_exc()}")
+            if not self.ignore_errors:
+                raise
+            raise FileTranslationFailure("detection", e) from e
+
+        if not ctx.textlines or ctx.mask_raw is None:
+            logger.warning("No textlines or mask_raw detected, skipping inpainting.")
+            ctx.img_inpainted = ctx.img_rgb
+            ctx.result = ctx.img_inpainted
+            ctx.text_regions = []
+            await self._report_progress('inpaint-only-complete', True)
+            # 不在这里清理，让调用方在保存JSON后统一清理
+            return ctx
+
+        # Step 2: 填充文本 - 跳过OCR，为每个textline填充占位文本
+        for textline in ctx.textlines:
+            textline.text = "TEXT"
+        logger.info(f"✓ Step 2 - Fill Text: Filled {len(ctx.textlines)} textlines with placeholder 'TEXT'")
+
+        # Step 3: Textline Merge - 将textlines合并成text_regions（大框）
+        try:
+            ctx.text_regions = await dispatch_textline_merge(
+                ctx.textlines,
+                ctx.img_rgb.shape[1],
+                ctx.img_rgb.shape[0],
+                config,
+                verbose=self.verbose,
+                model_assisted_other_textlines=(
+                    getattr(ctx, 'model_assisted_other_textlines', None)
+                    if bool(getattr(config.ocr, 'merge_special_require_full_wrap', True))
+                    else None
+                )
+            )
+            logger.info(f"✓ Step 3 - Textline Merge: Merged {len(ctx.textlines)} textlines into {len(ctx.text_regions)} text_regions")
+        except Exception:
+            logger.error(f"Error during textline merge:\n{traceback.format_exc()}")
+            # 降级：为每个textline创建一个简单的TextBlock
+            logger.warning("Falling back to simple text_regions (1 textline = 1 region)")
+            ctx.text_regions = []
+            fallback_line_spacing = 1.0
+            fallback_letter_spacing = 1.0
+            if hasattr(config, 'render'):
+                line_spacing_val = getattr(config.render, 'line_spacing', None)
+                if line_spacing_val is not None:
+                    fallback_line_spacing = float(line_spacing_val)
+                letter_spacing_val = getattr(config.render, 'letter_spacing', None)
+                if letter_spacing_val is not None:
+                    fallback_letter_spacing = float(letter_spacing_val)
+
+            for textline in ctx.textlines:
+                region = TextBlock(
+                    lines=[textline.pts],
+                    texts=["TEXT"],
+                    font_size=int(textline.font_size) if hasattr(textline, 'font_size') else 20,
+                    angle=0,
+                    prob=textline.prob if hasattr(textline, 'prob') else 1.0,
+                    fg_color=(0, 0, 0),
+                    bg_color=(255, 255, 255),
+                    line_spacing=fallback_line_spacing,
+                    letter_spacing=fallback_letter_spacing
+                )
+                ctx.text_regions.append(region)
+            logger.info(f"Created {len(ctx.text_regions)} simple text_regions")
+
+        if not ctx.text_regions:
+            logger.warning("No text_regions created, skipping mask refinement and inpainting.")
+            ctx.img_inpainted = ctx.img_rgb
+            ctx.result = ctx.img_inpainted
+            await self._report_progress('inpaint-only-complete', True)
+            # 不在这里清理，让调用方在保存JSON后统一清理
+            return ctx
+
+        # Step 4: Mask Refinement - 使用text_regions和mask_raw优化蒙版
+        skip_mask_refinement_for_imported_export = (
+            getattr(ctx, 'used_imported_yolo_labels', False) and
+            ((self.template and self.save_text) or self.generate_and_export)
+        )
+        if skip_mask_refinement_for_imported_export:
+            logger.info("Import YOLO labels enabled in export mode: skipping mask refinement stage")
+            ctx.mask = None
+        else:
+            await self._report_progress('mask-generation')
+            try:
+                ctx.mask = await self._run_mask_refinement(config, ctx)
+                mask_pixels = np.count_nonzero(ctx.mask) if ctx.mask is not None else 0
+                logger.info(f"✓ Step 4 - Mask Refinement: Generated mask with {mask_pixels} non-zero pixels")
+            except Exception:
+                logger.error(f"Error during mask refinement:\n{traceback.format_exc()}")
+                # 降级到简单膨胀
+                logger.warning("Falling back to simple mask dilation")
+                kernel = np.ones((config.kernel_size, config.kernel_size), np.uint8)
+                ctx.mask = cv2.dilate(ctx.mask_raw, kernel, iterations=config.mask_dilation_offset // config.kernel_size)
+                mask_pixels = np.count_nonzero(ctx.mask) if ctx.mask is not None else 0
+                logger.info(f"Simple dilated mask has {mask_pixels} non-zero pixels")
+
+        # Step 5: Inpainting - 使用优化后的mask进行修复
+        if self._should_skip_inpainting_for_ai_renderer(config):
+            logger.info("AI renderer selected: skipping inpainting and using original work image as render base.")
+            ctx.img_inpainted = ctx.img_rgb
+        elif ctx.mask is None or np.count_nonzero(ctx.mask) == 0:
+            logger.warning("Mask is empty! Skipping inpainting.")
+            ctx.img_inpainted = ctx.img_rgb
+        else:
+            await self._report_progress('inpainting')
+            try:
+                ctx.img_inpainted = await self._run_inpainting(config, ctx)
+                logger.info("✓ Step 5 - Inpainting: Completed successfully")
+            except Exception as e:
+                logger.error(f"Error during inpainting:\n{traceback.format_exc()}")
+                if not self.ignore_errors:
+                    raise
+                raise FileTranslationFailure("inpainting", e) from e
+
+        # 设置结果 - 转换为PIL Image（保存函数需要PIL格式）
+        from PIL import Image
+        if isinstance(ctx.img_inpainted, np.ndarray):
+            ctx.result = Image.fromarray(ctx.img_inpainted)
+        else:
+            ctx.result = ctx.img_inpainted
+
+        ctx.text_regions = []
+
+        # 设置标志，告诉_complete_translation_pipeline跳过处理
+        ctx.inpaint_only_complete = True
+
+        logger.info("=== Inpaint Only Mode Complete ===")
+        await self._report_progress('inpaint-only-complete', True)
+        # 不在这里清理，让调用方在保存JSON后统一清理
+        return ctx
+
+    def _save_unfiltered_textline_debug_images(self, config: Config, ctx: Context) -> None:
+        """Write the debug images that show the detected text lines before OCR."""
+        img_bbox_raw = np.copy(ctx.img_rgb)
+        for txtln in ctx.textlines:
+            det_label = getattr(txtln, 'det_label', None) or getattr(txtln, 'yolo_label', None)
+            if isinstance(det_label, str) and det_label.strip().lower() == 'other':
+                continue
+            cv2.polylines(img_bbox_raw, [txtln.pts], True, color=(255, 0, 0), thickness=2)
+        imwrite_unicode(self._result_path('bboxes_unfiltered.png'), cv2.cvtColor(img_bbox_raw, cv2.COLOR_RGB2BGR), logger)
+        # 仅在开启模型辅助合并时输出标签调试图，避免开关关闭时仍生成该文件。
+        # 调试图优先使用检测原始全集（含 other），用于排查标签分流逻辑。
+        if bool(getattr(config.ocr, 'merge_special_require_full_wrap', True)):
+            labeled_debug_textlines = getattr(ctx, 'all_detected_textlines', None) or ctx.textlines
+            self._save_labeled_textline_debug_image(
+                ctx.img_rgb,
+                labeled_debug_textlines,
+                'bboxes_unfiltered_labeled.png'
+            )
+
     async def _translate_until_translation(self, image: Image.Image, config: Config) -> Context:
         """
         执行翻译之前的所有步骤（彩色化、上采样、检测、OCR、文本行合并）
@@ -4614,45 +4831,7 @@ class MangaTranslator:
 
         # preload and download models (not strictly necessary, remove to lazy load)
         if self.models_ttl == 0 and not self._models_loaded:
-            logger.info('Loading models')
-            
-            # ✅ 检查停止标志
-            await asyncio.sleep(0)
-            self._check_cancelled()
-            
-            if config.upscale.upscale_ratio:
-                # 传递超分配置参数
-                upscaler_kwargs = {}
-                if config.upscale.upscaler == 'realcugan':
-                    if config.upscale.realcugan_model:
-                        upscaler_kwargs['model_name'] = config.upscale.realcugan_model
-                    if config.upscale.tile_size is not None:
-                        upscaler_kwargs['tile_size'] = config.upscale.tile_size
-                elif config.upscale.upscaler == 'mangajanai':
-                    # mangajanai 的 upscale_ratio 可以是字符串 (x2, x4, DAT2 x4) 或数字
-                    ratio = config.upscale.upscale_ratio
-                    if isinstance(ratio, str):
-                        upscaler_kwargs['model_name'] = ratio
-                    elif ratio == 2:
-                        upscaler_kwargs['model_name'] = 'x2'
-                    else:
-                        upscaler_kwargs['model_name'] = 'x4'
-                    if config.upscale.tile_size is not None:
-                        upscaler_kwargs['tile_size'] = config.upscale.tile_size
-                await prepare_upscaling(config.upscale.upscaler, **upscaler_kwargs)
-            
-            await prepare_detection(config.detector.detector)
-            
-            await prepare_ocr(config.ocr.ocr, self.device)
-            
-            await prepare_inpainting(config.inpainter.inpainter, self.device)
-            
-            await prepare_translation(config.translator.translator_gen)
-            
-            if config.colorizer.colorizer != Colorizer.none:
-                await prepare_colorization(config.colorizer.colorizer)
-            
-            self._models_loaded = True  # 标记模型已加载
+            await self._preload_models(config)
 
         # Start the background cleanup job once if not already started.
         if self._detector_cleanup_task is None:
@@ -4719,159 +4898,7 @@ class MangaTranslator:
 
         # --- Inpaint Only Mode Check (for batch processing) ---
         if self.inpaint_only:
-            logger.info("=== Inpaint Only Mode ===")
-            logger.info("Pipeline: Detection → Fill Text → Textline Merge → Mask Refinement → Inpainting")
-            
-            ctx.img_rgb, ctx.img_alpha = load_image(ctx.upscaled)
-            ctx.bubble_mask = None
-            
-            # 验证加载的图片
-            if ctx.img_rgb is None or ctx.img_rgb.size == 0:
-                logger.error("[Batch] Failed to load image: img_rgb is empty or invalid")
-                raise Exception("Failed to load image: img_rgb is empty or invalid")
-            
-            if len(ctx.img_rgb.shape) < 2 or ctx.img_rgb.shape[0] == 0 or ctx.img_rgb.shape[1] == 0:
-                logger.error(f"[Batch] Invalid loaded image dimensions: {ctx.img_rgb.shape}")
-                raise Exception(f"Invalid loaded image dimensions: {ctx.img_rgb.shape}")
-            
-            # Step 1: 检测 - 获取textlines（检测框）和mask_raw（原始蒙版）
-            await self._report_progress('detection')
-            try:
-                ctx.textlines, ctx.mask_raw, ctx.mask = await self._run_detection(config, ctx)
-                logger.info(f"✓ Step 1 - Detection: Found {len(ctx.textlines) if ctx.textlines else 0} textlines")
-                logger.info(f"  - mask_raw: {ctx.mask_raw.shape if ctx.mask_raw is not None else 'None'}")
-                if ctx.mask_raw is not None:
-                    logger.info(f"  - mask_raw non-zero pixels: {np.count_nonzero(ctx.mask_raw)}")
-            except Exception as e:
-                logger.error(f"Error during detection:\n{traceback.format_exc()}")
-                if not self.ignore_errors:
-                    raise
-                raise FileTranslationFailure("detection", e) from e
-            
-            if not ctx.textlines or ctx.mask_raw is None:
-                logger.warning("No textlines or mask_raw detected, skipping inpainting.")
-                ctx.img_inpainted = ctx.img_rgb
-                ctx.result = ctx.img_inpainted
-                ctx.text_regions = []
-                await self._report_progress('inpaint-only-complete', True)
-                # 不在这里清理，让调用方在保存JSON后统一清理
-                return ctx
-            
-            # Step 2: 填充文本 - 跳过OCR，为每个textline填充占位文本
-            for textline in ctx.textlines:
-                textline.text = "TEXT"
-            logger.info(f"✓ Step 2 - Fill Text: Filled {len(ctx.textlines)} textlines with placeholder 'TEXT'")
-            
-            # Step 3: Textline Merge - 将textlines合并成text_regions（大框）
-            try:
-                ctx.text_regions = await dispatch_textline_merge(
-                    ctx.textlines,
-                    ctx.img_rgb.shape[1],
-                    ctx.img_rgb.shape[0],
-                    config,
-                    verbose=self.verbose,
-                    model_assisted_other_textlines=(
-                        getattr(ctx, 'model_assisted_other_textlines', None)
-                        if bool(getattr(config.ocr, 'merge_special_require_full_wrap', True))
-                        else None
-                    )
-                )
-                logger.info(f"✓ Step 3 - Textline Merge: Merged {len(ctx.textlines)} textlines into {len(ctx.text_regions)} text_regions")
-            except Exception:
-                logger.error(f"Error during textline merge:\n{traceback.format_exc()}")
-                # 降级：为每个textline创建一个简单的TextBlock
-                logger.warning("Falling back to simple text_regions (1 textline = 1 region)")
-                ctx.text_regions = []
-                fallback_line_spacing = 1.0
-                fallback_letter_spacing = 1.0
-                if hasattr(config, 'render'):
-                    line_spacing_val = getattr(config.render, 'line_spacing', None)
-                    if line_spacing_val is not None:
-                        fallback_line_spacing = float(line_spacing_val)
-                    letter_spacing_val = getattr(config.render, 'letter_spacing', None)
-                    if letter_spacing_val is not None:
-                        fallback_letter_spacing = float(letter_spacing_val)
-
-                for textline in ctx.textlines:
-                    region = TextBlock(
-                        lines=[textline.pts],
-                        texts=["TEXT"],
-                        font_size=int(textline.font_size) if hasattr(textline, 'font_size') else 20,
-                        angle=0,
-                        prob=textline.prob if hasattr(textline, 'prob') else 1.0,
-                        fg_color=(0, 0, 0),
-                        bg_color=(255, 255, 255),
-                        line_spacing=fallback_line_spacing,
-                        letter_spacing=fallback_letter_spacing
-                    )
-                    ctx.text_regions.append(region)
-                logger.info(f"Created {len(ctx.text_regions)} simple text_regions")
-            
-            if not ctx.text_regions:
-                logger.warning("No text_regions created, skipping mask refinement and inpainting.")
-                ctx.img_inpainted = ctx.img_rgb
-                ctx.result = ctx.img_inpainted
-                await self._report_progress('inpaint-only-complete', True)
-                # 不在这里清理，让调用方在保存JSON后统一清理
-                return ctx
-            
-            # Step 4: Mask Refinement - 使用text_regions和mask_raw优化蒙版
-            skip_mask_refinement_for_imported_export = (
-                getattr(ctx, 'used_imported_yolo_labels', False) and
-                ((self.template and self.save_text) or self.generate_and_export)
-            )
-            if skip_mask_refinement_for_imported_export:
-                logger.info("Import YOLO labels enabled in export mode: skipping mask refinement stage")
-                ctx.mask = None
-            else:
-                await self._report_progress('mask-generation')
-                try:
-                    ctx.mask = await self._run_mask_refinement(config, ctx)
-                    mask_pixels = np.count_nonzero(ctx.mask) if ctx.mask is not None else 0
-                    logger.info(f"✓ Step 4 - Mask Refinement: Generated mask with {mask_pixels} non-zero pixels")
-                except Exception:
-                    logger.error(f"Error during mask refinement:\n{traceback.format_exc()}")
-                    # 降级到简单膨胀
-                    logger.warning("Falling back to simple mask dilation")
-                    kernel = np.ones((config.kernel_size, config.kernel_size), np.uint8)
-                    ctx.mask = cv2.dilate(ctx.mask_raw, kernel, iterations=config.mask_dilation_offset // config.kernel_size)
-                    mask_pixels = np.count_nonzero(ctx.mask) if ctx.mask is not None else 0
-                    logger.info(f"Simple dilated mask has {mask_pixels} non-zero pixels")
-            
-            # Step 5: Inpainting - 使用优化后的mask进行修复
-            if self._should_skip_inpainting_for_ai_renderer(config):
-                logger.info("AI renderer selected: skipping inpainting and using original work image as render base.")
-                ctx.img_inpainted = ctx.img_rgb
-            elif ctx.mask is None or np.count_nonzero(ctx.mask) == 0:
-                logger.warning("Mask is empty! Skipping inpainting.")
-                ctx.img_inpainted = ctx.img_rgb
-            else:
-                await self._report_progress('inpainting')
-                try:
-                    ctx.img_inpainted = await self._run_inpainting(config, ctx)
-                    logger.info("✓ Step 5 - Inpainting: Completed successfully")
-                except Exception as e:
-                    logger.error(f"Error during inpainting:\n{traceback.format_exc()}")
-                    if not self.ignore_errors:
-                        raise
-                    raise FileTranslationFailure("inpainting", e) from e
-            
-            # 设置结果 - 转换为PIL Image（保存函数需要PIL格式）
-            from PIL import Image
-            if isinstance(ctx.img_inpainted, np.ndarray):
-                ctx.result = Image.fromarray(ctx.img_inpainted)
-            else:
-                ctx.result = ctx.img_inpainted
-            
-            ctx.text_regions = []
-
-            # 设置标志，告诉_complete_translation_pipeline跳过处理
-            ctx.inpaint_only_complete = True
-
-            logger.info("=== Inpaint Only Mode Complete ===")
-            await self._report_progress('inpaint-only-complete', True)
-            # 不在这里清理，让调用方在保存JSON后统一清理
-            return ctx
+            return await self._run_inpaint_only_pipeline(config, ctx)
 
         ctx.img_rgb, ctx.img_alpha = load_image(ctx.upscaled)
         ctx.bubble_mask = None
@@ -4913,22 +4940,7 @@ class MangaTranslator:
             return await self._revert_upscale(config, ctx)
 
         if self.verbose:
-            img_bbox_raw = np.copy(ctx.img_rgb)
-            for txtln in ctx.textlines:
-                det_label = getattr(txtln, 'det_label', None) or getattr(txtln, 'yolo_label', None)
-                if isinstance(det_label, str) and det_label.strip().lower() == 'other':
-                    continue
-                cv2.polylines(img_bbox_raw, [txtln.pts], True, color=(255, 0, 0), thickness=2)
-            imwrite_unicode(self._result_path('bboxes_unfiltered.png'), cv2.cvtColor(img_bbox_raw, cv2.COLOR_RGB2BGR), logger)
-            # 仅在开启模型辅助合并时输出标签调试图，避免开关关闭时仍生成该文件。
-            # 调试图优先使用检测原始全集（含 other），用于排查标签分流逻辑。
-            if bool(getattr(config.ocr, 'merge_special_require_full_wrap', True)):
-                labeled_debug_textlines = getattr(ctx, 'all_detected_textlines', None) or ctx.textlines
-                self._save_labeled_textline_debug_image(
-                    ctx.img_rgb,
-                    labeled_debug_textlines,
-                    'bboxes_unfiltered_labeled.png'
-                )
+            self._save_unfiltered_textline_debug_images(config, ctx)
 
         # -- OCR
         await self._report_progress('ocr')
