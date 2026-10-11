@@ -148,7 +148,7 @@ class BaseAPIRenderer:
         return load_ai_renderer_prompt_file(None) or DEFAULT_AI_RENDERER_PROMPT
 
     def _format_prompt_value(self, value) -> str:
-        # 富文本→纯文本统一走 rich_text.plain_text_of
+        # Rich text to plain text always goes through rich_text.plain_text_of
         return plain_text_of(value).replace("\r\n", "\n").replace("\n", "\\n").strip()
 
     def _compose_render_prompt(

@@ -19,10 +19,10 @@ from manga_translator.runtime_paths import get_config_path
 
 logger = logging.getLogger(__name__)
 
-# 默认配置文件路径
+# Path of the default configuration file
 _DEFAULT_REPLACEMENTS_PATH = get_config_path('text_replacements.yaml')
 
-# 缓存：(文件路径, mtime) -> 解析后的规则
+# Cache: (file path, mtime) -> parsed rules
 _replacements_cache: Dict[str, Tuple[float, dict]] = {}
 
 
@@ -315,7 +315,7 @@ def _compile_rule(rule: dict) -> Optional[Tuple[re.Pattern, str]]:
         if is_regex:
             compiled = re.compile(pattern_str)
         else:
-            # 字面替换：转义所有正则特殊字符
+            # Literal replacement: escape every regular expression special character
             compiled = re.compile(re.escape(pattern_str))
         return (compiled, replace_str)
     except re.error as e:
@@ -411,7 +411,7 @@ def apply_replacements(text: str, direction: int, replacements: Optional[dict] =
     if replacements is None:
         replacements = load_replacements(file_path)
 
-    # 保护标记：提取 [BR]、<br>、【BR】 等，用占位符替代
+    # Protect the markers: take out [BR], <br>, 【BR】 and so on and put placeholders in their place
     _PROTECTED_RE = re.compile(
         r'\[BR\]'            # [BR]
         r'|【BR】'           # 【BR】
@@ -426,16 +426,16 @@ def apply_replacements(text: str, direction: int, replacements: Optional[dict] =
 
     text = _PROTECTED_RE.sub(_protect, text)
 
-    # 1. 先应用 common 规则
+    # 1. Apply the common rules first
     for pattern, repl in replacements.get('common', []):
         text = pattern.sub(repl, text)
 
-    # 2. 根据方向应用对应分组
+    # 2. Apply the group for the text direction
     group_key = 'vertical' if direction == 1 else 'horizontal'
     for pattern, repl in replacements.get(group_key, []):
         text = pattern.sub(repl, text)
 
-    # 恢复保护的标记
+    # Restore the protected markers
     for i, token in enumerate(protected_tokens):
         text = text.replace(f'\x00PROT{i}\x00', token)
 
@@ -450,9 +450,9 @@ def build_h2v_dict(file_path: Optional[str] = None) -> dict:
     replacements = load_replacements(file_path)
     h2v = {}
     for pattern, repl in replacements.get('vertical', []):
-        # 只取字面替换（pattern 是 re.escape 后的单字符）
+        # Only literal replacements are taken (the pattern is a single character after re.escape)
         raw = pattern.pattern
-        # re.escape 单字符的结果：要么是字符本身，要么是 \x 形式
+        # The result of re.escape on a single character: either the character itself or the \x form
         unescaped = None
         if len(raw) == 1:
             unescaped = raw

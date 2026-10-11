@@ -69,8 +69,8 @@ _HORIZONTAL_SYMBOL_HALFWIDTH_MAP = str.maketrans({"！": "!", "？": "?"})
 # Keep join controls in horizontal strings for QTextLayout shaping. In the
 # per-character vertical path they have neither ink nor a character slot.
 _ZERO_WIDTH_JOIN_CONTROLS = frozenset(("\u200c", "\u200d"))
-# 普通自动旋转字符已移到 rich_text_rules.yaml。四个弯引号与四个日文
-# 角引号保留渲染引擎特殊路径：自动旋转 90°，再做顶右/底左定位。
+# Ordinary automatically rotated characters moved to rich_text_rules.yaml. The four curly quotes and the four Japanese
+# corner brackets keep the special path of the rendering engine: rotated 90 degrees automatically, then placed top-right/bottom-left.
 _VERTICAL_ROTATE_OPEN_SPECIALS = {"“", "‘", "「", "『"}
 _VERTICAL_ROTATE_CLOSE_SPECIALS = {"”", "’", "」", "』"}
 _VERTICAL_OPEN_BRACKETS = _VERTICAL_ROTATE_OPEN_SPECIALS | {
@@ -147,8 +147,8 @@ def CJK_Compatibility_Forms_translate(cdpt: str, direction: int):
 
 
 def _normalize_horizontal_block_content(content: str) -> str:
-    # F14：BR 编解码统一走 rich_text.normalize_rich_linebreaks（BR→\n 后去换行，
-    # 与旧的 _BR_RE.sub('') 输出一致）
+    # F14: BR encoding and decoding go through rich_text.normalize_rich_linebreaks (BR -> \n, then the line breaks are removed,
+    # which gives the same output as the old _BR_RE.sub(''))
     content = normalize_rich_linebreaks(content).replace("\r", "").replace("\n", "")
     return (
         content.translate(_HORIZONTAL_SYMBOL_HALFWIDTH_MAP)
@@ -227,11 +227,11 @@ def _rich_vertical_layout_geometry(
         for previous, current in itertools.pairwise(layouts)
     ]
     layout_width = sum(column.thickness for column in layouts) + sum(gaps)
-    # 紧凑框：各列 content_paint_bounds 先经列位游走换算成正文带内的绝对
-    # 区间再取并集——中间列的斜体切变/描边外扩落在列间隙或邻列区域内，
-    # 不放大整框；只有真正越过 [0, layout_width] 的墨迹才计入 extras。
-    # 右侧另含首列注音/着重号。正文列区间 [left_extra, left_extra+layout_width]
-    # 因此一般不在 paint 框正中，正文中心由 body_center_x 显式给出。
+    # Compact box: the content_paint_bounds of each column are first converted, by walking the column positions, into absolute
+    # intervals inside the body band and then united - italic shear and stroke growth of a middle column fall in the column gap or the neighbouring column
+    # and do not enlarge the whole box; only ink that really crosses [0, layout_width] counts towards extras.
+    # The right side also includes the ruby and emphasis marks of the first column. The body column interval [left_extra, left_extra+layout_width]
+    # is therefore usually not in the middle of the paint box; the body centre is given explicitly by body_center_x.
     column_edges = _vertical_column_walk(
         [float(column.thickness) for column in layouts], gaps, float(layout_width)
     )
@@ -254,8 +254,8 @@ def _rich_vertical_layout_geometry(
         layouts[0].annotation_cross_extent if layouts else 0,
         math.ceil(max(0.0, paint_right - layout_width)),
     )
-    # 纵向包络：正文高 = 最高列的游走高度；上下 extras 由各列图层实际
-    # 纵向溢出（偏移/切变/描边外扩）取最大值，测量与绘制共用。
+    # Vertical envelope: body height = the walked height of the tallest column; the top and bottom extras are the maximum of the actual
+    # vertical overflow of each column layer (offset, shear, stroke growth), shared by measuring and drawing.
     body_height = max((column.height for column in layouts), default=0)
     top_extra = max(
         (int(max(0.0, -column.content_paint_bounds.top)) for column in layouts),
@@ -525,9 +525,9 @@ def _line_surface(
     scale_x: float = 1.0,
     scale_y: float = 1.0,
 ):
-    # ``geometry`` 只允许来自当前一次布局调用；它不是跨字号/字体的缓存。
-    # 省略时保留原有的独立测量路径，竖排和外部调用无需携带任何状态。
-    # 携带 geometry 时其 path 已含 shear，本参数只在重算分支生效。
+    # ``geometry`` may only come from the current layout call; it is not a cache across font sizes or fonts.
+    # When omitted, the original independent measuring path is kept; vertical text and outside callers need to carry no state.
+    # When geometry is carried, its path already includes the shear; this parameter only takes effect in the recompute branch.
     effective_bold = bool(bold) or _state().bold
     with _bold_scope(effective_bold):
         if geometry is None:
@@ -657,7 +657,7 @@ def _build_horizontal_ruby_plan(
         return None
     ruby_style = span.style.copy()
     ruby_style.emphasis = False
-    # 注音不继承正文装饰（装饰只作用于正文行）
+    # Ruby does not inherit the body decorations (decorations only apply to body lines)
     ruby_style.underline = False
     ruby_style.strikethrough = False
     ruby_font = max(1, round(run.font_size * RICH_TEXT_POLICY.horizontal_ruby_size))
@@ -767,7 +767,7 @@ def _rich_horizontal_main_rect(
     height = run.ink_height
     width = run.ink_width
     if not include_paint_effects:
-        # 描边只扩展绘制包络；在旋转前还原字形框，避免描边参与行间推进。
+        # The stroke only grows the paint envelope; the glyph box is restored before rotation, so the stroke takes no part in the line advance.
         pad = _stroke_pad_px(run.font_size, run.stroke_ratio)
         left += pad
         top += pad
@@ -902,9 +902,9 @@ def _finalize_rich_horizontal_line(
                     )
 
         if run.span.style.underline and run.logical_width > 0:
-            # 下划线沿行方向铺满 run 的 advance 宽，纵向位置只由基线和字号
-            # 决定（不看墨迹框）：相邻 run 无论字形高低都接成一条连续线，
-            # 纯空格 run 也能画出线来。
+            # The underline runs along the line for the full advance width of the run; its vertical position depends only on the baseline and the font size
+            # (not on the ink box): neighbouring runs join into one continuous line whatever the glyph heights,
+            # and a run of spaces alone still gets a line.
             underline = plan_underline(run.span, 0.0, run.logical_width, run.font_size)
             underline.cross_center = (
                 run.font_size * RICH_TEXT_POLICY.underline_offset
@@ -965,8 +965,8 @@ def _finalize_rich_horizontal_line(
         bottom = max(rect[1] + rect[3] for rect in rects)
         return left, top, right, bottom
 
-    # 只有装饰没有正文墨迹时（例如整行都是带下划线的空格），正文框退化为
-    # 装饰框，避免 body_rects 为空。
+    # With decoration but no body ink (for example a whole line of underlined spaces), the body box falls back to
+    # the decoration box, so body_rects is not empty.
     body_left, body_top, body_right, body_bottom = bounds(body_rects or paint_rects)
     spacing_left, spacing_top, spacing_right, spacing_bottom = bounds(
         spacing_rects or body_rects or paint_rects
@@ -1147,7 +1147,7 @@ def _build_tcy_geometry(
     paint_height, paint_width, paint_dx, paint_dy = _style_layer_effects_geometry(
         int(ink_geometry["height"]), int(ink_geometry["width"]), style, font_size
     )
-    # 压缩比例按正文墨迹宽度决定，描边与特效随最终图层一起压缩。
+    # The compression ratio is decided by the width of the body ink; stroke and effects are compressed together with the final layer.
     max_width = float(base_font_size) * RICH_TEXT_POLICY.tcy_max_width
     scale_x = max_width / body_width if body_width > max_width else 1.0
     if scale_x < 1.0:
@@ -1159,7 +1159,7 @@ def _build_tcy_geometry(
         paint_width=int(paint_width),
         paint_height=int(paint_height),
         paint_offset_x=float(paint_dx),
-        # 原始图层含描边留白；向上外扩以保持正文起点不随描边变化。
+        # The original layer includes room for the stroke; grow upwards so the start of the body does not move with the stroke.
         paint_offset_y=float(paint_dy) - stroke_pad,
         scale_x=float(scale_x),
     )
@@ -1199,7 +1199,7 @@ def _build_tcy_plan(
         if forced_advance is None
         else _scale_advance(forced_advance, letter_spacing)
     )
-    # 强制推进时按正文高度居中，描边与特效的外扩不参与槽位补偿。
+    # With a forced advance, centre by the body height; the growth from stroke and effects takes no part in the slot compensation.
     slot_offset_y = (float(advance_main) - geometry.spacing_height) / 2.0
     return TcyPlan(
         source=span,
@@ -1251,7 +1251,7 @@ def _build_vertical_char_plan(
             base,
             span.style.transform.rotation,
         )
-        # 槽位上下均分伸缩量，保持旋转墨迹以原槽位中心为锚点。
+        # Share the stretch equally above and below the slot, so the rotated ink stays anchored on the centre of the original slot.
         off_y += (float(advance_y) - float(base.advance_y)) / 2.0
     return VerticalCharPlan(
         span=span,
@@ -1285,8 +1285,8 @@ def _rich_vertical_tcy_layer_x(
 def _rich_vertical_char_layer_x(
     body_left: float, thickness: float, item: VerticalCharPlan
 ) -> float:
-    # 自由旋转字符按墨迹居中（对齐 BallonsTranslator）：旋转绕图层中心，
-    # advance box 居中会把标点的 side bearing 偏心带进横向，墨迹居中不会。
+    # Freely rotated characters are centred by ink (in line with BallonsTranslator): rotation is about the layer centre;
+    # centring by advance box would bring the off-centre side bearing of punctuation into the horizontal position, centring by ink does not.
     char_x = _vertical_char_bitmap_x(
         body_left,
         thickness,
@@ -1403,8 +1403,8 @@ def _build_rich_vertical_layout(
             )
             span_ruby_extra = _rich_vertical_ruby_space(font_size) if span.ruby else 0
             ruby_extra = max(ruby_extra, span_ruby_extra)
-            # 字体作用域提升到 span 层，避免带 fontFamily 的 span 逐字符
-            # 反复 set_font（每次都会清空测量/竖排缓存导致缓存永不命中）
+            # The font scope is raised to the span level, so a span with fontFamily does not call
+            # set_font for every character (each call clears the measuring and vertical caches, so they would never hit)
             span_shear = _style_italic_shear(span.style)
             with _style_font_scope(span.style):
                 for char in span.text:
@@ -1478,10 +1478,10 @@ def _build_rich_vertical_layout(
                 group_end += 1
             group_items = laid[item_index:group_end]
             if span.style.underline:
-                # 下划线沿列方向铺满本 span 的槽位区间（纵中横块按块高计入），
-                # 与着重号同侧（列右）以复用 annotation_cross_extent 的列间避让。
-                # 它是列级装饰：单字的 transform.rotation 不作用在它上面，
-                # 竖排里被旋转 90° 的括号旁边线仍然是上下方向的一条。
+                # The underline runs along the column for the slot interval of this span (a tate-chu-yoko block counts by its block height),
+                # on the same side as the emphasis marks (right of the column), to reuse the column spacing of annotation_cross_extent.
+                # It is a column-level decoration: the transform.rotation of a single character does not apply to it,
+                # so in vertical text the line beside a bracket rotated 90 degrees still runs top to bottom.
                 intervals = [
                     interval
                     for interval in (
@@ -1775,7 +1775,7 @@ def _vertical_base(
         return _cache_put(state.vertical, key, base, _VERTICAL_CACHE_MAX)
 
     rotated = rot == 90
-    # 斜体、竖排自动旋转和拉伸都在轮廓阶段完成，仅光栅化一次。
+    # Italics, automatic rotation in vertical text and stretching are all done at the outline stage; rasterisation happens once.
     glyph = _glyph_raster(
         translated,
         font_size,
@@ -1817,7 +1817,7 @@ def _vertical_base(
     if not rotated:
         frame_width = max(frame_width, int(glyph.advance_x))
 
-    # 强制推进只保留真实墨迹居中；墨迹可溢出槽位，但不会反向放大推进量。
+    # A forced advance only keeps the real ink centred; ink may overflow the slot, but never enlarges the advance in return.
     center_gap = (advance_y - ink_h) / 2.0
     y = (center_gap if forced else max(0.0, center_gap)) - ink_y
 
@@ -1879,8 +1879,8 @@ def _vertical_char_bitmap_x(
     ink_x = base.ink_x
     translated = base.translated
     if ink_center or translated in _VERTICAL_PUNCT_UP:
-        # 竖排标点的 advance/side bearing 常按横排标点设计，不能用于列内居中。
-        # 它们仍按实际标点墨迹居中；正文直立字继续使用 advance box。
+        # The advance and side bearing of vertical punctuation are often designed for horizontal text and cannot be used for centring in a column.
+        # They are still centred by the actual punctuation ink; upright body characters keep using the advance box.
         x = frame_left + (frame_width - ink_w) / 2.0 - ink_x
     elif base.rot_degree == 0:
         advance_x = max(float(base.advance_x), 1.0)

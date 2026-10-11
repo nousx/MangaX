@@ -111,7 +111,7 @@ def prepare_text_replacements_for_layout(
             continue
 
         render_horizontally = resolve_render_horizontal(region)
-        # TextBlock.translation property 恒返 str
+        # The TextBlock.translation property always returns str
         raw_text = region.translation
         raw_text = _strip_linebreak_edge_punctuation_if_enabled(raw_text, config)
         direction = 0 if render_horizontally else 1
@@ -140,7 +140,7 @@ def sync_translation_raw_from_layout(
     for region in text_regions:
         record = getattr(region, '_replacement_layout_record', None)
         if record is not None:
-            # TextBlock.translation property 恒返 str
+            # The TextBlock.translation property always returns str
             raw_after_layout = project_layout_changes_to_raw(record, region.translation)
             region.translation = _strip_linebreak_edge_punctuation_if_enabled(region.translation, config)
             region.translation_raw = _strip_linebreak_edge_punctuation_if_enabled(
@@ -154,13 +154,13 @@ def sync_translation_raw_from_layout(
                 pass
 
         if not skip_text_replacements:
-            # 富文本规则读取的是替换及断句完成后的 translation。规则引擎会把
-            # [BR]/【BR】/<br>/换行转换为 paragraph 边界，标记本身不会进入样式 run。
+            # The rich-text rules read the translation after replacement and line breaking are done. The rule engine turns
+            # [BR]/【BR】/<br>/line breaks into paragraph boundaries; the markers themselves do not enter a style run.
             from .rich_text_rules import apply_rich_text_rules_to_region
 
             apply_rich_text_rules_to_region(region)
 
-        # 即使终稿通过 skip_text_replacements 跳过自动富文本规则，传统 BR
-        # 仍要转换成 paragraph，保证纯文本多行内容沿用统一结构化渲染路径。
+        # Even when a final text skips the automatic rich-text rules through skip_text_replacements, a traditional BR
+        # still has to become a paragraph, so plain multi-line text follows the same structured rendering path.
         if hasattr(region, 'ensure_translation_rich_from_legacy_breaks'):
             region.ensure_translation_rich_from_legacy_breaks()

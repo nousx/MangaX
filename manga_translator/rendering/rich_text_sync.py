@@ -47,7 +47,7 @@ def _text_of(entries: Sequence[_RuleEntry]) -> str:
 
 
 def _copy_entries(entries: Sequence[_RuleEntry]) -> List[_RuleEntry]:
-    # node 保持同一对象引用:重建文档时按 identity 分组,深拷贝会拆散节点。
+    # node keeps the same object reference: rebuilding the document groups by identity, and a deep copy would break the nodes apart.
     return [
         _RuleEntry(entry.char, copy.deepcopy(entry.style), node=entry.node)
         for entry in entries
@@ -72,9 +72,9 @@ def _apply_edit_ops(entries: List[_RuleEntry], ops: Sequence[Any]) -> List[_Rule
             raise ValueError(
                 f"edit op out of range: pos={position} removed={removed} len={len(entries)}"
             )
-        # Qt 怪癖:改动涉及文档末尾时 contentsChange 会把末尾段落分隔符
-        # 计入 charsRemoved(全选替换 6 字符报 removed=7),这里钳到实际长度;
-        # 钳错了也会被调用方的 post_text 校验兜住。
+        # Qt quirk: when a change reaches the end of the document, contentsChange counts the final paragraph separator
+        # in charsRemoved (replacing all 6 characters reports removed=7); it is clamped to the real length here,
+        # and a wrong clamp is still caught by the caller's post_text check.
         removed = min(removed, len(entries) - position)
         del entries[position : position + removed]
 
@@ -89,7 +89,7 @@ def _apply_edit_ops(entries: List[_RuleEntry], ops: Sequence[Any]) -> List[_Rule
             and prev_entry.style == next_entry.style
         ):
             inherited_style = prev_entry.style
-        # 节点归属独立判断:夹在同一节点内部必须并入,否则节点会被切成两份。
+        # Node membership is decided separately: text inside one node must be merged into it, otherwise the node is cut in two.
         inherited_node = None
         if (
             prev_entry is not None
@@ -195,7 +195,7 @@ def _map_styles_to_raw(
         if i in style_by_src:
             last_style = style_by_src[i]
             last_node = node_by_src[i]
-        # 未映射到的字符(被替换段的非首字符)沿用段首样式(向左继承)。
+        # Characters without a mapping (the non-first characters of a replaced span) take the style of the span start (inherited from the left).
         result.append(_RuleEntry(char, copy.deepcopy(last_style), node=last_node))
     return result
 

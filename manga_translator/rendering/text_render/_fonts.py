@@ -136,9 +136,9 @@ def _resolve_existing_font_path(path: str) -> str:
     return next((candidate for candidate in candidates if candidate and os.path.exists(candidate)), '')
 
 
-# Qt 把 "Family [Foundry]" 中方括号段当厂商名解析（qfontdatabase 的 parseFontName）；
-# 家族名以 "[" 开头时会被拆成「空家族 + 厂商」，匹配退化成该厂商下任选，
-# 结果与请求的字体无关（例如 [工具箱] 系列全部命中同一个文件）。
+# Qt parses the bracketed part of "Family [Foundry]" as the foundry name (parseFontName in qfontdatabase);
+# a family name that starts with "[" is split into "empty family + foundry", and matching degrades to any font of that foundry,
+# unrelated to the font that was asked for (for example, a whole series whose names start with a bracketed tag hits the same file).
 _QT_FOUNDRY_SENSITIVE_NAME_IDS = (1, 3, 4, 16, 21)
 
 
@@ -223,13 +223,13 @@ def _sanitized_font_bytes(path: str):
                     changed = True
             if not changed:
                 return None, []
-            # 缺英文首选家族名(nameID 16)时补一条：offscreen 的 freetype 字体库
-            # 选名优先 nameID 16，缺英文记录会挑中文名并转成乱码。
+            # Add an English preferred family name (nameID 16) when it is missing: the freetype font database of the offscreen platform
+            # prefers nameID 16 when choosing a name, and without an English record it picks the Chinese name and turns it into garbage.
             en_family = name_table.getName(1, 3, 1, 0x409)
             if en_family is not None and name_table.getName(16, 3, 1, 0x409) is None:
                 name_table.setName(en_family.toUnicode(), 16, 3, 1, 0x409)
             if 'DSIG' in font:
-                del font['DSIG']  # 名字表改动后原签名必然失效
+                del font['DSIG']  # After the name table changes, the original signature is bound to be invalid
             buffer = io.BytesIO()
             font.save(buffer)
             return buffer.getvalue(), original_names
@@ -274,8 +274,8 @@ def register_font_file(path: str) -> list:
                 QFontDatabase.removeApplicationFont(font_id)
                 font_id = QFontDatabase.addApplicationFontFromData(sanitized)
                 families = list(QFontDatabase.applicationFontFamilies(font_id)) if font_id >= 0 else []
-                # 旧配置/富文本样式里可能仍存着原始名字（含中文变体），
-                # 记下「原名/去括号名 -> 文件」映射供 set_font 兜底。
+                # Old configurations and rich-text styles may still store the original name (with its Chinese variant);
+                # record an "original name / name without brackets -> file" mapping as a fallback for set_font.
                 logger.info(
                     'Registered bracketed font with sanitized families: %s -> %s',
                     os.path.basename(path), families,
@@ -321,7 +321,7 @@ def _system_font_dirs() -> list:
         dirs = [os.path.join(os.environ.get('WINDIR', r'C:\Windows'), 'Fonts')]
         local_appdata = os.environ.get('LOCALAPPDATA')
         if local_appdata:
-            # 当前 Windows 默认把用户安装的字体放这里
+            # Windows now puts fonts installed by the user here by default
             dirs.append(os.path.join(local_appdata, 'Microsoft', 'Windows', 'Fonts'))
     elif sys.platform == 'darwin':
         dirs = ['/System/Library/Fonts', '/Library/Fonts', os.path.expanduser('~/Library/Fonts')]
@@ -380,14 +380,14 @@ def _raw_font(path: str, pixel_size: float) -> QRawFont:
     font = _cache_get(state.raw_fonts, key)
     if font is not None:
         return font
-    # 复用已有实例：找同路径任意 size 的 font，拷贝后 setPixelSize
+    # Reuse an existing instance: find a font of any size with the same path, copy it, then setPixelSize
     for cached_key in reversed(state.raw_fonts):
         if cached_key[0] == norm_path:
             base = state.raw_fonts[cached_key]
             font = QRawFont(base)
             font.setPixelSize(pixel_size)
             return _cache_put(state.raw_fonts, key, font, _RAW_FONT_CACHE_MAX)
-    # 首次加载：从文件创建
+    # First load: create from the file
     font = QRawFont(norm_path, pixel_size)
     if not font.isValid():
         raise RuntimeError(f'Could not load Qt font: {norm_path}')
@@ -413,8 +413,8 @@ def _font_descriptor(path: str) -> LayoutFontDescriptor:
         note_ignored_error(ignored_error, "manga_translator/rendering/text_render/_fonts.py:_font_descriptor")
         pass
 
-    # 文件里读出的家族名带方括号时不能直接交给 QFont 匹配（foundry 语法），
-    # 换用注册环节返回的净化名。
+    # A family name with square brackets read from the file cannot be handed to QFont matching as it is (foundry syntax);
+    # use the cleaned name returned when it was registered instead.
     if (not family or qt_family_is_ambiguous(family)) and registered_families:
         family = registered_families[0]
 
@@ -442,8 +442,8 @@ def _set_family(state: FontState, family: str, style: str = ''):
     state.font_family = family
     state.font_style = style
     state.qfonts.clear()
-    # glyph_specs/glyphs 的 key 含字体家族，切换字体时无需清空，
-    # 保留缓存避免重复解析大字体文件的字形数据
+    # The keys of glyph_specs/glyphs include the font family, so nothing needs clearing when the font changes;
+    # the cache is kept to avoid parsing the glyph data of large font files again
     state.measures.clear()
     state.vertical.clear()
 
@@ -455,13 +455,13 @@ def _match_family(requested: str):
     available = {name.casefold(): name for name in QFontDatabase.families()}
     family = available.get(requested.casefold())
     if family is None or qt_family_is_ambiguous(family):
-        # 旧配置/系统安装的 "[工具箱]xxx" 家族名走不了 QFont 匹配（foundry 语法），
-        # 映射到注册环节生成的去括号名字。
+        # A family name with a bracketed prefix, from an old configuration or a system install, cannot go through QFont matching (foundry syntax);
+        # map it to the bracket-free name created when it was registered.
         stripped = strip_qt_foundry_brackets(requested)
         stripped_family = available.get(stripped.casefold()) if stripped else None
         if stripped_family and not qt_family_is_ambiguous(stripped_family):
             return stripped_family
-        # offscreen 等环境的字体库可能拿不到中文家族名，退回按文件注册并改用其家族名
+        # The font database of offscreen and similar environments may not provide the Chinese family name; fall back to registering the file and using its family name
         alias_path = _font_family_aliases.get(requested.casefold()) or (
             _font_family_aliases.get(stripped.casefold()) if stripped else None)
         if alias_path and os.path.exists(alias_path):
@@ -497,8 +497,8 @@ def set_font(font: str):
     if family is not None and qt_family_is_ambiguous(family):
         logger.warning('Bracketed font family may not match correctly in Qt: %s', family)
     if family is None:
-        # 无头下 QGuiApplication.font() 是逻辑字体 "Sans Serif"，匹配结果随机，
-        # 直接回退到自带字体目录里保证存在的默认家族。
+        # Headless, QGuiApplication.font() is the logical font "Sans Serif", whose match is arbitrary;
+        # fall back directly to a default family that is certain to exist in the bundled fonts folder.
         family = DEFAULT_FONT_FAMILY
         if requested:
             logger.warning('Qt font family not found: %s; using %s', requested, family)

@@ -29,7 +29,7 @@ def add_color(bw_char_map, color, stroke_char_map, stroke_color):
     out = np.zeros((H, W, 4), dtype=np.uint8)
     color_arr = np.asarray(color, dtype=np.float32).reshape(1, 1, 3)
 
-    # 无描边：直接输出文字图层
+    # No stroke: output the text layer directly
     if stroke_color is None or stroke_char_map is None:
         out[:, :, :3] = np.clip(color_arr, 0, 255).astype(np.uint8)
         out[:, :, 3] = bw_char_map
@@ -37,11 +37,11 @@ def add_color(bw_char_map, color, stroke_char_map, stroke_color):
 
     stroke_color_arr = np.asarray(stroke_color, dtype=np.float32).reshape(1, 1, 3)
 
-    # 1) 强制 stroke_alpha >= text_alpha —— 描边层全零时输出退化为纯文字
+    # 1) Force stroke_alpha >= text_alpha - when the stroke layer is all zero, the output reduces to the text alone
     text_alpha_u8 = bw_char_map
     stroke_alpha_u8 = np.maximum(stroke_char_map, text_alpha_u8)
 
-    # 2) 文字在描边纯色底上混合（局部不透明，无半透明层叠加）
+    # 2) The text is blended onto the solid stroke colour (locally opaque, no stacking of semi-transparent layers)
     text_af = (text_alpha_u8.astype(np.float32) / 255.0)[:, :, None]
     rgb = color_arr * text_af + stroke_color_arr * (1.0 - text_af)
 
@@ -174,8 +174,8 @@ def _paste_rgba(dst: np.ndarray, src: np.ndarray, x: int, y: int):
     src_view = src[by1 : by1 + (sy2 - sy1), bx1 : bx1 + (sx2 - sx1)]
     dst_view = dst[sy1:sy2, sx1:sx2]
     if not dst_view[:, :, 3].any():
-        # F26 快路径：目标区域完全透明（竖排逐字符粘贴的常见情形），
-        # alpha-over 退化为直接覆盖，跳过全量浮点混合
+        # F26 fast path: the target area is fully transparent (the usual case when pasting vertical text character by character),
+        # so alpha-over reduces to a plain overwrite and the full floating-point blend is skipped
         dst_view[:] = src_view
         return
     src_crop = src_view.astype(np.float32)
@@ -440,7 +440,7 @@ def _paste_bitmap(
     bitmap = bitmap_arr[by1 : by1 + (sy2 - sy1), bx1 : bx1 + (sx2 - sx1)]
     target = canvas[sy1:sy2, sx1:sx2]
     if mode == "add":
-        # 使用 cv2.add 避免 numpy uint8 加法溢出导致的脏斑点
+        # Use cv2.add to avoid the specks caused by numpy uint8 addition overflow
         cv2.add(target, bitmap, dst=target)
     else:
         np.maximum(target, bitmap, out=target)

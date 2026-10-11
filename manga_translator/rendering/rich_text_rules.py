@@ -100,7 +100,7 @@ def _compile_rule(rule: dict) -> Optional[dict]:
     except (TypeError, ValueError, re.error) as exc:
         logger.warning("Failed to compile rich text rule: pattern=%r error=%s", pattern, exc)
         return None
-    # ``ruby: null``（YAML 空值）等价于没有注音，而不是整条规则非法。
+    # ``ruby: null`` (a YAML null) means no ruby; it does not make the whole rule invalid.
     ruby = rule.get("ruby") or ""
     if not isinstance(ruby, str):
         logger.warning("Failed to compile rich text rule: pattern=%r; ruby must be a string", pattern)
@@ -512,9 +512,9 @@ def apply_rich_text_rules(
                         entry.node = node
                     changed = True
                 elif styled_match_policy == "skip":
-                    # 手工痕迹检查已保证区间内只有本规则的残留节点；若尚未被
-                    # 单个节点完整覆盖（部分删除后的残余、相邻两个同注音节点），
-                    # 整体重包补齐，已完整覆盖则维持原节点不动。
+                    # The check for manual traces has made sure the interval only holds leftover nodes of this rule; when it is not yet
+                    # fully covered by a single node (a remainder after partial deletion, or two adjacent nodes with the same ruby),
+                    # it is wrapped again as a whole; when it is fully covered, the node is left as it is.
                     first_node = target[0].node
                     if first_node is None or any(
                         entry.node is not first_node for entry in target

@@ -15,18 +15,18 @@ class RichTextRenderPolicy:
     decoration_gap: float = 0.08
     emphasis_radius: float = 0.055
     vertical_emphasis_offset: float = 0.20
-    # 下划线：线宽与偏移都是基准字号的比例（与描边 stroke_ratio 同口径）。
-    # underline_offset 是横排基线到线条上沿的距离；vertical_underline_offset
-    # 是竖排列正文边缘到线条中心的距离（与 vertical_emphasis_offset 同口径，
-    # 取值小于它，使下划线落在正文与着重号之间而不重叠）。
+    # Underline: thickness and offset are both ratios of the base font size (the same convention as the stroke's stroke_ratio).
+    # underline_offset is the distance from the horizontal baseline to the top edge of the line; vertical_underline_offset
+    # is the distance from the body edge of a vertical column to the centre of the line (the same convention as vertical_emphasis_offset,
+    # with a smaller value, so the underline falls between the body and the emphasis marks without overlapping).
     underline_thickness: float = 0.06
     underline_offset: float = 0.14
     vertical_underline_offset: float = 0.10
-    # 横排删除线中心相对基线的位置；线宽复用 underline_thickness。
+    # Position of the centre of a horizontal strikethrough relative to the baseline; the thickness reuses underline_thickness.
     strikethrough_offset: float = -0.30
     ruby_overflow_ratio: float = 1.20
-    # 纵中横块允许的最大墨迹宽度（基准字号倍数），超出按比例整组水平压缩。
-    # 与参考实现（mtu-json-gui）一致：留 1.1 倍余量，防止全角数字挤压过度。
+    # Maximum ink width allowed for a tate-chu-yoko block (in multiples of the base font size); beyond it the whole group is compressed horizontally in proportion.
+    # As in the reference implementation (mtu-json-gui): a margin of 1.1 is left, so full-width digits are not squeezed too much.
     tcy_max_width: float = 1.10
 
 

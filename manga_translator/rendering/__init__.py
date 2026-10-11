@@ -14,7 +14,7 @@ from tqdm import tqdm
 
 from ..config import Config, Renderer
 
-# 只使用 Qt 离屏渲染器
+# Only the Qt off-screen renderer is used
 from ..utils import (
     TextBlock,
     build_region_reference_mask as _build_region_reference_mask,
@@ -52,7 +52,7 @@ from manga_translator.utils.swallowed import note_ignored_error
 
 logger = get_logger('render')
 
-# 基准字体大小，用于模拟文本块
+# Base font size, used to simulate text blocks
 BASE_FONT_SIZE = 100
 
 
@@ -103,7 +103,7 @@ def _estimate_effect_padding(
     if stroke_ratio <= 0.0:
         return 0.0
 
-    # 与 text_render.py 中 bg_size 计算保持一致
+    # Kept in line with the bg_size calculation in text_render.py
     return float(max(int(font_size * stroke_ratio), 1))
 
 
@@ -114,12 +114,12 @@ def _has_explicit_line_breaks(text: str) -> bool:
 
 
 def _rich_text_has_content(value) -> bool:
-    # F12：薄委托 rich_text.has_content（本层语义：仅富文本文档参与判断）
+    # F12: thin wrapper around rich_text.has_content (at this layer only rich-text documents are considered)
     return is_rich_text_document(value) and rich_text_has_content(value)
 
 
 def _translation_preview(value, limit: int = 80) -> str:
-    # F12：薄委托 rich_text.plain_text_of（任意译文值 → 纯文本）
+    # F12: thin wrapper around rich_text.plain_text_of (any translation value -> plain text)
     return plain_text_of(value)[:limit]
 
 
@@ -142,12 +142,12 @@ def _should_apply_default_english_line_break_method(region: TextBlock, config: C
         return False
     if not isinstance(getattr(region, 'translation', ''), str):
         return False
-    # 开关开启时，对所有语言生效（强制横排+气泡排版）
+    # With the switch on, it applies to every language (forced horizontal + bubble layout)
     render_cfg = getattr(config, 'render', None) if config is not None else None
     bubble_layout = bool(getattr(render_cfg, 'bubble_layout_english', False)) if render_cfg is not None else False
     if bubble_layout:
         return not _has_explicit_line_breaks(getattr(region, 'translation', ''))
-    # 默认行为：仅对英文横排生效
+    # Default behaviour: only for horizontal English text
     return (
         str(getattr(region, 'target_lang', '') or '').upper() == 'ENG'
         and _resolve_region_render_horizontal(region)
@@ -192,11 +192,11 @@ def _apply_default_english_line_break_method(
     if not _should_apply_default_english_line_break_method(region, config):
         return False
 
-    # 开关开启时，强制横排
+    # With the switch on, force horizontal text
     render_cfg = getattr(config, 'render', None) if config is not None else None
     bubble_layout = bool(getattr(render_cfg, 'bubble_layout_english', False)) if render_cfg is not None else False
     if bubble_layout:
-        # 强制设置为横排
+        # Force it to horizontal
         region._direction = 'h'
 
     applied = apply_manga2eng_line_breaks(
@@ -277,7 +277,7 @@ def calc_font_from_box(width: float, height: float, text: str, is_horizontal: bo
     if is_rich_text_document(text):
         if not _rich_text_has_content(text):
             return 1
-        # F24：解析一次向下传实例，二分迭代内不再重复解析 dict
+        # F24: parse once and pass the instance down, so the dict is not parsed again inside the bisection
         text = ensure_rich_text_document(text)
     else:
         text = (text or '').strip()
@@ -418,13 +418,13 @@ def calc_box_from_font(font_size: int, text: str, is_horizontal: bool,
             return None, None
         return 0, 0, 0, (0.0, 0.0)
 
-    # 直接按目标字号测量，不再做基准字号线性缩放
+    # Measure at the target font size directly, instead of scaling linearly from the base size
     req_width = math.ceil(base_w)
     req_height = math.ceil(base_h)
     body_x = float(body_x)
     body_y = float(body_y)
 
-    # 横排的描边/富文本效果已经进入真实墨迹计划；竖排仍沿用外围 padding。
+    # For horizontal text the stroke and rich-text effects are part of the real ink plan; vertical text still uses the outer padding.
     effect_padding = 0.0 if is_horizontal else _estimate_effect_padding(
         font_size,
         config,
@@ -437,28 +437,28 @@ def calc_box_from_font(font_size: int, text: str, is_horizontal: bool,
         body_x += pad_total / 2.0
         body_y += pad_total / 2.0
 
-    # 如果没有提供中心点，返回尺寸和正文中心（框内坐标）
+    # Without a centre point, return the size and the body centre (coordinates inside the box)
     if center is None:
         return req_width, req_height, n_lines, (body_x, body_y)
 
-    # 提供了中心点，构建 dst_points
+    # With a centre point, build dst_points
     cx, cy = center
     half_w = req_width / 2
     half_h = req_height / 2
 
-    # 未旋转的矩形四个角点
+    # The four corners of the unrotated rectangle
     unrotated_points = np.array([
         [cx - half_w, cy - half_h],
         [cx + half_w, cy - half_h],
         [cx + half_w, cy + half_h],
         [cx - half_w, cy + half_h]
     ], dtype=np.float32)
-    # 正文中心（未旋转世界坐标）：框左上角 + 框内坐标
+    # Body centre (unrotated world coordinates): top-left corner of the box + coordinates inside the box
     unrotated_body = np.array([
         [cx - half_w + body_x, cy - half_h + body_y],
     ] * 4, dtype=np.float32)
 
-    # 应用旋转（正文点走与角点完全相同的变换，保证坐标约定一致）
+    # Apply the rotation (the body point goes through exactly the same transform as the corners, so the conventions agree)
     if angle != 0:
         dst_points = rotate_polygons(
             center, unrotated_points.reshape(1, -1),
@@ -759,7 +759,7 @@ def optimize_line_breaks_for_region(region: TextBlock, config: Config, target_fo
         # Convert [BR] to \n for calculation
         text_for_calc = re.sub(r'\s*\[BR\]\s*', '\n', text_variant, flags=re.IGNORECASE)
         
-        # 严格智能缩放模式：如果去掉所有断句（无\n），会导致文本框扩大，淘汰此方案
+        # Strict smart scaling: if removing every line break (no \n) makes the text box grow, this option is rejected
         strict_smart_scaling = getattr(config.render, 'strict_smart_scaling', False) if config and hasattr(config, 'render') else False
         if layout_mode == 'smart_scaling' and strict_smart_scaling:
             if '\n' not in text_for_calc:
@@ -834,12 +834,12 @@ def optimize_line_breaks_for_region(region: TextBlock, config: Config, target_fo
             continue
     
     # Compare and log optimization results
-    # 使用统一的正则匹配所有BR变体进行统计
+    # Count with one regular expression that matches every BR variant
     br_pattern = r'(\[BR\]|【BR】|<br>)'
     original_br_count = len(re.findall(br_pattern, original_translation, flags=re.IGNORECASE))
     optimized_br_count = len(re.findall(br_pattern, best_text, flags=re.IGNORECASE))
     
-    # 只有当BR数量真的改变时才应用优化
+    # Apply the optimisation only when the number of BRs really changed
     if optimized_br_count != original_br_count:
         br_change = optimized_br_count - original_br_count
         if br_change > 0:
@@ -854,7 +854,7 @@ def optimize_line_breaks_for_region(region: TextBlock, config: Config, target_fo
         return best_text, best_font_size
     else:
         logger.debug(f"[AI Line Break Font Scaling] No optimization applied: the original line breaks are optimal; font size {best_font_size:.1f}px")
-        # 即使数量相同，也返回标准化后的文本（全角变半角）
+        # Even with the same count, return the normalised text (full-width to half-width)
         return best_text, best_font_size
 
 def _resolve_region_render_horizontal(region: TextBlock) -> bool:
@@ -1172,8 +1172,8 @@ def _resolve_region_layout_center(
         letter_spacing=letter_spacing_multiplier,
         stroke_width=_resolve_region_stroke_width(region, config),
     )
-    # 上对齐用正文本体高度（正文中心到底边的两倍），把框外注音/着重号排除，
-    # 这样正文顶边贴气泡顶边，而不是让注音顶边贴气泡。
+    # Top alignment uses the height of the body text (twice the distance from the body centre to the bottom edge), leaving out ruby and emphasis marks outside the box,
+    # so the top of the body meets the top of the bubble, rather than the top of the ruby.
     body_height = 2.0 * (req_h - body_y)
     return _compute_top_aligned_center(region, body_height)
 
@@ -1187,12 +1187,12 @@ def _calc_region_dst_points_for_font(
     config: Config,
     anchor_mode: str = 'top',
 ) -> Optional[np.ndarray]:
-    # F24：富文本渲染值在此解析一次；锚点计算与 dst 计算（以及掩码二分的
-    # 每一步）复用同一实例，不再重复解析 dict。
+    # F24: the rich-text render value is parsed once here; the anchor calculation and the dst calculation (and every
+    # step of the mask bisection) reuse the same instance, so the dict is not parsed again.
     render_value = _region_render_value(region)
     if is_rich_text_document(render_value):
         render_value = ensure_rich_text_document(render_value)
-    # anchor 是“正文中心”应落到的世界坐标（纯文本时正文中心即框中心）。
+    # anchor is the world coordinate where the "body centre" should land (for plain text the body centre is the box centre).
     anchor = _resolve_region_layout_center(
         region=region,
         font_size=font_size,
@@ -1217,11 +1217,11 @@ def _calc_region_dst_points_for_font(
     )
     if dst_points is None:
         return None
-    # calc_box_from_font 把“渲染框中心”放在 anchor。管线自算锚点（top/center）
-    # 的语义是“正文中心该在哪”：平移整框，使正文中心落在 anchor——纯文本
-    # body_world==anchor、delta=0，与旧行为完全一致；富文本则把注音/着重号
-    # 挤到框外，正文本体锚定不动。center_box（编辑器授权中心）保持渲染框
-    # 中心语义，不平移，与编辑器预览对齐。
+    # calc_box_from_font puts the "render box centre" at anchor. An anchor the pipeline computes itself (top/center)
+    # means "where the body centre should be": the whole box is shifted so the body centre lands on anchor - for plain text
+    # body_world == anchor and delta = 0, exactly as before; for rich text the ruby and emphasis marks
+    # are pushed outside the box while the body stays anchored. center_box (a centre authorised by the editor) keeps the render box
+    # centre meaning and is not shifted, so it lines up with the editor preview.
     if anchor_mode == 'center_box':
         return dst_points
     delta_x = float(anchor[0]) - float(body_world[0])
@@ -1392,8 +1392,8 @@ def _layout_region_with_fixed_font(
     fixed_font_size = region.font_size if region.font_size > 0 else round((img.shape[0] + img.shape[1]) / 200)
     logger.debug(f"[RESIZE] skip_font_scaling: region {region_idx} uses fixed font size {fixed_font_size}")
 
-    # 直接用固定字体大小计算文本框
-    # 需要考虑 direction 强制覆盖（和 render() 中的判断逻辑一致）
+    # Compute the text box directly from the fixed font size
+    # The forced direction override has to be taken into account (the same test as in render())
     actual_horizontal = _resolve_region_render_horizontal(region)
 
     line_spacing_multiplier = _resolve_line_spacing_multiplier(region, config)
@@ -1437,11 +1437,11 @@ def _layout_rich_text_region(
     render_horizontally,
 ):
     """Fit a rich-text region by shrinking its font; its line structure is never rearranged."""
-    # 富文本文档不可重排：不做断句优化/自动断行（会破坏结构化段落
-    # 与样式边界），但字号自适应必须生效——不再直接使用估算字号。
-    # 解析一次向下传实例，字号二分内不重复解析 dict。
+    # A rich-text document cannot be rearranged: no line-break optimisation or automatic wrapping (they would break the structured paragraphs
+    # and the style boundaries), but font size fitting must still apply - the estimated size is no longer used as it is.
+    # Parse once and pass the instance down, so the dict is not parsed again inside the font size bisection.
     rich_render_value = ensure_rich_text_document(_region_render_value(region))
-    # 1) 未旋转外接框内能容纳的最大字号，与估算字号取 min（只收缩）
+    # 1) The largest font size that fits the unrotated bounding box, min with the estimated size (shrink only)
     box_fit_font_size = calc_font_from_box(
         width=float(line_box_width),
         height=float(line_box_height),
@@ -1458,8 +1458,8 @@ def _layout_rich_text_region(
         layout_min_font_size,
     )
 
-    # 2) balloon_fill：继续用气泡蒙版收缩（_calc_region_dst_points_for_font
-    #    内部已支持富文本正文锚定）；区域不完全在蒙版内时保持框收缩结果
+    # 2) balloon_fill: shrink further with the bubble mask (_calc_region_dst_points_for_font
+    #    already anchors the body of rich text); when the region is not fully inside the mask, keep the box-fitted result
     if mode == 'balloon_fill' and original_img is not None:
         try:
             if (
@@ -1673,7 +1673,7 @@ def _layout_region_balloon_fill(
         search_bubble_height = 0
 
         if not lines_fully_enclosed:
-            # 气泡蒙版无效或区域未被气泡完整包裹：降级 strict 布局。
+            # The bubble mask is invalid or the region is not fully enclosed by a bubble: fall back to the strict layout.
             chosen_font_size = _resolve_balloon_fill_fallback_font_size(
                 region=region,
                 config=config,
@@ -1717,7 +1717,7 @@ def _layout_region_balloon_fill(
 
             preferred_font_size = int(max(layout_candidate_font_size, layout_min_font_size))
 
-            # 调试用途：记录“超出范围候选框”（较大字号候选但不满足蒙版约束）
+            # For debugging: record the "out of range candidate box" (a larger font size candidate that fails the mask constraint)
             preferred_fits = False
             preferred_dst_points = _calc_region_dst_points_for_font(
                 region=region,
@@ -2043,7 +2043,7 @@ def _layout_region_balloon_fill(
             if overflow_candidate_dst_points is not None:
                 overflow_poly = np.asarray(overflow_candidate_dst_points).reshape(-1, 2).astype(np.int32)
                 if overflow_poly.shape[0] >= 4:
-                    # BGR 橙色：表示候选框超出蒙版范围，最终被收缩/放弃
+                    # BGR orange: the candidate box goes beyond the mask and is shrunk or dropped in the end
                     cv2.polylines(debug_img, [overflow_poly], True, (0, 165, 255), 2)
                     cv2.putText(
                         debug_img,
@@ -2075,7 +2075,7 @@ def _layout_region_strict(
     render_horizontally,
 ):
     """strict: keep the text of a region inside its detected box."""
-    # 有 BR 与无 BR 同一规则：最终文本按 OCR 框适配的字号作布局上限。
+    # The same rule with and without BR: the final text uses the font size fitted to the OCR box as the layout limit.
     layout_font_size = _resolve_strict_layout_font_size(
         region=region,
         config=config,
@@ -2122,7 +2122,7 @@ def _layout_region_smart_scaling(
     target_font_size,
 ):
     """smart_scaling: let the box of a region grow when its text does not fit."""
-    # 添加诊断日志
+    # Diagnostic logging
     logger.debug(f"[SMART_SCALING] Region {region_idx}: mode={mode}, has_br={has_br}")
 
     try:
@@ -2152,7 +2152,7 @@ def _layout_region_smart_scaling(
         dst_points = region.min_rect
 
         if width_overflow > 0 or height_overflow > 0:
-            # 独立缩放宽度和高度（单列/单行和多列/多行都使用相同逻辑）
+            # Scale width and height independently (the same logic for a single column/line and for several)
             width_scale_factor = 1.0
             height_scale_factor = 1.0
 
@@ -2175,7 +2175,7 @@ def _layout_region_smart_scaling(
             except Exception as e:
                 logger.warning(f"Failed to apply independent scaling: {e}")
 
-            # 字体缩放基于最大的溢出维度
+            # Font scaling is based on the dimension that overflows the most
             scale_needed = max(required_width / bubble_width if bubble_width > 0 else 1.0,
                              required_height / bubble_height if bubble_height > 0 else 1.0)
             diff_ratio = scale_needed - 1.0
@@ -2183,7 +2183,7 @@ def _layout_region_smart_scaling(
             font_scale_factor = 1 - min(font_shrink_ratio, 0.5)
             target_font_size = int(target_font_size * font_scale_factor)
 
-            # 用取整后的字体重新算required
+            # Recompute required with the rounded font size
             if render_horizontally:
                 final_total_width = text_render.get_string_width(
                     target_font_size,
@@ -2210,7 +2210,7 @@ def _layout_region_smart_scaling(
                     stroke_width=_resolve_region_stroke_width(region, config),
                 )
 
-            # 用新的required重新计算框扩大
+            # Recompute the box growth with the new required
             width_scale_factor = required_width / bubble_width if bubble_width > 0 and required_width > bubble_width else 1.0
             height_scale_factor = required_height / bubble_height if bubble_height > 0 and required_height > bubble_height else 1.0
 
@@ -2242,7 +2242,7 @@ def _layout_region_smart_scaling(
 
     final_font_size = target_font_size
 
-    # 用辅助函数直接计算 dst_points（包含矩形构建和旋转）
+    # Compute dst_points directly with the helper (it builds the rectangle and rotates it)
     line_spacing_multiplier = _resolve_line_spacing_multiplier(region, config)
     letter_spacing_multiplier = _resolve_letter_spacing_multiplier(region, config)
     dst_points = _calc_region_dst_points_for_font(
@@ -2255,7 +2255,7 @@ def _layout_region_smart_scaling(
         anchor_mode=normal_anchor_mode,
     )
 
-    # 如果计算失败，使用原始检测框
+    # When the calculation fails, use the original detected box
     if dst_points is None:
         dst_points = region.min_rect
 
@@ -2294,15 +2294,15 @@ def _layout_regions_to_font_size(
     # Prepare debug image for balloon_fill mode (only when requested)
     debug_img = None
     if mode == 'balloon_fill' and original_img is not None and return_debug_img:
-        # OpenCV 绘制 API 使用 BGR 颜色；调试图统一转为 BGR，避免颜色对不上
+        # OpenCV drawing APIs use BGR colours; the debug image is converted to BGR so the colours match
         debug_img = cv2.cvtColor(original_img, cv2.COLOR_RGB2BGR)
         logger.debug("Created debug image for balloon_fill visualization")
 
     balloon_fill_mask = None
     balloon_fill_label_map = None
     balloon_fill_label_count = None
-    # skip_font_scaling（编辑器授权布局）恒用 center_box 锚点，气泡蒙版不参与摆放；
-    # 仅 verbose 调试图仍需要蒙版做可视化
+    # With skip_font_scaling (a layout authorised by the editor) the center_box anchor is always used and the bubble mask takes no part in placement;
+    # only the verbose debug image still needs the mask, for visualisation
     if mode == 'balloon_fill' and original_img is not None and (not skip_font_scaling or return_debug_img):
         try:
             if bubble_mask is None:
@@ -2322,12 +2322,12 @@ def _layout_regions_to_font_size(
                         connectivity=8,
                     )
                     if debug_img is not None:
-                        # 在调试图上渲染“蓝色蒙版区域”（半透明填充）+ 蓝色边界，提升可见性
+                        # Draw the "blue mask area" (semi-transparent fill) and a blue outline on the debug image, to make it easier to see
                         mask_u8 = np.where(balloon_fill_mask > 0, 255, 0).astype(np.uint8)
                         mask_pixels_idx = mask_u8 > 0
                         if np.any(mask_pixels_idx):
                             overlay = debug_img.copy()
-                            overlay[mask_pixels_idx] = (255, 0, 0)  # BGR 蓝色
+                            overlay[mask_pixels_idx] = (255, 0, 0)  # BGR blue
                             cv2.addWeighted(overlay, 0.22, debug_img, 0.78, 0, dst=debug_img)
 
                         contours, _ = cv2.findContours(mask_u8, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
@@ -2340,7 +2340,7 @@ def _layout_regions_to_font_size(
             balloon_fill_label_count = None
 
     # Bubble mask for center_text_in_bubble: reuse the mask passed from the image context.
-    # （skip_font_scaling 时锚点固定为 center_box，气泡居中不生效，不做无谓的蒙版构建）
+    # (with skip_font_scaling the anchor is fixed to center_box and centring in the bubble does not apply, so the mask is not built for nothing)
     center_check_mask = balloon_fill_mask
     center_check_label_map = balloon_fill_label_map
     center_check_label_count = balloon_fill_label_count
@@ -2378,13 +2378,13 @@ def _layout_regions_to_font_size(
                 config._current_region = region
                 config._semantic_linebreak_current_region_idx = region_idx
 
-            # 区域字体统一在布局测量前应用；后续候选字号、缩放和最终 dst_points 都用同一字体。
+            # The region font is applied before any layout measurement; later candidate sizes, scaling and the final dst_points all use the same font.
             if region_font_family:
                 text_render.set_font(region_font_family)
             else:
                 text_render.set_font(text_render.DEFAULT_FONT_FAMILY)
 
-            # 如果 translation 为空,直接返回 min_rect,避免触发复杂的布局计算
+            # When translation is empty, return min_rect directly and avoid the complex layout calculation
             render_value = _region_render_value(region)
             if (
                 not render_value
@@ -2403,7 +2403,7 @@ def _layout_regions_to_font_size(
                 skip_text_replacements=skip_text_replacements,
             )
 
-            # 判断是否需要气泡内居中：开启设置 且 区域确实在检测到的气泡内
+            # Whether to centre in the bubble: the setting is on and the region really is inside a detected bubble
             apply_bubble_centering = config.render.center_text_in_bubble
             if apply_bubble_centering and center_check_mask is not None and np.count_nonzero(center_check_mask) > 0:
                 _rm = _build_region_reference_mask(
@@ -2420,8 +2420,8 @@ def _layout_regions_to_font_size(
             )
             anchor_modes[region_idx] = normal_anchor_mode
 
-            # skip_font_scaling模式：使用region.font_size作为最终字体，完全跳过排版缩放
-            # 编辑器导出时用户设多少字号就渲染多少，不做任何缩放
+            # skip_font_scaling mode: use region.font_size as the final size and skip layout scaling entirely
+            # In an editor export the font size the user set is the size rendered, with no scaling
             if skip_font_scaling:
                 _layout_region_with_fixed_font(
                     anchor_modes=anchor_modes,
@@ -2436,16 +2436,16 @@ def _layout_regions_to_font_size(
             else:
                 original_region_font_size = region.font_size if region.font_size > 0 else round((img.shape[0] + img.shape[1]) / 200)
 
-                # 保存原始字体大小到region对象，用于JSON导出
+                # Keep the original font size on the region object, for the JSON export
                 if not hasattr(region, 'original_font_size'):
                     region.original_font_size = original_region_font_size
 
                 layout_min_font_size = 1
                 target_font_size = max(_resolve_initial_layout_font_size(region, img, config), layout_min_font_size)
 
-                # 入口只保留布局算法自身的参考字号：
-                # region.font_size > 图像估算值
-                # render.font_size 作为固定字号，在统一出口覆盖布局结果。
+                # At entry only the reference font size of the layout algorithm itself is kept:
+                # region.font_size > the value estimated from the image
+                # render.font_size is a fixed font size that overrides the layout result at the single exit.
                 region.layout_base_font_size = int(target_font_size)
 
                 english_auto_line_break_applied = _apply_default_english_line_break_method(
@@ -2488,8 +2488,8 @@ def _layout_regions_to_font_size(
                     region.target_lang,
                 )
             no_br_source_text = region.translation
-            # region.translation 恒为 str（TextBlock._translation 只经
-            # _translation_plain_text 写入），无需 isinstance 防御
+            # region.translation is always str (TextBlock._translation is only written through
+            # _translation_plain_text), so no isinstance guard is needed
             has_br = bool(re.search(r'(\[BR\]|【BR】|<br>)', region.translation, flags=re.IGNORECASE))
             if not has_br:
                 # Keep the text as it is before wrapping, so the breaks can be recomputed later.
@@ -2551,9 +2551,9 @@ def _layout_regions_to_font_size(
                 )
                 continue
 
-            # 入口 BR 分支：显式 BR 保留；无 BR 统一在此处自动断句。
-            # balloon_fill + balloon_fill_mask_layout 使用气泡内接矩形，
-            # 不再先按 OCR 框断句、再在后面的 balloon_fill 分支重复断句。
+            # BR branch at entry: explicit BRs are kept; text without BR is broken into lines here.
+            # balloon_fill + balloon_fill_mask_layout uses the rectangle inscribed in the bubble,
+            # instead of breaking lines by the OCR box first and breaking again in the balloon_fill branch later.
             layout_box_width, layout_box_height, bubble_layout_rect = _break_region_lines(
                 bubble_layout_rect=bubble_layout_rect,
                 config=config,
@@ -2577,9 +2577,9 @@ def _layout_regions_to_font_size(
 
 
 
-            # 断句完成后不再按 BR 二次分支：统一用最终文本计算按框适配字号
-            # （strict 的布局上限）与候选字号/候选尺寸（smart_scaling、
-            # balloon_fill 的缩放输入）。
+            # After line breaking there is no second branch on BR: the final text is used to compute the box-fitted font size
+            # (the layout limit of strict) and the candidate font size and candidate dimensions (the scaling inputs of smart_scaling
+            # and balloon_fill).
             layout_candidate_font_size, box_fit_font_size = _select_preserved_line_layout_font(
                 base_font_size=layout_candidate_font_size,
                 width=layout_box_width,
@@ -2757,8 +2757,8 @@ async def dispatch(
         skip_text_replacements=skip_text_replacements,
     )
 
-    # 自动富文本规则必须等普通字符串完成替换、断句和自动换行后再生成文档；
-    # 最后一次测量只更新几何：全局字号配置应用一次，局部富文本字号/倍率保持优先。
+    # Automatic rich-text rules must wait until replacement, line breaking and automatic wrapping of the plain string are done before the document is generated;
+    # the last measurement only updates geometry: the global font size setting is applied once, while local rich-text sizes and ratios keep priority.
     _finalize_region_font_sizes(
         text_regions,
         dst_points_list,
@@ -2771,9 +2771,9 @@ async def dispatch(
         if hasattr(region, '_rich_text_rules_applied'):
             delattr(region, '_rich_text_rules_applied')
 
-    # 与编辑器一致：每个区域先合成完整的特效、描边和正文，再按区域顺序
-    # 叠到画布上，后面的区域覆盖前面的区域。不能跨区域分遍绘制，否则
-    # 下层正文会浮到上层描边之上，破坏文本框之间的覆盖顺序。
+    # As in the editor: each region is first composed in full, with effects, stroke and body, and then
+    # laid on the canvas in region order, later regions covering earlier ones. Drawing in passes across regions is not possible:
+    # the body of a lower region would float above the stroke of an upper one and break the stacking order of the text boxes.
     for region, dst_points in tqdm(
         zip(text_regions, dst_points_list),
         '[render]',
@@ -2845,7 +2845,7 @@ def _rotate_native_rgba(premultiplied: np.ndarray, angle: float) -> np.ndarray:
 
     height, width = premultiplied.shape[:2]
     center = (width / 2.0, height / 2.0)
-    # OpenCV 正角在图像坐标中是逆时针；项目 angle/Qt 正角是顺时针。
+    # A positive OpenCV angle is counter-clockwise in image coordinates; a positive project angle (and Qt angle) is clockwise.
     matrix = cv2.getRotationMatrix2D(center, -angle, 1.0)
     abs_cos = abs(float(matrix[0, 0]))
     abs_sin = abs(float(matrix[0, 1]))
@@ -2874,7 +2874,7 @@ def render(
     render_alpha: Optional[np.ndarray] = None,
     paint_part: str | None = None,
 ):
-    # 区域只保存 family；字体文件在启动/导入阶段注册。
+    # A region only stores the family; the font files are registered at start-up or on import.
     region_font_family = getattr(region, 'font_family', '') or ''
     if region_font_family:
         text_render.set_font(region_font_family)
@@ -2936,12 +2936,12 @@ def render(
     render_horizontally = _resolve_region_render_horizontal(region)
     letter_spacing = _resolve_letter_spacing_multiplier(region, config)
 
-    # 将当前region传递给config，用于方向不匹配检测
+    # Pass the current region to config, for detecting a direction mismatch
     if config:
         config._current_region = region
 
-    # 使用 Qt 离屏渲染器。仅由 BR 转换产生的无样式文档继续使用
-    # 等价多行字符串，保持现有纯文本布局行为。
+    # Use the Qt off-screen renderer. A document without styling that only comes from BR conversion keeps using
+    # the equivalent multi-line string, so the existing plain-text layout behaviour stays the same.
     if is_rich_text_document(text_to_render):
         plain_equivalent = plain_equivalent_text(text_to_render)
         if plain_equivalent is not None:
@@ -2998,7 +2998,7 @@ def render(
     edge = layout_points[1] - layout_points[0]
     angle = math.degrees(math.atan2(float(edge[1]), float(edge[0])))
 
-    # dst_points 不再控制像素尺寸；实际四角由原生 RGBA 宽高反向派生。
+    # dst_points no longer controls the pixel size; the actual four corners are derived back from the native RGBA width and height.
     actual_dst_points = _native_render_rect_points(anchor, w, h, angle)
     region.dst_points = actual_dst_points
 

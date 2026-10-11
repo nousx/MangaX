@@ -111,8 +111,8 @@ class TcyPlan:
     pre_advance: int
     post_advance: int
     main_start: float = 0.0
-    # 整组水平压缩系数（<=1）：墨迹宽超过 tcy_max_width*基准字号时按比例
-    # 压缩，作用于最终图层（含描边/特效）。width/paint_offset_x 已按此压缩。
+    # Horizontal compression factor for the whole group (<=1): when the ink is wider than tcy_max_width * base font size it is compressed
+    # in proportion, applied to the final layer (with stroke and effects). width/paint_offset_x are already compressed by it.
     scale_x: float = 1.0
 
 @dataclass

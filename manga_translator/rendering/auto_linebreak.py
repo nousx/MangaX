@@ -1,5 +1,5 @@
 # auto_linebreak v2.1.0
-# 完全自包含的换行引擎：CJK 标点禁则、英文连字符均内嵌在布局决策阶段
+# A fully self-contained line-breaking engine: CJK punctuation rules and English hyphenation are both built into the layout decision stage
 import math
 import os
 import re
@@ -323,7 +323,7 @@ def should_force_no_wrap_single_region(region: Any) -> bool:
     )
 
 # ---------------------------------------------------------------------------
-# 竖排换行引擎（完全内嵌，不依赖 text_render.calc_vertical）
+# Vertical line-breaking engine (fully built in, does not depend on text_render.calc_vertical)
 # ---------------------------------------------------------------------------
 
 _BR_RE = re.compile(r'\s*(\[BR\]|<br>|【BR】)\s*', re.IGNORECASE)
@@ -475,7 +475,7 @@ def _vert_total_height(text: str, font_size: int, config: Any = None, letter_spa
 
 
 # ---------------------------------------------------------------------------
-# 横排 CJK 换行引擎（完全内嵌，含标点禁则）
+# Horizontal CJK line-breaking engine (fully built in, with punctuation rules)
 # ---------------------------------------------------------------------------
 
 _NO_START_CHARS = "》，。．」』】）！；：？"
@@ -505,13 +505,13 @@ def _layout_horizontal_cjk(font_size: int, text: str, max_width: int, letter_spa
             char_width = get_char_offset_x(font_size, char, letter_spacing=letter_spacing)
 
             if current_width + char_width > max_width and current_line:
-                # 行首禁则：如果收尾标点本身触发溢出，仍优先贴到上一行。
+                # No-start rule: when the closing punctuation itself causes the overflow, it still goes on the previous line.
                 if char in _NO_START_CHARS:
                     current_line += char
                     current_width = get_string_width(font_size, current_line, letter_spacing=letter_spacing)
                     continue
 
-                # 行尾禁则：行尾不能以 no_end_chars 结尾 → 把末字推到下一行
+                # No-end rule: a line may not end with one of no_end_chars -> push the last character to the next line
                 if current_line and current_line[-1] in _NO_END_CHARS:
                     last_char = current_line[-1]
                     previous_line = current_line[:-1]
@@ -525,7 +525,7 @@ def _layout_horizontal_cjk(font_size: int, text: str, max_width: int, letter_spa
                     current_line = char
                 current_width = get_string_width(font_size, current_line, letter_spacing=letter_spacing)
             elif not current_line and char in _NO_START_CHARS:
-                # 行首禁则：把它追加到上一行
+                # No-start rule: append it to the previous line
                 if lines:
                     prev_text, prev_w = lines[-1]
                     lines[-1] = (prev_text + char, prev_w + char_width)
@@ -543,7 +543,7 @@ def _layout_horizontal_cjk(font_size: int, text: str, max_width: int, letter_spa
 
 
 # ---------------------------------------------------------------------------
-# 横排英文换行引擎（完全内嵌，含连字符断字 + 超宽自扩 + 优化 pass）
+# Horizontal English line-breaking engine (fully built in, with hyphenation + automatic widening + optimisation passes)
 # ---------------------------------------------------------------------------
 
 def _layout_horizontal_eng(
@@ -589,7 +589,7 @@ def _layout_horizontal_eng(
 
     word_widths = [get_string_width(font_size, w, letter_spacing=letter_spacing) for w in words]
 
-    # 超宽自动扩 max_width
+    # Widen max_width automatically when a word is too wide
     max_height = 99999
     while True:
         max_lines = max_height // font_size + 1
@@ -604,7 +604,7 @@ def _layout_horizontal_eng(
 
     hyphenator = select_hyphenator(language) if hyphenate else None
 
-    # 切音节
+    # Split into syllables
     syllables: List[List[str]] = []
     for word in words:
         new_syls: List[str] = []
@@ -624,7 +624,7 @@ def _layout_horizontal_eng(
                 normalized.append(syl)
         syllables.append(normalized)
 
-    # 主换行 pass
+    # Main line-breaking pass
     line_words_list: List[List[int]] = []
     line_width_list: List[int] = []
     hyphenation_idx_list: List[int] = []
@@ -697,7 +697,7 @@ def _layout_horizontal_eng(
                 if (i - 1) in newline_positions:
                     break_line()
 
-    # 连字符优化 pass
+    # Hyphenation optimisation pass
     max_lines = max_height // font_size + 1
     if hyphenate and len(line_words_list) > max_lines:
         li = 0
@@ -742,7 +742,7 @@ def _layout_horizontal_eng(
             else:
                 li += 1
 
-    # 行合并 pass
+    # Line merging pass
     li = 0
     while li < len(line_words_list) - 1:
         lw1 = line_words_list[li]
@@ -801,7 +801,7 @@ def _layout_horizontal_eng(
 
 
 # ---------------------------------------------------------------------------
-# 统一的布局调度函数
+# Single dispatch function for layout
 # ---------------------------------------------------------------------------
 
 def _normalize_lang(lang: str) -> str:
@@ -1026,7 +1026,7 @@ def _calc_vertical_layout(
 
 
 # ---------------------------------------------------------------------------
-# fallback: 像素预算均匀插 [BR]
+# fallback: insert [BR] evenly by pixel budget
 # ---------------------------------------------------------------------------
 
 def _insert_br_by_word_pixel_budget(
@@ -1259,7 +1259,7 @@ def _insert_br_by_pixel_budget(
 
 
 # ---------------------------------------------------------------------------
-# 最优换行搜索
+# Search for the best line breaks
 # ---------------------------------------------------------------------------
 
 def _find_best_lines_for_target_segments(
@@ -1434,7 +1434,7 @@ def _find_best_lines_for_target_segments(
     if not candidates:
         return []
     _, best_lines, _ = min(candidates, key=lambda item: item[0])
-    # 返回候选断行文本；旧横排块标签不再作为渲染协议。
+    # Return the candidate text with line breaks; the old horizontal block tags are no longer a rendering protocol.
     return best_lines
 def _find_best_lines_for_rect_shape(
     clean_text: str,
@@ -1550,7 +1550,7 @@ def _find_best_lines_for_rect_shape(
 
 
 # ---------------------------------------------------------------------------
-# 尺寸度量
+# Size metrics
 # ---------------------------------------------------------------------------
 
 def _measure_required_size(
@@ -1596,7 +1596,7 @@ def _measure_required_size(
         config=config,
         letter_spacing=letter_spacing_multiplier,
     )
-    # 精确计算各列实际字形宽度之和，与 put_text_vertical 的 line_widths 逻辑一致
+    # Sum the actual glyph widths of each column exactly, the same logic as line_widths in put_text_vertical
     line_widths = [_vert_line_width(line, font_size) for line in lines]
     required_width = sum(line_widths) + spacing_x * max(0, n - 1)
     return n, float(required_width), float(required_height)
@@ -1655,7 +1655,7 @@ def _resolve_initial_segments(
 
 
 # ---------------------------------------------------------------------------
-# 公开入口
+# Public entry point
 # ---------------------------------------------------------------------------
 
 def solve_no_br_layout(

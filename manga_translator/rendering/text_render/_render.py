@@ -242,7 +242,7 @@ def _render_rich_text_horizontal(
 ):
     document = ensure_rich_text_document(text)
     stroke_ratio = _resolve_stroke_ratio(config, stroke_width)
-    _ = (width, height)  # 包络由内容决定，外部最小尺寸不再参与画布
+    _ = (width, height)  # The envelope is decided by the content; an outside minimum size no longer takes part in the canvas
     # Layout and paint belong to one call.  Keep the handoff local instead of
     # retaining glyph data across font/size/style changes.
     glyph_geometries = {}
@@ -268,10 +268,10 @@ def _render_rich_text_horizontal(
     body_left = padding + geometry["left_extra"]
     body_width = geometry["body_width"]
 
-    # 一次遍历构建绘制项（每个字形只光栅化一次，派生 effects/stroke/fill
-    # 三层），再按全局 effects → stroke → fill 顺序三次粘贴；emphasis 圆点
-    # 与文字装饰属 fill 层，按其在遍历序中的位置插入，逐像素等价于旧的三遍
-    # 光栅化。
+    # One pass builds the draw items (each glyph is rasterised once, giving the effects/stroke/fill
+    # layers), then three pastes follow in the global order effects -> stroke -> fill; emphasis dots
+    # and text decorations belong to the fill layer and are inserted at their place in the traversal order, pixel for pixel the same as the old three
+    # rasterisation passes.
     glyph_items = []  # (parts, x, y)
     fill_extras = []  # (index_in_glyph_items, 'disc'|'bar', args)
     for layout, normalized_baseline in zip(layouts, geometry["baselines"]):
@@ -401,7 +401,7 @@ def _render_rich_text_horizontal(
             cx, cy, radius, color = args
             _draw_rgba_disc(canvas, cx, cy, radius, color)
         else:
-            # 文字装饰：主轴 [x0, x1) × 交叉轴以 center_y 为中心的实心横条
+            # Text decoration: a solid horizontal bar over [x0, x1) on the main axis, centred on center_y on the cross axis
             x0, x1, center_y, thickness, color = args
             _draw_rgba_bar(
                 canvas, x0, center_y - thickness / 2.0, x1 - x0, thickness, color
@@ -452,7 +452,7 @@ def _render_rich_text_vertical(
 ):
     document = ensure_rich_text_document(text)
     stroke_ratio = _resolve_stroke_ratio(config, stroke_width)
-    _ = h  # 包络由内容决定，外部最小高度不再参与画布
+    _ = h  # The envelope is decided by the content; an outside minimum height no longer takes part in the canvas
     layouts = _build_rich_vertical_layout(
         document, font_size, stroke_ratio, fg, bg, letter_spacing, profile_stats
     )
@@ -473,9 +473,9 @@ def _render_rich_text_vertical(
     content_bottom = padding + geometry["paint_height"]
     columns = _rich_vertical_column_positions(layouts, geometry, padding)
 
-    # 与横排同构：一次遍历构建 (effects, stroke, fill) 三层绘制项，按全局
-    # 顺序三次粘贴。emphasis 圆点与列注音属 fill 层，按列尾在遍历序中的
-    # 位置插入，绘制顺序与旧三遍路径完全相同。
+    # Same structure as horizontal text: one pass builds the (effects, stroke, fill) draw items, pasted three times in the global
+    # order. Emphasis dots and column ruby belong to the fill layer and are inserted at the place of the column end in the traversal
+    # order, so the drawing order is exactly that of the old three-pass path.
     glyph_items = []  # (parts, x, y)
     fill_extras = []  # (index_in_glyph_items, 'disc'|'ruby', args)
     for idx, layout in enumerate(layouts):
@@ -502,8 +502,8 @@ def _render_rich_text_vertical(
                 )
                 if parts is None:
                     continue
-                # 纵中横整组水平压缩：与计划几何同一公式（ceil），保证压缩
-                # 后 fill 层宽 == item.width。
+                # Horizontal compression of a whole tate-chu-yoko group: the same formula as the plan geometry (ceil), so that after
+                # compression the width of the fill layer == item.width.
                 parts = _scale_parts_x(parts, item.scale_x)
                 x = _rich_vertical_tcy_layer_x(body_left, thickness, item)
                 y = (
@@ -586,7 +586,7 @@ def _render_rich_text_vertical(
             cx, cy, radius, color = args
             _draw_rgba_disc(canvas, cx, cy, radius, color)
         elif kind == "bar":
-            # 文字装饰：主轴 [y0, y1) × 交叉轴以 center_x 为中心的实心竖条
+            # Text decoration: a solid vertical bar over [y0, y1) on the main axis, centred on center_x on the cross axis
             y0, y1, center_x, thickness, color = args
             _draw_rgba_bar(
                 canvas, center_x - thickness / 2.0, y0, thickness, y1 - y0, color
@@ -662,9 +662,9 @@ def measure_rich_text_metrics(
             "body_center": geometry["body_center"],
         }
 
-    # 与横排同口径：全局描边直接参与竖排几何（字符/TCY 的描边 pad 与 TCY
-    # 压缩系数都依赖 stroke 存在性），dummy 颜色即可。渲染路径约定
-    # bg=None ⟺ 描边禁用（此时 stroke_ratio 同为 0），测量按此对齐。
+    # Same convention as horizontal text: the global stroke takes part in the vertical geometry directly (the stroke pad of characters and TCY, and the TCY
+    # compression factor, both depend on whether a stroke exists), so a dummy colour is enough. The render path's convention is
+    # bg=None <=> stroke disabled (stroke_ratio is 0 then as well), and measuring follows it.
     measure_bg = (0, 0, 0) if stroke_ratio > 0 else None
     layouts = _build_rich_vertical_layout(
         document, base_font, stroke_ratio, (0, 0, 0), measure_bg, letter_spacing
@@ -822,7 +822,7 @@ def _coerce_render_document(text) -> RichTextDocument:
     输出面尺寸恒等于测量框（测/渲同源契约对纯文本同样成立）。
     """
     if is_rich_text_document(text):
-        # F24：入口解析一次，向下传实例（内部 ensure 对实例是短路）
+        # F24: parse once at entry and pass the instance down (the ensure inside short-circuits for an instance)
         return ensure_rich_text_document(text)
     return legacy_line_breaks_to_document(text or "")
 

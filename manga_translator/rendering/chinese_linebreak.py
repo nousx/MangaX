@@ -31,7 +31,7 @@ logger = get_logger("render")
 
 
 # ---------------------------------------------------------------------------
-# 模型资源
+# Model resources
 # ---------------------------------------------------------------------------
 
 COARSE_MODEL_NAME = "coarse_electra_small_20220616_012050"
@@ -193,7 +193,7 @@ def _get_models() -> Optional[tuple[Any, Any]]:
 
 
 # ---------------------------------------------------------------------------
-# 字符表
+# Character tables
 # ---------------------------------------------------------------------------
 
 OPEN_TO_CLOSE = {
@@ -243,15 +243,15 @@ CLOSE_TO_OPEN = {close: open_ for open_, close in OPEN_TO_CLOSE.items()}
 
 _WHITESPACE_CHARS = set(" \t　")
 
-# 结构性断句字符:句读标点加空白。空白与逗号同级,作为独立单元参与断句;
-# 换行若落在空白处,该空白会在排版收尾时被删除(见 layout_chinese_cjk)。
+# Structural break characters: sentence punctuation plus whitespace. Whitespace ranks with the comma and takes part in line breaking as a unit of its own;
+# when a line break falls on whitespace, that whitespace is removed at the end of layout (see layout_chinese_cjk).
 STRUCTURAL_BREAK_CHARS = set(
     "，、。．｡､,.!?！？；;：:﹐﹑﹒﹔﹕﹖﹗︐︑︒︓︔︕︖"
     "…‥⋯︰⋮︙︴—－–−︱︲～〜〰~≀|"
 ) | _WHITESPACE_CHARS
 
-# 以下三个表由基础表派生,避免手抄多份字符清单造成遗漏
-# (旧版手抄的 NO_END_CHARS 漏了 ［〔〖〘〚,NO_START_CHARS 漏了 ］〕〗〙〛)。
+# The three tables below are derived from the base tables, so no character list is copied by hand and left incomplete
+# (the old hand-copied NO_END_CHARS missed five opening brackets and NO_START_CHARS missed the five matching closing ones).
 PHRASE_PUNCT = (
     (STRUCTURAL_BREAK_CHARS - _WHITESPACE_CHARS)
     | set(OPEN_TO_CLOSE)
@@ -272,7 +272,7 @@ STRONG_STANDALONE_MARKS = set("!?！？︕︖⁈⁉‼…‥⋯︰⋮︙♪♫�
 
 
 # ---------------------------------------------------------------------------
-# 运行时状态
+# Runtime state
 # ---------------------------------------------------------------------------
 
 _load_lock = threading.Lock()
@@ -291,7 +291,7 @@ _BR_RE = re.compile(r"\s*(\[BR\]|<br>|【BR】)\s*", re.IGNORECASE)
 
 
 # ---------------------------------------------------------------------------
-# 数据结构
+# Data structures
 # ---------------------------------------------------------------------------
 
 
@@ -350,7 +350,7 @@ def _line_metric_uniformity(
 
 
 # ---------------------------------------------------------------------------
-# 语义单元构建
+# Building the semantic units
 # ---------------------------------------------------------------------------
 
 
@@ -392,8 +392,8 @@ def _semantic_units(text: str) -> Optional[Tuple[SemanticUnit, ...]]:
 
 
 def _tokenize_for_parse(tokenizer: Any, text: str) -> Optional[list[str]]:
-    # HanLP 粗分词会丢弃空白,因此按去空白后的原文校验;空白稍后由
-    # _inject_space_units 按原文位置回填,这里保证 token 序列不含空白。
+    # HanLP coarse segmentation drops whitespace, so validation uses the text with whitespace removed; the whitespace is put back later by
+    # _inject_space_units at its position in the original text, and here the token sequence is guaranteed to contain none.
     try:
         raw_tokens = _normalize_tokens(tokenizer(text))
     except Exception as exc:
@@ -662,7 +662,7 @@ def _is_structural_break_unit(unit: SemanticUnit) -> bool:
         return False
     visible = unit.text.strip()
     if not visible:
-        # 纯空白单元:与逗号同级的断句点(换行落在这里时空白会被删除)。
+        # A whitespace-only unit: a break point that ranks with the comma (the whitespace is removed when a line break falls here).
         return bool(unit.text)
     return all(char in STRUCTURAL_BREAK_CHARS for char in visible)
 
@@ -689,7 +689,7 @@ def _compact_log_text(text: str, limit: int = 80) -> str:
 
 
 # ---------------------------------------------------------------------------
-# 排版
+# Layout
 # ---------------------------------------------------------------------------
 
 
@@ -723,8 +723,8 @@ def layout_chinese_cjk(
         if not para_lines:
             return None
         para_lines = _avoid_single_char_lines(para_lines, max(1, int(max_budget)), measure)
-        # 行首/行尾空白只在换行恰好落在空白处时出现,按规则删除;行内空白保留。
-        # 必须在单字行合并之后再剥,否则合并回同一行时会丢失词间空格。
+        # Whitespace at the start or end of a line only appears when a line break falls exactly on whitespace and is removed by rule; whitespace inside a line is kept.
+        # It must be stripped after single-character lines are merged; otherwise the space between words is lost when they merge back into one line.
         para_lines = [line for line in (line.strip() for line in para_lines) if line] or [""]
         lines.extend(para_lines)
         metrics.extend(int(measure(line)) for line in para_lines)
@@ -925,7 +925,7 @@ def _is_content_char(char: str) -> bool:
 
 
 # ---------------------------------------------------------------------------
-# 候选生成与评分
+# Candidate generation and scoring
 # ---------------------------------------------------------------------------
 
 
@@ -1172,7 +1172,7 @@ def bubble_mask_overflow_pixels(dst_points: Any, bubble_mask: Any) -> int:
 
 
 # ---------------------------------------------------------------------------
-# 调试快照与调试记录(仅供调试面板/调试 JSON 输出使用)
+# Debug snapshots and debug records (only for the debug panel and the debug JSON output)
 # ---------------------------------------------------------------------------
 
 
