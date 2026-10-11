@@ -2714,32 +2714,188 @@ class MangaTranslator:
 
         return self._filter_ocr_textlines(config, textlines, ocr_prob_threshold)
 
+    @staticmethod
+    def _drop_textlines_in_skipped_languages(config: Config, ctx: Context) -> None:
+        """Remove the text lines whose detected language is listed in translator.skip_lang."""
+        skip_langs = [lang.strip().upper() for lang in config.translator.skip_lang.split(',')]
+        filtered_textlines = []  
+        for txtln in ctx.textlines:  
+            try:  
+                detected_lang, confidence = langid.classify(txtln.text)
+                source_language = ISO_639_1_TO_VALID_LANGUAGES.get(detected_lang, 'UNKNOWN')
+                if source_language != 'UNKNOWN':
+                    source_language = source_language.upper()
+            except Exception as ignored_error:
+                note_ignored_error(ignored_error, "manga_translator/manga_translator.py:MangaTranslator._run_textline_merge")
+                source_language = 'UNKNOWN'  
+
+            # Print detected source_language and whether it's in skip_langs  
+            # logger.info(f'Detected source language: {source_language}, in skip_langs: {source_language in skip_langs}, text: "{txtln.text}"')  
+
+            if source_language in skip_langs:  
+                logger.info(f'Filtered out: {txtln.text}')  
+                logger.info(f'Reason: Detected language {source_language} is in skip_langs')  
+                continue  # Skip this region  
+            filtered_textlines.append(txtln)  
+        ctx.textlines = filtered_textlines  
+
+    def _filter_small_single_box_regions(self, config: Config, ctx: Context, text_regions):
+        """Drop merged regions that consist of one detected box smaller than detector.min_box_area_ratio."""
+        img_h, img_w = ctx.img_rgb.shape[:2]
+        img_total_pixels = img_h * img_w
+
+        rearrange_plan = build_det_rearrange_plan(
+            ctx.img_rgb,
+            tgt_size=config.detector.detection_size,
+            min_effective_short_side=config.detector.det_rearrange_min_effective_short_side,
+        )
+        require_rearrange = rearrange_plan is not None
+
+        if require_rearrange:
+            h = int(rearrange_plan['h'])
+            w = int(rearrange_plan['w'])
+            patch_size = int(rearrange_plan['patch_size'])
+            asp_ratio = h / w
+
+            # 限制面积过滤参考块的最大长宽比（不超过 3:1）。
+            # 检测切片可以更高以占满模型长边，但过滤阈值不能因此过度放大。
+            max_patch_aspect_ratio = 3.0
+            patch_aspect_ratio = patch_size / w
+            if patch_aspect_ratio > max_patch_aspect_ratio:
+                adjusted_ph = max_patch_aspect_ratio * w
+                tile_pixels = adjusted_ph * w
+                logger.info(f"Extreme image aspect ratio detected ({asp_ratio:.2f}); limiting area-filter reference aspect ratio: actual tile={patch_size}x{w} (ratio={patch_aspect_ratio:.2f}), reference tile={adjusted_ph:.0f}x{w} (ratio={max_patch_aspect_ratio:.2f}), area={tile_pixels:.0f} pixels")
+            else:
+                tile_pixels = patch_size * w
+                logger.info(f"Extreme image aspect ratio detected ({asp_ratio:.2f}); using tile area ({patch_size}x{w}={tile_pixels} pixels) for filtering")
+        else:
+            tile_pixels = img_total_pixels  # 不切割，使用整图
+
+        before_filter_count = len(text_regions)
+        filtered_out_regions = []
+        filtered_in_regions = []
+
+        for region in text_regions:
+            # 计算合并的检测框数量
+            num_textlines = len(region.lines)
+
+            # 如果包含多个检测框，说明是真正的文本区域，保留
+            if num_textlines > 1:
+                filtered_in_regions.append(region)
+                continue
+
+            # 只对单个检测框的区域进行面积过滤
+            region_area = region.real_area
+            # 使用切割块面积（如果有切割）或整图面积
+            area_ratio = region_area / tile_pixels
+
+            if region_area <= 16 or area_ratio <= config.detector.min_box_area_ratio:
+                filtered_out_regions.append((region, area_ratio, num_textlines, require_rearrange))
+            else:
+                filtered_in_regions.append(region)
+
+        text_regions = filtered_in_regions
+        after_filter_count = len(text_regions)
+
+        if filtered_out_regions:
+            reference_desc = f'tile({patch_size}x{w})' if require_rearrange else f'full image({img_w}x{img_h})'
+            filter_ratio = len(filtered_out_regions) / before_filter_count * 100 if before_filter_count > 0 else 0
+            # Info级别：只显示摘要
+            logger.info(f"Post-merge area filter: reference={reference_desc}, minimum area ratio={config.detector.min_box_area_ratio:.4f} ({config.detector.min_box_area_ratio*100:.2f}%), before={before_filter_count}, after={after_filter_count}, removed={len(filtered_out_regions)} ({filter_ratio:.1f}%, single-box regions only)")
+            # Verbose模式：显示详细信息
+            if self.verbose:
+                for idx, (region, ratio, num_lines, was_rearranged) in enumerate(filtered_out_regions):
+                    # 获取框的宽高
+                    x1, y1, x2, y2 = region.xyxy
+                    width = x2 - x1
+                    height = y2 - y1
+                    logger.debug(f'  Removing single-box region [{idx+1}]: size={width:.0f}x{height:.0f}, area={region.real_area:.1f} pixels, ratio={ratio*100:.3f}%, text="{region.text[:20]}"')
+        return text_regions
+
+    @staticmethod
+    def _repair_unpaired_brackets(stripped_text: str) -> str:
+        """Remove brackets that have no partner and correct closing brackets of the wrong kind."""
+        bracket_pairs = {  
+            '(': ')', '（': '）', '[': ']', '【': '】', '{': '}', '〔': '〕', '〈': '〉', '「': '」',  
+            '"': '"', '＂': '＂', "'": "'", "“": "”", '《': '》', '『': '』', '〝': '〞', '﹁': '﹂', '﹃': '﹄',  
+            '⸂': '⸃', '⸄': '⸅', '⸉': '⸊', '⸌': '⸍', '⸜': '⸝', '⸠': '⸡', '‹': '›', '«': '»', '＜': '＞', '<': '>'  
+        }   
+        left_symbols = set(bracket_pairs.keys())  
+        right_symbols = set(bracket_pairs.values())  
+
+        has_brackets = any(s in stripped_text for s in left_symbols) or any(s in stripped_text for s in right_symbols)  
+
+        if has_brackets:  
+            result_chars = []  
+            stack = []  
+            to_skip = []    
+
+            # 第一次遍历：标记匹配的括号  
+            # First traversal: mark matching brackets
+            for i, char in enumerate(stripped_text):  
+                if char in left_symbols:  
+                    stack.append((i, char))  
+                elif char in right_symbols:  
+                    if stack:  
+                        # 有对应的左括号，出栈  
+                        # There is a corresponding left bracket, pop the stack
+                        stack.pop()  
+                    else:  
+                        # 没有对应的左括号，标记为删除  
+                        # No corresponding left parenthesis, marked for deletion
+                        to_skip.append(i)  
+
+            # 标记未匹配的左括号为删除
+            # Mark unmatched left brackets as delete  
+            for pos, _ in stack:  
+                to_skip.append(pos)  
+
+            has_removed_symbols = len(to_skip) > 0  
+
+            # 第二次遍历：处理匹配但不对应的括号
+            # Second pass: Process matching but mismatched brackets
+            stack = []  
+            for i, char in enumerate(stripped_text):  
+                if i in to_skip:  
+                    # 跳过孤立的括号
+                    # Skip isolated parentheses
+                    continue  
+
+                if char in left_symbols:  
+                    stack.append(char)  
+                    result_chars.append(char)  
+                elif char in right_symbols:  
+                    if stack:  
+                        left_bracket = stack.pop()  
+                        expected_right = bracket_pairs.get(left_bracket)  
+
+                        if char != expected_right:  
+                            # 替换不匹配的右括号为对应左括号的正确右括号
+                            # Replace mismatched right brackets with the correct right brackets corresponding to the left brackets
+                            result_chars.append(expected_right)  
+                            logger.info(f'Fixed mismatched bracket: replaced "{char}" with "{expected_right}"')  
+                        else:  
+                            result_chars.append(char)  
+                else:  
+                    result_chars.append(char)  
+
+            new_stripped_text = ''.join(result_chars)  
+
+            if has_removed_symbols:  
+                logger.info(f'Removed unpaired bracket from "{stripped_text}"')  
+
+            if new_stripped_text != stripped_text and not has_removed_symbols:  
+                logger.info(f'Fixed brackets: "{stripped_text}" → "{new_stripped_text}"')  
+
+            stripped_text = new_stripped_text  
+        return stripped_text
+
     async def _run_textline_merge(self, config: Config, ctx: Context):
         current_time = time.time()
         self._model_usage_timestamps[("textline_merge", "textline_merge")] = current_time
         # Filter out languages to skip  
         if config.translator.skip_lang is not None:  
-            skip_langs = [lang.strip().upper() for lang in config.translator.skip_lang.split(',')]
-            filtered_textlines = []  
-            for txtln in ctx.textlines:  
-                try:  
-                    detected_lang, confidence = langid.classify(txtln.text)
-                    source_language = ISO_639_1_TO_VALID_LANGUAGES.get(detected_lang, 'UNKNOWN')
-                    if source_language != 'UNKNOWN':
-                        source_language = source_language.upper()
-                except Exception as ignored_error:
-                    note_ignored_error(ignored_error, "manga_translator/manga_translator.py:MangaTranslator._run_textline_merge")
-                    source_language = 'UNKNOWN'  
-    
-                # Print detected source_language and whether it's in skip_langs  
-                # logger.info(f'Detected source language: {source_language}, in skip_langs: {source_language in skip_langs}, text: "{txtln.text}"')  
-    
-                if source_language in skip_langs:  
-                    logger.info(f'Filtered out: {txtln.text}')  
-                    logger.info(f'Reason: Detected language {source_language} is in skip_langs')  
-                    continue  # Skip this region  
-                filtered_textlines.append(txtln)  
-            ctx.textlines = filtered_textlines  
+            self._drop_textlines_in_skipped_languages(config, ctx)
     
         merge_input_textlines = list(ctx.textlines)
         enable_model_assisted_merge = bool(getattr(config.ocr, 'merge_special_require_full_wrap', True))
@@ -2770,75 +2926,7 @@ class MangaTranslator:
         # 应用合并后的面积过滤（基于合并后的大框）
         # 只过滤单个检测框的小区域，保留包含多个检测框的合并区域
         if config.detector.min_box_area_ratio > 0:
-            img_h, img_w = ctx.img_rgb.shape[:2]
-            img_total_pixels = img_h * img_w
-            
-            rearrange_plan = build_det_rearrange_plan(
-                ctx.img_rgb,
-                tgt_size=config.detector.detection_size,
-                min_effective_short_side=config.detector.det_rearrange_min_effective_short_side,
-            )
-            require_rearrange = rearrange_plan is not None
-            
-            if require_rearrange:
-                h = int(rearrange_plan['h'])
-                w = int(rearrange_plan['w'])
-                patch_size = int(rearrange_plan['patch_size'])
-                asp_ratio = h / w
-                
-                # 限制面积过滤参考块的最大长宽比（不超过 3:1）。
-                # 检测切片可以更高以占满模型长边，但过滤阈值不能因此过度放大。
-                max_patch_aspect_ratio = 3.0
-                patch_aspect_ratio = patch_size / w
-                if patch_aspect_ratio > max_patch_aspect_ratio:
-                    adjusted_ph = max_patch_aspect_ratio * w
-                    tile_pixels = adjusted_ph * w
-                    logger.info(f"Extreme image aspect ratio detected ({asp_ratio:.2f}); limiting area-filter reference aspect ratio: actual tile={patch_size}x{w} (ratio={patch_aspect_ratio:.2f}), reference tile={adjusted_ph:.0f}x{w} (ratio={max_patch_aspect_ratio:.2f}), area={tile_pixels:.0f} pixels")
-                else:
-                    tile_pixels = patch_size * w
-                    logger.info(f"Extreme image aspect ratio detected ({asp_ratio:.2f}); using tile area ({patch_size}x{w}={tile_pixels} pixels) for filtering")
-            else:
-                tile_pixels = img_total_pixels  # 不切割，使用整图
-            
-            before_filter_count = len(text_regions)
-            filtered_out_regions = []
-            filtered_in_regions = []
-            
-            for region in text_regions:
-                # 计算合并的检测框数量
-                num_textlines = len(region.lines)
-                
-                # 如果包含多个检测框，说明是真正的文本区域，保留
-                if num_textlines > 1:
-                    filtered_in_regions.append(region)
-                    continue
-                
-                # 只对单个检测框的区域进行面积过滤
-                region_area = region.real_area
-                # 使用切割块面积（如果有切割）或整图面积
-                area_ratio = region_area / tile_pixels
-                
-                if region_area <= 16 or area_ratio <= config.detector.min_box_area_ratio:
-                    filtered_out_regions.append((region, area_ratio, num_textlines, require_rearrange))
-                else:
-                    filtered_in_regions.append(region)
-            
-            text_regions = filtered_in_regions
-            after_filter_count = len(text_regions)
-            
-            if filtered_out_regions:
-                reference_desc = f'tile({patch_size}x{w})' if require_rearrange else f'full image({img_w}x{img_h})'
-                filter_ratio = len(filtered_out_regions) / before_filter_count * 100 if before_filter_count > 0 else 0
-                # Info级别：只显示摘要
-                logger.info(f"Post-merge area filter: reference={reference_desc}, minimum area ratio={config.detector.min_box_area_ratio:.4f} ({config.detector.min_box_area_ratio*100:.2f}%), before={before_filter_count}, after={after_filter_count}, removed={len(filtered_out_regions)} ({filter_ratio:.1f}%, single-box regions only)")
-                # Verbose模式：显示详细信息
-                if self.verbose:
-                    for idx, (region, ratio, num_lines, was_rearranged) in enumerate(filtered_out_regions):
-                        # 获取框的宽高
-                        x1, y1, x2, y2 = region.xyxy
-                        width = x2 - x1
-                        height = y2 - y1
-                        logger.debug(f'  Removing single-box region [{idx+1}]: size={width:.0f}x{height:.0f}, area={region.real_area:.1f} pixels, ratio={ratio*100:.3f}%, text="{region.text[:20]}"')
+            text_regions = self._filter_small_single_box_regions(config, ctx, text_regions)
 
         keep_lang = str(getattr(config.translator, 'keep_lang', 'none') or 'none').strip().upper()
         keep_lang_enabled = keep_lang not in _KEEP_LANG_NONE_VALUES
@@ -2861,79 +2949,7 @@ class MangaTranslator:
                 logger.info(f'Removed leading characters: "{removed_start_chars}" from "{original_text}"')  
             
             # Modified filtering condition: handle incomplete parentheses  
-            bracket_pairs = {  
-                '(': ')', '（': '）', '[': ']', '【': '】', '{': '}', '〔': '〕', '〈': '〉', '「': '」',  
-                '"': '"', '＂': '＂', "'": "'", "“": "”", '《': '》', '『': '』', '〝': '〞', '﹁': '﹂', '﹃': '﹄',  
-                '⸂': '⸃', '⸄': '⸅', '⸉': '⸊', '⸌': '⸍', '⸜': '⸝', '⸠': '⸡', '‹': '›', '«': '»', '＜': '＞', '<': '>'  
-            }   
-            left_symbols = set(bracket_pairs.keys())  
-            right_symbols = set(bracket_pairs.values())  
-            
-            has_brackets = any(s in stripped_text for s in left_symbols) or any(s in stripped_text for s in right_symbols)  
-            
-            if has_brackets:  
-                result_chars = []  
-                stack = []  
-                to_skip = []    
-                
-                # 第一次遍历：标记匹配的括号  
-                # First traversal: mark matching brackets
-                for i, char in enumerate(stripped_text):  
-                    if char in left_symbols:  
-                        stack.append((i, char))  
-                    elif char in right_symbols:  
-                        if stack:  
-                            # 有对应的左括号，出栈  
-                            # There is a corresponding left bracket, pop the stack
-                            stack.pop()  
-                        else:  
-                            # 没有对应的左括号，标记为删除  
-                            # No corresponding left parenthesis, marked for deletion
-                            to_skip.append(i)  
-                
-                # 标记未匹配的左括号为删除
-                # Mark unmatched left brackets as delete  
-                for pos, _ in stack:  
-                    to_skip.append(pos)  
-                
-                has_removed_symbols = len(to_skip) > 0  
-                
-                # 第二次遍历：处理匹配但不对应的括号
-                # Second pass: Process matching but mismatched brackets
-                stack = []  
-                for i, char in enumerate(stripped_text):  
-                    if i in to_skip:  
-                        # 跳过孤立的括号
-                        # Skip isolated parentheses
-                        continue  
-                        
-                    if char in left_symbols:  
-                        stack.append(char)  
-                        result_chars.append(char)  
-                    elif char in right_symbols:  
-                        if stack:  
-                            left_bracket = stack.pop()  
-                            expected_right = bracket_pairs.get(left_bracket)  
-                            
-                            if char != expected_right:  
-                                # 替换不匹配的右括号为对应左括号的正确右括号
-                                # Replace mismatched right brackets with the correct right brackets corresponding to the left brackets
-                                result_chars.append(expected_right)  
-                                logger.info(f'Fixed mismatched bracket: replaced "{char}" with "{expected_right}"')  
-                            else:  
-                                result_chars.append(char)  
-                    else:  
-                        result_chars.append(char)  
-                
-                new_stripped_text = ''.join(result_chars)  
-                
-                if has_removed_symbols:  
-                    logger.info(f'Removed unpaired bracket from "{stripped_text}"')  
-                
-                if new_stripped_text != stripped_text and not has_removed_symbols:  
-                    logger.info(f'Fixed brackets: "{stripped_text}" → "{new_stripped_text}"')  
-                
-                stripped_text = new_stripped_text  
+            stripped_text = self._repair_unpaired_brackets(stripped_text)
               
             region.text = stripped_text.strip()
 
