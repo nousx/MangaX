@@ -735,6 +735,123 @@ class MangaTranslator:
             self._mark_context_failure(ctx, e, stage='saving')
             return False
 
+    @staticmethod
+    def _force_direction_and_alignment(regions_data: list, config: Config) -> None:
+        """Apply the text direction and alignment the settings force to every region about to be saved."""
+        try:
+            # 覆盖方向
+            if hasattr(config.render, 'direction'):
+                dir_val = config.render.direction
+                if hasattr(dir_val, 'value'): dir_val = dir_val.value
+
+                forced_direction = None
+                if dir_val == 'vertical': forced_direction = 'v'
+                elif dir_val == 'horizontal': forced_direction = 'h'
+
+                if forced_direction:
+                    for region in regions_data:
+                        region['direction'] = forced_direction
+
+            # 覆盖对齐方式
+            if hasattr(config.render, 'alignment'):
+                align_val = config.render.alignment
+                if hasattr(align_val, 'value'): align_val = align_val.value
+
+                if align_val in ('left', 'center', 'right'):
+                    for region in regions_data:
+                        region['alignment'] = align_val
+
+        except Exception as e:
+            logger.warning(f"Failed to override region settings from config: {e}")
+
+    @staticmethod
+    def _preserved_skip_font_scaling(ctx: Context, text_output_file: str):
+        """The skip_font_scaling flag to keep: the one on the context, else the one already in the file."""
+        preserved_skip_font_scaling = getattr(ctx, 'skip_font_scaling', None)
+        if preserved_skip_font_scaling is None and os.path.exists(text_output_file):
+            try:
+                with open(text_output_file, 'r', encoding='utf-8') as f:
+                    existing_data = json.load(f)
+                if existing_data and len(existing_data.values()) > 0:
+                    existing_image_data = next(iter(existing_data.values()))
+                    if isinstance(existing_image_data, dict) and 'skip_font_scaling' in existing_image_data:
+                        preserved_skip_font_scaling = _parse_skip_font_scaling_flag(
+                            existing_image_data.get('skip_font_scaling'),
+                            default=True,
+                        )
+            except Exception as e:
+                logger.warning(f"Failed to preserve skip_font_scaling from existing JSON {text_output_file}: {e}")
+        return preserved_skip_font_scaling
+
+    def _add_mask_to_saved_data(self, ctx: Context, data_to_save: dict) -> None:
+        """Store the refined mask of a page with its saved text, unless the mode leaves masks out."""
+        skip_mask_export = (
+            getattr(ctx, 'used_imported_yolo_labels', False) and
+            ((self.template and self.save_text) or self.generate_and_export)
+        )
+
+        # 保存优化后的蒙版（ctx.mask），而不是原始蒙版（ctx.mask_raw）
+        # 这样加载后可以直接使用，无需再次进行蒙版优化
+        mask_to_save = None
+        mask_is_refined = False
+        if ctx.mask is not None:
+            mask_to_save = ctx.mask
+            mask_is_refined = True
+
+        if skip_mask_export:
+            logger.info("Import YOLO labels enabled in export mode: skipping mask save in JSON")
+        elif self.save_mask and mask_to_save is not None:
+            try:
+                import base64
+
+                import cv2
+                _, buffer = cv2.imencode('.png', mask_to_save)
+                mask_base64 = base64.b64encode(buffer).decode('utf-8')
+                data_to_save['mask_raw'] = mask_base64
+                data_to_save['mask_is_refined'] = mask_is_refined
+            except Exception as e:
+                logger.error(f"Failed to encode mask to base64: {e}")
+
+    @staticmethod
+    def _keep_existing_overlays(text_output_file: str, data_to_save: dict) -> None:
+        """Carry over the paint, stamp and paste layers the editor stored in the existing file."""
+        try:
+            with open(text_output_file, 'r', encoding='utf-8') as f:
+                existing_data = json.load(f)
+            if existing_data and len(existing_data.values()) > 0:
+                existing_image_data = next(iter(existing_data.values()))
+                if isinstance(existing_image_data, dict):
+                    for overlay_key in ('paint_overlay', 'stamp_overlay', 'paste_overlay'):
+                        overlay_value = existing_image_data.get(overlay_key)
+                        if isinstance(overlay_value, str) and overlay_value:
+                            data_to_save[overlay_key] = overlay_value
+                    # 复数贴片列表（可编辑贴片）原样保留，避免后端回写时丢数据
+                    paste_overlays_value = existing_image_data.get('paste_overlays')
+                    if isinstance(paste_overlays_value, list):
+                        data_to_save['paste_overlays'] = list(paste_overlays_value)
+        except Exception as e:
+            logger.debug(f"Failed to preserve overlay layers from existing JSON {text_output_file}: {e}")
+
+    @staticmethod
+    def _record_last_export_dir(ctx: Context, text_output_file: str, data_to_save: dict) -> None:
+        """Record where the result was written, keeping the stored folder when nothing was written this time."""
+        final_output_dir = getattr(ctx, 'final_output_dir', None)
+        if final_output_dir:
+            data_to_save['last_export_dir'] = final_output_dir
+        elif os.path.exists(text_output_file):
+            # 本轮没有写图（例如仅导出 JSON 模式），保留已有的 last_export_dir
+            try:
+                with open(text_output_file, 'r', encoding='utf-8') as f:
+                    existing_data = json.load(f)
+                if existing_data and len(existing_data.values()) > 0:
+                    existing_image_data = next(iter(existing_data.values()))
+                    if isinstance(existing_image_data, dict):
+                        preserved_dir = existing_image_data.get('last_export_dir')
+                        if preserved_dir:
+                            data_to_save['last_export_dir'] = preserved_dir
+            except Exception as e:
+                logger.debug(f"Failed to preserve last_export_dir from existing JSON {text_output_file}: {e}")
+
     def _save_text_to_file(self, image_path: str, ctx: Context, config: Config = None) -> bool:
         """保存/回写文本区域到JSON（含translation、font_size等渲染后字段），使用新的目录结构"""
         text_output_file = self.text_output_file
@@ -763,31 +880,7 @@ class MangaTranslator:
         # 这是为了确保即使 textline_merge 检测过程使用了 auto，
         # 最终保存时也会反映用户的强制设置（例如全书强制横排）
         if config and hasattr(config, 'render'):
-            try:
-                # 覆盖方向
-                if hasattr(config.render, 'direction'):
-                    dir_val = config.render.direction
-                    if hasattr(dir_val, 'value'): dir_val = dir_val.value
-
-                    forced_direction = None
-                    if dir_val == 'vertical': forced_direction = 'v'
-                    elif dir_val == 'horizontal': forced_direction = 'h'
-
-                    if forced_direction:
-                        for region in regions_data:
-                            region['direction'] = forced_direction
-
-                # 覆盖对齐方式
-                if hasattr(config.render, 'alignment'):
-                    align_val = config.render.alignment
-                    if hasattr(align_val, 'value'): align_val = align_val.value
-
-                    if align_val in ('left', 'center', 'right'):
-                        for region in regions_data:
-                            region['alignment'] = align_val
-
-            except Exception as e:
-                logger.warning(f"Failed to override region settings from config: {e}")
+            self._force_direction_and_alignment(regions_data, config)
 
         # 获取图片尺寸（优先使用保存的尺寸，兼容并发模式）
         if hasattr(ctx, 'original_size') and ctx.original_size:
@@ -805,20 +898,7 @@ class MangaTranslator:
             'original_height': original_height
         }
 
-        preserved_skip_font_scaling = getattr(ctx, 'skip_font_scaling', None)
-        if preserved_skip_font_scaling is None and os.path.exists(text_output_file):
-            try:
-                with open(text_output_file, 'r', encoding='utf-8') as f:
-                    existing_data = json.load(f)
-                if existing_data and len(existing_data.values()) > 0:
-                    existing_image_data = next(iter(existing_data.values()))
-                    if isinstance(existing_image_data, dict) and 'skip_font_scaling' in existing_image_data:
-                        preserved_skip_font_scaling = _parse_skip_font_scaling_flag(
-                            existing_image_data.get('skip_font_scaling'),
-                            default=True,
-                        )
-            except Exception as e:
-                logger.warning(f"Failed to preserve skip_font_scaling from existing JSON {text_output_file}: {e}")
+        preserved_skip_font_scaling = self._preserved_skip_font_scaling(ctx, text_output_file)
 
         # 导出原文 / 仅翻译(JSON)：后续导入渲染应重新执行智能排版，不继承旧字号。
         if (self.template and self.save_text) or self.translate_json_only:
@@ -849,69 +929,14 @@ class MangaTranslator:
                 logger.info(f"Recording colorization information in JSON: colorizer={config.colorizer.colorizer}")
 
         # 导入 YOLO 框的导出类模式不保存蒙版，后续由 load_text 缺失 mask 时再补生成
-        skip_mask_export = (
-            getattr(ctx, 'used_imported_yolo_labels', False) and
-            ((self.template and self.save_text) or self.generate_and_export)
-        )
-
-        # 保存优化后的蒙版（ctx.mask），而不是原始蒙版（ctx.mask_raw）
-        # 这样加载后可以直接使用，无需再次进行蒙版优化
-        mask_to_save = None
-        mask_is_refined = False
-        if ctx.mask is not None:
-            mask_to_save = ctx.mask
-            mask_is_refined = True
-
-        if skip_mask_export:
-            logger.info("Import YOLO labels enabled in export mode: skipping mask save in JSON")
-        elif self.save_mask and mask_to_save is not None:
-            try:
-                import base64
-
-                import cv2
-                _, buffer = cv2.imencode('.png', mask_to_save)
-                mask_base64 = base64.b64encode(buffer).decode('utf-8')
-                data_to_save['mask_raw'] = mask_base64
-                data_to_save['mask_is_refined'] = mask_is_refined
-            except Exception as e:
-                logger.error(f"Failed to encode mask to base64: {e}")
+        self._add_mask_to_saved_data(ctx, data_to_save)
 
         # 保留编辑器写入的画笔/印章图层（后端回写不生产这两个键，避免覆盖丢失）
         if os.path.exists(text_output_file):
-            try:
-                with open(text_output_file, 'r', encoding='utf-8') as f:
-                    existing_data = json.load(f)
-                if existing_data and len(existing_data.values()) > 0:
-                    existing_image_data = next(iter(existing_data.values()))
-                    if isinstance(existing_image_data, dict):
-                        for overlay_key in ('paint_overlay', 'stamp_overlay', 'paste_overlay'):
-                            overlay_value = existing_image_data.get(overlay_key)
-                            if isinstance(overlay_value, str) and overlay_value:
-                                data_to_save[overlay_key] = overlay_value
-                        # 复数贴片列表（可编辑贴片）原样保留，避免后端回写时丢数据
-                        paste_overlays_value = existing_image_data.get('paste_overlays')
-                        if isinstance(paste_overlays_value, list):
-                            data_to_save['paste_overlays'] = list(paste_overlays_value)
-            except Exception as e:
-                logger.debug(f"Failed to preserve overlay layers from existing JSON {text_output_file}: {e}")
+            self._keep_existing_overlays(text_output_file, data_to_save)
 
         # 记录本次主翻译流程的输出目录，编辑器再次导出时回写到原目录
-        final_output_dir = getattr(ctx, 'final_output_dir', None)
-        if final_output_dir:
-            data_to_save['last_export_dir'] = final_output_dir
-        elif os.path.exists(text_output_file):
-            # 本轮没有写图（例如仅导出 JSON 模式），保留已有的 last_export_dir
-            try:
-                with open(text_output_file, 'r', encoding='utf-8') as f:
-                    existing_data = json.load(f)
-                if existing_data and len(existing_data.values()) > 0:
-                    existing_image_data = next(iter(existing_data.values()))
-                    if isinstance(existing_image_data, dict):
-                        preserved_dir = existing_image_data.get('last_export_dir')
-                        if preserved_dir:
-                            data_to_save['last_export_dir'] = preserved_dir
-            except Exception as e:
-                logger.debug(f"Failed to preserve last_export_dir from existing JSON {text_output_file}: {e}")
+        self._record_last_export_dir(ctx, text_output_file, data_to_save)
 
         data[image_key] = data_to_save
 
