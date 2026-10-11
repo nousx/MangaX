@@ -98,15 +98,32 @@ class _TextValueEditor(_ValueEditor):
         self._edit.setPlaceholderText(self._t("Value"))
 
 
+# Stored codes whose translation key spells the word out.
+_ENUM_CHOICE_WORDS = {"h": "horizontal", "v": "vertical"}
+
+
 class _EnumValueEditor(_ValueEditor):
-    def __init__(self, spec: FieldSpec, parent=None):
+    def __init__(self, spec: FieldSpec, t_func: Callable | None = None, parent=None):
         super().__init__(parent)
         self._field_key = spec.key
+        self._t = t_func
         self._combo = ComboBox(self)
         for choice in spec.choices:
-            self._combo.addItem(choice, userData=choice)
+            self._combo.addItem(self._choice_label(choice), userData=choice)
         self._combo.currentIndexChanged.connect(self.changed)
         _row(self).addWidget(self._combo, 1)
+
+    def _choice_label(self, choice: str) -> str:
+        """The translated name of a choice, or the stored code when there is no translation."""
+        if self._t is None:
+            return choice
+        key = f"{self._field_key}_{_ENUM_CHOICE_WORDS.get(choice, choice)}"
+        label = self._t(key)
+        return label if label and label != key else choice
+
+    def refresh_ui_texts(self) -> None:
+        for index in range(self._combo.count()):
+            self._combo.setItemText(index, self._choice_label(str(self._combo.itemData(index))))
 
     def value(self) -> Any:
         return self._combo.currentData()
@@ -276,7 +293,7 @@ def build_value_editor(
         editor = _RangeValueEditor(spec.integer, t_func, parent) if op == "between" \
             else _NumberValueEditor(spec.integer, parent)
     elif spec.kind == KIND_ENUM:
-        editor = _EnumValueEditor(spec, parent)
+        editor = _EnumValueEditor(spec, t_func, parent)
     elif spec.kind == KIND_COLOR:
         editor = _ColorValueEditor(t_func, config_service, op == "color_near", parent)
     elif spec.kind == KIND_BOOL:
@@ -349,6 +366,9 @@ class ConditionRow(QWidget):
             item = self._value_layout.takeAt(0)
             widget = item.widget()
             if widget is not None:
+                # deleteLater() only removes it on a later pass of the event loop;
+                # until then it would still be drawn on top of the new editor.
+                widget.hide()
                 widget.deleteLater()
         self._editor = build_value_editor(
             self._current_spec(),
@@ -602,6 +622,7 @@ class SetFieldsActionCard(_ActionCard):
                 item = holder_layout.takeAt(0)
                 widget = item.widget()
                 if widget is not None:
+                    widget.hide()
                     widget.deleteLater()
             spec = FIELDS_BY_KEY.get(combo.currentData())
             editor = build_value_editor(spec, "set", self._t, self._config_service,

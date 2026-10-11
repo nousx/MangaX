@@ -168,4 +168,5 @@ class ReplacementsEditorPanel(BaseYamlRuleEditorPanel):
             item = self._preset_slot_layout.takeAt(0)
             w = item.widget()
             if w:
+                w.hide()
                 w.deleteLater()

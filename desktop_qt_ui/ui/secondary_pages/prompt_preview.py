@@ -384,6 +384,7 @@ class PromptPreviewPanel(CardWidget):
             item = self._content_layout.takeAt(0)
             w = item.widget()
             if w:
+                w.hide()
                 w.deleteLater()
 
     # ─── 外部调用：加载文件 ─────────────────────────────
