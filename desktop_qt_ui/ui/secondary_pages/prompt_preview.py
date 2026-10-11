@@ -99,7 +99,7 @@ def _glossary_category_icon(category: str):
     )
 
 
-# 模块级翻译函数（由 Panel / Dialog 初始化时设置）
+# Module-level translation function (set when the Panel / Dialog is initialised)
 def _current_t(text):
     return text
 
@@ -307,7 +307,7 @@ def _is_colorizer_structured(data: Any) -> bool:
 
 
 # ─────────────────────────────────────────────────────────
-# PromptPreviewPanel  (右侧结构化预览)
+# PromptPreviewPanel  (the structured preview on the right)
 # ─────────────────────────────────────────────────────────
 class PromptPreviewPanel(CardWidget):
     """
@@ -325,7 +325,7 @@ class PromptPreviewPanel(CardWidget):
         self._current_path: Optional[str] = None
         self._setup_ui()
 
-    # ─── UI 搭建 ───────────────────────────────────────
+    # ─── Building the UI ───────────────────────────────
     def _setup_ui(self):
         card_layout = QVBoxLayout(self)
         card_layout.setContentsMargins(14, 12, 14, 12)
@@ -346,7 +346,7 @@ class PromptPreviewPanel(CardWidget):
 
         card_layout.addWidget(_divider())
 
-        # 文件名
+        # File name
         self._filename_label = _dim_label(self._t("Select a prompt file to preview"))
         card_layout.addWidget(self._filename_label)
 
@@ -378,7 +378,7 @@ class PromptPreviewPanel(CardWidget):
         else:
             self.clear()
 
-    # ─── 清空 ──────────────────────────────────────────
+    # ─── Clearing ──────────────────────────────────────
     def _clear_content(self):
         while self._content_layout.count():
             item = self._content_layout.takeAt(0)
@@ -387,7 +387,7 @@ class PromptPreviewPanel(CardWidget):
                 w.hide()
                 w.deleteLater()
 
-    # ─── 外部调用：加载文件 ─────────────────────────────
+    # ─── Called from outside: load a file ──────────────
     def load_file(self, file_path: str):
         """加载 prompt 文件并展示预览。"""
         self._current_path = file_path
@@ -401,7 +401,7 @@ class PromptPreviewPanel(CardWidget):
 
         self._filename_label.setText(os.path.basename(file_path))
 
-        # 尝试解析
+        # Try to parse
         data = self._try_load(file_path)
         if data is not None and self._is_structured(data):
             self._render_structured(data)
@@ -414,7 +414,7 @@ class PromptPreviewPanel(CardWidget):
         self._edit_btn.setEnabled(False)
         self._filename_label.setText(self._t("Select a prompt file to preview"))
 
-    # ─── 解析 ──────────────────────────────────────────
+    # ─── Parsing ───────────────────────────────────────
     @staticmethod
     def _try_load(path: str) -> Optional[dict]:
         ext = os.path.splitext(path)[1].lower()
@@ -437,7 +437,7 @@ class PromptPreviewPanel(CardWidget):
             return False
         if _is_colorizer_structured(data):
             return True
-        # 只要存在以下任一关键字段就认为是结构化的。
+        # It counts as structured when any one of the key fields below exists.
         return any(
             key in data
             for key in (
@@ -449,7 +449,7 @@ class PromptPreviewPanel(CardWidget):
             )
         )
 
-    # ─── 结构化渲染 ────────────────────────────────────
+    # ─── Structured rendering ──────────────────────────
     def _render_structured(self, data: dict):
         layout = self._content_layout
 
@@ -550,7 +550,7 @@ class PromptPreviewPanel(CardWidget):
                         glossary_stack.setCurrentIndex(page_index)
                         glossary_segmented.setCurrentItem(route_key)
 
-                # 处理非标准分类
+                # Handle non-standard categories
                 standard_keys = set(_GLOSSARY_CATEGORIES)
                 for cat_key, entries in glossary.items():
                     if cat_key in standard_keys:
@@ -585,7 +585,7 @@ class PromptPreviewPanel(CardWidget):
 
         layout.addStretch()
 
-    # ─── 原始文本渲染 ──────────────────────────────────
+    # ─── Raw text rendering ────────────────────────────
     def _render_raw(self, file_path: str):
         layout = self._content_layout
         raw_card = SimpleCardWidget(self._content_widget)
@@ -603,7 +603,7 @@ class PromptPreviewPanel(CardWidget):
         raw_layout.addWidget(text_edit, 1)
         layout.addWidget(raw_card, 1)
 
-    # ─── 编辑按钮 ──────────────────────────────────────
+    # ─── Edit button ───────────────────────────────────
     def _on_edit_clicked(self):
         if self._current_path:
             self.edit_requested.emit(self._current_path)
@@ -640,7 +640,7 @@ class PromptPreviewPanel(CardWidget):
 
 
 # ─────────────────────────────────────────────────────────
-# 可编辑 glossary 表格（支持增删行）
+# Editable glossary table (rows can be added and removed)
 # ─────────────────────────────────────────────────────────
 def _make_editable_glossary_table(entries: List[Dict[str, str]]) -> QTableWidget:
     """生成一个可编辑的 original → translation 表。"""
@@ -980,13 +980,13 @@ class PromptEditorDialog(FluentSecondaryDialog):
         _current_t = self._t
         self._file_path = file_path
         self._original_content = ""
-        self._data: Optional[dict] = None  # 解析后的结构化数据
+        self._data: Optional[dict] = None  # The parsed structured data
         self._is_structured = False
-        self._template_dirty = False  # 模板 tab 是否有修改
-        self._free_dirty = False  # 自由 tab 是否有修改
+        self._template_dirty = False  # Whether the template tab has changes
+        self._free_dirty = False  # Whether the free-form tab has changes
         self._was_saved = False
 
-        # 模板编辑的控件引用
+        # References to the controls of the template editor
         self._system_prompt_edit: Optional[QPlainTextEdit] = None
         self._style_guide_edit: Optional[QPlainTextEdit] = None
         self._rules_edit: Optional[QPlainTextEdit] = None
@@ -1049,7 +1049,7 @@ class PromptEditorDialog(FluentSecondaryDialog):
         btn_row.addWidget(self._save_btn)
         root.addLayout(btn_row)
 
-    # ─── 加载 ──────────────────────────────────────────
+    # ─── Loading ───────────────────────────────────────
     def _load_file(self):
         try:
             with open(self._file_path, "r", encoding="utf-8") as f:
@@ -1058,7 +1058,7 @@ class PromptEditorDialog(FluentSecondaryDialog):
             self._original_content = ""
             self._status.setText(self._t("Error: {error}", error=e))
 
-        # 尝试解析
+        # Try to parse
         self._data = PromptPreviewPanel._try_load(self._file_path)
         self._is_structured = (
             self._data is not None and PromptPreviewPanel._is_structured(self._data)
@@ -1070,7 +1070,7 @@ class PromptEditorDialog(FluentSecondaryDialog):
         self._build_free_tab()
         self._status.setText(self._t("Loaded successfully"))
 
-    # ─── 模板编辑 Tab ──────────────────────────────────
+    # ─── Template editing tab ──────────────────────────
     def _build_template_tab(self):
         page = QScrollArea(self._tab_stack)
         page.setWidgetResizable(True)
@@ -1080,14 +1080,14 @@ class PromptEditorDialog(FluentSecondaryDialog):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(10)
 
-        # 保存 layout 引用，供动态添加字段用
+        # Keep a reference to the layout, for adding fields dynamically
         self._template_layout = layout
         self._template_sections_layout = QVBoxLayout()
         self._template_sections_layout.setContentsMargins(0, 0, 0, 0)
         self._template_sections_layout.setSpacing(10)
-        # 带 stretch：对话框放大时多余空间进入各字段区（编辑框跟着长）
+        # With stretch: when the dialog grows, the extra space goes to the field areas (the edit boxes grow with it)
         layout.addLayout(self._template_sections_layout, 1)
-        # 有序容器列表 [(key, container_widget), ...]
+        # Ordered list of containers [(key, container_widget), ...]
         self._section_containers: list = []
 
         data = self._data
@@ -1123,7 +1123,7 @@ class PromptEditorDialog(FluentSecondaryDialog):
         if isinstance(glossary, dict):
             self._insert_section("glossary", glossary=glossary)
 
-        # ── "+ 添加字段" 按钮 ──
+        # ── "+ Add field" button ──
         self._add_section_btn = QPushButton(self._t("Add Section"))
         self._add_section_btn.setIcon(FIF.ADD)
         self._add_section_btn.clicked.connect(self._show_add_section_menu)
@@ -1147,7 +1147,7 @@ class PromptEditorDialog(FluentSecondaryDialog):
         self._tab_stack.setCurrentIndex(page_index)
         self._tab_segmented.setCurrentItem(route_key)
 
-    # ─── 容器创建 & 操作栏 ─────────────────────────────
+    # ─── Creating containers & the action bar ──────────
     _SECTION_META = {
         "system_prompt": "System Prompt",
         "project_title": "Project Title",
@@ -1165,7 +1165,7 @@ class PromptEditorDialog(FluentSecondaryDialog):
         outer.setContentsMargins(12, 10, 12, 10)
         outer.setSpacing(6)
 
-        # 标题行
+        # Title row
         header = QHBoxLayout()
         header.setContentsMargins(0, 0, 0, 0)
         title_lbl = _section_label(self._t(label), _prompt_icon(key))
@@ -1205,7 +1205,7 @@ class PromptEditorDialog(FluentSecondaryDialog):
 
         return container, body
 
-    # 各字段区在纵向多余空间中的分配权重（0 = 保持内容高度）
+    # Weight of each field area in the extra vertical space (0 = keep the content height)
     _SECTION_STRETCHES = {
         "system_prompt": 3,
         "terminology": 2,
@@ -1221,7 +1221,7 @@ class PromptEditorDialog(FluentSecondaryDialog):
         """创建并插入一个字段区域到 layout。"""
         container, body = self._make_section_container(key)
 
-        # 根据 key 填充 body
+        # Fill the body by key
         if key == "system_prompt":
             self._fill_system_prompt(body, kwargs.get("text", ""))
         elif key == "project_title":
@@ -1244,7 +1244,7 @@ class PromptEditorDialog(FluentSecondaryDialog):
             self._section_containers.insert(idx, (key, container))
         self._refresh_section_move_buttons()
 
-    # ─── 各字段的填充方法 ──────────────────────────────
+    # ─── Fill methods of the fields ────────────────────
     def _fill_system_prompt(self, layout: QVBoxLayout, text: str = ""):
         self._system_prompt_edit = _styled_text_edit(text)
         self._system_prompt_edit.setMinimumHeight(180)
@@ -1505,7 +1505,7 @@ class PromptEditorDialog(FluentSecondaryDialog):
             return
         self._apply_glossary_result(category, table, row, dialog)
 
-    # ─── 字段操作：移动 & 删除 ─────────────────────────
+    # ─── Field operations: move & remove ───────────────
     def _refresh_section_move_buttons(self):
         total = len(self._section_containers)
         for index, (_, container) in enumerate(self._section_containers):
@@ -1602,7 +1602,7 @@ class PromptEditorDialog(FluentSecondaryDialog):
             )
             return
 
-        # 交换 list
+        # Swap in the list
         logger.info(
             "Prompt editor move apply: file=%s key=%s from=%s to=%s order_before=%s",
             self._file_path,
@@ -1617,15 +1617,15 @@ class PromptEditorDialog(FluentSecondaryDialog):
 
     def _remove_section(self, container: QWidget, key: str):
         """删除字段区域并清空对应控件引用。"""
-        # 从列表中移除
+        # Remove from the list
         self._section_containers = [(k, c) for k, c in self._section_containers if c is not container]
 
-        # 从 layout 中移除
+        # Remove from the layout
         self._template_sections_layout.removeWidget(container)
         delete_widget(container)
         self._refresh_section_move_buttons()
 
-        # 清空控件引用
+        # Clear the control references
         if key == "system_prompt":
             self._system_prompt_edit = None
         elif key == "project_title":
@@ -1642,7 +1642,7 @@ class PromptEditorDialog(FluentSecondaryDialog):
             self._glossary_tab_stack = None
             self._glossary_tab_pages.clear()
 
-    # ─── 添加字段菜单 ──────────────────────────────────
+    # ─── Add field menu ────────────────────────────────
     _SECTION_DEFS = [
         ("system_prompt", "System Prompt"),
         ("project_title", "Project Title"),
@@ -1679,7 +1679,7 @@ class PromptEditorDialog(FluentSecondaryDialog):
         """在"添加字段"按钮上方插入新的字段区域。"""
         self._insert_section(key)
 
-    # ─── 自由编辑 Tab ──────────────────────────────────
+    # ─── Free-form editing tab ─────────────────────────
     def _build_free_tab(self):
         page = SimpleCardWidget(self._tab_stack)
         page_layout = QVBoxLayout(page)
@@ -1704,7 +1704,7 @@ class PromptEditorDialog(FluentSecondaryDialog):
             self._tab_stack.setCurrentIndex(page_index)
             self._tab_segmented.setCurrentItem(route_key)
 
-    # ─── 表格行增删 ────────────────────────────────────
+    # ─── Adding and removing table rows ────────────────
     @staticmethod
     def _add_table_row(table: QTableWidget, cols: int):
         row = table.rowCount()
@@ -1754,7 +1754,7 @@ class PromptEditorDialog(FluentSecondaryDialog):
         table.setCurrentCell(target_row, 0)
         return True
 
-    # ─── 从模板收集数据 ────────────────────────────────
+    # ─── Collecting the data from the template ─────────
     def _collect_template_data(self) -> dict:
         """从模板编辑控件收集数据，并按当前 section 顺序重建结构。"""
         base_data = self._data if isinstance(self._data, dict) else {}
@@ -1806,7 +1806,7 @@ class PromptEditorDialog(FluentSecondaryDialog):
                     entry = _get_glossary_entry_row(tbl, row)
                     if entry["original"]:
                         entries.append(serialize_glossary_entry(entry))
-                # 保留空分类，避免保存后 glossary 被塌缩成 {}。
+                # Empty categories are kept, so the glossary does not collapse to {} after saving.
                 glossary_data[cat_key] = entries
 
         project_inserted = False
@@ -1838,13 +1838,13 @@ class PromptEditorDialog(FluentSecondaryDialog):
 
         return data
 
-    # ─── 保存 ──────────────────────────────────────────
+    # ─── Saving ────────────────────────────────────────
     def _save(self):
         current_tab = self._tab_stack.currentIndex()
 
-        # 判断用哪个 Tab 的内容
+        # Decide which tab's content is used
         if self._is_structured and current_tab == 0:
-            # 模板编辑 → 收集数据 → 序列化
+            # Template editing -> collect the data -> serialise
             data = self._collect_template_data()
             ext = os.path.splitext(self._file_path)[1].lower()
             try:
@@ -1860,10 +1860,10 @@ class PromptEditorDialog(FluentSecondaryDialog):
                 self._status.setText(f"❌ {self._t('Serialize Error')}: {e}")
                 return
         else:
-            # 自由编辑
+            # Free-form editing
             content = self._free_editor.toPlainText()
 
-            # 格式验证
+            # Format validation
             ext = os.path.splitext(self._file_path)[1].lower()
             if ext == ".json":
                 try:
@@ -1881,14 +1881,14 @@ class PromptEditorDialog(FluentSecondaryDialog):
                     self._status.setText(f"❌ YAML {self._t('Format Error')}: {e}")
                     return
 
-        # 写入文件
+        # Write to the file
         try:
             with open(self._file_path, "w", encoding="utf-8") as f:
                 f.write(content)
             self._status.setText(f"✅ {self._t('Saved successfully')}")
             self._was_saved = True
             self._original_content = content
-            # 同步另一个 tab
+            # Sync the other tab
             if self._is_structured and current_tab == 0:
                 self._free_editor.setPlainText(content)
             self.accept()
@@ -1897,6 +1897,6 @@ class PromptEditorDialog(FluentSecondaryDialog):
 
     def get_was_modified(self) -> bool:
         if self._is_structured:
-            # 简单比较自由编辑内容
+            # Simple comparison of the free-form content
             return self._was_saved or self._free_editor.toPlainText() != self._original_content
         return self._was_saved or self._free_editor.toPlainText() != self._original_content

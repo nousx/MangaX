@@ -29,8 +29,8 @@ from .graphics_items import RegionTextItem
 
 class GraphicsViewRenderingMixin:
     def _schedule_render_update(self) -> None:
-        # 场景里还没有 region item 时（切图/清空后的首次重建）立即执行，避免防抖延迟出现空白帧；
-        # 已有内容时用防抖合并连续的整批重建请求。
+        # When the scene has no region item yet (the first rebuild after switching or clearing), run at once, so the debounce delay does not show a blank frame;
+        # when there is content already, debounce to merge consecutive whole-batch rebuild requests.
         immediate = not self._region_items
         if immediate:
             if self.render_debounce_timer.isActive():
@@ -196,8 +196,8 @@ class GraphicsViewRenderingMixin:
             if edit_kind is None:
                 edit_kind = self._consume_pending_geometry_edit(index)
 
-            # white_frame 编辑时 item.geo 在拖动中已经更新过，跳过 update_from_data。
-            # 其他编辑（rotate/move/shape/other）需要从 model 同步到 item。
+            # For a white_frame edit, item.geo was already updated during the drag, so update_from_data is skipped.
+            # The other edits (rotate/move/shape/other) have to be synced from the model to the item.
             if edit_kind != "white_frame":
                 region_for_item = region_data.copy()
                 if (
@@ -212,8 +212,8 @@ class GraphicsViewRenderingMixin:
                         pass
                 item.update_from_data(region_for_item)
 
-            # dst 永远由 calc_box_from_font(字号) 反算 + render_center 定位（snapshot 完成），
-            # 不再需要 override —— 白框只负责 UI 显示和提供渲染中心。
+            # dst is always derived from calc_box_from_font(font size) and placed by render_center (done by the snapshot);
+            # an override is no longer needed - the white box only serves the UI display and provides the render centre.
             self._recalculate_single_region_render_data(index)
 
             self._update_single_region_text_visual(index)
@@ -465,7 +465,7 @@ class GraphicsViewRenderingMixin:
                     item = current_items[i]
                     item.set_image_item(self._image_item)
                     item.region_index = i
-                    # 本轮刚创建的 item 已经用同一份 region_data 初始化过，避免重复
+                    # An item created in this round was already initialised with the same region_data; avoid doing it twice
                     # prepareGeometryChange/update/scene invalidation。
                     if i >= first_new_item_index:
                         continue

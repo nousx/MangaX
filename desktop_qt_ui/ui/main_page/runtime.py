@@ -104,8 +104,8 @@ def reset_progress(self):
 
 def on_translation_state_changed(self, is_translating: bool):
     """根据翻译状态更新开始/停止按钮。"""
-    # 文件列表保持可选择，以便翻译期间仍可从主页进入编辑器；文件增删
-    # 控件和业务层修改入口继续锁定，避免改变当前任务的输入。
+    # The file list stays selectable, so the editor can still be opened from the main page during translation; the controls that add and remove files
+    # and the entry points of the business layer that modify them stay locked, so the input of the current task does not change.
     for name in (
         "add_files_button",
         "add_folder_button",

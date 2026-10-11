@@ -23,7 +23,7 @@ def create_replacements_page(self) -> QWidget:
     header_layout.addWidget(self.replacements_page_subtitle_label)
     page_layout.addWidget(header_card)
 
-    # MainView 是纯逻辑 QObject，不能当控件父级；面板随 addWidget 进布局后自动认领父级
+    # MainView is a pure logic QObject and cannot be the parent of a control; the panel gets its parent automatically when addWidget puts it in the layout
     self.replacements_editor_panel = ReplacementsEditorPanel(t_func=self._t)
     page_layout.addWidget(self.replacements_editor_panel, 1)
 

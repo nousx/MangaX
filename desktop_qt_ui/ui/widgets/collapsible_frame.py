@@ -23,13 +23,13 @@ class CollapsibleFrame(CardWidget):
         self.layout.setContentsMargins(8, 8, 8, 8)
         self.layout.setSpacing(6)
 
-        # --- 标题栏 ---
+        # --- Title bar ---
         self.header_button = PushButton(title, self, FIF.DOWN)
         self.header_button.setCheckable(True)
         self.header_button.setChecked(True)
         self.header_button.setCursor(Qt.CursorShape.PointingHandCursor)
         
-        # --- 内容容器 ---
+        # --- Content container ---
         self.content_area = SmoothScrollArea(self)
         self.content_area.setFrameShape(QFrame.Shape.NoFrame)
         self.content_area.setWidgetResizable(True)
@@ -38,16 +38,16 @@ class CollapsibleFrame(CardWidget):
         self.content_layout.setContentsMargins(0, 0, 0, 0)
         self.content_area.setWidget(self.content_widget)
 
-        # --- 动画 ---
+        # --- Animation ---
         self.animation = QPropertyAnimation(self.content_area, b"maximumHeight")
         self.animation.setDuration(200)
         self.animation.setEasingCurve(QEasingCurve.Type.InOutQuad)
 
-        # --- 布局 ---
+        # --- Layout ---
         self.layout.addWidget(self.header_button)
         self.layout.addWidget(self.content_area)
 
-        # --- 连接信号 ---
+        # --- Connect the signals ---
         self.header_button.toggled.connect(self.toggle)
 
     def toggle(self, checked: bool):
@@ -56,11 +56,11 @@ class CollapsibleFrame(CardWidget):
         
         start_height = self.content_area.height()
         if checked:
-            # 展开
+            # Expand
             self.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Preferred)
             end_height = self.content_widget.sizeHint().height()
         else:
-            # 折叠
+            # Collapse
             self.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
             end_height = 0
 

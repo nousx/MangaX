@@ -8,8 +8,8 @@ from qfluentwidgets.common.icon import drawSvgIcon, writeSvg
 
 from utils.resource_helper import resource_path
 
-# (SVG 路径, 颜色) -> 改写好填充色的 SVG bytes。writeSvg 每次都要重新解析
-# 改写 XML，这里做个小缓存；主题切换后颜色变化，键自然失效。
+# (SVG path, colour) -> SVG bytes with the fill colour rewritten. writeSvg has to parse and rewrite
+# the XML every time, so a small cache is kept here; after a theme switch the colour changes and the keys expire by themselves.
 _SVG_BYTES_CACHE: dict[tuple[str, str], bytes] = {}
 _SVG_BYTES_CACHE_MAX = 256
 
@@ -69,7 +69,7 @@ class _ThemedFluentSvgIconEngine(QIconEngine):
         pixmap = QPixmap.fromImage(image)
 
         painter = QPainter(pixmap)
-        # 绘制坐标使用设备无关像素；QPainter 依据 pixmap 的 DPR 放大
+        # Drawing coordinates are in device-independent pixels; QPainter scales by the DPR of the pixmap
         self.paint(painter, QRect(0, 0, size.width(), size.height()), mode, state)
         painter.end()
         return pixmap

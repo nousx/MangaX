@@ -253,7 +253,7 @@ class BatchEditPanel(CardWidget):
         self._setup_ui()
         self._load_schemes()
 
-    # ─── 构建 ───
+    # ─── Construction ───
 
     def _setup_ui(self) -> None:
         root = QVBoxLayout(self)
@@ -475,7 +475,7 @@ class BatchEditPanel(CardWidget):
             self._t("Changes"),
         ]
 
-    # ─── 外部注入 ───
+    # ─── Injected from outside ───
 
     def set_catalog_snapshot(self, snapshot) -> None:
         """由 MainWindow 在主页文件列表快照就绪时推入。"""
@@ -506,7 +506,7 @@ class BatchEditPanel(CardWidget):
             )
         )
 
-    # ─── 方案 ───
+    # ─── Schemes ───
 
     def _load_schemes(self) -> None:
         self._schemes = scheme_store.load_schemes()
@@ -592,7 +592,7 @@ class BatchEditPanel(CardWidget):
         if self._loading:
             return
         self._autosave.start(self._AUTOSAVE_DELAY_MS)
-        # 条件/动作一改，上一次的预览结果就作废了
+        # Once a condition or an action changes, the last preview result is void
         self._clear_matches()
 
     def _save_current_scheme(self) -> None:
@@ -689,7 +689,7 @@ class BatchEditPanel(CardWidget):
             return ""
         return name
 
-    # ─── 条件行 ───
+    # ─── Condition rows ───
 
     def _add_condition_row(
         self, condition: Optional[dict] = None, silent: bool = False
@@ -716,7 +716,7 @@ class BatchEditPanel(CardWidget):
         if not silent:
             self._mark_dirty()
 
-    # ─── 预览 ───
+    # ─── Preview ───
 
     def _clear_matches(self) -> None:
         self._matches = []
@@ -791,7 +791,7 @@ class BatchEditPanel(CardWidget):
     def _selected_matches(self) -> list:
         return self._table_model.selected_matches()
 
-    # ─── 执行 ───
+    # ─── Running ───
 
     def _conflicting_editor_image(self, target_paths) -> Optional[str]:
         """编辑器正打开的图是否在本次写回范围内。
@@ -883,10 +883,10 @@ class BatchEditPanel(CardWidget):
                 self._t("{count} files could not be written", count=len(report.errors)),
                 "\n".join(f"{path}\n    {message}" for path, message in report.errors),
             )
-        # 盘上已经变了，旧的预览结果不再可信
+        # The files on disk have changed; the old preview result can no longer be trusted
         self._clear_matches()
 
-    # ─── 恢复 ───
+    # ─── Restoring ───
 
     def _restorable_paths(self) -> list[str]:
         return [path for path in self._json_paths() if engine.has_backup(path)]
@@ -905,7 +905,7 @@ class BatchEditPanel(CardWidget):
             "Roll {files} files back to their backup? The backup is consumed.",
             files=len(paths),
         )
-        # 恢复也是全量覆盖，编辑器内存里的旧副本同样会把它盖回去
+        # Restoring is a full overwrite as well; the old copy in the editor's memory would write over it in the same way
         conflict = self._conflicting_editor_image(
             os.path.abspath(path) for path in paths
         )
@@ -957,7 +957,7 @@ class BatchEditPanel(CardWidget):
             )
         self._clear_matches()
 
-    # ─── 进度 / 状态 ───
+    # ─── Progress / status ───
 
     def _open_progress(self, title: str, label: str, total: int, channel: str) -> None:
         self._close_progress()
@@ -999,7 +999,7 @@ class BatchEditPanel(CardWidget):
             message,
         )
 
-    # ─── 页面约定 ───
+    # ─── Page conventions ───
 
     def refresh(self) -> None:
         if self._autosave.isActive():

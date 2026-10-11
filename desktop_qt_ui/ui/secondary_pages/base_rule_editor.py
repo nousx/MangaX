@@ -124,7 +124,7 @@ class BaseYamlRuleEditorPanel(CardWidget):
         self._init_backward_compatibility_aliases()
         self._load_data()
 
-    # ─── 抽象与定制接口（子类实现） ───
+    # ─── Abstract and customisation interface (implemented by subclasses) ───
 
     def _get_file_path(self) -> str:
         raise NotImplementedError
@@ -187,14 +187,14 @@ class BaseYamlRuleEditorPanel(CardWidget):
     def _apply_theme_extra(self) -> None:
         pass
 
-    # ─── UI 构建 ───
+    # ─── Building the UI ───
 
     def _setup_ui(self) -> None:
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(10)
 
-        # 1. 顶部工具栏
+        # 1. Top toolbar
         toolbar = SimpleCardWidget(self)
         toolbar_layout = QHBoxLayout(toolbar)
         toolbar_layout.setContentsMargins(10, 8, 10, 8)
@@ -230,7 +230,7 @@ class BaseYamlRuleEditorPanel(CardWidget):
         layout.addWidget(toolbar)
         self._toolbar = toolbar
 
-        # 2. 搜索过滤栏
+        # 2. Search and filter bar
         filter_card = SimpleCardWidget(self)
         filter_layout = QHBoxLayout(filter_card)
         filter_layout.setContentsMargins(10, 8, 10, 8)
@@ -247,12 +247,12 @@ class BaseYamlRuleEditorPanel(CardWidget):
         layout.addWidget(filter_card)
         self.filter_card = filter_card
 
-        # 3. 双模式切换容器
+        # 3. Container that switches between the two modes
         self.mode_segment = SegmentedWidget(self)
         self.mode_stack = PopUpAniStackedWidget(self)
         self._mode_pages: Dict[str, QWidget] = {}
 
-        # 模式1: 表格模式
+        # Mode 1: table mode
         table_container = SimpleCardWidget(self.mode_stack)
         table_layout = QVBoxLayout(table_container)
         table_layout.setContentsMargins(10, 10, 10, 10)
@@ -277,7 +277,7 @@ class BaseYamlRuleEditorPanel(CardWidget):
         self.mode_stack.addWidget(table_container)
         self._mode_pages["table_view"] = table_container
 
-        # 模式2: 原始 YAML 源码模式
+        # Mode 2: raw YAML source mode
         raw_container = SimpleCardWidget(self.mode_stack)
         raw_layout = QVBoxLayout(raw_container)
         raw_layout.setContentsMargins(10, 10, 10, 10)
@@ -310,7 +310,7 @@ class BaseYamlRuleEditorPanel(CardWidget):
         layout.addWidget(self.mode_segment)
         layout.addWidget(self.mode_stack, 1)
 
-        # 4. 底部状态栏
+        # 4. Status bar at the bottom
         self.status = CaptionLabel("")
         layout.addWidget(self.status)
 
@@ -318,7 +318,7 @@ class BaseYamlRuleEditorPanel(CardWidget):
         self._show_mode_page("table_view")
         self.mode_segment.setCurrentItem("table_view")
 
-        # 信号连接
+        # Signal connections
         self.add_button.clicked.connect(self._on_add_rule)
         self.delete_button.clicked.connect(self._on_delete_rule)
         self.up_button.clicked.connect(lambda: self._on_move_rule(-1))
@@ -352,7 +352,7 @@ class BaseYamlRuleEditorPanel(CardWidget):
         self._group_segmented = self.group_segment
         self._group_stack = self.group_stack
 
-    # ─── 表格创建与基本事件 ───
+    # ─── Creating the table and basic events ───
 
     def _fit_flag_columns(self, table: TableWidget) -> None:
         """Size the two yes/no columns; their translated titles can be longer than 55 pixels."""
@@ -473,7 +473,7 @@ class BaseYamlRuleEditorPanel(CardWidget):
         self._apply_filter(self._current_table(), self.search.text())
         self._update_status()
 
-    # ─── 数据存取与同步 ───
+    # ─── Data access and sync ───
 
     def _load_data(self) -> None:
         if not os.path.exists(self._file_path):
@@ -579,7 +579,7 @@ class BaseYamlRuleEditorPanel(CardWidget):
                 self.status.setText(msg)
             return False
 
-    # ─── 操作逻辑（增、删、移、改） ───
+    # ─── Operations (add, remove, move, change) ───
 
     def _get_selected_rows(self) -> List[int]:
         table = self._current_table()
@@ -830,7 +830,7 @@ class BaseYamlRuleEditorPanel(CardWidget):
             f"{group_key}: {enabled}/{total} {self._t('enabled')}{selected_info}{modified_mark}  [{mode}]"
         )
 
-    # ─── 公共接口 ───
+    # ─── Public interface ───
 
     def refresh(self) -> None:
         if not self._modified:

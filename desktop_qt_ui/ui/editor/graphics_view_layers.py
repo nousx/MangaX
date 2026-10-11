@@ -60,8 +60,8 @@ class GraphicsViewLayersMixin:
                 self.scene.removeItem(self._textbox_preview_item)
                 self._textbox_preview_item = None
 
-            # 仿制印章：取样圈是场景顶层 item，取样点/偏移属于当前图片，
-            # 切图时必须一并清掉，否则旧取样点会带到新图
+            # Clone stamp: the sampling circle is a top-level scene item, and the sampling point and offset belong to the current image;
+            # they have to be cleared together when the image changes, otherwise the old sampling point is carried to the new image
             self._clone_sample_image_point = None
             self._clone_offset = None
             self._clear_clone_marker()

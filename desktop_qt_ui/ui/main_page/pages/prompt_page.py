@@ -70,7 +70,7 @@ def create_prompt_page(self) -> QWidget:
 
     prompt_splitter.addWidget(self.prompt_card)
 
-    # MainView 是纯逻辑 QObject，不能当控件父级；面板随 addWidget 进布局后自动认领父级
+    # MainView is a pure logic QObject and cannot be the parent of a control; the panel gets its parent automatically when addWidget puts it in the layout
     self.prompt_preview_panel = PromptPreviewPanel(t_func=self._t)
     prompt_splitter.addWidget(self.prompt_preview_panel)
 

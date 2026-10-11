@@ -79,10 +79,10 @@ def apply_native_title_bar_theme(widget: QWidget, theme: str | None = None, logg
     if sys.platform != "win32":
         return
 
-    # 注意：这里只同步 DWMWA_USE_IMMERSIVE_DARK_MODE。
-    # 无边框窗口（qframelesswindow）NC 区已被抹平、标题栏由 Qt 自绘，
-    # 再设置 DWMWA_CAPTION_COLOR/DWMWA_TEXT_COLOR 并强制 SWP_FRAMECHANGED
-    # 会引入 DWM 与 Qt 双绘制者（标题栏重影的头号候选机制），已移除。
+    # Note: only DWMWA_USE_IMMERSIVE_DARK_MODE is synced here.
+    # In a frameless window (qframelesswindow) the NC area is flattened and the title bar is drawn by Qt;
+    # also setting DWMWA_CAPTION_COLOR/DWMWA_TEXT_COLOR and forcing SWP_FRAMECHANGED
+    # would make DWM and Qt both draw (the leading candidate for the ghost title bar), so it was removed.
     try:
         import ctypes
         from ctypes import wintypes

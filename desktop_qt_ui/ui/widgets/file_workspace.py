@@ -118,7 +118,7 @@ class _WorkspaceDelegate(QStyledItemDelegate):
 
     def sizeHint(self, _option, index):
         if index.data(KIND_ROLE) == KIND_FOLDER:
-            # 整行目录和缩略图自动换行，共享一个滚动区域。
+            # Full-width folder rows and thumbnails wrap automatically and share one scroll area.
             return QSize(max(1, self.parent().viewport().width()), self.FOLDER_HEIGHT)
         return self.TILE_SIZE
 
@@ -241,7 +241,7 @@ class _WorkspaceView(QListView):
         self.doubleClicked.connect(self._activate)
 
     def visible_indexes(self):
-        # 顺序布局的 y 坐标单调；二分定位首个可见项目。
+        # The y coordinates of a sequential layout are monotonic; the first visible item is found by bisection.
         low, high = 0, self.model().rowCount()
         while low < high:
             mid = (low + high) // 2
@@ -286,7 +286,7 @@ class _WorkspaceView(QListView):
     def _activate(self, index):
         if index.data(KIND_ROLE) == KIND_FOLDER:
             path = index.data(PATH_ROLE)
-            # 打开目录不把它保留为待删除项；勾选目录仍可移除整个目录。
+            # Opening a folder does not keep it as an item pending removal; a ticked folder can still be removed as a whole.
             self.selectionModel().select(index, QItemSelectionModel.SelectionFlag.Deselect)
             self.workspace_model.toggle_folder(path)
         elif index.data(KIND_ROLE) == KIND_IMAGE:
@@ -315,7 +315,7 @@ class _WorkspaceView(QListView):
 
     def mouseMoveEvent(self, event):
         if self._pressed_control:
-            # 控件已接管按下事件，移动也不能交给 Qt 用旧起点开始框选。
+            # The control has taken over the press event, so the move cannot be left to Qt to start a box selection from the old origin either.
             distance = (event.position().toPoint() - self._control_press_position).manhattanLength()
             if distance >= QApplication.startDragDistance():
                 self._control_dragged = True
@@ -342,7 +342,7 @@ class _WorkspaceView(QListView):
 
     def mouseDoubleClickEvent(self, event):
         if event.button() == Qt.MouseButton.LeftButton and self._control_at(event.position().toPoint()):
-            # 第二次按下会作为双击事件送达，也要接管后续移动和松开。
+            # The second press arrives as a double-click event; the following move and release have to be taken over as well.
             self.mousePressEvent(event)
             self._control_dragged = True
             return
@@ -440,7 +440,7 @@ class FileWorkspace(QWidget):
         if not paths:
             self.clear_requested.emit()
             return
-        # 目录和子项同时选中时只移除目录，避免重复处理已经移除的后代。
+        # When a folder and its children are both selected, only the folder is removed, so descendants already removed are not handled twice.
         keys = {canonical_path_key(path) for path in paths}
         roots = []
         for path in paths:

@@ -384,7 +384,7 @@ def _get_setting_description(view, full_key: str) -> str:
     desc_key = "desc_" + full_key.replace(".", "_")
     if hasattr(view, '_t'):
         result = view._t(desc_key)
-        # 如果翻译结果等于 key 本身，说明没有对应翻译
+        # When the translation result equals the key itself, there is no translation for it
         if result != desc_key:
             return result
     return ""
@@ -705,12 +705,12 @@ def set_parameters(self, config: dict):
     self._settings_pending_structure_signature = structure_signature
     self._settings_value_bindings = {}
 
-    # 构建代号：每次重建自增，链中每步校验，过期构建链自行终止，
-    # 避免二次 config_loaded 并发开出第二条构建链导致控件重复。
+    # Build generation: increased on every rebuild and checked at each step of the chain; a stale build chain ends itself,
+    # so a second config_loaded does not start a second chain concurrently and duplicate the controls.
     self._settings_build_seq = getattr(self, "_settings_build_seq", 0) + 1
     build_seq = self._settings_build_seq
 
-    # Clear existing widgets immediately（补回底部 stretch，保持 spacer 约定）
+    # Clear existing widgets immediately (the bottom stretch is added back, keeping the spacer convention)
     for panel in self.tab_frames.values():
         _clear_layout_widgets(panel.layout(), restore_stretch=True)
     _drop_cached_settings_widget_refs(self)
@@ -827,7 +827,7 @@ def _process_next_setting_chunk(self, build_seq: int):
     section = self._sections_to_process.pop(0)
     config = self._config_to_process
 
-    # 使用固定的英文键名
+    # Use fixed English key names
     panel_map = {
         "translator": self.tab_frames.get("Basic Settings"),
         "cli": self.tab_frames.get("Basic Settings"),
@@ -843,7 +843,7 @@ def _process_next_setting_chunk(self, build_seq: int):
 
     panel = panel_map.get(section)
     if section == "global":
-        # 处理顶层的全局参数
+        # Handle the top-level global parameters
         global_params = {k: v for k, v in config.items() if k not in ["translator", "cli", "detector", "inpainter", "render", "upscale", "colorizer", "ocr", "app"]}
         if global_params and panel:
             self._create_param_widgets(global_params, panel.layout(), "")
@@ -859,19 +859,19 @@ def _finalize_settings_ui(self, build_seq: int | None = None):
     """
     if build_seq is not None and build_seq != getattr(self, "_settings_build_seq", None):
         return
-    # 在 CLI 配置区域最上面添加"翻译完成后卸载模型"复选框
+    # Add the "unload models after translation" checkbox at the very top of the CLI settings area
     cli_panel = self.tab_frames.get("Basic Settings")
     if cli_panel and not getattr(self, "_settings_tabs_use_reclassify", False):
         cli_layout = cli_panel.layout()
         if cli_layout is not None:
-            # 创建滑块开关
+            # Create the toggle switch
             unload_models_checkbox = ToggleSwitch()
             
-            # 从配置中读取初始状态
+            # Read the initial state from the configuration
             config = self.config_service.get_config()
             unload_models_checkbox.setCheckedSilently(config.app.unload_models_after_translation)
             
-            # 连接信号
+            # Connect the signal
             unload_models_checkbox.checkedChanged.connect(
                 lambda checked: self.controller.update_single_config(
                     'app.unload_models_after_translation', 
@@ -879,7 +879,7 @@ def _finalize_settings_ui(self, build_seq: int | None = None):
                 )
             )
             
-            # 创建标签
+            # Create the label
             label_text = self._t("label_unload_models_after_translation")
             if not label_text or label_text == "label_unload_models_after_translation":
                 label_text = "Unload Models After Translation"
@@ -890,7 +890,7 @@ def _finalize_settings_ui(self, build_seq: int | None = None):
                 unload_models_checkbox,
             )
             
-            # 插入到最上面（索引0）
+            # Insert at the very top (index 0)
             _insert_settings_row(cli_layout, 0, row)
     
     if hasattr(self, "env_tab_widget"):
@@ -902,7 +902,7 @@ def _finalize_settings_ui(self, build_seq: int | None = None):
     for layout in [self.env_preset_layout, self.env_group_container_layout, self.ocr_container_layout, self.color_container_layout, self.render_container_layout]:
         _clear_layout_widgets(layout)
                 
-    # --- 全局 API Preset Toolbar ---
+    # --- Global API preset toolbar ---
     preset_label = BodyLabel(self._t("Preset:"))
     self.preset_combo = QComboBox()
     self.preset_combo.setMinimumWidth(180)
@@ -970,7 +970,7 @@ def _on_setting_changed(self, value, full_key, display_map=None):
         reverse_map = {v: k for k, v in display_map.items()}
         final_value = reverse_map.get(value, value) # Fallback to value itself if not in map
     
-    # 特殊处理：当 upscaler 变化时，更新 upscale_ratio 动态下拉框
+    # Special handling: when upscaler changes, update the dynamic upscale_ratio drop-down
     if full_key == "upscale.upscaler":
         self._update_upscale_ratio_options(final_value)
 
@@ -993,41 +993,41 @@ def _on_upscale_ratio_changed(self, text, full_key):
     config = self.config_service.get_config()
     
     if config.upscale.upscaler == "realcugan":
-        # 当前是 realcugan
+        # Currently realcugan
         if text == self._t("upscale_ratio_not_use"):
-            # 禁用超分
+            # Upscaling off
             self.setting_changed.emit("upscale.upscale_ratio", None)
             self.setting_changed.emit("upscale.realcugan_model", None)
         else:
-            # text 可能是中文显示名称，需要转换回英文值
+            # text may be a localised display name and has to be converted back to the English value
             display_map = self.controller.get_display_mapping("realcugan_model")
             model_value = text
             
-            # 如果有display_map，进行反向查找
+            # With a display_map, do a reverse lookup
             if display_map:
                 reverse_map = {v: k for k, v in display_map.items()}
                 model_value = reverse_map.get(text, text)
             
-            # 从模型名称中提取倍率
+            # Extract the ratio from the model name
             scale_str = model_value.split('x')[0] if 'x' in model_value else None
             if scale_str and scale_str.isdigit():
                 scale = int(scale_str)
-                # 同时更新 realcugan_model 和 upscale_ratio
+                # Update realcugan_model and upscale_ratio together
                 self.setting_changed.emit("upscale.realcugan_model", model_value)
                 self.setting_changed.emit("upscale.upscale_ratio", scale)
             else:
-                # 无法解析倍率，只更新模型
+                # The ratio cannot be parsed: only the model is updated
                 self.setting_changed.emit("upscale.realcugan_model", model_value)
     elif config.upscale.upscaler == "mangajanai":
-        # 当前是 mangajanai，直接把选项存到 upscale_ratio
+        # Currently mangajanai: the option is stored in upscale_ratio directly
         if text == self._t("upscale_ratio_not_use"):
-            # 禁用超分
+            # Upscaling off
             self.setting_changed.emit("upscale.upscale_ratio", None)
         else:
-            # 直接存储选项字符串 (x2, x4, DAT2 x4)
+            # Store the option string directly (x2, x4, DAT2 x4)
             self.setting_changed.emit("upscale.upscale_ratio", text)
     else:
-        # 当前是其他超分模型，text 是倍率
+        # Currently another upscaling model: text is the ratio
         if text == self._t("upscale_ratio_not_use"):
             self.setting_changed.emit(full_key, None)
         else:
@@ -1040,14 +1040,14 @@ def _on_upscale_ratio_changed(self, text, full_key):
 def _on_numeric_input_changed(self, text, full_key, value_type):
     """统一处理数值类型输入框的变化（支持 int 和 float）"""
     if not text or not text.strip():
-        # 空值 = 使用默认值 (None)
+        # Empty = use the default (None)
         self.setting_changed.emit(full_key, None)
     else:
         try:
             value = value_type(text)
             self.setting_changed.emit(full_key, value)
         except ValueError:
-            # 无效输入 = 使用默认值
+            # Invalid input = use the default
             self.setting_changed.emit(full_key, None)
 
 def _update_upscale_ratio_options(self, upscaler):
@@ -1056,7 +1056,7 @@ def _update_upscale_ratio_options(self, upscaler):
     if not upscale_ratio_widget:
         return
     
-    # 阻止信号触发（try/finally 保证异常路径也恢复）
+    # Block the signals (try/finally restores them on the exception path too)
     upscale_ratio_widget.blockSignals(True)
     try:
         _repopulate_upscale_ratio_options(self, upscale_ratio_widget, upscaler)
@@ -1069,12 +1069,12 @@ def _repopulate_upscale_ratio_options(self, upscale_ratio_widget, upscaler):
     upscale_ratio_widget.clear()
 
     if upscaler == "realcugan":
-        # 显示 Real-CUGAN 模型列表（使用中文显示）
+        # Show the list of Real-CUGAN models (with localised names)
         realcugan_models = self.controller.get_options_for_key("realcugan_model")
         display_map = self.controller.get_display_mapping("realcugan_model")
         
         if realcugan_models:
-            # 如果有display_map，使用中文名称
+            # With a display_map, use the localised names
             if display_map:
                 display_options = [display_map.get(model, model) for model in realcugan_models]
                 all_options = [self._t("upscale_ratio_not_use")] + display_options
@@ -1083,10 +1083,10 @@ def _repopulate_upscale_ratio_options(self, upscale_ratio_widget, upscaler):
             
             upscale_ratio_widget.addItems(all_options)
         
-        # 设置默认值
+        # Set the default value
         config = self.config_service.get_config()
         if config.upscale.realcugan_model:
-            # 如果有display_map，显示中文名称
+            # With a display_map, show the localised name
             if display_map:
                 display_name = display_map.get(config.upscale.realcugan_model, config.upscale.realcugan_model)
                 upscale_ratio_widget.setCurrentText(display_name)
@@ -1100,12 +1100,12 @@ def _repopulate_upscale_ratio_options(self, upscale_ratio_widget, upscaler):
             else:
                 upscale_ratio_widget.setCurrentText(realcugan_models[0])
     elif upscaler == "mangajanai":
-        # 显示 MangaJaNai 特殊选项
+        # Show the special MangaJaNai options
         mangajanai_options = ["x2", "x4", "DAT2 x4"]
         all_options = [self._t("upscale_ratio_not_use")] + mangajanai_options
         upscale_ratio_widget.addItems(all_options)
         
-        # 设置默认值 - upscale_ratio 直接存储选项字符串
+        # Set the default value - upscale_ratio stores the option string directly
         config = self.config_service.get_config()
         ratio = config.upscale.upscale_ratio
         if ratio is None:
@@ -1117,10 +1117,10 @@ def _repopulate_upscale_ratio_options(self, upscale_ratio_widget, upscaler):
         else:
             upscale_ratio_widget.setCurrentText("x4")
     else:
-        # 显示普通倍率选项
+        # Show the ordinary ratio options
         ratio_options = [self._t("upscale_ratio_not_use"), "2", "3", "4"]
         upscale_ratio_widget.addItems(ratio_options)
-        # 设置默认值
+        # Set the default value
         config = self.config_service.get_config()
         if config.upscale.upscale_ratio is None:
             upscale_ratio_widget.setCurrentText(self._t("upscale_ratio_not_use"))
@@ -1135,11 +1135,11 @@ def _create_param_widgets(self, data, parent_layout, prefix=""):
     for key, value in data.items():
         full_key = f"{prefix}.{key}" if prefix else key
 
-        # 跳过这些选项，因为已经用下拉框替代或不需要在UI中显示
-        # realcugan_model 将通过 upscale_ratio 动态下拉框处理
-        # gimp_font 已废弃；字体统一使用 font_family。
-        # replace_translation 和 replace_translation_mode 通过工作流模式下拉框控制
-        # app 路径、收藏、文件夹排序和当前预设属于内部状态，不显示在 UI 中。
+        # These options are skipped, because a drop-down replaces them or they do not need to be shown in the UI
+        # realcugan_model is handled through the dynamic upscale_ratio drop-down
+        # gimp_font is deprecated; fonts always use font_family.
+        # replace_translation and replace_translation_mode are controlled through the workflow mode drop-down
+        # The app paths, favourites, folder sort order and current preset are internal state and are not shown in the UI.
         if full_key in _SKIPPED_SETTING_KEYS:
             continue
 
@@ -1155,7 +1155,7 @@ def _create_param_widgets(self, data, parent_layout, prefix=""):
         display_map = self.controller.get_display_mapping(key)
 
         if full_key == "filter_text_enabled":
-            # 特殊处理：过滤列表开关 + 编辑过滤列表按钮
+            # Special handling: the filter list switch + the edit filter list button
             checkbox = ToggleSwitch(checked=value)
             checkbox.checkedChanged.connect(lambda checked, k=full_key: self._on_setting_changed(bool(checked), k, None))
             
@@ -1177,7 +1177,7 @@ def _create_param_widgets(self, data, parent_layout, prefix=""):
             widget = [combo, button]
 
         elif full_key == "translator.high_quality_prompt_path":
-            # 创建自定义ComboBox,在下拉时刷新提示词列表
+            # Create a custom ComboBox that refreshes the prompt list when it drops down
             class RefreshablePromptComboBox(QComboBox):
                 def __init__(self, controller_ref, parent=None):
                     super().__init__(parent)
@@ -1189,7 +1189,7 @@ def _create_param_widgets(self, data, parent_layout, prefix=""):
                     prompt_files = self.controller_ref.get_hq_prompt_options()
                     if prompt_files:
                         self.addItems(prompt_files)
-                    # 恢复之前选择的值
+                    # Restore the value that was selected before
                     if current_text:
                         index = self.findText(current_text)
                         if index >= 0:
@@ -1211,7 +1211,7 @@ def _create_param_widgets(self, data, parent_layout, prefix=""):
             widget = [combo, button]
 
         elif isinstance(value, bool):
-            # 特殊处理：use_custom_api_params 需要添加"打开文件"按钮
+            # Special handling: use_custom_api_params needs an "open file" button
             if full_key == "use_custom_api_params":
                 checkbox = ToggleSwitch(checked=value)
                 checkbox.checkedChanged.connect(lambda checked, k=full_key: self._on_setting_changed(bool(checked), k, None))
@@ -1224,23 +1224,23 @@ def _create_param_widgets(self, data, parent_layout, prefix=""):
                 widget = ToggleSwitch(checked=value)
                 widget.checkedChanged.connect(lambda checked, k=full_key: self._on_setting_changed(bool(checked), k, None))
 
-        # 特殊处理：upscale_ratio 动态下拉框（必须在 int/float 判断之前）
+        # Special handling: the dynamic upscale_ratio drop-down (must come before the int/float test)
         elif full_key == "upscale.upscale_ratio":
             widget = QComboBox()
             self.upscale_ratio_combo = widget
-            widget.setMinimumWidth(100)  # 设置最小宽度，让选项显示更完整
+            widget.setMinimumWidth(100)  # Set a minimum width, so the options are shown more fully
             
-            # 获取当前的 upscaler 值来决定显示什么选项
+            # The current upscaler value decides which options are shown
             config = self.config_service.get_config()
             current_upscaler = config.upscale.upscaler
             
             if current_upscaler == "realcugan":
-                # 显示 Real-CUGAN 模型列表（使用中文显示）
+                # Show the list of Real-CUGAN models (with localised names)
                 realcugan_models = self.controller.get_options_for_key("realcugan_model")
                 display_map = self.controller.get_display_mapping("realcugan_model")
                 
                 if realcugan_models:
-                    # 如果有display_map，使用中文名称
+                    # With a display_map, use the localised names
                     if display_map:
                         display_options = [display_map.get(model, model) for model in realcugan_models]
                         all_options = [self._t("upscale_ratio_not_use")] + display_options
@@ -1248,10 +1248,10 @@ def _create_param_widgets(self, data, parent_layout, prefix=""):
                         all_options = [self._t("upscale_ratio_not_use")] + realcugan_models
                     widget.addItems(all_options)
                 
-                # 设置当前值（从 realcugan_model 获取）
+                # Set the current value (from realcugan_model)
                 current_model = config.upscale.realcugan_model
                 if current_model:
-                    # 如果有display_map，显示中文名称
+                    # With a display_map, show the localised name
                     if display_map:
                         display_name = display_map.get(current_model, current_model)
                         widget.setCurrentText(display_name)
@@ -1262,12 +1262,12 @@ def _create_param_widgets(self, data, parent_layout, prefix=""):
                 elif realcugan_models:
                     widget.setCurrentText(realcugan_models[0])
             elif current_upscaler == "mangajanai":
-                # 显示 MangaJaNai 特殊选项
+                # Show the special MangaJaNai options
                 mangajanai_options = ["x2", "x4", "DAT2 x4"]
                 all_options = [self._t("upscale_ratio_not_use")] + mangajanai_options
                 widget.addItems(all_options)
                 
-                # 设置当前值 - upscale_ratio 直接存储选项字符串
+                # Set the current value - upscale_ratio stores the option string directly
                 if value is None:
                     widget.setCurrentText(self._t("upscale_ratio_not_use"))
                 elif isinstance(value, str) and value in mangajanai_options:
@@ -1277,10 +1277,10 @@ def _create_param_widgets(self, data, parent_layout, prefix=""):
                 else:
                     widget.setCurrentText("x4")
             else:
-                # 显示普通倍率选项
+                # Show the ordinary ratio options
                 ratio_options = [self._t("upscale_ratio_not_use"), "2", "3", "4"]
                 widget.addItems(ratio_options)
-                # 设置当前值
+                # Set the current value
                 if value is None:
                     widget.setCurrentText(self._t("upscale_ratio_not_use"))
                 else:
@@ -1300,9 +1300,9 @@ def _create_param_widgets(self, data, parent_layout, prefix=""):
             widget.editingFinished.connect(lambda k=full_key, w=widget: self._on_numeric_input_changed(w.text(), k, float if isinstance(value, float) else int))
 
         elif value is None and key in _OPTIONAL_INPUT_KEYS:
-            # 处理值为 None 的可选参数（数值/字符串）
+            # Handle optional parameters whose value is None (numbers and strings)
             widget = QLineEdit("")
-            # 根据参数名设置提示文本
+            # Set the placeholder text by parameter name
             if key == 'tile_size':
                 widget.setPlaceholderText(self._t("Default: 400"))
                 widget.editingFinished.connect(lambda k=full_key, w=widget: self._on_numeric_input_changed(w.text(), k, int))
@@ -1328,9 +1328,9 @@ def _create_param_widgets(self, data, parent_layout, prefix=""):
             widget = QComboBox()
             if key == "translator":
                 self.translator_combo = widget
-                widget.setMinimumWidth(180)  # 设置翻译器下拉框最小宽度
+                widget.setMinimumWidth(180)  # Minimum width of the translator drop-down
             elif full_key == "ocr.ocr_vl_language_hint":
-                widget.setMinimumWidth(260)  # OCR语言全称较长，避免被截断
+                widget.setMinimumWidth(260)  # The full names of OCR languages are long; avoid cutting them off
             else:
                 widget.setMinimumWidth(180)
             
@@ -1345,7 +1345,7 @@ def _create_param_widgets(self, data, parent_layout, prefix=""):
                 if value is not None:
                     widget.setCurrentText(value)
                 else:
-                    # 对于 None 值，设置第一个选项为默认值（通常是 "不使用"）
+                    # For a None value, the first option is set as the default (usually the "not used" entry)
                     if options:
                         widget.setCurrentText(options[0])
                 widget.currentTextChanged.connect(lambda text, k=full_key: self._on_setting_changed(text, k, None))
@@ -1426,7 +1426,7 @@ class _ClickableRow(SimpleCardWidget):
         from PyQt6.QtCore import QEvent
         if event.type() in (QEvent.Type.MouseButtonPress, QEvent.Type.FocusIn):
             self._activate()
-        return False  # 不消费事件，让子控件正常工作
+        return False  # The event is not consumed, so the child controls work normally
 
     def _activate(self):
         """激活此行：更新描述面板和当前行标记。"""

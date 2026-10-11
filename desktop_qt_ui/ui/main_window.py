@@ -43,11 +43,11 @@ class MainWindow(FluentWindow):
         )
 
         self._update_window_title()
-        self.resize(1300, 800)  # 设置默认窗口大小（增加20像素）
-        self.setMinimumSize(800, 600)  # 设置最小窗口大小
-        # 不设置最大大小，允许无限制调整
+        self.resize(1300, 800)  # Set the default window size (20 pixels larger)
+        self.setMinimumSize(800, 600)  # Set the minimum window size
+        # No maximum size is set, so resizing is unlimited
 
-        # 窗口居中显示
+        # Centre the window
         from PyQt6.QtGui import QScreen
 
         screen = QScreen.availableGeometry(self.screen())
@@ -55,18 +55,18 @@ class MainWindow(FluentWindow):
         y = (screen.height() - self.height()) // 2
         self.move(x, y)
 
-        # 侧边栏：默认收起（48px 窄图标条），悬停显示提示，点汉堡按钮展开
+        # Sidebar: collapsed by default (a 48px strip of icons), with tooltips on hover; the hamburger button expands it
         self.navigationInterface.setExpandWidth(200)
         self.navigationInterface.setUpdateIndicatorPosOnCollapseFinished(True)
         self.navigationInterface.setReturnButtonVisible(False)
 
-        # 顶部标题栏压窄：默认 48 → 36，内容区上边距同步收紧
+        # The title bar is made narrower: 48 by default -> 36, and the top margin of the content area is tightened with it
         self.titleBar.setFixedHeight(36)
         self.widgetLayout.setContentsMargins(0, 36, 0, 0)
 
-        # 窗口图标已在 main.py 中设置，这里不需要重复设置
+        # The window icon is set in main.py and does not need setting again here
 
-        # 当前应用的主题（用于逻辑判断）
+        # The theme currently applied (for logic decisions)
         self.current_applied_theme = "light"
 
         self._setup_logic_and_models()
@@ -122,12 +122,12 @@ class MainWindow(FluentWindow):
 
     def _setup_ui(self):
         """初始化UI组件"""
-        # 不显示顶部菜单栏，菜单功能统一整合到设置区域
+        # No menu bar at the top; the menu functions are all in the settings area
         self._create_ui_actions()
 
         self.main_view = MainView(self.app_logic, self)
 
-        # 设置 app_logic 对 main_view 的引用，用于更新进度条
+        # Give app_logic a reference to main_view, for updating the progress bar
         self.app_logic.main_view = self.main_view
 
         self.stacked_widget = self.stackedWidget
@@ -267,8 +267,8 @@ class MainWindow(FluentWindow):
         self.editor_view.property_panel.repopulate_options()
 
         if hasattr(self.main_view, "batch_edit_panel"):
-            # 编辑器把 region 常驻内存且不监听文件变化，批量写回后必须让它重新
-            # 加载，否则切图时的自动保存会用旧数据覆盖掉刚写进去的修改。
+            # The editor keeps the regions in memory and does not watch for file changes; after a batch write-back it has to
+            # reload, otherwise the automatic save on switching images would overwrite the changes just written with old data.
             self.main_view.batch_edit_panel.set_editor_context(
                 self.editor_model.get_source_image_path,
                 self.editor_controller.document_service.load_image_and_regions,
@@ -294,25 +294,25 @@ class MainWindow(FluentWindow):
         config_service = get_config_service()
         config = config_service.get_config()
 
-        # 获取主题设置，Pydantic会自动使用默认值'light'
+        # Get the theme setting; Pydantic uses the default 'light' automatically
         theme = config.app.theme
         self._apply_theme(theme)
 
     def _apply_theme(self, theme: str):
         """应用指定的主题"""
 
-        # 处理系统主题逻辑：如果是 'system'，则解析为实际主题
+        # System theme logic: 'system' is resolved to the actual theme
         if theme == "system":
             sys_theme = self._detect_system_theme()
             if sys_theme == "dark":
                 self._apply_theme("dark")
             else:
                 config = self.config_service.get_config()
-                # 使用用户偏好（所有非 dark 主题）
+                # Use the user's preference (all themes other than dark)
                 self._apply_theme(config.app.theme_user_preference)
             return
 
-        # 记录当前实际应用的主题
+        # Record the theme actually applied
         self.current_applied_theme = theme
 
         app = QApplication.instance()
@@ -320,7 +320,7 @@ class MainWindow(FluentWindow):
 
         apply_application_theme(theme, app)
 
-        # 通知各视图刷新局部 Fluent 主题状态（MainView 是纯逻辑对象，无需 update）
+        # Tell the views to refresh their local Fluent theme state (MainView is a pure logic object and needs no update)
         if hasattr(self, "main_view") and self.main_view:
             self.main_view.apply_fluent_theme(theme)
         if hasattr(self, "editor_view") and self.editor_view:
@@ -329,7 +329,7 @@ class MainWindow(FluentWindow):
         if hasattr(self, "stacked_widget") and self.stacked_widget:
             self.stacked_widget.update()
         self.update()
-        # 延迟到事件循环下一拍统一应用一次原生标题栏主题，避免同一次切换重复设置
+        # Deferred to the next turn of the event loop, where the native title bar theme is applied once, so it is not set twice for one switch
         QTimer.singleShot(
             0,
             lambda active_theme=theme: self._apply_native_title_bar_theme(active_theme),
@@ -361,7 +361,7 @@ class MainWindow(FluentWindow):
         elif scheme == Qt.ColorScheme.Light:
             theme = config.app.theme_user_preference
         else:
-            # 无法识别外观时保留当前主题，不覆盖用户偏好。
+            # When the appearance cannot be recognised, the current theme is kept and the user's preference is not overwritten.
             return
 
         if theme != self.current_applied_theme:
@@ -377,15 +377,15 @@ class MainWindow(FluentWindow):
 
         self._apply_theme(theme)
 
-        # 仅保存手动选择的非 dark 主题，供浅色系统下恢复。
+        # Only a manually chosen non-dark theme is saved, to be restored when the system is in light mode.
         if theme not in ("dark", "system"):
             config.app.theme_user_preference = theme
 
-        # 保存到配置
+        # Save to the configuration
         config.app.theme = theme
         config_service.set_config(config)
 
-        # 保存到文件
+        # Save to the file
         config_service.save_config_file()
 
     def _connect_signals(self):
@@ -448,7 +448,7 @@ class MainWindow(FluentWindow):
         )
         self.main_view.file_list.files_dropped.connect(
             self.app_logic.add_files
-        )  # 拖放文件支持
+        )  # Support for dropping files
         # self.main_view.enter_editor_button.clicked.connect(self.enter_editor_mode) # Example for a dedicated button
 
         # --- View Switching Connections ---
@@ -457,12 +457,12 @@ class MainWindow(FluentWindow):
         )
         self.editor_view_action.triggered.connect(self.switch_to_editor_view)
 
-        # --- 撤销/重做延迟转发到编辑器controller ---
+        # --- Undo/redo are forwarded to the editor controller, lazily ---
         self.undo_action.triggered.connect(self._handle_undo)
         self.redo_action.triggered.connect(self._handle_redo)
 
-        # --- 主题切换连接 ---
-        # Qt 发出通知时仍使用旧调色板，排队到其更新完成后再应用自定义主题。
+        # --- Theme switch connections ---
+        # Qt still uses the old palette when it sends the notification; queue until its update is done, then apply the custom theme.
         QApplication.styleHints().colorSchemeChanged.connect(
             self._on_system_theme_changed,
             type=Qt.ConnectionType.QueuedConnection,
@@ -506,7 +506,7 @@ class MainWindow(FluentWindow):
         self._file_catalog_snapshot = snapshot
         self.main_view.file_list.set_snapshot(snapshot)
         if hasattr(self.main_view, "batch_edit_panel"):
-            # 批量管理的作用范围跟随主页文件列表，快照一变就同步过去
+            # The scope of batch editing follows the file list of the main page; it is synced whenever the snapshot changes
             self.main_view.batch_edit_panel.set_catalog_snapshot(snapshot)
         for warning in snapshot.warnings:
             self.logger.warning(warning)
@@ -546,7 +546,7 @@ class MainWindow(FluentWindow):
         if not self.editor_view or not self.editor_controller:
             return
         if self.stacked_widget.currentWidget() == self.editor_view:
-            # 检查当前加载的图片是否被移除
+            # Check whether the image currently loaded was removed
             current_image = self.editor_controller.model.get_source_image_path()
 
             if current_image:
@@ -555,24 +555,24 @@ class MainWindow(FluentWindow):
                 norm_current = os.path.normpath(current_image)
                 norm_removed = os.path.normpath(file_path)
 
-                # 如果移除的是当前图片
+                # When the current image is what was removed
                 if norm_current == norm_removed:
                     self.editor_controller.document_service.clear_editor_state()
-                # 如果移除的是文件夹，检查当前图片是否在该文件夹内
+                # When a folder was removed, check whether the current image is inside it
                 elif os.path.isdir(file_path):
                     try:
-                        # 检查当前图片是否在被移除的文件夹内
+                        # Check whether the current image is inside the removed folder
                         if (
                             os.path.commonpath([norm_current, norm_removed])
                             == norm_removed
                         ):
                             self.editor_controller.document_service.clear_editor_state()
                     except ValueError:
-                        # 不同驱动器，跳过
+                        # A different drive: skip
                         pass
 
-            # 注意：编辑器有自己独立的文件列表，不需要同步主页的删除操作
-            # 只有当主页文件全部清空时，才清空编辑器列表
+            # Note: the editor has its own file list and does not need to follow removals on the main page
+            # The editor list is only cleared when the main page has no files left at all
 
     def _on_files_cleared_update_editor(self):
         """当文件列表被清空时，清空编辑器"""
@@ -585,13 +585,13 @@ class MainWindow(FluentWindow):
         """切换语言"""
         if self.i18n and self.i18n.set_locale(locale_code):
             self._apply_qt_translator(locale_code)
-            # 保存语言设置到配置
+            # Save the language setting to the configuration
             config = self.config_service.get_config()
             config.app.ui_language = locale_code
             self.config_service.set_config(config)
             self.config_service.save_config_file()
 
-            # 刷新UI文本
+            # Refresh the UI text
             self._refresh_ui_texts()
             self.logger.info(f"Language switched to: {locale_code}")
 
@@ -611,7 +611,7 @@ class MainWindow(FluentWindow):
             QLibraryInfo.LibraryPath.TranslationsPath
         )
 
-        # locale_code 形如 zh_CN / en_US，依次尝试精确与语言级别匹配
+        # locale_code looks like zh_CN / en_US; an exact match is tried first, then a match at language level
         language = QLocale(locale_code).name().split("_", 1)[0]
         candidates = (
             f"qtbase_{locale_code}",
@@ -630,12 +630,12 @@ class MainWindow(FluentWindow):
         self._update_window_title()
         self._refresh_action_texts()
 
-        # 刷新主视图的所有文本
+        # Refresh all text of the main view
         if hasattr(self, "main_view") and self.main_view:
             self.main_view.refresh_ui_texts()
             self._refresh_navigation_texts()
 
-        # 刷新编辑器视图的所有文本（如果存在）
+        # Refresh all text of the editor view (when it exists)
         if hasattr(self, "editor_view") and self.editor_view:
             if hasattr(self.editor_view, "refresh_ui_texts"):
                 self.editor_view.refresh_ui_texts()
@@ -675,14 +675,14 @@ class MainWindow(FluentWindow):
             if not saved_files:
                 return
 
-            # 翻译会新建/更新 JSON 元数据；先刷新完整快照，编辑器打开请求会自动等待。
+            # Translation creates or updates the JSON metadata; refresh the full snapshot first, and the request to open the editor waits automatically.
             self._request_main_file_snapshot()
 
             if not self._should_prompt_open_results_in_editor():
                 return
 
-            # qfluentwidgets 的无边框对话框若以最小化主窗口为父窗口弹出，
-            # Windows 11 上恢复后可能停止合成窗口新内容；弹框前先恢复可避免该状态。
+            # When a frameless qfluentwidgets dialog pops up with a minimised main window as its parent,
+            # Windows 11 may stop compositing new window content after it is restored; restoring before the dialog avoids that state.
             if self.isMinimized():
                 self.showNormal()
 
@@ -881,7 +881,7 @@ class MainWindow(FluentWindow):
             item = getattr(self, "_main_navigation_items", {}).get(key)
             if item is not None and hasattr(item, "setText"):
                 item.setText(text)
-                # 收起状态下条目靠悬停提示识别，语言切换时一并刷新
+                # In the collapsed state the items are recognised by their hover tooltips, which are refreshed on a language switch too
                 item.setToolTip(text)
 
     def closeEvent(self, event):
@@ -911,8 +911,8 @@ class MainWindow(FluentWindow):
 
             self.editor_controller.shutdown()
 
-        # 先等待 API 测试/取模型等后台线程结束（带超时），
-        # 避免 QThread: Destroyed while thread is still running。
+        # Wait first for the background threads of the API test, model list and so on to finish (with a timeout),
+        # to avoid "QThread: Destroyed while thread is still running".
         if hasattr(self, "main_view") and self.main_view:
             self.main_view.shutdown_background_threads(3000)
             if hasattr(self.main_view, "batch_edit_panel"):

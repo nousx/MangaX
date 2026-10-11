@@ -24,7 +24,7 @@ def create_batch_edit_page(self) -> QWidget:
     header_layout.addWidget(self.batch_edit_page_subtitle_label)
     layout.addWidget(header)
 
-    # MainView 是纯逻辑 QObject，不能当控件父级；面板随 addWidget 进布局后自动认领父级
+    # MainView is a pure logic QObject and cannot be the parent of a control; the panel gets its parent automatically when addWidget puts it in the layout
     self.batch_edit_panel = BatchEditPanel(t_func=self._t)
     layout.addWidget(self.batch_edit_panel, 1)
     return page

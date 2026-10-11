@@ -25,10 +25,10 @@ class TranslationMarkupHighlighter(QSyntaxHighlighter):
     
     def _setup_formats(self):
         """设置不同类型标记的格式"""
-        # 换行位置格式 - 显示特殊符号
+        # Format for line break positions - shows a special symbol
         self.newline_format = QTextCharFormat()
-        self.newline_format.setBackground(QColor("#FFF3E0"))  # 浅橙色
-        self.newline_format.setForeground(QColor("#F57C00"))  # 橙色
+        self.newline_format.setBackground(QColor("#FFF3E0"))  # light orange
+        self.newline_format.setForeground(QColor("#F57C00"))  # orange
     
     def set_markup_getter(self, getter):
         """设置标记获取函数"""
@@ -43,18 +43,18 @@ class TranslationMarkupHighlighter(QSyntaxHighlighter):
         if not markup_text:
             return
         
-        # 解析标记
+        # Parse the markers
         newline_positions = self._parse_markup(markup_text)
         
-        # 计算当前块在整个文档中的偏移
+        # Offset of the current block in the whole document
         block_start = self.currentBlock().position()
         block_length = len(text)
         
-        # 在换行位置后添加视觉标记
+        # Add a visual marker after the line break position
         for pos in newline_positions:
             if block_start <= pos < block_start + block_length:
                 rel_pos = pos - block_start
-                # 高亮换行位置后的一个字符
+                # Highlight one character after the line break position
                 if rel_pos < block_length:
                     self.setFormat(rel_pos, 1, self.newline_format)
     
@@ -69,7 +69,7 @@ class TranslationMarkupHighlighter(QSyntaxHighlighter):
         
         for mark in markup_text.split():
             if mark.startswith('↵'):
-                # 换行标记
+                # Line break marker
                 try:
                     pos = int(mark[1:])
                     newline_positions.append(pos)
@@ -91,24 +91,24 @@ class MarkupBoxHighlighter(QSyntaxHighlighter):
     
     def _setup_formats(self):
         """设置格式"""
-        # 换行标记格式
+        # Format of the line break marker
         self.newline_mark_format = QTextCharFormat()
-        self.newline_mark_format.setForeground(QColor("#F57C00"))  # 橙色
+        self.newline_mark_format.setForeground(QColor("#F57C00"))  # orange
         self.newline_mark_format.setFontWeight(QFont.Weight.Bold)
         
-        # 数字格式
+        # Number format
         self.number_format = QTextCharFormat()
-        self.number_format.setForeground(QColor("#00897B"))  # 青色
+        self.number_format.setForeground(QColor("#00897B"))  # cyan
     
     def highlightBlock(self, text):
         """高亮当前文本块"""
-        # 高亮换行标记 ↵
+        # Highlight the line break marker ↵
         newline_pattern = QRegularExpression(r'↵\d+')
         match_iterator = newline_pattern.globalMatch(text)
         while match_iterator.hasNext():
             match = match_iterator.next()
-            self.setFormat(match.capturedStart(), 1, self.newline_mark_format)  # ↵ 符号
-            # 数字部分
+            self.setFormat(match.capturedStart(), 1, self.newline_mark_format)  # the ↵ symbol
+            # The number part
             num_start = match.capturedStart() + 1
             num_length = match.capturedLength() - 1
             self.setFormat(num_start, num_length, self.number_format)

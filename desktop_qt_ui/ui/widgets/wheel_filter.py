@@ -10,7 +10,7 @@ from PyQt6.QtWidgets import QAbstractSpinBox, QComboBox, QSlider, QWidget
 from qfluentwidgets import ComboBox
 from qfluentwidgets.components.widgets.combo_box import ComboBoxMenu
 
-# 需要接管滚轮语义的控件类型（注意：不含 QScrollBar，滚动条必须始终响应滚轮）
+# Control types whose wheel behaviour is taken over (note: QScrollBar is not among them; scroll bars must always respond to the wheel)
 _WHEEL_TARGET_TYPES = (QAbstractSpinBox, QComboBox, QSlider, ComboBox)
 
 

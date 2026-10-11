@@ -28,15 +28,15 @@ class SelectionManager(QObject):
         self._get_region_items = get_region_items_fn
         self._logger = get_logger(__name__)
 
-        # 同步守卫
+        # Sync guard
         self._syncing = False
 
-        # 框选状态
+        # Box selection state
         self._is_box_selecting = False
         self._box_select_start_pos = None
         self._box_select_rect_item: QGraphicsRectItem = None
 
-        # 连接信号
+        # Connect the signals
         self._scene.selectionChanged.connect(self._on_scene_selection_changed)
         self._model.selection_changed.connect(self._sync_qt_from_model)
 
@@ -92,11 +92,11 @@ class SelectionManager(QObject):
         )
 
     # ------------------------------------------------------------------ #
-    #  公开 API
+    #  Public API
     # ------------------------------------------------------------------ #
 
     # ------------------------------------------------------------------ #
-    #  框选 API
+    #  Box selection API
     # ------------------------------------------------------------------ #
 
     def start_box_select(self, scene_pos):
@@ -104,7 +104,7 @@ class SelectionManager(QObject):
         self._is_box_selecting = True
         self._box_select_start_pos = scene_pos
 
-        # 创建或复用框选矩形
+        # Create or reuse the selection rectangle
         need_create = self._box_select_rect_item is None
         if not need_create:
             try:
@@ -117,7 +117,7 @@ class SelectionManager(QObject):
             self._box_select_rect_item = self._scene.addRect(0, 0, 0, 0)
             self._box_select_rect_item.setZValue(300)
 
-        # 每次开始框选时现取主题色，避免缓存的旧 themeColor 在换主题后残留
+        # The theme colour is read each time a box selection starts, so a cached old themeColor does not linger after the theme changes
         accent = themeColor().toRgb()
         if not accent.isValid():
             accent = QColor("#0F6CBD")
@@ -151,7 +151,7 @@ class SelectionManager(QObject):
             return
 
         try:
-            # 使用 item shape 做精确命中，避免仅按 boundingRect 误选旋转/细长区域
+            # Use the item shape for exact hit testing, so rotated or thin regions are not selected by boundingRect alone
             from .graphics_items import RegionTextItem
 
             region_items = self._region_items()
@@ -166,7 +166,7 @@ class SelectionManager(QObject):
                 }
             )
 
-            # 批量设置 Qt item 选择状态
+            # Set the selection state of the Qt items as a batch
             self._syncing = True
             try:
                 if not ctrl_pressed:
@@ -178,7 +178,7 @@ class SelectionManager(QObject):
             finally:
                 self._syncing = False
 
-            # 手动触发一次同步
+            # Trigger a sync by hand, once
             self._on_scene_selection_changed()
         except RuntimeError:
             pass
@@ -192,7 +192,7 @@ class SelectionManager(QObject):
         return self._is_box_selecting
 
     # ------------------------------------------------------------------ #
-    #  同步（内部）
+    #  Sync (internal)
     # ------------------------------------------------------------------ #
 
     def _on_scene_selection_changed(self):
@@ -211,11 +211,11 @@ class SelectionManager(QObject):
         try:
             region_items = self._region_items()
 
-            # 清除所有 item 的选择
+            # Clear the selection of all items
             for item in region_items:
                 self._set_item_selected(item, False)
 
-            # 设置新选中的 items
+            # Set the newly selected items
             for idx in selected_indices:
                 if 0 <= idx < len(region_items):
                     self._set_item_selected(region_items[idx], True)
@@ -225,7 +225,7 @@ class SelectionManager(QObject):
             self._syncing = False
 
     # ------------------------------------------------------------------ #
-    #  生命周期
+    #  Lifecycle
     # ------------------------------------------------------------------ #
 
     def suppress_forward_sync(self, suppress):

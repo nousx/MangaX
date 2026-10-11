@@ -413,11 +413,11 @@ class RichTextFloatingEditor(SimpleCardWidget):
             return
         start, end = self._state.selected_range
         if start == end:
-            # 未选中 = 作用于全文：先把选区扩到全文再走正常流程，
-            # 与查询侧「空选区显示全文概览」的语义对齐。
+            # Nothing selected = applies to the whole text: extend the selection to the whole text first, then follow the normal flow,
+            # in line with the query side, where an empty selection shows an overview of the whole text.
             self._select_python_range(0, len(self._state.editor_text))
             start, end = self._state.selected_range
-            if start == end:  # 空文本
+            if start == end:  # Empty text
                 self._refresh_inspector()
                 return
         if key == "R":
@@ -488,8 +488,8 @@ class RichTextFloatingEditor(SimpleCardWidget):
             self._state.begin_pending_style_edit(key, start, end)
         else:
             self._state.discard_pending_style(key, start, end)
-        # 结构签名不变时 run list 会自动就地复用卡片（持焦点的控件不覆盖），
-        # 无需再显式标记 allow_reuse。
+        # When the structure signature is unchanged, the run list reuses the cards in place automatically (a control that holds the focus is not overwritten),
+        # so allow_reuse no longer needs to be set explicitly.
         self._commit_document(document)
 
     def _remove_style_from_explicit_range(self, start: int, end: int, key: str) -> None:

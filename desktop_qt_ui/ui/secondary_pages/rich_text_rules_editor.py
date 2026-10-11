@@ -493,7 +493,7 @@ class RichTextStyleDialog(FluentSecondaryDialog):
         )
         self.hint_label.setWordWrap(True)
         root.addWidget(self.hint_label)
-        # 19 行表单包进纵向滚动区，小屏时内容可滚动而不是把窗口撑出屏
+        # The 19-row form is wrapped in a vertical scroll area, so on a small screen the content scrolls instead of pushing the window off screen
         self.controls_scroll = SingleDirectionScrollArea(
             self, orient=Qt.Orientation.Vertical
         )

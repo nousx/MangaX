@@ -20,7 +20,7 @@ class FileListItemWidget(CardWidget):
         self.layout.setContentsMargins(8, 6, 8, 6)
         self.layout.setSpacing(10)
 
-        # 缩略图
+        # Thumbnail
         self.thumbnail_label = QLabel()
         self.thumbnail_label.setFixedSize(QSize(40, 40))
         self.thumbnail_label.setPixmap(thumbnail.scaled(
@@ -30,13 +30,13 @@ class FileListItemWidget(CardWidget):
         ))
         self.layout.addWidget(self.thumbnail_label)
 
-        # 文件名
+        # File name
         import os
         self.filename_label = BodyLabel(os.path.basename(file_path), self)
         self.layout.addWidget(self.filename_label)
         self.layout.addStretch()
 
-        # 移除按钮
+        # Remove button
         self.remove_button = TransparentToolButton(FIF.CLOSE, self)
         self.remove_button.setFixedSize(QSize(28, 28))
         self.remove_button.setIconSize(QSize(12, 12))

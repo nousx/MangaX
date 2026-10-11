@@ -247,7 +247,7 @@ def open_prompt_editor(self, file_path: str):
 
         dlg = PromptEditorDialog(file_path, t_func=self._t, parent=self._dialog_parent())
     dlg.exec()
-    # 编辑器关闭后刷新预览
+    # Refresh the preview after the editor closes
     if dlg.get_was_modified() and hasattr(self, "prompt_preview_panel"):
         self.prompt_preview_panel.load_file(file_path)
 
@@ -296,7 +296,7 @@ def create_new_prompt(self):
         QMessageBox.warning(self._dialog_parent(), self._t("Warning"), self._t("File already exists") + f": {filename}")
         return
 
-    # 默认 YAML 模板
+    # Default YAML template
     default_content = (
         '# 自定义翻译提示词模板\n'
         '# Custom translation prompt template\n'

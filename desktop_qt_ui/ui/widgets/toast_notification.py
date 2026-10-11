@@ -59,8 +59,8 @@ class ToastNotification(QObject):
         return self
 
     def eventFilter(self, obj, event):
-        # 在 release 而不是 press 处理点击：press 就 close 会让后续事件
-        # 继续派发给正在销毁的 InfoBar。处理后 return True 终止派发。
+        # The click is handled on release, not on press: closing on press would let the later events
+        # keep being dispatched to an InfoBar that is being destroyed. Returning True afterwards ends the dispatch.
         if obj is self._bar and event.type() == QEvent.Type.MouseButtonRelease:
             if self._clickable and self._extra_data:
                 self._open_extra_location()

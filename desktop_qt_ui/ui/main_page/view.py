@@ -165,8 +165,8 @@ class MainView(QObject):
             "rich_text_rules": self.rich_text_rules_page,
             "batch_edit": self.batch_edit_page,
         }
-        # 不在这里调用 _create_dynamic_settings，等待 app_logic.initialize 发送 config_loaded 信号
-        # self._create_dynamic_settings()  # 删除这行，避免重复创建
+        # _create_dynamic_settings is not called here; wait for app_logic.initialize to send the config_loaded signal
+        # self._create_dynamic_settings()  # removed, to avoid creating it twice
 
         # Connect signals for button state management
         self.controller.state_manager.is_translating_changed.connect(self.on_translation_state_changed, type=Qt.ConnectionType.QueuedConnection)

@@ -21,7 +21,7 @@ class ThemedProgressDialog(Dialog):
         self._maximum = 0
         self._value = 0
 
-        # parent 归一化后仍为 None 时 WindowModal 等于不模态，退到 ApplicationModal
+        # When parent is still None after normalisation, WindowModal means not modal at all; fall back to ApplicationModal
         self.setWindowModality(
             Qt.WindowModality.WindowModal
             if self.parent() is not None
@@ -37,7 +37,7 @@ class ThemedProgressDialog(Dialog):
         if cancel_button_text:
             self.close_button.setToolTip(cancel_button_text)
 
-        # 顶部真正的标题行：标题 + stretch + 关闭按钮，取代手动 move/raise_
+        # A real title row at the top: title + stretch + close button, replacing the manual move/raise_
         header_layout = QHBoxLayout()
         header_layout.setContentsMargins(0, 0, 0, 0)
         header_layout.setSpacing(8)
@@ -46,7 +46,7 @@ class ThemedProgressDialog(Dialog):
         header_layout.addWidget(self.close_button, 0, Qt.AlignmentFlag.AlignVCenter)
         self.textLayout.insertLayout(0, header_layout)
 
-        # 两条进度条常驻布局、按模式切换可见性，不再销毁重建
+        # Both progress bars stay in the layout and their visibility switches with the mode; they are no longer destroyed and rebuilt
         self._indeterminate_bar = IndeterminateProgressBar(self, start=True)
         self._indeterminate_bar.setFixedHeight(4)
         self._determinate_bar = ProgressBar(self)

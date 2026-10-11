@@ -153,7 +153,7 @@ class ReplacementsEditorPanel(BaseYamlRuleEditorPanel):
             if item:
                 item.setForeground(QTableWidgetItem().foreground())
 
-    # ─── 预设按钮扩展接口 ───
+    # ─── Extension interface for preset buttons ───
 
     def register_preset_button(self, label: str, callback: Callable) -> QPushButton:
         """预设按钮接口（将来加'中文'、'全开'、'全关'等一键预设时使用）"""

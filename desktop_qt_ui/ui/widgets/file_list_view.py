@@ -304,7 +304,7 @@ class FileCatalogModel(QAbstractItemModel):
         if target is None:
             return ()
 
-        # 连同删除后变空的祖先一起移除，保留其余节点的索引和展开状态。
+        # Removed together with the ancestors that become empty, keeping the indexes and expanded state of the other nodes.
         while target.parent is not None and target.parent.file_count == target.file_count:
             target = target.parent
 
@@ -622,7 +622,7 @@ class FileListView(TreeView):
         self._restore_scroll_value = self.verticalScrollBar().value()
 
     def _restore_scroll_position(self) -> None:
-        # 先更新布局和滚动范围，避免重置模型后的旧范围把位置截成 0。
+        # Update the layout and the scroll range first, so the old range after a model reset does not clip the position to 0.
         self.doItemsLayout()
         scroll_bar = self.verticalScrollBar()
         top_index = (
@@ -634,7 +634,7 @@ class FileListView(TreeView):
                 scroll_bar.value() + self.visualRect(top_index).top() - self._restore_top_offset
             )
         else:
-            # 顶部项目恰好被移除时，留在原来的滚动位置（末尾由 Qt 自动限位）。
+            # When the top item is exactly what was removed, stay at the old scroll position (Qt limits it at the end automatically).
             scroll_bar.setValue(self._restore_scroll_value)
 
     def _restore_view_state(self) -> None:
@@ -650,7 +650,7 @@ class FileListView(TreeView):
         if self._restore_selected_path:
             index = self.catalog_model.index_for_path(self._restore_selected_path)
             if index.isValid():
-                # 恢复选择不应再次触发打开编辑器，也不应滚回远处的选中项。
+                # Restoring the selection should not open the editor again, nor scroll back to a distant selected item.
                 with QSignalBlocker(self.selectionModel()):
                     self.selectionModel().setCurrentIndex(index, QItemSelectionModel.SelectionFlag.NoUpdate)
         self._restore_scroll_position()

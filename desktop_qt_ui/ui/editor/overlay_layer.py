@@ -138,7 +138,7 @@ class OverlayLayerManager:
             z_value=1,
             convert_warning="Failed to convert inpainted image to QImage: %s",
         )
-        # 位于修复图之上、文字区域之下
+        # Above the inpainted image and below the text regions
         self.paint_overlay = PixmapOverlayLayer(
             view,
             z_value=5,
@@ -146,7 +146,7 @@ class OverlayLayerManager:
             empty_when_zero_size=True,
             update_scene=True,
         )
-        # 印章层位于画笔层之上
+        # The stamp layer is above the brush layer
         self.stamp_overlay = PixmapOverlayLayer(
             view,
             z_value=6,

@@ -41,8 +41,8 @@ class ThemedTextInputDialog(Dialog):
         self.yesButton.setDefault(True)
         self.yesButton.setAutoDefault(True)
 
-        # 布局激活前的 sizeHint 不可信，且硬钉宽度会被 _adjustText 的布局
-        # 最小宽覆盖；改为最小尺寸 + 布局激活后 adjustSize 按内容取真实尺寸。
+        # sizeHint cannot be trusted before the layout is activated, and a hard-coded width would be overridden by the minimum width of the
+        # layout of _adjustText; instead a minimum size is set and adjustSize takes the real size from the content after the layout is activated.
         _apply_flexible_size(self, 460, 230)
 
     def showEvent(self, event: QShowEvent) -> None:

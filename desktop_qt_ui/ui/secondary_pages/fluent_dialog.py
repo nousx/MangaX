@@ -81,7 +81,7 @@ class FluentSecondaryDialog(FramelessDialog):
     def apply_fluent_dialog_style(self):
         FluentStyleSheet.DIALOG.apply(self)
 
-    # ─── 无边框窗口拖动 ─────────────────────────────────────
+    # ─── Dragging the frameless window ──────────────────────
     def mousePressEvent(self, event):
         if (
             event.button() == Qt.MouseButton.LeftButton
@@ -116,10 +116,10 @@ class FluentSecondaryDialog(FramelessDialog):
             return not (widget.textInteractionFlags() & interactive_flags)
         if isinstance(widget, CardWidget):
             return not widget.isClickEnabled()
-        # 纯布局容器：type 精确匹配，避免把 QWidget/QFrame 的交互子类误判为背景
+        # Pure layout containers: the type is matched exactly, so interactive subclasses of QWidget/QFrame are not mistaken for background
         return type(widget) in (QWidget, QFrame)
 
-    # ─── 屏幕尺寸夹取 ──────────────────────────────────────
+    # ─── Clamping to the screen size ───────────────────────
     def showEvent(self, event):
         if not self._screen_clamped:
             self._screen_clamped = True
@@ -143,8 +143,8 @@ class FluentSecondaryDialog(FramelessDialog):
         if self.width() > max_w or self.height() > max_h:
             self.resize(min(self.width(), max_w), min(self.height(), max_h))
 
-        # 位置兜底：避免整窗生成在工作区外（QDialog 随后仍可能按父窗口居中，
-        # 但那时窗口尺寸已被夹取，居中结果必然在屏内）。
+        # Position fallback: keeps the whole window from appearing outside the work area (QDialog may still centre on the parent window afterwards,
+        # but by then the window size has been clamped, so the centred result is certain to be on screen).
         geo = self.geometry()
         x = min(max(geo.x(), available.left()), max(available.right() - geo.width() + 1, available.left()))
         y = min(max(geo.y(), available.top()), max(available.bottom() - geo.height() + 1, available.top()))

@@ -23,7 +23,7 @@ from .graphics_items import RegionTextItem
 
 
 class GraphicsViewInputMixin:
-    # 视图缩放上下限：防止滚轮缩放跑飞（极小 lod 还会造成 item 描边溢出 boundingRect 残影）
+    # Zoom limits of the view: keep wheel zooming from running away (a very small lod also leaves trails where the item outline spills over boundingRect)
     MIN_VIEW_SCALE = 0.05
     MAX_VIEW_SCALE = 50.0
 
@@ -59,13 +59,13 @@ class GraphicsViewInputMixin:
     def wheelEvent(self, event):
         delta_y = int(event.angleDelta().y())
         if delta_y == 0:
-            # 横向滚轮/触摸板：不是缩放手势，交回默认处理
+            # Horizontal wheel / touchpad: not a zoom gesture, handed back to the default handling
             super().wheelEvent(event)
             return
         zoom_in_factor = 1.15
         self._apply_zoom(zoom_in_factor if delta_y > 0 else 1.0 / zoom_in_factor)
 
-    # ------------------------- 统一交互终结 -------------------------
+    # ------------------------- Ending an interaction, in one place -------------------------
 
     def _has_active_interaction(self) -> bool:
         return bool(
@@ -109,7 +109,7 @@ class GraphicsViewInputMixin:
 
         self._end_hand_scroll()
 
-    # ------------------------- 中键平移（对称合成左键） -------------------------
+    # ------------------------- Middle-button panning (symmetric synthetic left button) -------------------------
 
     def _begin_hand_scroll(self, event):
         """中键按下：切 ScrollHandDrag 并合成左键 press 喂给 QGraphicsView。"""
@@ -161,7 +161,7 @@ class GraphicsViewInputMixin:
         super().keyPressEvent(event)
 
     def focusOutEvent(self, event):
-        # 模态框/窗口失活/焦点转移都会吞掉后续 release：统一丢弃进行中交互
+        # A modal dialog, window deactivation or a focus change all swallow the later release: the interaction in progress is dropped in one place
         self._cancel_active_interaction(commit=False)
         super().focusOutEvent(event)
 
@@ -171,7 +171,7 @@ class GraphicsViewInputMixin:
 
         self.setFocus()
 
-        # 点按命中目标不是贴片（文本框/空白等）时，隐藏贴片选中手柄
+        # When a click does not hit a paste overlay (a text box, empty space and so on), hide the selection handles of the overlay
         if hasattr(self, "clear_paste_overlay_selection_for_press"):
             self.clear_paste_overlay_selection_for_press(event)
 
@@ -287,7 +287,7 @@ class GraphicsViewInputMixin:
             return
 
         if event.button() == Qt.MouseButton.LeftButton:
-            # 这三种交互原本各自 accept 并 return，保持该行为
+            # These three interactions used to accept and return on their own; that behaviour is kept
             exclusive = (
                 self.selection_manager.is_box_selecting
                 or self._is_drawing_textbox
@@ -305,7 +305,7 @@ class GraphicsViewInputMixin:
         pixmap.fill(Qt.GlobalColor.transparent)
         if self._preview_item is None:
             self._preview_item = self.scene.addPixmap(pixmap)
-            # 预览应该在蒙版之上、文字之下，避免盖住文本渲染
+            # The preview should be above the mask and below the text, so it does not cover the rendered text
             self._preview_item.setZValue(12)
             self._scale_mask_item(self._preview_item)
         else:
@@ -403,7 +403,7 @@ class GraphicsViewInputMixin:
         self.viewport().update()
 
     def _get_edit_mask_shape(self):
-        # paint / stamp 模式：始终匹配底图像素尺寸
+        # paint / stamp mode: always matches the pixel size of the base image
         if self._active_tool in ("paint", "paint_erase", "stamp_erase"):
             if self._image_item is None:
                 return None
@@ -618,7 +618,7 @@ class GraphicsViewInputMixin:
             )
         )
 
-    # ------------------------- 仿制印章 -------------------------
+    # ------------------------- Clone stamp -------------------------
 
     def _set_clone_sample_point(self, view_pos):
         """右键取样：记录取样点并清空偏移锁（再次落笔时重新锁定相对位移）。"""
@@ -642,8 +642,8 @@ class GraphicsViewInputMixin:
             center_x = self._clone_sample_image_point.x()
             center_y = self._clone_sample_image_point.y()
 
-        # 取样圈是场景顶层 item：挂在底图下 Z 值只在父项内部生效，
-        # 会被 overlay/mask/preview 图层盖住
+        # The sampling circle is a top-level scene item: under the base image its Z value would only apply inside the parent,
+        # and the overlay/mask/preview layers would cover it
         marker = self._clone_marker_item
         marker_alive = marker is not None
         if marker_alive:
@@ -662,7 +662,7 @@ class GraphicsViewInputMixin:
             self.scene.addItem(marker)
             self._clone_marker_item = marker
 
-        # 图像像素坐标 → 场景坐标（底图可能带降采样补偿变换）
+        # Image pixel coordinates -> scene coordinates (the base image may carry a transform that compensates for downsampling)
         radius = max(2.0, self._brush_size / 2.0)
         center_scene = self._image_item.mapToScene(QPointF(center_x, center_y))
         edge_x = self._image_item.mapToScene(QPointF(center_x + radius, center_y))
@@ -706,7 +706,7 @@ class GraphicsViewInputMixin:
         self._clone_last_dab = None
         self._clone_drawing = True
 
-        # 与其它绘制工具共用预览 item，自维护一张持久 pixmap 做增量盖印
+        # Shares the preview item with the other drawing tools and keeps a persistent pixmap of its own for incremental stamping
         self._clone_preview_pixmap = self._show_stroke_preview()
         self._clone_dab_segment(pos)
 
@@ -792,7 +792,7 @@ class GraphicsViewInputMixin:
             return None
         h, w = composite.shape[:2]
         r = max(0.5, self._brush_size / 2.0)
-        # 像素格子对齐（同参考实现），保证印章边缘不随移动方向变化
+        # Aligned to the pixel grid (as in the reference implementation), so the stamp edge does not change with the direction of movement
         snap_x = float(np.floor(px)) + 0.5
         snap_y = float(np.floor(py)) + 0.5
         left = int(np.floor(snap_x - r))
@@ -801,7 +801,7 @@ class GraphicsViewInputMixin:
         bottom = int(np.ceil(snap_y + r))
 
         ox, oy = self._clone_offset  # src = dest + offset
-        # 目标窗口与取样窗口同时裁进图像边界
+        # The target window and the sampling window are both clipped to the image bounds
         x0 = max(left, 0, -ox)
         y0 = max(top, 0, -oy)
         x1 = min(right, w, w - ox)
@@ -812,7 +812,7 @@ class GraphicsViewInputMixin:
         yy, xx = np.ogrid[y0:y1, x0:x1]
         mask = ((xx + 0.5) - snap_x) ** 2 + ((yy + 0.5) - snap_y) ** 2 <= r * r
         if not np.any(mask):
-            # 1 像素单点保底
+            # A single 1-pixel dot as the minimum
             cx, cy = int(np.floor(px)), int(np.floor(py))
             if not (x0 <= cx < x1 and y0 <= cy < y1):
                 return None
@@ -904,8 +904,8 @@ class GraphicsViewInputMixin:
     def _on_active_tool_changed(self, tool: str):
         if tool == self._active_tool:
             return
-        # 先按旧工具语义提交进行中的笔画/框选，再切换 _active_tool，
-        # 绝不能让旧笔画落进新工具的提交分支
+        # First commit the stroke or box selection in progress with the meaning of the old tool, then switch _active_tool;
+        # an old stroke must never fall into the commit branch of the new tool
         self._cancel_active_interaction(commit=True, allow_tool_switch=False)
         self._active_tool = tool
         if tool != "clone":
@@ -923,7 +923,7 @@ class GraphicsViewInputMixin:
     @pyqtSlot(str)
     def _on_brush_color_changed(self, color: str):
         self._brush_color = color or "#ffffff"
-        # 只有当前是 paint 工具时刷新光标
+        # The cursor is refreshed only while the current tool is paint
         if self._active_tool == "paint":
             self._update_cursor()
 
@@ -1010,11 +1010,11 @@ class GraphicsViewInputMixin:
             self._emit_view_state_changed()
 
     def contextMenuEvent(self, event):
-        # 仿制印章模式下右键用于取样，完全屏蔽右键菜单
+        # In clone stamp mode the right button samples; the context menu is blocked entirely
         if self._active_tool == "clone":
             event.accept()
             return
-        # menu.exec 会抓走鼠标，进行中交互的 release 必然丢失：先统一丢弃
+        # menu.exec grabs the mouse, so the release of an interaction in progress is certain to be lost: drop it first
         self._cancel_active_interaction(commit=False)
         selected_regions = self.model.get_selection()
         selection_count = len(selected_regions)
@@ -1242,8 +1242,8 @@ class GraphicsViewInputMixin:
                         }
 
             config = get_config_service().get_config()
-            # 新建文本框的字体和对齐方式应与排版设置保持一致。
-            # font_family 为空时交给渲染器使用其默认字体。
+            # The font and alignment of a new text box should match the layout settings.
+            # When font_family is empty, the renderer uses its default font.
             default_font_family = getattr(config.render, "font_family", "") or ""
             default_alignment = getattr(config.render, "alignment", "auto") or "auto"
             default_line_spacing = (

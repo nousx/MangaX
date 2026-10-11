@@ -40,7 +40,7 @@ from editor.rich_text_editing import (
 from editor.region_geometry_state import normalize_region_geometry_data
 from services import get_config_service, get_i18n_manager
 
-# from .collapsible_frame import CollapsibleFrame  # 不再使用折叠框
+# from .collapsible_frame import CollapsibleFrame  # the collapsible frame is no longer used
 from ui.secondary_pages.themed_text_input_dialog import themed_get_text
 from utils.font_list import FontComboBox
 
@@ -161,8 +161,8 @@ class PropertyPanel(QWidget):
     FONT_SIZE_MAX = 1000
 
     # --- Define all required signals ---
-    # 第三个参数是编辑操作记录 {'ops': [[pos, removed, inserted], ...],
-    # 'pre_text': str, 'post_text': str}(\n 口径),供富文本样式同步用
+    # The third argument is the record of edit operations {'ops': [[pos, removed, inserted], ...],
+    # 'pre_text': str, 'post_text': str} (in \n convention), used to sync the rich-text styles
     translated_text_modified = pyqtSignal(int, str, object)
     translation_raw_modified = pyqtSignal(int, str, object)
     original_text_modified = pyqtSignal(int, str)
@@ -209,7 +209,7 @@ class PropertyPanel(QWidget):
         self._paint_route_indexes: dict[str, int] = {}
         self._updating_paint_route = False
 
-        # 译文框编辑操作记录器(采集/收窄逻辑在后端 text_edit_ops)
+        # Recorder of edit operations in the translation box (the collecting and narrowing logic is in the backend, text_edit_ops)
         from manga_translator.utils.text_edit_ops import EditOpRecorder
 
         self._translation_edit_recorder = EditOpRecorder()
@@ -228,16 +228,16 @@ class PropertyPanel(QWidget):
         return key
 
     def _init_ui(self):
-        # 创建主布局
+        # Create the main layout
         main_layout = QVBoxLayout(self)
         main_layout.setContentsMargins(0, 0, 0, 0)
         self.setLayout(main_layout)
 
-        # 创建滚动区域
+        # Create the scroll area
         scroll_area = FluentScrollArea()
         self.scroll_area = scroll_area
 
-        # 创建内容容器
+        # Create the content container
         content_widget = QWidget(scroll_area)
         self.content_widget = content_widget
         content_layout = QVBoxLayout(content_widget)
@@ -250,18 +250,18 @@ class PropertyPanel(QWidget):
         self._create_style_section(content_layout)
         self._create_action_section(content_layout)
 
-        # 添加一个弹性空间，将所有内容向上推，使布局更紧凑
+        # Add a stretch that pushes all content up, for a more compact layout
         content_layout.addStretch()
 
-        # 将内容容器放入滚动区域
+        # Put the content container in the scroll area
         scroll_area.setWidget(content_widget)
         scroll_area.enableTransparentBackground()
         main_layout.addWidget(scroll_area)
-        # 统一滚轮语义：无焦点的滑块/数值框/下拉框不吞滚轮，事件直通滚动区域
+        # One wheel behaviour everywhere: sliders, number boxes and drop-downs without focus do not swallow the wheel; the event goes straight to the scroll area
         self._wheel_filter = install_wheel_filter(self)
         self.sync_sidebar_layout()
 
-        # 不再使用语法高亮器,改用符号替换
+        # The syntax highlighter is no longer used; symbols are replaced instead
         # self.highlighter = HorizontalTagHighlighter(self.translated_text_box.document())
 
     def _make_group(self, title: str) -> tuple[PanelSettingCardGroup, CardWidget]:
@@ -336,11 +336,11 @@ class PropertyPanel(QWidget):
             QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding
         )
 
-        # 选择按钮组（两个 tab 共享同一个按钮组，保持互斥）
+        # Selection button group (the tabs share one button group, so the buttons stay mutually exclusive)
         self.mask_tool_group = QButtonGroup(self)
         self.mask_tool_group.setExclusive(True)
 
-        # ======= Tab 1：蒙版 =======
+        # ======= Tab 1: mask =======
         mask_tab = SimpleCardWidget(self.paint_stack)
         mask_layout = QVBoxLayout(mask_tab)
         mask_layout.setContentsMargins(6, 8, 6, 6)
@@ -402,7 +402,7 @@ class PropertyPanel(QWidget):
         mask_layout.addWidget(self.clear_all_masks_button)
         mask_layout.addStretch()
 
-        # ======= Tab 2：画笔（彩色涂鸦） =======
+        # ======= Tab 2: brush (colour doodles) =======
         paint_tab = SimpleCardWidget(self.paint_stack)
         paint_layout = QVBoxLayout(paint_tab)
         paint_layout.setContentsMargins(6, 8, 6, 6)
@@ -427,7 +427,7 @@ class PropertyPanel(QWidget):
         self.paint_eraser_button.setIcon(FIF.ERASE_TOOL)
         set_hover_hint(self.paint_eraser_button, self._t("Eraser Tool") + " (E)")
 
-        # 复用同一个互斥按钮组，保证和蒙版页工具互相切换时正确取消选中
+        # Reuse the same exclusive button group, so switching to and from the tools of the mask tab clears the selection correctly
         self.mask_tool_group.addButton(self.paint_select_button, 3)
         self.mask_tool_group.addButton(self.paint_brush_button, 4)
         self.mask_tool_group.addButton(self.paint_eraser_button, 5)
@@ -443,7 +443,7 @@ class PropertyPanel(QWidget):
         paint_tools_layout.addWidget(self.paint_eraser_button)
         paint_layout.addLayout(paint_tools_layout)
 
-        # 画笔大小（与蒙版页共享同一个模型字段）
+        # Brush size (shares one model field with the mask tab)
         paint_size_layout = QHBoxLayout()
         paint_size_layout.setContentsMargins(0, 0, 0, 0)
         paint_size_layout.setSpacing(6)
@@ -461,7 +461,7 @@ class PropertyPanel(QWidget):
         paint_size_layout.addWidget(self.paint_size_value_label)
         paint_layout.addLayout(paint_size_layout)
 
-        # 画笔颜色（复用 ColorPickerWidget）
+        # Brush colour (reuses ColorPickerWidget)
         color_row = QHBoxLayout()
         color_row.setContentsMargins(0, 0, 0, 0)
         color_row.setSpacing(6)
@@ -488,7 +488,7 @@ class PropertyPanel(QWidget):
         paint_layout.addWidget(self.clear_paint_overlay_button)
         paint_layout.addStretch()
 
-        # ======= Tab 3：印章（仿制印章，与画笔页结构一致） =======
+        # ======= Tab 3: stamp (clone stamp, same structure as the brush tab) =======
         stamp_tab = SimpleCardWidget(self.paint_stack)
         stamp_layout = QVBoxLayout(stamp_tab)
         stamp_layout.setContentsMargins(6, 8, 6, 6)
@@ -528,7 +528,7 @@ class PropertyPanel(QWidget):
         stamp_tools_layout.addWidget(self.stamp_eraser_button)
         stamp_layout.addLayout(stamp_tools_layout)
 
-        # 印章大小（与蒙版/画笔页共享同一个模型字段）
+        # Stamp size (shares one model field with the mask and brush tabs)
         stamp_size_layout = QHBoxLayout()
         stamp_size_layout.setContentsMargins(0, 0, 0, 0)
         stamp_size_layout.setSpacing(6)
@@ -699,7 +699,7 @@ class PropertyPanel(QWidget):
         )
         text_layout.addLayout(ocr_trans_config_layout)
 
-        # 原文文本框
+        # Original text box
         self.original_text_box = TextEdit()
         self.original_text_box.setUndoRedoEnabled(True)
         self.original_text_box.setVerticalScrollBarPolicy(
@@ -725,7 +725,7 @@ class PropertyPanel(QWidget):
         self.original_text_label = BodyLabel(self._t("Original Text:"))
         text_layout.addWidget(self.original_text_label)
         text_layout.addWidget(self.original_text_box)
-        # 复选框:勾选时让"译文"框显示"替换前译文"(translation_raw),编辑会实时跑替换写回译文
+        # Checkbox: when ticked, the "translation" box shows the "translation before replacement" (translation_raw), and edits run the replacement live and write the translation back
         self.translation_raw_checkbox = CheckBox(self._t("Show Translation (Raw)"))
         self.translation_raw_checkbox.setChecked(True)
         self.translation_raw_checkbox.toggled.connect(
@@ -810,7 +810,7 @@ class PropertyPanel(QWidget):
         self.font_color_label = BodyLabel(self._t("Font Color:"))
         style_layout.addRow(self.font_color_label, self.font_color_picker)
 
-        # Stroke color (描边颜色)
+        # Stroke color
         self.stroke_color_picker = ColorPickerWidget(
             dialog_title="Select stroke color",
             default_color="#ffffff",
@@ -821,7 +821,7 @@ class PropertyPanel(QWidget):
         self.stroke_color_label = BodyLabel(self._t("Stroke Color:"))
         style_layout.addRow(self.stroke_color_label, self.stroke_color_picker)
 
-        # Stroke width (描边宽度)
+        # Stroke width
         self.stroke_width_spinbox = _double_spin_box()
         self.stroke_width_spinbox.setRange(0.0, 1.0)
         self.stroke_width_spinbox.setSingleStep(0.01)
@@ -830,7 +830,7 @@ class PropertyPanel(QWidget):
         self.stroke_width_label = BodyLabel(self._t("Stroke Width:"))
         style_layout.addRow(self.stroke_width_label, self.stroke_width_spinbox)
 
-        # Line spacing (行间距倍率)
+        # Line spacing (multiplier)
         self.line_spacing_spinbox = _double_spin_box()
         self.line_spacing_spinbox.setRange(0.1, 5.0)
         self.line_spacing_spinbox.setSingleStep(0.1)
@@ -890,7 +890,7 @@ class PropertyPanel(QWidget):
         action_layout.addWidget(self.copy_button)
         action_layout.addWidget(self.paste_button)
         action_layout.addWidget(self.delete_button)
-        # 添加弹性空间，将按钮推向左侧，使它们更紧凑
+        # Add a stretch that pushes the buttons to the left, to keep them compact
         action_layout.addStretch()
         self._finish_group(self.action_frame, action_card)
         layout.addWidget(self.action_frame)
@@ -946,8 +946,8 @@ class PropertyPanel(QWidget):
         self.delete_style_preset_button.clicked.connect(
             self._on_delete_style_preset_clicked
         )
-        # 实时更新（textChanged）
-        # contentsChange 在 textChanged 之前触发,提供精确的编辑位置记录
+        # Live update (textChanged)
+        # contentsChange fires before textChanged and gives an exact record of the edit position
         self.translated_text_box.document().contentsChange.connect(
             self._on_translated_contents_change
         )
@@ -956,7 +956,7 @@ class PropertyPanel(QWidget):
         self.direction_combo.currentTextChanged.connect(self._on_direction_changed)
 
         # Text
-        # 实时更新（textChanged）
+        # Live update (textChanged)
         self.original_text_box.textChanged.connect(self._on_original_text_changed)
         self.ocr_model_combo.currentTextChanged.connect(self._on_ocr_model_change)
         self.translator_combo.currentTextChanged.connect(self._on_translator_change)
@@ -1021,12 +1021,12 @@ class PropertyPanel(QWidget):
                 current_text=lang_map.get(translator_config.target_lang),
             )
 
-        # Alignment（保持原选中文本，绝不能借机改写选中 region 的对齐）
+        # Alignment (keep the originally selected text; this must never rewrite the alignment of the selected region)
         alignment_map = self.app_logic.get_display_mapping("alignment")
         if alignment_map:
             self._repopulate_combo(self.alignment_combo, list(alignment_map.values()))
 
-        # Direction（同上，保持原选中文本）
+        # Direction (as above, keep the originally selected text)
         direction_map = self.app_logic.get_display_mapping("direction")
         if direction_map:
             self._repopulate_combo(
@@ -1036,7 +1036,7 @@ class PropertyPanel(QWidget):
 
     def refresh_ui_texts(self):
         """刷新所有UI文本（用于语言切换）"""
-        # 刷新分组框标题
+        # Refresh the group box titles
         if hasattr(self, "mask_edit_frame"):
             self._set_group_title(self.mask_edit_frame, self._t("Image Editing"))
         if hasattr(self, "text_edit_frame"):
@@ -1046,7 +1046,7 @@ class PropertyPanel(QWidget):
         if hasattr(self, "action_frame"):
             self._set_group_title(self.action_frame, self._t("Actions"))
 
-        # 刷新标签
+        # Refresh the labels
         if hasattr(self, "brush_size_title_label"):
             self.brush_size_title_label.setText(self._t("Brush Size:"))
         if hasattr(self, "ocr_model_row_label"):
@@ -1068,7 +1068,7 @@ class PropertyPanel(QWidget):
         if hasattr(self, "stroke_color_label"):
             self.stroke_color_label.setText(self._t("Stroke Color:"))
 
-        # 刷新颜色选择器内部文本
+        # Refresh the text inside the colour pickers
         if hasattr(self, "font_color_picker"):
             self.font_color_picker.refresh_ui_texts()
         if hasattr(self, "stroke_color_picker"):
@@ -1095,7 +1095,7 @@ class PropertyPanel(QWidget):
         if hasattr(self, "quick_symbols_button"):
             self.quick_symbols_button.refresh_ui_texts()
 
-        # 刷新按钮
+        # Refresh the buttons
         if hasattr(self, "ocr_button"):
             self.ocr_button.setText(self._t("Recognize"))
         if hasattr(self, "local_ocr_hint"):
@@ -1168,26 +1168,26 @@ class PropertyPanel(QWidget):
         ):
             self._refresh_style_preset_action_buttons()
 
-        # 刷新复选框
+        # Refresh the checkboxes
         if hasattr(self, "show_refined_mask_checkbox"):
             self.show_refined_mask_checkbox.setText(self._t("Show Refined Mask"))
         if hasattr(self, "clear_all_masks_button"):
             self.clear_all_masks_button.setText(self._t("Clear All Masks"))
 
-        # 刷新下拉菜单（重新填充以使用新的翻译）
+        # Refresh the drop-down menus (refilled to use the new translations)
         self._refresh_combo_boxes()
         self._refresh_style_preset_combo()
         self.sync_sidebar_layout()
 
     def _refresh_combo_boxes(self):
         """刷新所有下拉菜单的选项"""
-        # 保存当前选中的索引（而不是文本，因为文本会随语言变化）
+        # Keep the selected index (not the text, because the text changes with the language)
         current_translator_index = self.translator_combo.currentIndex()
         current_target_lang_index = self.target_language_combo.currentIndex()
         current_alignment_index = self.alignment_combo.currentIndex()
         current_direction_index = self.direction_combo.currentIndex()
 
-        # 重新填充翻译器下拉菜单
+        # Refill the translator drop-down
         translator_map = self.app_logic.get_display_mapping("translator")
         if translator_map:
             self._repopulate_combo(
@@ -1196,7 +1196,7 @@ class PropertyPanel(QWidget):
                 current_index=current_translator_index,
             )
 
-        # 重新填充目标语言下拉菜单
+        # Refill the target language drop-down
         lang_map = self.app_logic.get_display_mapping("target_lang")
         if lang_map:
             self._repopulate_combo(
@@ -1205,7 +1205,7 @@ class PropertyPanel(QWidget):
                 current_index=current_target_lang_index,
             )
 
-        # 重新填充对齐下拉菜单
+        # Refill the alignment drop-down
         alignment_map = self.app_logic.get_display_mapping("alignment")
         if alignment_map:
             self._repopulate_combo(
@@ -1214,7 +1214,7 @@ class PropertyPanel(QWidget):
                 current_index=current_alignment_index,
             )
 
-        # 重新填充方向下拉菜单
+        # Refill the direction drop-down
         direction_map = self.app_logic.get_display_mapping("direction")
         if direction_map:
             self._repopulate_combo(
@@ -1644,10 +1644,10 @@ class PropertyPanel(QWidget):
     def on_selection_changed(self, selected_indices):
         """Slot to update the panel when the selection in the model changes."""
         if not selected_indices:
-            # 没有选择，禁用所有控件
+            # Nothing selected: disable all controls
             self.clear_and_disable_selection_dependent()
         elif len(selected_indices) == 1:
-            # 单选，显示该区域的详细信息
+            # Single selection: show the details of that region
             self.text_edit_frame.setEnabled(True)
             self.style_edit_frame.setEnabled(True)
             self.action_frame.setEnabled(True)
@@ -1659,8 +1659,8 @@ class PropertyPanel(QWidget):
                     regions[region_index], region_index, update_focused_text=True
                 )
         else:
-            # 多选，启用样式编辑，但禁用文本编辑。样式值沿用第一个选中区域，
-            # 与通过 Ctrl+点击形成多选时的显示口径一致。
+            # Multiple selection: style editing is on, text editing is off. The style values follow the first selected region,
+            # the same display convention as when a multiple selection is built with Ctrl+click.
             self.text_edit_frame.setEnabled(False)
             self.style_edit_frame.setEnabled(True)
             self.action_frame.setEnabled(True)
@@ -1676,7 +1676,7 @@ class PropertyPanel(QWidget):
                     update_text_fields=False,
                 )
 
-            # 多选不显示任何一个区域的文本，只保留其样式控件值。
+            # With a multiple selection no region's text is shown; only its style control values are kept.
             self.block_updates = True
             self._set_selection_controls_blocked(True)
             try:
@@ -1709,9 +1709,9 @@ class PropertyPanel(QWidget):
             self.original_text_box.clear()
             self.translated_text_box.clear()
             self._set_font_size_controls(12)
-            self.stroke_width_spinbox.setValue(0.07)  # 重置为默认值
-            self.line_spacing_spinbox.setValue(1.0)  # 重置为默认值
-            self.letter_spacing_spinbox.setValue(1.0)  # 重置为默认值
+            self.stroke_width_spinbox.setValue(0.07)  # Reset to the default value
+            self.line_spacing_spinbox.setValue(1.0)  # Reset to the default value
+            self.letter_spacing_spinbox.setValue(1.0)  # Reset to the default value
             self.angle_spinbox.setValue(0.0)
             default_color = (
                 self.config_service.get_config().render.font_color or "#000000"
@@ -1749,7 +1749,7 @@ class PropertyPanel(QWidget):
         try:
             # --- Update Text & Styles ---
             if update_text_fields:
-                # 统一使用 text 字段（用户编辑和OCR识别都使用这个字段）
+                # The text field is always used (both user edits and OCR results use it)
                 original_text = region_data.get("text", "")
                 update_original_text = update_focused_text or "text" in force_text_fields
                 if (
@@ -1758,7 +1758,7 @@ class PropertyPanel(QWidget):
                     self.original_text_box.setText(original_text)
 
 
-                # 复选框选中 → 显示"替换前译文"(translation_raw)，否则显示"译文"(translation)
+                # Checkbox ticked -> show the "translation before replacement" (translation_raw), otherwise the "translation" (translation)
                 show_raw = bool(
                     getattr(self, "translation_raw_checkbox", None)
                     and self.translation_raw_checkbox.isChecked()
@@ -1777,17 +1777,17 @@ class PropertyPanel(QWidget):
                     )
                 )
 
-                # 将所有 AI 换行符转换为真实换行，保留换行两侧的用户空格
+                # Turn every AI line break marker into a real line break, keeping the user's spaces on both sides of it
                 translation_text = storage_text_to_editor_text(translation_text)
 
-                # 剥除存量的旧 <H> 局部横排标记（协议已废除，保留内文显示）
+                # Strip leftover old <H> local-horizontal markers (the protocol is abolished; the inner text is kept for display)
                 display_text = strip_legacy_horizontal_tags(translation_text)
 
                 if (
                     update_translation_text or not self.translated_text_box.hasFocus()
                 ) and self.translated_text_box.toPlainText() != display_text:
                     self.translated_text_box.setText(display_text)
-                # 重置编辑操作基线:无论是否覆盖了文本,都以框内当前内容为准
+                # Reset the baseline of the edit operations: whether or not the text was overwritten, the current content of the box is the reference
                 self._translation_edit_recorder.reset(
                     self.translated_text_box.toPlainText()
                 )
@@ -1802,7 +1802,7 @@ class PropertyPanel(QWidget):
             fg_colors = region_data.get("fg_colors")
             font_color = region_data.get("font_color")
 
-            # 优先使用用户设置的font_color，然后才是原始的fg_colors
+            # Prefer the font_color the user set, then the original fg_colors
             if font_color:
                 color_hex = font_color
             elif isinstance(fg_colors, (list, tuple)) and len(fg_colors) == 3:
@@ -1893,11 +1893,11 @@ class PropertyPanel(QWidget):
         if self.current_region_index == -1:
             return
 
-        # 保存原文编辑
+        # Save the edit of the original text
         current_original = self.original_text_box.toPlainText()
         region_data = self.model.get_region_by_index(self.current_region_index)
         if region_data:
-            # 比较当前编辑的文本与original_text（如果没有则与text比较）
+            # Compare the text being edited with original_text (or with text when there is none)
             stored_original = region_data.get("original_text") or region_data.get(
                 "text", ""
             )
@@ -1906,7 +1906,7 @@ class PropertyPanel(QWidget):
                     self.current_region_index, current_original
                 )
 
-        # 保存译文编辑
+        # Save the edit of the translation
         self._save_translated_text()
 
     def _save_translated_text(self):
@@ -1917,7 +1917,7 @@ class PropertyPanel(QWidget):
         raw_text = self.translated_text_box.toPlainText()
         text_with_br = self._editor_text_to_model_text(raw_text)
 
-        # 按当前模式决定写入哪个字段
+        # The current mode decides which field is written
         show_raw = bool(
             getattr(self, "translation_raw_checkbox", None)
             and self.translation_raw_checkbox.isChecked()
@@ -1953,7 +1953,7 @@ class PropertyPanel(QWidget):
         """转发译文框的编辑事件(在 textChanged 之前触发);逻辑在后端。"""
         current = self.translated_text_box.toPlainText()
         if getattr(self, "block_updates", True):
-            # 程序化 setText:操作作废,基线由 _update_display 统一重置
+            # A programmatic setText: the operations are void; the baseline is reset in one place, _update_display
             self._translation_edit_recorder.invalidate(current)
             return
         self._translation_edit_recorder.record_change(
@@ -1966,8 +1966,8 @@ class PropertyPanel(QWidget):
             text_with_br = self._editor_text_to_model_text(raw_text)
             edit_info = self._take_translation_edit_info()
 
-            # 复选框选中 → 当前编辑的是"替换前译文",走 raw 信号(controller 会跑替换更新 translation);
-            # 否则编辑的是"译文",走原信号
+            # Checkbox ticked -> the "translation before replacement" is being edited, which goes through the raw signal (the controller runs the replacement and updates translation);
+            # otherwise the "translation" is being edited, which goes through the original signal
             show_raw = bool(
                 getattr(self, "translation_raw_checkbox", None)
                 and self.translation_raw_checkbox.isChecked()
@@ -2003,7 +2003,7 @@ class PropertyPanel(QWidget):
     def get_selected_target_language(self) -> str:
         """获取当前选择的目标语言（返回key而不是display name）"""
         display_name = self.target_language_combo.currentText()
-        # 使用 lang_name_to_code 映射（在 populate_options_from_config 中创建）
+        # Use the lang_name_to_code mapping (created in populate_options_from_config)
         if hasattr(self, "lang_name_to_code"):
             return self.lang_name_to_code.get(display_name, display_name)
         return display_name
@@ -2230,8 +2230,8 @@ class PropertyPanel(QWidget):
 
     def sync_active_tool_from_model(self, tool: str):
         """当 model 的 active_tool 变化时，UI 同步高亮对应按钮并切换标签页。"""
-        # 'select' 在蒙版页和画板页都有按钮，按当前所在标签页决定亮哪个，
-        # 避免在画板页点击「选择」时被强制切回蒙版页。
+        # 'select' has a button on both the mask tab and the drawing tab; the current tab decides which one lights up,
+        # so clicking "select" on the drawing tab does not force a switch back to the mask tab.
         if tool == "select":
             current_index = self._paint_current_index()
             select_buttons = {
@@ -2310,7 +2310,7 @@ class PropertyPanel(QWidget):
                 cx, cy = lx, ly
             return (cx, cy, w, h)
 
-        # 兜底：从 lines[0] bbox 计算
+        # Fallback: compute from the bbox of lines[0]
         lines = region_data.get("lines", [])
         if not lines or not lines[0]:
             return None
@@ -2323,8 +2323,8 @@ class PropertyPanel(QWidget):
         y0, y1 = min(y_coords), max(y_coords)
         return ((x0 + x1) / 2.0, (y0 + y1) / 2.0, x1 - x0, y1 - y0)
 
-    # _mark_horizontal 已删除：局部横排改用富文本 tcy（浮动编辑器 T 按钮），
-    # 旧 <H> 协议已废除，渲染管线不再有任何 <H> 消费方。
+    # _mark_horizontal was removed: local horizontal text now uses rich-text tcy (the T button of the floating editor);
+    # the old <H> protocol is abolished and nothing in the rendering pipeline consumes <H> any more.
     def _on_ocr_model_change(self, text):
         """OCR模型变化时保存编辑器专用配置"""
         self.app_logic.update_single_config("app.editor_ocr", text)
@@ -2338,5 +2338,5 @@ class PropertyPanel(QWidget):
         """目标语言变化时保存配置"""
         lang_code = self.lang_name_to_code.get(display_name, "CHS")
         self.app_logic.update_single_config("translator.target_lang", lang_code)
-        # 同时更新翻译服务的目标语言
+        # Update the target language of the translation service as well
         self.app_logic.translation_service.set_target_language(lang_code)

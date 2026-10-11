@@ -45,14 +45,14 @@ class GraphicsView(
         super().__init__(parent)
         self.model = model
         self.controller = controller
-        # 显式保存 EditorView 引用：addWidget 会把本视图换父到画布容器，
-        # 事后再靠 parent() 摸 EditorView 已经失效
+        # Keep the EditorView reference explicitly: addWidget reparents this view to the canvas container,
+        # so reaching EditorView through parent() afterwards no longer works
         self.editor_view = editor_view if editor_view is not None else parent
         self.logger = get_logger(__name__)
         self.render_coordinator = RenderCoordinator()
 
         self.scene = QGraphicsScene(self)
-        # 编辑器频繁整批重建少量文本框；禁用 BSP 索引可避免 add/remove 时维护索引的额外开销。
+        # The editor often rebuilds a small set of text boxes as a whole; with the BSP index off, the extra cost of maintaining it on add/remove is avoided.
         self.scene.setItemIndexMethod(QGraphicsScene.ItemIndexMethod.NoIndex)
         self.setScene(self.scene)
 
@@ -82,12 +82,12 @@ class GraphicsView(
         self._current_draw_mask_points: list[tuple[int, int]] = []
         self._current_draw_mask_shape: tuple[int, int] | None = None
 
-        # 仿制印章：右键取样点（图像像素坐标）；偏移在采样后首次落笔锁定，
-        # 跨笔画保持（传递仿制），再次右键取样时重置
+        # Clone stamp: the sampling point of the right click (image pixel coordinates); the offset is locked at the first stroke after sampling,
+        # kept across strokes (aligned cloning), and reset on the next right-click sample
         self._clone_sample_image_point = None
         self._clone_offset = None  # (dx, dy)：src = dest + offset
         self._clone_marker_item = None
-        # 笔画进行时状态
+        # State while a stroke is in progress
         self._clone_drawing = False
         self._clone_old_overlay = None
         self._clone_working_overlay = None
@@ -169,9 +169,9 @@ class GraphicsView(
         self.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
 
         self.setViewportUpdateMode(QGraphicsView.ViewportUpdateMode.SmartViewportUpdate)
-        # 不用 CacheBackground：背景是纯色，缓存反而多付一张视口大小 pixmap 的分配+blit。
-        # 不用 DontAdjustForAntialiasing：它把更新区域余量从 2px 砍到 0，
-        # 与 1/lod 缩放的粗描边组合会留下残影。
+        # CacheBackground is not used: the background is a plain colour, and the cache would only add the allocation and blit of a viewport-sized pixmap.
+        # DontAdjustForAntialiasing is not used: it cuts the margin of the update area from 2px to 0,
+        # which, combined with thick outlines scaled by 1/lod, leaves trails.
         self.setTransformationAnchor(QGraphicsView.ViewportAnchor.AnchorUnderMouse)
         self.setResizeAnchor(QGraphicsView.ViewportAnchor.AnchorViewCenter)
         self.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)

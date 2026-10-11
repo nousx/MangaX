@@ -259,7 +259,7 @@ class RegionListView(ListWidget):
         layout.addLayout(header_layout)
         layout.addWidget(translated_edit)
 
-        # 差量更新时直接取用，避免 findChild
+        # Used directly in incremental updates, to avoid findChild
         item_container.original_label = original_label
         item_container.translated_edit = translated_edit
         item_container.drag_handle = drag_handle

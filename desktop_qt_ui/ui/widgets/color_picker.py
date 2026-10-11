@@ -43,7 +43,7 @@ logger = logging.getLogger('manga_translator')
 
 
 # ═══════════════════════════════════════════════════════════════
-#  ScreenColorPicker — 全屏自定义屏幕取色器
+#  ScreenColorPicker - a custom full-screen colour picker
 # ═══════════════════════════════════════════════════════════════
 
 class ScreenColorPicker(QWidget):
@@ -56,9 +56,9 @@ class ScreenColorPicker(QWidget):
     color_picked = pyqtSignal(QColor)
     canceled = pyqtSignal()
 
-    MAG_N = 11        # 放大区域边长(像素，奇数)
-    MAG_S = 10        # 每像素放大倍数
-    OFFSET = 25       # 预览框离光标偏移
+    MAG_N = 11        # Side length of the magnified area (pixels, odd)
+    MAG_S = 10        # Magnification per pixel
+    OFFSET = 25       # Offset of the preview box from the cursor
 
     def __init__(self):
         super().__init__(None)
@@ -80,7 +80,7 @@ class ScreenColorPicker(QWidget):
         self._img = None
         self._dpr = 1.0
 
-    # ── 公开接口 ──────────────────────────────────────────────
+    # ── Public interface ──────────────────────────────────────
 
     def start(self):
         screen = QApplication.primaryScreen()
@@ -95,10 +95,10 @@ class ScreenColorPicker(QWidget):
         self.show()
         self.activateWindow()
         self.raise_()
-        # 确保键盘焦点在取色器上，ESC 取消可达
+        # Make sure the keyboard focus is on the picker, so ESC can cancel
         self.setFocus()
 
-    # ── 内部 ──────────────────────────────────────────────────
+    # ── Internal ──────────────────────────────────────────────
 
     def _px_color(self, lx, ly):
         if self._img is None:
@@ -108,12 +108,12 @@ class ScreenColorPicker(QWidget):
             return self._img.pixelColor(px, py)
         return QColor(0, 0, 0)
 
-    # ── 绘制 ──────────────────────────────────────────────────
+    # ── Painting ──────────────────────────────────────────────
 
     def paintEvent(self, event):
         if self._shot is None:
-            # WA_OpaquePaintEvent 契约：每个像素都必须被绘制，
-            # 否则会把陈旧的 backing store 内容显示出来。
+            # Contract of WA_OpaquePaintEvent: every pixel has to be painted,
+            # otherwise stale backing store content would be shown.
             p = QPainter(self)
             p.fillRect(self.rect(), QColor(0, 0, 0))
             p.end()
@@ -163,12 +163,12 @@ class ScreenColorPicker(QWidget):
         rect = self._panel_rect(cx, cy)
         bx, by = rect.x(), rect.y()
 
-        # 背景
+        # Background
         p.setBrush(QColor(24, 24, 28, 235))
         p.setPen(QPen(QColor(70, 70, 70), 1))
         p.drawRoundedRect(rect, 8, 8)
 
-        # 放大镜
+        # Magnifier
         mx, my = bx + pad, by + pad
         half = n // 2
         for dy in range(n):
@@ -176,7 +176,7 @@ class ScreenColorPicker(QWidget):
                 p.fillRect(mx + dx * s, my + dy * s, s, s,
                            self._px_color(cx - half + dx, cy - half + dy))
 
-        # 网格
+        # Grid
         p.setPen(QPen(QColor(50, 50, 50, 80), 1))
         for i in range(1, n):
             p.drawLine(mx + i * s, my, mx + i * s, my + mag)
@@ -184,11 +184,11 @@ class ScreenColorPicker(QWidget):
         p.setPen(QPen(QColor(100, 100, 100), 1))
         p.setBrush(Qt.BrushStyle.NoBrush)
         p.drawRect(mx, my, mag, mag)
-        # 中心高亮
+        # Centre highlight
         p.setPen(QPen(QColor(255, 255, 255), 2))
         p.drawRect(mx + half * s, my + half * s, s, s)
 
-        # 颜色信息
+        # Colour information
         iy = my + mag + 10
         sw = 26
         p.setBrush(self._color)
@@ -208,7 +208,7 @@ class ScreenColorPicker(QWidget):
         r, g, b = self._color.red(), self._color.green(), self._color.blue()
         p.drawText(tx, iy + 26, f"R:{r} G:{g} B:{b}")
 
-    # ── 事件 ──────────────────────────────────────────────────
+    # ── Events ────────────────────────────────────────────────
 
     def _update_cursor_state(self, global_pos: QPoint, repaint: bool = True):
         if repaint and global_pos == self._mpos:
@@ -240,7 +240,7 @@ class ScreenColorPicker(QWidget):
             self.canceled.emit()
             self.close()
         else:
-            # 其余按键不吞，交给默认处理
+            # Other keys are not swallowed and go to the default handling
             super().keyPressEvent(ev)
 
 
@@ -457,7 +457,7 @@ class _ColorField(QWidget):
         p.save()
         p.setClipPath(path)
         p.drawImage(rect, self._base_image(rect.width(), rect.height()))
-        # HSV 的 V 是 RGB 线性缩放，等价于叠加 alpha=(1-V) 的黑色
+        # The V of HSV is a linear scaling of RGB, which equals laying black with alpha=(1-V) on top
         if self._value < 1.0:
             p.fillRect(rect, QColor(0, 0, 0, round((1.0 - self._value) * 255)))
         p.restore()
@@ -787,7 +787,7 @@ class _ColorPaletteView(FlyoutViewBase):
 class ColorPickerWidget(QWidget):
     """可复用的颜色选择器组件，包含颜色按钮和常用颜色菜单。"""
 
-    color_changed = pyqtSignal(str)  # 颜色变化时发出 hex 颜色值
+    color_changed = pyqtSignal(str)  # Emit the hex colour value when the colour changes
 
     def __init__(self, dialog_title="Select color", default_color="#000000",
                  config_key="saved_colors", config_service=None, i18n_func=None,
@@ -873,7 +873,7 @@ class ColorPickerWidget(QWidget):
             self.color_button.setColor(color)
         self.update()
 
-    # ── 颜色对话框 ───────────────────────────────────────────────
+    # ── Colour dialog ─────────────────────────────────────────
 
     def _on_color_clicked(self):
         if self._ignore_next_color_click:
@@ -974,8 +974,8 @@ class ColorPickerWidget(QWidget):
             if reopen_dialog:
                 QTimer.singleShot(150, self._open_color_flyout)
             else:
-                # 取消后要重新激活的是所属顶层窗口；
-                # 对非窗口控件调 activateWindow/raise_ 无效
+                # After a cancel, the window to activate again is the owning top-level window;
+                # activateWindow/raise_ on a control that is not a window has no effect
                 window = self.window()
                 if window is not None:
                     window.activateWindow()
@@ -983,7 +983,7 @@ class ColorPickerWidget(QWidget):
 
         picker.color_picked.connect(on_picked)
         picker.canceled.connect(on_cancel)
-        # 保持引用防止被 GC；取色器 WA_DeleteOnClose，销毁时清引用防悬空
+        # Keep a reference so it is not garbage-collected; the picker is WA_DeleteOnClose, and the reference is cleared on destruction so it does not dangle
         picker.destroyed.connect(self._on_screen_picker_destroyed)
         self._screen_picker = picker
         picker.start()
@@ -1006,11 +1006,11 @@ class ColorPickerWidget(QWidget):
         self._saved_colors.insert(0, normalized)
         self._saved_colors = self._saved_colors[:20]
         self._persist_saved_colors()
-        # 弹层还开着时同步刷新「最近使用」分组
+        # While the popup is still open, refresh the "recently used" group as well
         if self._palette_view is not None:
             self._palette_view.update_saved_colors(self._saved_colors)
 
-    # ── RGB 标签 ──────────────────────────────────────────────────
+    # ── RGB labels ────────────────────────────────────────────
 
     def _update_color_tooltips(self, hex_color: str):
         try:
@@ -1021,7 +1021,7 @@ class ColorPickerWidget(QWidget):
         except Exception:
             set_hover_hint(self.color_button, self._t("Click to select color"))
 
-    # ── 持久化 ────────────────────────────────────────────────────
+    # ── Persistence ───────────────────────────────────────────
 
     def _load_saved_colors(self):
         if not self._config_service:

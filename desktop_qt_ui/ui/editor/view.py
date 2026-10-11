@@ -179,15 +179,15 @@ class EditorView(QWidget):
         self.clear_list_button: PushButton | None = None
         self.file_list: FileListView | None = None
 
-        # 设置controller的view引用，用于更新UI状态
+        # Give the controller a reference to the view, for updating the UI state
         self.controller.set_view(self)
 
-        # 主布局变为垂直，以容纳顶栏
+        # The main layout becomes vertical, to make room for the top bar
         self.layout = QVBoxLayout(self)
         self.layout.setContentsMargins(0, 0, 0, 0)
         self.layout.setSpacing(0)
 
-        # 1. 顶部工具栏
+        # 1. Top toolbar
         self.toolbar = EditorToolbar(
             self,
             snap_enabled=self._snap_enabled,
@@ -203,36 +203,36 @@ class EditorView(QWidget):
         self.toolbar.setFixedHeight(56)
         self.layout.addWidget(self.toolbar)
 
-        # 2. 主内容分割器
+        # 2. Main content splitter
         main_splitter = QSplitter(Qt.Orientation.Horizontal, self)
         main_splitter.setHandleWidth(6)
         self.main_splitter = main_splitter
         self.layout.addWidget(main_splitter)
 
-        # --- 左侧面板 (标签页) ---
+        # --- Left panel (tabs) ---
         left_panel = self._create_left_panel()
 
-        # --- 中心画布区域（包含画布和缩放滑块） ---
+        # --- Central canvas area (canvas and zoom slider) ---
         center_panel = self._create_center_panel()
 
-        # --- 右侧面板 (文件列表) ---
+        # --- Right panel (file list) ---
         right_panel = self._create_right_panel()
 
-        # --- 组合布局 ---
+        # --- Putting the layout together ---
         main_splitter.addWidget(left_panel)
         main_splitter.addWidget(center_panel)
         main_splitter.addWidget(right_panel)
         main_splitter.setStretchFactor(0, 0)
-        main_splitter.setStretchFactor(1, 1)  # 让中心画布拉伸
+        main_splitter.setStretchFactor(1, 1)  # Let the central canvas stretch
         main_splitter.setStretchFactor(2, 0)
 
-        # --- 连接信号与槽 ---
+        # --- Connect signals and slots ---
         self._connect_signals()
 
-        # --- 设置快捷键管理器 ---
+        # --- Set up the shortcut manager ---
         self.shortcut_manager = EditorShortcutManager(self)
 
-        # --- 应用编辑器样式（与主页统一） ---
+        # --- Apply the editor style (the same as the main page) ---
         self._apply_editor_style()
         self._apply_initial_splitter_sizes()
 
@@ -290,7 +290,7 @@ class EditorView(QWidget):
                 self._rich_editor_restore_on_show = False
                 self._reset_rich_editor_anchor()
                 if changed or editor.isVisible():
-                    # clear_region 会先刷新去抖期内的编辑内容，再解除绑定并隐藏。
+                    # clear_region first flushes the content still waiting in the debounce period, then unbinds and hides.
                     editor.clear_region()
             elif changed:
                 self._on_selection_changed_for_rich_editor(self.model.get_selection())
@@ -357,10 +357,10 @@ class EditorView(QWidget):
         """处理属性面板的粘贴按钮"""
         selected_regions = self.model.get_selection()
         if selected_regions and len(selected_regions) == 1:
-            # 有单个选中区域时，粘贴样式
+            # With a single selected region, paste the style
             self.controller.paste_region_style(selected_regions[0])
         else:
-            # 无选中区域时，粘贴新区域
+            # With no selected region, paste a new region
             self.controller.paste_region()
 
     def _handle_delete_from_panel(self):
@@ -372,8 +372,8 @@ class EditorView(QWidget):
     def _create_left_panel(self) -> QWidget:
         """创建左侧的标签页，包含区域列表和属性面板"""
         left_panel = SimpleCardWidget(self)
-        # 不能 setFixedWidth：在 QSplitter 里 min==max 会让分割条拖不动。
-        # 初始宽度由 _apply_initial_splitter_sizes 按 sizeHint 设置。
+        # setFixedWidth cannot be used: inside a QSplitter, min==max makes the splitter handle impossible to drag.
+        # The initial width is set by _apply_initial_splitter_sizes from sizeHint.
         left_panel.setMinimumWidth(280)
         left_panel.setSizePolicy(
             QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Expanding
@@ -394,7 +394,7 @@ class EditorView(QWidget):
         left_layout.addWidget(self.left_segmented_widget)
         left_layout.addWidget(self.left_stack, 1)
 
-        # 创建“译文列表”标签页
+        # Create the "translation list" tab
         translation_widget = SimpleCardWidget(left_panel)
         translation_widget.setSizePolicy(
             QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding
@@ -403,7 +403,7 @@ class EditorView(QWidget):
         translation_layout.setContentsMargins(8, 8, 8, 8)
         translation_layout.setSpacing(8)
 
-        # --- 查找和替换 ---
+        # --- Find and replace ---
         replace_widget = SimpleCardWidget(translation_widget)
         replace_layout = QVBoxLayout(replace_widget)
         replace_layout.setContentsMargins(8, 8, 8, 8)
@@ -463,7 +463,7 @@ class EditorView(QWidget):
         )
         self.left_segmented_widget.currentItemChanged.connect(self._set_left_route)
 
-        # 设置默认显示"属性编辑"标签页
+        # Show the "property editing" tab by default
         self._set_left_route(self.LEFT_PROPERTY_ROUTE, emit_changed=False)
 
         return left_panel
@@ -512,10 +512,10 @@ class EditorView(QWidget):
 
     def refresh_ui_texts(self):
         """刷新所有UI文本（用于语言切换）"""
-        # 刷新标签页标题
+        # Refresh the tab titles
         self.refresh_tab_titles()
 
-        # 刷新查找替换按钮
+        # Refresh the find and replace buttons
         if self.find_input is not None:
             self.find_input.setPlaceholderText(self._t("Find"))
         if self.replace_input is not None:
@@ -529,11 +529,11 @@ class EditorView(QWidget):
         if self.region_list_view is not None:
             self.region_list_view.refresh_ui_texts()
 
-        # 刷新工具栏
+        # Refresh the toolbar
         if self.toolbar is not None:
             self.toolbar.refresh_ui_texts()
 
-        # 刷新属性面板
+        # Refresh the property panel
         if self.property_panel is not None:
             self.property_panel.refresh_ui_texts()
 
@@ -547,7 +547,7 @@ class EditorView(QWidget):
         if self.rich_text_editor is not None:
             self.rich_text_editor.refresh_ui_texts()
 
-        # 刷新右侧文件列表按钮
+        # Refresh the buttons of the file list on the right
         if self.add_files_button is not None:
             set_hover_hint(self.add_files_button, self._t("Add Files"))
         if self.add_folder_button is not None:
@@ -555,7 +555,7 @@ class EditorView(QWidget):
         if self.clear_list_button is not None:
             set_hover_hint(self.clear_list_button, self._t("Clear List"))
 
-        # 文件项文本不需要重建，语言切换时只需重绘空列表占位提示。
+        # The text of the file items needs no rebuilding; on a language switch only the placeholder hint of the empty list is repainted.
         if self.file_list is not None:
             self.file_list.refresh_empty_state_text()
 
@@ -654,7 +654,7 @@ class EditorView(QWidget):
             editor.raise_()
             return
 
-        # F22：换绑前先把上一区域去抖期内的待发内容写回，再取新区域数据。
+        # F22: before rebinding, write back the pending content of the previous region's debounce period, then take the data of the new region.
         editor.flush_pending_changes()
         region_data = self.model.get_region_by_index(region_index)
         if not region_data:
@@ -670,8 +670,8 @@ class EditorView(QWidget):
             self._position_rich_text_editor(region_index)
         editor.show()
         editor.raise_()
-        # F09：选中不再调用 focus_text() 抢焦点——焦点留在画布，
-        # Delete/A/D/Q/W/E 等画布快捷键保持生效；点击文本框自然获焦进入编辑。
+        # F09: selecting no longer calls focus_text() to grab the focus - the focus stays on the canvas,
+        # so canvas shortcuts such as Delete/A/D/Q/W/E keep working; clicking the text box focuses it naturally and starts editing.
 
     def _on_selection_changed_for_rich_editor(self, selected_indices: list):
         editor = self.rich_text_editor
@@ -776,7 +776,7 @@ class EditorView(QWidget):
             or self._translation_list_is_active()
         ):
             return
-        # 等几何提交和可能的 item 重建完成后，再按新位置恢复浮动编辑器。
+        # Wait until the geometry commit and a possible item rebuild are done, then restore the floating editor at the new position.
         QTimer.singleShot(0, self._show_rich_text_editor_after_region_drag)
 
     def _show_rich_text_editor_after_region_drag(self):
@@ -788,7 +788,7 @@ class EditorView(QWidget):
             return
         selected = self.model.get_selection()
         if selected and len(selected) == 1:
-            # 拖动后文本框位置已经改变，按新位置重新选择一次停靠侧。
+            # After a drag the text box has moved; choose the docking side again for the new position.
             self._sync_rich_text_editor_region(
                 int(selected[0]), reset_position=True, position_only=True
             )
@@ -827,8 +827,8 @@ class EditorView(QWidget):
             and region_index == self._rich_editor_anchor_region
             and self._rich_editor_anchor_placement in {"left", "right"}
         )
-        # 不调用 adjustSize()：浮窗尺寸由它自己的 _refresh_layout_size 管理，
-        # 这里再 adjustSize 会和浮窗抢尺寸导致抖动
+        # adjustSize() is not called: the size of the popup is managed by its own _refresh_layout_size,
+        # and calling adjustSize here would fight it for the size and cause jitter
         popup_w = self.rich_text_editor.width()
         popup_h = self.rich_text_editor.height()
         margin = 8
@@ -1153,7 +1153,7 @@ class EditorView(QWidget):
         edit_canvas_layout.setContentsMargins(0, 0, 0, 0)
         edit_canvas_layout.setSpacing(0)
 
-        # 画布（滚动条已在 GraphicsView 中配置）
+        # Canvas (the scroll bars are configured in GraphicsView)
         self.graphics_view = GraphicsView(
             self.model, controller=self.controller, parent=self, editor_view=self
         )
@@ -1183,7 +1183,7 @@ class EditorView(QWidget):
         right_layout.setContentsMargins(0, 0, 0, 0)
         right_layout.setSpacing(10)
 
-        # 文件操作按钮
+        # File operation buttons
         file_button_widget = CardWidget()
         file_button_widget.setFixedHeight(64)
         file_buttons_layout = QHBoxLayout(file_button_widget)
@@ -1214,7 +1214,7 @@ class EditorView(QWidget):
         file_buttons_layout.addStretch()
         right_layout.addWidget(file_button_widget)
 
-        # 文件列表
+        # File list
         file_list_card = CardWidget()
         file_list_layout = QVBoxLayout(file_list_card)
         file_list_layout.setContentsMargins(8, 8, 8, 8)
@@ -1232,13 +1232,13 @@ class EditorView(QWidget):
     @pyqtSlot(str)
     def _on_file_remove_requested(self, file_path: str):
         """处理文件移除请求：只处理编辑器自己的文件列表"""
-        # 先在视图中移除（避免重建列表）
+        # Remove from the view first (to avoid rebuilding the list)
         self.file_list.remove_file(file_path)
 
-        # 调用 editor_logic 移除文件（会检查是否需要清空画布）
+        # Call editor_logic to remove the file (it checks whether the canvas has to be cleared)
         self.logic.remove_file(file_path)
 
-        # 编辑器有自己独立的文件列表，不需要同步到主页的 app_logic
+        # The editor has its own file list and does not need to sync with app_logic of the main page
 
     def _apply_editor_style(self, theme: str | None = None):
         """刷新画布和自定义颜色控件的主题。"""

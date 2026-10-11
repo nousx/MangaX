@@ -55,7 +55,7 @@ logger = logging.getLogger("manga_translator")
 def is_ai_colorizer_prompt_data(data) -> bool:
     if not isinstance(data, dict):
         return False
-    # 仅根据 AI 上色专用字段判断，避免普通翻译 JSON/YAML 被误判为上色提示词。
+    # Decided only by the fields specific to AI colorization, so an ordinary translation JSON/YAML is not mistaken for a colorization prompt.
     return any(
         key in data
         for key in (
@@ -228,7 +228,7 @@ class AIColorizerPromptEditorDialog(FluentSecondaryDialog):
         self._template_sections_layout = QVBoxLayout()
         self._template_sections_layout.setContentsMargins(0, 0, 0, 0)
         self._template_sections_layout.setSpacing(10)
-        # 带 stretch：对话框放大时多余空间进入各字段区（编辑框跟着长）
+        # With stretch: when the dialog grows, the extra space goes to the field areas (the edit boxes grow with it)
         layout.addLayout(self._template_sections_layout, 1)
         self._insert_section("prompt_text", text=str(self._data.get("ai_colorizer_prompt", "")))
         self._insert_section(
@@ -329,7 +329,7 @@ class AIColorizerPromptEditorDialog(FluentSecondaryDialog):
         outer.addWidget(_divider())
         return container, body
 
-    # 各字段区在纵向多余空间中的分配权重（0 = 保持内容高度）
+    # Weight of each field area in the extra vertical space (0 = keep the content height)
     _SECTION_STRETCHES = {
         "prompt_text": 3,
         "colorization_rules": 1,

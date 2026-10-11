@@ -50,16 +50,16 @@ class ShortcutManager(QObject):
         shortcut = QShortcut(key_sequence, self.parent_widget)
 
         if context_aware:
-            # 包装回调函数，添加上下文检查
+            # Wrap the callback, adding a context check
             def context_aware_callback():
-                # parent_widget.focusWidget() 不跨窗口：焦点在浮动编辑器
-                # （Qt.Tool 顶层窗）里时它仍返回主窗口内旧焦点，导致误删画布选中区。
+                # parent_widget.focusWidget() does not cross windows: while the focus is in the floating editor
+                # (a Qt.Tool top-level window) it still returns the old focus inside the main window, which deleted the selected canvas region by mistake.
                 focused_widget = QApplication.focusWidget()
                 if (
                     focused_widget is not None
                     and focused_widget.window() is not self.parent_widget.window()
                 ):
-                    # 焦点在其它顶层窗口（如浮动富文本编辑器）：编辑器快捷键一律不处理
+                    # The focus is in another top-level window (such as the floating rich-text editor): editor shortcuts are not handled at all
                     return
                 callback(focused_widget)
 
@@ -258,28 +258,28 @@ class EditorShortcutManager(ShortcutManager):
     def _handle_undo(self, focused_widget):
         """处理撤销快捷键"""
         if self.is_text_widget(focused_widget):
-            # 如果焦点在文本控件上，让文本控件处理撤销
+            # When the focus is on a text control, let it handle undo
             focused_widget.undo()
         else:
-            # 否则调用编辑器的撤销
+            # Otherwise call the editor's undo
             self.controller.undo()
 
     def _handle_redo(self, focused_widget):
         """处理重做快捷键"""
         if self.is_text_widget(focused_widget):
-            # 如果焦点在文本控件上，让文本控件处理重做
+            # When the focus is on a text control, let it handle redo
             focused_widget.redo()
         else:
-            # 否则调用编辑器的重做
+            # Otherwise call the editor's redo
             self.controller.redo()
 
     def _handle_copy(self, focused_widget):
         """处理复制快捷键"""
         if self.is_text_widget(focused_widget):
-            # 如果焦点在文本控件上，让文本控件处理复制
+            # When the focus is on a text control, let it handle copy
             focused_widget.copy()
         else:
-            # 若画布上有选中的贴片，优先复制贴片
+            # When a paste overlay is selected on the canvas, copy the overlay first
             graphics_view = getattr(self.editor_view, "graphics_view", None)
             overlay_id = getattr(
                 graphics_view, "_selected_paste_overlay_id", None
@@ -287,7 +287,7 @@ class EditorShortcutManager(ShortcutManager):
             if overlay_id:
                 self.controller.copy_paste_overlay(overlay_id)
                 return
-            # 否则复制选中的区域
+            # Otherwise copy the selected regions
             selected_regions = self.editor_view.model.get_selection()
             if selected_regions:
                 self.controller.copy_regions(selected_regions)
@@ -295,16 +295,16 @@ class EditorShortcutManager(ShortcutManager):
     def _handle_paste(self, focused_widget):
         """处理粘贴快捷键"""
         if self.is_text_widget(focused_widget):
-            # 如果焦点在文本控件上，让文本控件处理粘贴
+            # When the focus is on a text control, let it handle paste
             focused_widget.paste()
         else:
-            # 否则根据是否有选中区域决定粘贴行为
+            # Otherwise what paste does depends on whether a region is selected
             selected_regions = self.editor_view.model.get_selection()
             if selected_regions and len(selected_regions) == 1:
-                # 有单个选中区域时，粘贴样式
+                # With a single selected region, paste the style
                 self.controller.paste_region_style(selected_regions[0])
             elif selected_regions:
-                # 多选区域：沿用既有逻辑（粘贴新区域到鼠标位置）
+                # Several regions selected: the existing logic applies (paste a new region at the mouse position)
                 self._paste_new_region_at_cursor()
             else:
                 last_kind = (
@@ -383,7 +383,7 @@ class EditorShortcutManager(ShortcutManager):
     def _handle_delete(self, focused_widget):
         """处理删除快捷键"""
         if not self.is_text_widget(focused_widget):
-            # 若画布上有选中的贴片，优先删除贴片
+            # When a paste overlay is selected on the canvas, delete the overlay first
             graphics_view = getattr(self.editor_view, "graphics_view", None)
             if (
                 graphics_view is not None
@@ -391,7 +391,7 @@ class EditorShortcutManager(ShortcutManager):
             ):
                 graphics_view.delete_selected_paste_overlay()
                 return
-            # 否则处理删除选中的区域
+            # Otherwise delete the selected regions
             selected_regions = self.editor_view.model.get_selection()
             if selected_regions:
                 self.controller.delete_regions(selected_regions)
@@ -403,7 +403,7 @@ class EditorShortcutManager(ShortcutManager):
 
     def _handle_export(self, focused_widget):
         """处理导出快捷键 (Ctrl+Q)"""
-        # 与工具栏共用同一入口，确保读取模型前先 flush 富文本正文和 Ruby。
+        # Shares one entry point with the toolbar, so the rich-text body and the ruby are flushed before the model is read.
         self.editor_view.export_image()
 
     def _handle_toggle_rich_text_popup(self):
@@ -487,9 +487,9 @@ class EditorShortcutManager(ShortcutManager):
 
     def _setup_wheel_shortcuts(self):
         """设置鼠标滚轮快捷键（通过事件过滤器实现）"""
-        # 为 graphics_view 的 viewport 安装事件过滤器
+        # Install an event filter on the viewport of graphics_view
         if hasattr(self.editor_view, "graphics_view"):
-            # 滚轮事件会先到达 viewport
+            # Wheel events reach the viewport first
             self.editor_view.graphics_view.viewport().installEventFilter(self)
 
     def eventFilter(self, obj, event):
@@ -501,14 +501,14 @@ class EditorShortcutManager(ShortcutManager):
         - Shift + 滚轮：调整蒙版画笔大小
         """
         if event.type() == QEvent.Type.Wheel:
-            # 检查是否是 graphics_view 的 viewport
+            # Check whether it is the viewport of graphics_view
             if obj == self.editor_view.graphics_view.viewport():
                 modifiers = event.modifiers()
 
-                # Shift + 滚轮：调整画笔大小（无论当前是什么工具）
+                # Shift + wheel: change the brush size (whatever the current tool is)
                 if modifiers == Qt.KeyboardModifier.ShiftModifier:
                     current_size = self.editor_view.model.get_brush_size()
-                    # 尝试获取滚轮方向
+                    # Try to get the wheel direction
                     angle_delta = event.angleDelta().y()
                     if angle_delta == 0:
                         angle_delta = event.pixelDelta().y()
@@ -516,12 +516,12 @@ class EditorShortcutManager(ShortcutManager):
                     delta = 1 if angle_delta > 0 else -1
                     new_size = max(5, min(200, current_size + delta))
                     self.editor_view.model.set_brush_size(new_size)
-                    return True  # 阻止事件继续传递
+                    return True  # Stop the event from propagating
 
-                # Ctrl + 滚轮（含 Ctrl+Shift 等组合）：调整选中文本框的字体大小；
-                # 无文本框选中但有选中贴片时，等比缩放贴片。
-                # 无论有无选中都吞掉事件——这是"调字号/缩放贴片"语义，
-                # 决不能穿透成画布缩放，让用户以为在调字号实际在缩放。
+                # Ctrl + wheel (including combinations such as Ctrl+Shift): change the font size of the selected text boxes;
+                # with no text box selected but a paste overlay selected, scale the overlay proportionally.
+                # The event is swallowed whether or not something is selected - this gesture means "change font size / scale overlay"
+                # and must never fall through to canvas zoom, where the user thinks the font size is changing while the canvas zooms.
                 elif modifiers & Qt.KeyboardModifier.ControlModifier:
                     angle_delta = event.angleDelta().y()
                     if angle_delta == 0:
@@ -567,7 +567,7 @@ class EditorShortcutManager(ShortcutManager):
                                     self.controller.update_font_size(
                                         region_index, new_size
                                     )
-                    return True  # 阻止事件继续传递
+                    return True  # Stop the event from propagating
 
-        # 其他事件继续传递
+        # Other events propagate as usual
         return super().eventFilter(obj, event)

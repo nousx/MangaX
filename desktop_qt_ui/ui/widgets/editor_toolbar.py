@@ -54,7 +54,7 @@ class _LeadingIndicatorMenuStyle(QProxyStyle):
         if base_style is not None:
             super().__init__(base_style)
         else:
-            # 无参构造：代理惰性使用应用 style，且不接管其所有权
+            # Constructed without arguments: the proxy uses the application style lazily and does not take ownership of it
             super().__init__()
 
     def subElementRect(self, element, option, widget=None):
@@ -174,7 +174,7 @@ class EditorToolbar(CardWidget):
         self.i18n = get_i18n_manager()
         self._themed_icon_buttons: list[tuple[ToolButton, str]] = []
         self.content_widget: QWidget | None = None
-        # 菜单在语言切换时整体重建，所有需要恢复的状态都存在字段里
+        # The menus are rebuilt as a whole on a language switch; all state that has to be restored is kept in fields
         self._display_mode = "full"
         self._align_ref = "selection"
         self._can_undo = False
@@ -226,13 +226,13 @@ class EditorToolbar(CardWidget):
         self.scroll_area.enableTransparentBackground()
         outer_layout.addWidget(self.scroll_area)
 
-        # 无父构造：setWidget 会认领所有权，先挂在框架上会产生幽灵坯子
+        # Constructed without a parent: setWidget takes ownership, and attaching to the frame first would leave a ghost placeholder
         self.content_widget = QWidget()
         layout = QHBoxLayout(self.content_widget)
         layout.setContentsMargins(8, 4, 8, 4)
         layout.setSpacing(10)
 
-        # --- 下拉菜单组：通用 / 显示模式 / 排列（每个都是单级菜单，功能不分级） ---
+        # --- Drop-down menu group: general / display mode / arrange (each is a single-level menu; functions are not nested) ---
         self.menu_button = DropDownPushButton()
         self.menu_button.setIcon(FIF.MENU)
         self.menu_button.setText(self._t("Menu"))
@@ -264,7 +264,7 @@ class EditorToolbar(CardWidget):
 
         layout.addWidget(self._create_separator())
 
-        # --- 常驻: 适应窗口 ---
+        # --- Always shown: fit to window ---
         self.fit_window_button = ToolButton()
         self.fit_window_button.setIcon(FIF.FIT_PAGE)
         set_hover_hint(self.fit_window_button, self._t("Fit to Window"))
@@ -272,7 +272,7 @@ class EditorToolbar(CardWidget):
 
         layout.addWidget(self._create_separator())
 
-        # --- 常驻: 原图不透明度 ---
+        # --- Always shown: opacity of the original image ---
         self.opacity_label = BodyLabel(self._t("Original Image Opacity:"))
         layout.addWidget(self.opacity_label)
         self.original_image_alpha_slider = Slider(Qt.Orientation.Horizontal)
@@ -292,30 +292,30 @@ class EditorToolbar(CardWidget):
         self._sync_content_width()
 
     # ------------------------------------------------------------------
-    # 主菜单
+    # Main menu
     # ------------------------------------------------------------------
 
     def _build_menus(self):
         """构建三个独立的单级下拉菜单。语言切换时整体重建，状态从字段恢复。"""
         old_menus = [self.main_menu, self.display_menu, self.arrange_menu]
-        # Popup 菜单必须以真正的顶层窗口作为 QWidget 父级。若把工具栏
-        # （位于 FluentWindow 的 QStackedWidget 内）作为父级，Windows Qt
-        # 会尝试激活该堆叠容器的 QWidgetWindow，并记录“must be a top
-        # level window”警告。工具栏脱离窗口单独测试时自身就是顶层控件，
-        # 因此保留自身作为兜底父级。
+        # A popup menu must have a real top-level window as its QWidget parent. With the toolbar
+        # (inside the QStackedWidget of FluentWindow) as the parent, Qt on Windows
+        # tries to activate the QWidgetWindow of that stacked container and logs a "must be a top
+        # level window" warning. When the toolbar is tested on its own, outside a window, it is a top-level control itself,
+        # so itself is kept as the fallback parent.
         menu_parent = self.window()
         if menu_parent is None or not menu_parent.isWindow():
             menu_parent = self
-        # 旧菜单里的主题图标按钮即将销毁，先清空登记表防止悬空引用
+        # The themed icon buttons of the old menu are about to be destroyed; clear the registry first to prevent dangling references
         self._themed_icon_buttons.clear()
         menu = _IconCheckableMenu(
             parent=menu_parent, indicatorType=MenuIndicatorType.CHECK
         )
 
-        # --- 通用菜单：撤销重做 / 缩放 / 持久化开关 ---
+        # --- General menu: undo and redo / zoom / persistent switches ---
 
-        # 撤销/重做的真实快捷键由 EditorShortcutManager 全局注册（带焦点感知），
-        # 这里只在文本上做提示，不设 QAction shortcut，避免双重触发。
+        # The real undo/redo shortcuts are registered globally by EditorShortcutManager (aware of focus);
+        # here they are only shown as a hint in the text, with no QAction shortcut, to avoid triggering twice.
         self.undo_action = Action(FIF.LEFT_ARROW, self._t("Undo") + " (Ctrl+Z)")
         self.undo_action.setEnabled(self._can_undo)
         self.undo_action.triggered.connect(self.undo_requested)
@@ -430,7 +430,7 @@ class EditorToolbar(CardWidget):
         self.main_menu = menu
         self.menu_button.setMenu(menu)
 
-        # --- 显示模式菜单：五种画布显示状态单选 ---
+        # --- Display mode menu: a single choice among five canvas display states ---
         display_menu = _ScreenBoundCheckableMenu(
             parent=menu_parent,
             indicatorType=MenuIndicatorType.RADIO,
@@ -452,7 +452,7 @@ class EditorToolbar(CardWidget):
         self.display_menu = display_menu
         self.display_mode_button.setMenu(display_menu)
 
-        # --- 排列菜单：参照单选 + 对齐/分布选项（文字+图标，点击不关闭） ---
+        # --- Arrange menu: a single reference choice + align and distribute options (text + icon; a click does not close the menu) ---
         arrange_menu = _StayOpenCheckableMenu(
             parent=menu_parent, indicatorType=MenuIndicatorType.RADIO
         )
@@ -520,7 +520,7 @@ class EditorToolbar(CardWidget):
         )
         arrange_menu.addAction(self._dist_h_action)
 
-        # 重建（语言切换）后按当前选区数恢复启停状态
+        # After a rebuild (language switch), restore the enabled state from the current number of selected items
         self._apply_align_button_states()
 
         self.arrange_menu = arrange_menu
@@ -764,7 +764,7 @@ class EditorToolbar(CardWidget):
         self._dist_h_action.setEnabled(dist_enabled)
 
     # ------------------------------------------------------------------
-    # 布局辅助
+    # Layout helpers
     # ------------------------------------------------------------------
 
     def _create_separator(self):

@@ -562,7 +562,7 @@ class StyleRunCard(SimpleCardWidget):
         self.keys = style_keys_for_segment(segment, forced_keys)
         self.controls: dict[str, QWidget] = {}
         self.name_labels: dict[str, CaptionLabel] = {}
-        # key -> [applier(style, transform, segment, draft)]：结构不变时就地刷新控件值
+        # key -> [applier(style, transform, segment, draft)]: when the structure is unchanged, the control values are refreshed in place
         self._value_appliers: dict[str, list] = {}
 
         layout = QVBoxLayout(self)
@@ -620,7 +620,7 @@ class StyleRunCard(SimpleCardWidget):
         return self.segment.start, self.segment.end
 
     # ------------------------------------------------------------------
-    # 结构签名相同时的就地刷新（避免整卡重建打断用户输入/点击）
+    # In-place refresh when the structure signature is the same (avoids rebuilding the whole card and interrupting the user's typing or clicking)
     # ------------------------------------------------------------------
 
     @staticmethod

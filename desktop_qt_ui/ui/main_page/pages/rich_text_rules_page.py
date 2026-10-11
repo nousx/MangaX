@@ -23,7 +23,7 @@ def create_rich_text_rules_page(self) -> QWidget:
     header_layout.addWidget(self.rich_text_rules_page_subtitle_label)
     layout.addWidget(header)
 
-    # MainView 是纯逻辑 QObject，不能当控件父级；面板随 addWidget 进布局后自动认领父级
+    # MainView is a pure logic QObject and cannot be the parent of a control; the panel gets its parent automatically when addWidget puts it in the layout
     self.rich_text_rules_editor_panel = RichTextRulesEditorPanel(t_func=self._t)
     layout.addWidget(self.rich_text_rules_editor_panel, 1)
     return page

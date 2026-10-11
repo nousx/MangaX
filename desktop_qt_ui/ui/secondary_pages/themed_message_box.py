@@ -183,7 +183,7 @@ def show_error_dialog(
         details_edit.setReadOnly(True)
         details_edit.setPlainText(detail_text)
         details_edit.setMinimumHeight(260)
-        # 详情区带 stretch，对话框放大时详情区跟着长
+        # The details area has stretch, so it grows when the dialog grows
         dialog.textLayout.addWidget(details_edit, 1)
         min_size = (720, 460)
     else:
@@ -198,7 +198,7 @@ def show_error_dialog(
         extra_button.clicked.connect(extra_button_callback)
         dialog.buttonLayout.insertWidget(0, extra_button, 1)
 
-    # 内容（含额外按钮）全部装配完成后再定尺寸
+    # The size is fixed only after all content (extra buttons included) is in place
     _apply_flexible_size(dialog, *min_size)
 
     return _exec_fluent_dialog(dialog, buttons, default_button)

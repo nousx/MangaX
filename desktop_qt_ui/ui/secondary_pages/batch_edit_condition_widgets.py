@@ -54,7 +54,7 @@ from ui.widgets.wheel_filter import TopLevelComboBox as ComboBox
 from utils.font_list import FontComboBox
 
 
-# ─── 值编辑器 ───
+# ─── Value editors ───
 
 
 class _ValueEditor(QWidget):
@@ -129,7 +129,7 @@ class _EnumValueEditor(_ValueEditor):
         return self._combo.currentData()
 
     def set_value(self, value: Any) -> None:
-        # 先吸收历史方向别名，避免 vr/vertical 因不在下拉选项中回退成 h。
+        # Absorb old direction aliases first, so vr/vertical does not fall back to h for not being among the drop-down options.
         value = region_field_value({self._field_key: value}, self._field_key)
         index = self._combo.findData(str(value or ""))
         self._combo.setCurrentIndex(index if index >= 0 else 0)
@@ -207,7 +207,7 @@ class _ColorValueEditor(_ValueEditor):
         if with_tolerance:
             self._tolerance_label = CaptionLabel(self._t("Tolerance"), self)
             self._tolerance = SpinBox(self)
-            self._tolerance.setRange(0, 442)  # 0..sqrt(3)*255，RGB 空间的最大距离
+            self._tolerance.setRange(0, 442)  # 0..sqrt(3)*255, the largest distance in RGB space
             self._tolerance.setValue(30)
             self._tolerance.valueChanged.connect(self.changed)
             layout.addWidget(self._tolerance_label)
@@ -305,7 +305,7 @@ def build_value_editor(
     return editor
 
 
-# ─── 条件行 ───
+# ─── Condition row ───
 
 
 class ConditionRow(QWidget):
@@ -343,7 +343,7 @@ class ConditionRow(QWidget):
         self.remove_button.clicked.connect(lambda: self.remove_requested.emit(self))
         self._rebuild_ops()
 
-    # --- 内部 ---
+    # --- Internal ---
 
     def _current_spec(self) -> FieldSpec:
         return FIELDS_BY_KEY.get(self.field_combo.currentData()) or FIELDS[0]
@@ -393,7 +393,7 @@ class ConditionRow(QWidget):
         self._rebuild_editor()
         self.changed.emit()
 
-    # --- 契约 ---
+    # --- Contract ---
 
     def to_dict(self) -> dict:
         return {
@@ -425,7 +425,7 @@ class ConditionRow(QWidget):
             self._editor.refresh_ui_texts()
 
 
-# ─── 动作块 ───
+# ─── Action blocks ───
 
 
 class _ActionCard(SimpleCardWidget):
@@ -514,8 +514,8 @@ class _EntryListActionCard(_ActionCard):
         self.changed.emit()
 
     def _on_toggled(self, checked: bool) -> None:
-        # 勾上却一条都没有等于开了个空块，直接给一条空白条目省一次点击。
-        # 回填方案时例外：条目马上就要照方案铺出来，这里再补一条就成了多余的空条目。
+        # Ticked with no entry at all would be an empty block; add one blank entry directly and save a click.
+        # Except when a scheme is being loaded: the entries are about to be laid out from the scheme, and one more here would be a spare empty entry.
         if checked and not self._entries and not self._loading_entries:
             self._add_entry(silent=True)
         super()._on_toggled(checked)
@@ -670,7 +670,7 @@ class SetFieldsActionCard(_ActionCard):
     def load_actions(self, actions: list[dict]) -> None:
         for row in list(self._rows):
             self._remove_row(row)
-        # 改 region 属性天然只有一条：字段本身就是列表，再套一层没意义
+        # Changing region properties naturally has a single entry: the field itself is a list, and wrapping it once more is pointless
         action = actions[0] if actions else None
         self.set_enabled(bool(action))
         for key, value in ((action or {}).get("fields") or {}).items():
@@ -737,7 +737,7 @@ class _ReplaceEntry(_ActionEntry):
         self.content_layout.addWidget(replace_host)
 
     def to_action(self) -> Optional[dict]:
-        # 替换空串没意义，pattern 留空就是这条没填完
+        # Replacing an empty string is pointless; an empty pattern means this entry is not filled in yet
         if not self.pattern_row.pattern.text():
             return None
         return {
@@ -827,7 +827,7 @@ class _RichTextEntry(_ActionEntry):
         self.changed.emit()
 
     def _edit_style(self) -> None:
-        # 延迟导入：规则页模块会在导入时拉起字体列表等重资源
+        # Lazy import: the rules page module pulls in heavy resources such as the font list on import
         from ui.secondary_pages.rich_text_rules_editor import RichTextStyleDialog
 
         dialog = RichTextStyleDialog(copy.deepcopy(self._style), self._t, self)
@@ -852,7 +852,7 @@ class _RichTextEntry(_ActionEntry):
         self.match_summary.setText(_style_summary(self._match_style, self._t("No style filter")))
 
     def to_action(self) -> Optional[dict]:
-        # pattern 留空 = 整条 region 的全部文字，所以这里不拦空 pattern
+        # An empty pattern = all the text of the whole region, so an empty pattern is not rejected here
         mode = self._mode()
         action = {
             "type": ACTION_RICH_TEXT,
@@ -863,7 +863,7 @@ class _RichTextEntry(_ActionEntry):
         if self._match_style:
             action["match_style"] = copy.deepcopy(self._match_style)
             action["match_style_logic"] = self.match_logic_combo.currentData() or LOGIC_ALL
-        # 控件把 ruby/tcy 塞在 style dict 里，方案文件要求它们与 style 平级
+        # The control puts ruby/tcy inside the style dict; the scheme file wants them at the same level as style
         style = copy.deepcopy(self._style)
         ruby = str(style.pop("ruby", "") or "")
         tcy = bool(style.pop("tcy", False))

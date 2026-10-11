@@ -84,7 +84,7 @@ class _PasteOverlaySelectionItem(QGraphicsItem):
         self.setZValue(15)
 
     def shape(self) -> QPainterPath:
-        # 纯装饰：不参与命中，鼠标事件全部落到贴片本体（本体 shape 已覆盖扩展区）
+        # Decoration only: takes no part in hit testing; all mouse events land on the overlay itself (whose shape already covers the extended area)
         return QPainterPath()
 
     def _geometry(self) -> tuple[float, float, float]:
@@ -110,7 +110,7 @@ class _PasteOverlaySelectionItem(QGraphicsItem):
         accent = _fluent_accent(235)
         surface = _fluent_surface(246)
 
-        # 虚线外框（双描边：阴影 + 强调色），对齐文本框选中态
+        # Dashed outer frame (double stroke: shadow + accent colour), matching the selected state of text boxes
         path = QPainterPath()
         path.addRect(frame)
         painter.setBrush(QBrush(_fluent_accent(16)))
@@ -122,7 +122,7 @@ class _PasteOverlaySelectionItem(QGraphicsItem):
         )
         painter.drawPath(path)
 
-        # 四角缩放手柄（文本框白框同款圆角方块）
+        # Scale handles at the four corners (the same rounded squares as the white box of text boxes)
         corner_hs = 13.0 / lod
         corners = (
             QPointF(0.0, 0.0),
@@ -148,7 +148,7 @@ class _PasteOverlaySelectionItem(QGraphicsItem):
                 radius,
             )
 
-        # 顶部旋转手柄（文本框同款：连接杆 + 圆环 + 圆点）
+        # Rotation handle at the top (as for text boxes: connecting rod + ring + dot)
         rot_hs = 14.0 / lod
         rotate_center = QPointF(width / 2.0, -_ROTATE_OFFSET_PX / lod)
         painter.setPen(_editor_pen(_shadow_color(125), pw * 3.0))
@@ -201,7 +201,7 @@ class PasteOverlayItem(QGraphicsPixmapItem):
         self._rebuild()
 
     # ------------------------------------------------------------------
-    # 基础数据 / 视图同步
+    # Base data / view sync
     # ------------------------------------------------------------------
 
     def overlay_id(self) -> str:
@@ -255,7 +255,7 @@ class PasteOverlayItem(QGraphicsPixmapItem):
                     raw = QPixmap.fromImage(qimage)
                     if not raw.isNull():
                         pixmap = raw
-        # 缓存解码原图：缩放永远从原图重采样，避免拖动时逐帧叠加重采样丢失细节
+        # Cache the decoded original: scaling always resamples from the original, so detail is not lost by resampling frame after frame while dragging
         self._source_pixmap = pixmap
         self.prepareGeometryChange()
         self.setPixmap(pixmap)
@@ -263,7 +263,7 @@ class PasteOverlayItem(QGraphicsPixmapItem):
 
     def _apply_geometry(self, *, rasterize: bool = True) -> None:
         overlay = self.overlay
-        # 解码原图仅作为重采样来源，最终尺寸以 overlay 的 width/height 为准
+        # The decoded original is only the source for resampling; the final size is the width/height of the overlay
         source = (
             self._source_pixmap
             if not self._source_pixmap.isNull()
@@ -279,8 +279,8 @@ class PasteOverlayItem(QGraphicsPixmapItem):
         target_height = max(
             1, int(round(float(overlay.get("height", source.height()))))
         )
-        # 拖动缩放期间（rasterize=False）不重采样 pixmap，把目标/当前比例折进
-        # item 变换；只有松手提交重建时才做一次最终栅格化，避免逐帧分配大 pixmap
+        # While scaling by drag (rasterize=False) the pixmap is not resampled; the target/current ratio is folded into
+        # the item transform, and the final rasterisation happens only once, on the rebuild after release, to avoid allocating a large pixmap every frame
         display = self.pixmap()
         if rasterize:
             if (
@@ -308,7 +308,7 @@ class PasteOverlayItem(QGraphicsPixmapItem):
                 self.setPixmap(display)
                 rasterize = True
 
-        # 变换锚点必须用“当前显示尺寸”
+        # The transform anchor has to use the "currently displayed size"
         width = display.width()
         height = display.height()
         if width <= 0 or height <= 0:
@@ -364,7 +364,7 @@ class PasteOverlayItem(QGraphicsPixmapItem):
         return path
 
     # ------------------------------------------------------------------
-    # 鼠标交互：移动 / 角缩放 / 旋转（提交走 undo 栈）
+    # Mouse interaction: move / corner scale / rotate (commits go through the undo stack)
     # ------------------------------------------------------------------
 
     def _hover_cursor_for(self, local_pos: QPointF):
@@ -477,9 +477,9 @@ class PasteOverlayItem(QGraphicsPixmapItem):
         view = self._paste_view
         if view is not None and getattr(view, "model", None) is not None:
             view.model.set_selection([])
-        # 注意：这里不立即补“选中框”。选中框的创建会触发 prepareGeometryChange，
-        # 若在鼠标按下的事件分发中改几何，可能出现按下瞬间整张贴片偏移一帧、
-        # 松手又恢复的闪烁。选中态统一放到 mouseRelease（提交后重建）再补。
+        # Note: the "selection frame" is not added here right away. Creating it triggers prepareGeometryChange,
+        # and changing geometry during the dispatch of the mouse press can make the whole overlay jump for one frame at the press
+        # and return on release - a flicker. The selected state is added in mouseRelease instead (rebuilt after the commit).
         local_pos = self.mapFromScene(event.scenePos())
         self._drag_mode = self._hit_mode(local_pos)
         self._drag_start_scene = event.scenePos()
@@ -522,14 +522,14 @@ class PasteOverlayItem(QGraphicsPixmapItem):
             delta = event.scenePos() - center
             distance = math.hypot(delta.x(), delta.y())
             factor = distance / self._drag_start_dist
-            # 防失控放大：限制到源贴片解码上限的 4 倍，避免单次拖拽申请超大 pixmap
+            # Guard against runaway enlargement: limited to 4 times the decode limit of the source overlay, so one drag cannot request a huge pixmap
             max_side = float(_PASTE_MAX_DIMENSION * 4)
             longest = max(self._drag_start_size) * factor
             if longest > max_side:
                 factor *= max_side / longest
             overlay["width"] = max(2.0, self._drag_start_size[0] * factor)
             overlay["height"] = max(2.0, self._drag_start_size[1] * factor)
-        # 缩放拖拽中只改变换不重采样；移动/旋转仍即时按几何刷新
+        # While scaling by drag only the transform changes, without resampling; moving and rotating still refresh from the geometry at once
         self._apply_geometry(rasterize=self._drag_mode != "resize")
         event.accept()
 
@@ -554,7 +554,7 @@ class PasteOverlayItem(QGraphicsPixmapItem):
                 "width": float(overlay.get("width", 0.0)),
                 "height": float(overlay.get("height", 0.0)),
             }
-        # 提交后模型整表重建贴片项（当前 item 将被移除），提交后不要再触碰 self
+        # After the commit the model rebuilds all overlay items (the current item will be removed), so self must not be touched afterwards
         if view is not None and getattr(view, "controller", None) is not None:
             view.controller.update_paste_overlay(overlay_id, patch)
             view.select_paste_overlay(overlay_id)
@@ -589,7 +589,7 @@ class GraphicsViewPasteOverlayMixin:
                 old_item is not None
                 and old_item.overlay.get("image") == overlay.get("image")
             ):
-                # 图片未变：复用 item，只更新几何/属性，不重建不解码
+                # The image did not change: reuse the item and only update geometry and properties, without rebuilding or decoding
                 old_item.overlay = dict(overlay)
                 old_item._apply_geometry()
                 item = old_item
@@ -600,12 +600,12 @@ class GraphicsViewPasteOverlayMixin:
                 self.scene.addItem(item)
             item.set_selected(item.overlay_id() == selected_id)
             new_items.append(item)
-        # 已不存在的贴片项清理出场景
+        # Remove overlay items that no longer exist from the scene
         self._remove_paste_items(existing.values())
 
-        # 重新按列表顺序入场景：Qt 同 z 的叠放顺序按插入顺序决定，
-        # 复用 item 不会改变原顺序，这里统一重建插入序，保证画布与
-        # 导出合成（compose_paste_overlays 按 z 升序、同 z 保序）一致
+        # Add to the scene again in list order: Qt decides the stacking of items with equal z by insertion order,
+        # and a reused item keeps its old order, so the insertion order is rebuilt here to keep the canvas and
+        # the export compositing (compose_paste_overlays: ascending z, list order for equal z) the same
         for item in new_items:
             try:
                 if item.scene():
@@ -697,7 +697,7 @@ class GraphicsViewPasteOverlayMixin:
     def on_paste_overlays_changed(self, overlays=None) -> None:
         self._rebuild_paste_overlay_items()
 
-    # --- PNG 拖放导入 ---
+    # --- Importing PNG by drag and drop ---
     def _dropped_image_paths(self, event):
         mime = event.mimeData()
         if mime is None or not mime.hasUrls():

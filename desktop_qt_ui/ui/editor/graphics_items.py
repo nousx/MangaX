@@ -100,7 +100,7 @@ def _editor_pen(color: QColor, width: float, style=Qt.PenStyle.SolidLine) -> QPe
 
 
 # ======================================================================
-# 辅助类
+# Helper classes
 # ======================================================================
 
 
@@ -118,13 +118,13 @@ class TransparentPixmapItem(QGraphicsPixmapItem):
 
 
 # ======================================================================
-# 主图形项
+# Main graphics item
 # ======================================================================
 
 
 class RegionTextItem(QGraphicsItemGroup):
     # ------------------------------------------------------------------
-    # 初始化
+    # Initialisation
     # ------------------------------------------------------------------
 
     def __init__(self, region_data, region_index, geometry_callback, parent=None):
@@ -133,13 +133,13 @@ class RegionTextItem(QGraphicsItemGroup):
         self.region_index = region_index
         self.geometry_callback = geometry_callback
 
-        self._image_item = None  # 图像项引用，用于坐标转换
-        self._in_callback = False  # 防止回调重入
+        self._image_item = None  # Reference to the image item, for coordinate conversion
+        self._in_callback = False  # Guards against re-entrant callbacks
 
-        # 单一几何状态源：geo
+        # Single source of geometry state: geo
         self.geo = RegionGeometryState.from_region_data(self.region_data)
 
-        # Qt 坐标：pos = 源区域中心，rotation = angle
+        # Qt coordinates: pos = centre of the source region, rotation = angle
         self.rotation_angle = float(self.geo.angle)
         self.visual_center = QPointF(
             float(self.geo.center[0]),
@@ -149,25 +149,25 @@ class RegionTextItem(QGraphicsItemGroup):
         self.setRotation(self.rotation_angle)
         self.setTransformOriginPoint(QPointF(0, 0))
 
-        # 构建局部坐标多边形
+        # Build the polygons in local coordinates
         self.polygons: List[QPolygonF] = []
         self._rebuild_qt_polygons()
 
-        # 文字 pixmap 子项
+        # Child item for the text pixmap
         self.text_item = TransparentPixmapItem(self)
         self.text_item.setZValue(-1)
 
-        # 交互状态
+        # Interaction state
         self.setFlags(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable)
         self.setAcceptHoverEvents(True)
         self._interaction_mode = "none"
         self._is_dragging = False
 
-        # 拖拽状态变量
+        # Drag state variables
         self._drag_handle_indices = None
         self._drag_start_pos = QPointF()
         self._drag_start_polygons: List[QPolygonF] = []
-        self._batch_drag_peers: list = []  # 批量移动时其他选中项的快照
+        self._batch_drag_peers: list = []  # Snapshot of the other selected items during a batch move
         self._drag_start_rotation = 0.0
         self._drag_raw_rotation = 0.0
         self._drag_start_visual_center = QPointF()
@@ -178,26 +178,26 @@ class RegionTextItem(QGraphicsItemGroup):
         self._drag_start_white_handle_world = None
         self._drag_last_angle_rad = 0.0
 
-        # 显示
+        # Display
         self._polygons_visible = True
         self._show_white_box = True
         self._shape_path = None
 
-        # 旋转角度标签（场景级别，懒加载）
+        # Rotation angle label (scene level, created lazily)
         self._angle_label = None
-        # 对齐辅助线（场景级别）
+        # Alignment guides (scene level)
         self._guide_lines = []
         self._spacing_labels: list = []
-        # 由编辑器通用菜单中的持久化开关统一控制。
+        # Controlled in one place by the persistent switch in the editor's general menu.
         self._snap_enabled = False
-        # 吸附阈值（像素）
+        # Snap threshold (pixels)
         self._snap_threshold = 1.0
         self._spacing_snap_threshold = 5.0
 
         self._setup_pens()
 
     # ------------------------------------------------------------------
-    # 内部构建
+    # Internal construction
     # ------------------------------------------------------------------
 
     def _rebuild_qt_polygons(self):
@@ -215,7 +215,7 @@ class RegionTextItem(QGraphicsItemGroup):
         self.white_brush = QBrush(Qt.BrushStyle.NoBrush)
 
     # ------------------------------------------------------------------
-    # 坐标转换（图像↔场景）
+    # Coordinate conversion (image <-> scene)
     # ------------------------------------------------------------------
 
     def set_image_item(self, item):
@@ -228,7 +228,7 @@ class RegionTextItem(QGraphicsItemGroup):
             self._clear_guide_lines()
 
     # ------------------------------------------------------------------
-    # 数据更新
+    # Data updates
     # ------------------------------------------------------------------
 
     def _apply_region_state(self, region_data: dict):
@@ -261,7 +261,7 @@ class RegionTextItem(QGraphicsItemGroup):
             old_rect = self.sceneBoundingRect() if self.scene() else None
             was_selected = self.isSelected()
 
-            # 模型数据是唯一事实来源，避免旧 item 残留状态污染
+            # The model data is the single source of truth, so leftover state of an old item cannot pollute it
             self._apply_region_state(region_data)
 
             if was_selected != self.isSelected():
@@ -278,7 +278,7 @@ class RegionTextItem(QGraphicsItemGroup):
             )
 
     # ------------------------------------------------------------------
-    # 核心修复: 文字 pixmap 定位
+    # Core fix: positioning the text pixmap
     # ------------------------------------------------------------------
 
     def update_text_pixmap(
@@ -292,7 +292,7 @@ class RegionTextItem(QGraphicsItemGroup):
         self.text_item.setPixmap(pixmap)
 
         if render_center is not None and pixmap and not pixmap.isNull():
-            # 以白框中心为锚点定位
+            # Positioned with the centre of the white box as the anchor
             local_center = self.mapFromScene(
                 QPointF(float(render_center[0]), float(render_center[1]))
             )
@@ -301,12 +301,12 @@ class RegionTextItem(QGraphicsItemGroup):
                 local_center.y() - pixmap.height() / 2.0,
             )
         else:
-            # 回退：直接映射世界坐标左上角
+            # Fallback: map the top-left corner in world coordinates directly
             local_pos = self.mapFromScene(QPointF(float(pos.x()), float(pos.y())))
 
         self.text_item.setPos(local_pos)
         self.text_item.setTransformOriginPoint(self.text_item.boundingRect().center())
-        self.text_item.setRotation(0)  # 父 item 已旋转
+        self.text_item.setRotation(0)  # The parent item is already rotated
 
     def set_dst_points(self, dst_points):
         """设置渲染 dst_points，自动模式下同步到白框。"""
@@ -316,11 +316,11 @@ class RegionTextItem(QGraphicsItemGroup):
         self.update()
 
     # ------------------------------------------------------------------
-    # ID / 序列化
+    # ID / serialisation
     # ------------------------------------------------------------------
 
     # ------------------------------------------------------------------
-    # 可见性
+    # Visibility
     # ------------------------------------------------------------------
 
     def set_text_visible(self, visible: bool):
@@ -336,7 +336,7 @@ class RegionTextItem(QGraphicsItemGroup):
         self.update()
 
     # ------------------------------------------------------------------
-    # Qt 必需重写: shape / boundingRect / paint
+    # Overrides Qt requires: shape / boundingRect / paint
     # ------------------------------------------------------------------
 
     def shape(self) -> QPainterPath:
@@ -370,8 +370,8 @@ class RegionTextItem(QGraphicsItemGroup):
 
     def boundingRect(self) -> QRectF:
         try:
-            # 余量随 1/lod 增长：选中态描边/手柄阴影的笔宽按 1/lod 缩放，
-            # 极小缩放下固定余量会小于笔宽外扩，拖动时留下残影
+            # The margin grows with 1/lod: the pen width of the selection outline and handle shadow scales with 1/lod,
+            # and at very small zoom a fixed margin would be smaller than the pen overhang, leaving trails when dragging
             margin = 10.0 + 6.0 / self._lod()
             return (
                 self.shape().boundingRect().adjusted(-margin, -margin, margin, margin)
@@ -454,7 +454,7 @@ class RegionTextItem(QGraphicsItemGroup):
         return super().itemChange(change, value)
 
     # ------------------------------------------------------------------
-    # 白框绘制辅助
+    # Helpers for drawing the white box
     # ------------------------------------------------------------------
 
     def _white_corner_points(self) -> list:
@@ -550,7 +550,7 @@ class RegionTextItem(QGraphicsItemGroup):
             )
 
     # ------------------------------------------------------------------
-    # 几何 / 手柄参数
+    # Geometry / handle parameters
     # ------------------------------------------------------------------
 
     def _lod(self) -> float:
@@ -734,7 +734,7 @@ class RegionTextItem(QGraphicsItemGroup):
             item._emit_region_update(event, new_data)
 
     # ------------------------------------------------------------------
-    # 旋转角度显示
+    # Rotation angle display
     # ------------------------------------------------------------------
 
     def _ensure_angle_label(self):
@@ -790,7 +790,7 @@ class RegionTextItem(QGraphicsItemGroup):
             self._angle_label = None
 
     # ------------------------------------------------------------------
-    # 对齐辅助线与吸附
+    # Alignment guides and snapping
     # ------------------------------------------------------------------
 
     def _get_white_frame_world_points_from_local(self, wf_local) -> dict:
@@ -827,7 +827,7 @@ class RegionTextItem(QGraphicsItemGroup):
 
     def _calculate_snap_offset(self, my_points: dict, targets: list) -> tuple:
         """计算当前文本框与场景中其他项的对齐吸附偏移量及辅助线坐标。"""
-        threshold = self._snap_threshold  # 保持 1px 的绝对距离阈值，不随缩放变化
+        threshold = self._snap_threshold  # Keep an absolute distance threshold of 1px that does not change with the zoom
         best_dx = None
         best_dy = None
         best_dx_dist = threshold + 0.001
@@ -969,7 +969,7 @@ class RegionTextItem(QGraphicsItemGroup):
         snap = [0.0, 0.0]  # [dx, dy]
         guides: list = []
 
-        # 每个轴的元数据: (axis_index, ori, near_key, far_key, perp_key, abcd_keys)
+        # Metadata of each axis: (axis_index, ori, near_key, far_key, perp_key, abcd_keys)
         axes = [
             (0, "h", "left", "right", "y", ("x1", "x2", "x3", "x4")),
             (1, "v", "top", "bottom", "x", ("y1", "y2", "y3", "y4")),
@@ -987,7 +987,7 @@ class RegionTextItem(QGraphicsItemGroup):
                 for pb in others[i + 1 :]:
                     an, af = comp(pa[near_k]), comp(pa[far_k])
                     bn, bf = comp(pb[near_k]), comp(pb[far_k])
-                    # 规范化:far 较小的为"左/上"框
+                    # Normalise: the box with the smaller far value is the "left/top" one
                     if af < bn:
                         ln_, lf_, rn_, rf_ = an, af, bn, bf
                     elif bf < an:
@@ -1036,7 +1036,7 @@ class RegionTextItem(QGraphicsItemGroup):
         pen.setCosmetic(True)
         pen.setStyle(Qt.PenStyle.DashLine)
 
-        # 间距标尺的画笔：亮橙色实线，粗 2px
+        # Pen of the spacing ruler: a solid bright orange line, 2px thick
         sp_pen = QPen(QColor(255, 180, 60, 255), 2)
         sp_pen.setCosmetic(True)
 
@@ -1044,10 +1044,10 @@ class RegionTextItem(QGraphicsItemGroup):
             if isinstance(guide_spec, dict) and guide_spec.get("kind") == "spacing":
                 ori = guide_spec.get("ori", "h")
                 label = guide_spec.get("label", "")
-                tick_half = 24.0  # 刻度线半长
+                tick_half = 24.0  # Half length of a tick
 
                 if ori == "h":
-                    # 参考间距 (x1,x2) 和目标间距 (x3,x4) 各画一对竖线
+                    # A pair of vertical lines each for the reference spacing (x1,x2) and the target spacing (x3,x4)
                     for xa, xb in [
                         (guide_spec.get("x1"), guide_spec.get("x2")),
                         (guide_spec.get("x3"), guide_spec.get("x4")),
@@ -1064,7 +1064,7 @@ class RegionTextItem(QGraphicsItemGroup):
                             )
                             ln.setZValue(9999)
                             self._guide_lines.append(ln)
-                            # 标签放在两根刻度线中间上方
+                            # The label goes above the middle of the two ticks
                             lbl = QGraphicsSimpleTextItem(label)
                             lbl.setPos((xa + xb) / 2.0 - 10, y - tick_half - 22)
                             lbl.setZValue(9999)
@@ -1130,7 +1130,7 @@ class RegionTextItem(QGraphicsItemGroup):
         self._spacing_labels.clear()
 
     # ------------------------------------------------------------------
-    # 手柄命中检测
+    # Handle hit testing
     # ------------------------------------------------------------------
 
     def _get_handle_at(self, pos: QPointF):
@@ -1171,7 +1171,7 @@ class RegionTextItem(QGraphicsItemGroup):
         return wf[0] <= pos.x() <= wf[2] and wf[1] <= pos.y() <= wf[3]
 
     # ------------------------------------------------------------------
-    # 提交入口
+    # Commit entry point
     # ------------------------------------------------------------------
 
     def _emit_region_update(self, event, new_data: dict):
@@ -1186,7 +1186,7 @@ class RegionTextItem(QGraphicsItemGroup):
             self._in_callback = False
 
     # ------------------------------------------------------------------
-    # 鼠标交互
+    # Mouse interaction
     # ------------------------------------------------------------------
 
     def hoverMoveEvent(self, event: QGraphicsSceneMouseEvent):
@@ -1335,15 +1335,15 @@ class RegionTextItem(QGraphicsItemGroup):
 
     def mouseReleaseEvent(self, event: QGraphicsSceneMouseEvent):
         if event.button() != Qt.MouseButton.LeftButton:
-            # 拖拽过程中释放右键/中键：绝不提交几何、也不打断进行中的拖拽
+            # Releasing the right or middle button during a drag: never commit geometry and never interrupt the drag in progress
             try:
                 super().mouseReleaseEvent(event)
             except RuntimeError:
                 pass
             return
 
-        # 提交回调可能触发 regions_changed → item 重建，销毁本对象；
-        # 回调返回后访问 self 必须先做存活检查，reset 只在最后调一次。
+        # The commit callback may trigger regions_changed -> item rebuild, which destroys this object;
+        # after the callback returns, self must be checked for being alive before it is touched, and reset is called only once, at the end.
         mode = self._interaction_mode
         try:
             if mode == "rotate":
@@ -1353,7 +1353,7 @@ class RegionTextItem(QGraphicsItemGroup):
             else:
                 super().mouseReleaseEvent(event)
         except RuntimeError:
-            # item 已在回调里被销毁，任何后续访问都会从虚函数抛异常导致 abort
+            # The item was destroyed in the callback; any further access would raise from a virtual function and abort
             return
         except Exception as e:
             logger.error(
@@ -1368,7 +1368,7 @@ class RegionTextItem(QGraphicsItemGroup):
             pass
 
     # ------------------------------------------------------------------
-    # 旋转拖拽
+    # Rotation drag
     # ------------------------------------------------------------------
 
     def _handle_rotate_drag(self, event):
@@ -1386,7 +1386,7 @@ class RegionTextItem(QGraphicsItemGroup):
         new_rot = self._drag_raw_rotation
 
         if self._snap_enabled:
-            # --- 角度吸附逻辑 ---
+            # --- Angle snapping ---
             snap_targets = [
                 0.0,
                 90.0,
@@ -1398,7 +1398,7 @@ class RegionTextItem(QGraphicsItemGroup):
                 -270.0,
                 -360.0,
             ]
-            # 获取其他文本框的角度
+            # Get the angles of the other text boxes
             scene = self.scene()
             if scene is not None:
                 for item in scene.items():
@@ -1406,7 +1406,7 @@ class RegionTextItem(QGraphicsItemGroup):
                         snap_targets.append(item.rotation() % 360)
                         snap_targets.append((item.rotation() % 360) - 360)
 
-            best_diff = 3.0  # 角度吸附阈值 3 度
+            best_diff = 3.0  # Angle snap threshold: 3 degrees
             snapped_rot = new_rot
             normalized_rot = new_rot % 360
             for target in snap_targets:
@@ -1417,15 +1417,15 @@ class RegionTextItem(QGraphicsItemGroup):
                 )
                 if diff <= best_diff:
                     best_diff = diff
-                    # 需要算出一个实际的旋转度数
-                    # 尽量保持接近 new_rot 的那个圈数
+                    # An actual rotation in degrees has to be worked out
+                    # Stay as close as possible to the number of turns of new_rot
                     rounds = round((new_rot - target) / 360.0)
                     snapped_rot = target + rounds * 360.0
 
             new_rot = snapped_rot
         self.setRotation(new_rot)
 
-        # 保持白框中心（局部点）在场景中不动
+        # Keep the centre of the white box (a local point) fixed in the scene
         theta = np.radians(new_rot)
         cos_t, sin_t = np.cos(theta), np.sin(theta)
         px, py = self._drag_start_center.x(), self._drag_start_center.y()
@@ -1437,11 +1437,11 @@ class RegionTextItem(QGraphicsItemGroup):
         )
         self.visual_center = QPointF(self.pos())
 
-        # 显示旋转角度
+        # Show the rotation angle
         rot_handle_scene = self.mapToScene(self._rotate_handle_info()["rot_pos"])
         self._show_angle_label(new_rot, rot_handle_scene)
 
-        # ====== 旋转时的整框延长线（辅助对齐背景斜线） ======
+        # ====== Extension lines of the whole box while rotating (to help align with slanted lines in the background) ======
         wf = self.geo.white_frame_local
         if wf is not None:
             left, top, right, bottom = wf
@@ -1481,7 +1481,7 @@ class RegionTextItem(QGraphicsItemGroup):
         new_cx, new_cy = float(self.pos().x()), float(self.pos().y())
         self.visual_center = QPointF(new_cx, new_cy)
 
-        # 同步 geo 状态：更新 center、lines、angle，并重建 polygons_local 和白框
+        # Sync the geo state: update center, lines and angle, and rebuild polygons_local and the white box
         self.geo.center = [new_cx, new_cy]
         self.geo.angle = float(new_angle)
         if new_lines:
@@ -1497,7 +1497,7 @@ class RegionTextItem(QGraphicsItemGroup):
         self._emit_region_update(event, new_data)
 
     # ------------------------------------------------------------------
-    # 白框编辑
+    # White box editing
     # ------------------------------------------------------------------
 
     def _handle_white_frame_edit(self, event: QGraphicsSceneMouseEvent):
@@ -1593,7 +1593,7 @@ class RegionTextItem(QGraphicsItemGroup):
             old_rect = self.sceneBoundingRect() if self.scene() else None
             scene_delta = event.scenePos() - self._drag_start_scene_pos
 
-            # 场景位移 → 局部位移（逆旋转）
+            # Scene displacement -> local displacement (reverse rotation)
             angle_rad = np.radians(self.rotation())
             cos_a, sin_a = np.cos(angle_rad), np.sin(angle_rad)
             dx = scene_delta.x() * cos_a + scene_delta.y() * sin_a
@@ -1603,7 +1603,7 @@ class RegionTextItem(QGraphicsItemGroup):
             moved = [left + dx, top + dy, right + dx, bottom + dy]
 
             if self._snap_enabled:
-                # --- 吸附：边缘 + 间距从同一位置独立计算，间距优先 ---
+                # --- Snapping: edges and spacing are computed independently from the same position; spacing has priority ---
                 my_points = self._get_white_frame_world_points_from_local(moved)
                 targets = self._get_other_items_snap_targets()
                 guide_specs = []
@@ -1643,19 +1643,19 @@ class RegionTextItem(QGraphicsItemGroup):
                     self._show_guide_lines(guide_specs)
                 else:
                     self._clear_guide_lines()
-                # --- 吸附逻辑结束 ---
+                # --- End of snapping ---
             else:
                 self._clear_guide_lines()
 
             self.prepareGeometryChange()
             self._shape_path = None
             self.geo.set_custom_white_frame_local(moved)
-            # 轻量预览：仅平移文字层
+            # Light preview: only the text layer is translated
             self.text_item.setPos(self._drag_start_text_item_pos + QPointF(dx, dy))
             self.update()
             self._invalidate_scene_rect(old_rect)
 
-            # 批量移动其他选中项
+            # Move the other selected items as a batch
             self._move_batch_peers(scene_delta.x(), scene_delta.y())
 
         except Exception as e:
@@ -1685,7 +1685,7 @@ class RegionTextItem(QGraphicsItemGroup):
         )
         self._emit_region_update(event, new_data)
 
-        # 回调可能已销毁本 item：存活时才继续提交批量 peers
+        # The callback may have destroyed this item: the batch peers are only committed while it is alive
         if sip.isdeleted(self):
             return
         self._commit_batch_peers(event)
@@ -1721,7 +1721,7 @@ class RegionTextItem(QGraphicsItemGroup):
         return None
 
     # ------------------------------------------------------------------
-    # 场景刷新
+    # Scene refresh
     # ------------------------------------------------------------------
 
     def _invalidate_scene_rect(self, old_rect):
@@ -1732,5 +1732,5 @@ class RegionTextItem(QGraphicsItemGroup):
             self.scene().update(update_rect)
 
     # ------------------------------------------------------------------
-    # WYSIWYG 占位（实际渲染由 GraphicsView 驱动）
+    # WYSIWYG placeholder (the actual rendering is driven by GraphicsView)
     # ------------------------------------------------------------------
