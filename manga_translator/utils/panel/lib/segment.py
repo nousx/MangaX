@@ -64,16 +64,16 @@ class Segment:
 		])
 
 	def intersect(self, other):
-		# 添加保护性检查，避免除零和无效数据
+		# Protective checks, to avoid division by zero and invalid data
 		try:
 			self_dist = self.dist()
 			other_dist = other.dist()
 			
-			# 如果任一线段长度为0，无法计算交集
+			# When either segment has length 0, the intersection cannot be computed
 			if self_dist == 0 or other_dist == 0:
 				return None
 			
-			# 检查是否有无效值（NaN或Inf）
+			# Check for invalid values (NaN or Inf)
 			if not (math.isfinite(self_dist) and math.isfinite(other_dist)):
 				return None
 			
@@ -118,7 +118,7 @@ class Segment:
 
 			return Segment(b, c)
 		except Exception as e:
-			# 捕获任何异常，避免崩溃
+			# Catch any exception, to avoid a crash
 			import logging
 			logging.warning(f"Segment.intersect error: {e}, self={self}, other={other}")
 			return None
@@ -131,24 +131,24 @@ class Segment:
 
 			dots = [tuple(self.a), tuple(self.b), tuple(other.a), tuple(other.b)]
 			
-			# 检查交集的点是否在dots列表中
+			# Check whether the intersection points are in the dots list
 			intersect_a = tuple(intersect.a)
 			intersect_b = tuple(intersect.b)
 			
 			if intersect_a not in dots or intersect_b not in dots:
-				# 交集点不在原始点列表中，无法计算union
+				# An intersection point is not in the original point list, so the union cannot be computed
 				return None
 			
 			dots.remove(intersect_a)
 			dots.remove(intersect_b)
 			
 			if len(dots) != 2:
-				# 剩余点数不对，无法构造线段
+				# The number of remaining points is wrong, so no segment can be built
 				return None
 			
 			return Segment(dots[0], dots[1])
 		except Exception as e:
-			# 捕获任何异常，避免崩溃
+			# Catch any exception, to avoid a crash
 			import logging
 			logging.warning(f"Segment.union error: {e}, self={self}, other={other}")
 			return None
@@ -231,30 +231,30 @@ class Segment:
 			ap = p - a
 			ab = b - a
 			
-			# 检查线段长度是否为0
+			# Check whether the segment has length 0
 			if ab[0] == 0 and ab[1] == 0:
 				return a
 			
-			# 计算点积
+			# Dot product
 			dot_ab_ab = np.dot(ab, ab)
 			
-			# 避免除零
+			# Avoid division by zero
 			if dot_ab_ab == 0:
 				return a
 			
-			# 检查是否有无效值
+			# Check for invalid values
 			if not np.isfinite(dot_ab_ab):
 				return a
 			
 			result = a + np.dot(ap, ab) / dot_ab_ab * ab
 			
-			# 检查结果是否有效
+			# Check whether the result is valid
 			if not (np.isfinite(result[0]) and np.isfinite(result[1])):
 				return a
 			
 			return (round(result[0]), round(result[1]))
 		except Exception as e:
-			# 出错时返回起点
+			# On error, return the start point
 			import logging
 			logging.warning(f"Segment.projected_point error: {e}, self={self}, p={p}")
 			return self.a

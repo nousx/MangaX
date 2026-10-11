@@ -1,4 +1,4 @@
-# 文本过滤工具
+# Text filtering tools
 import json
 import os
 from typing import Any, Dict, List, Optional, Tuple
@@ -9,7 +9,7 @@ from . import get_logger
 
 logger = get_logger('TextFilter')
 
-# 过滤列表缓存：(包含过滤列表, 精确过滤列表)
+# Filter list cache: (contains filter list, exact filter list)
 _filter_lists: Optional[Tuple[List[str], List[str]]] = None
 
 _FILTER_LIST_FILENAME = 'filter_list.json'

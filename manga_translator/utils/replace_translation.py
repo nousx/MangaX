@@ -51,74 +51,74 @@ def get_text_to_img_solid_ink(mask_final, cn_text_img, origin_img, mengban=8, pa
     Returns:
         合成后的图像
     """
-    # --- 1. 基础校验 ---
+    # --- 1. Basic checks ---
     if mask_final is None or cn_text_img is None or origin_img is None:
         raise ValueError('Input image is empty')
 
     h, w = origin_img.shape[:2]
 
-    # --- 2. 缩放 ---
-    # 蒙版使用最近邻插值，保持边缘清晰
+    # --- 2. Scaling ---
+    # The mask uses nearest-neighbour interpolation, to keep its edges sharp
     if mask_final.shape[:2] != (h, w):
         mask_final = cv2.resize(mask_final, (w, h), interpolation=cv2.INTER_NEAREST)
     
-    # 文字使用线性插值，边缘更柔和自然
+    # The text uses linear interpolation, for softer and more natural edges
     if cn_text_img.shape[:2] != (h, w):
         cn_text_img = cv2.resize(cn_text_img, (w, h), interpolation=cv2.INTER_LINEAR)
     
-    # --- 3. 准备蒙版区域 ---
+    # --- 3. Prepare the mask area ---
     if len(mask_final.shape) == 3:
         mask_gray = cv2.cvtColor(mask_final, cv2.COLOR_BGR2GRAY)
     else:
         mask_gray = mask_final
     _, mask_binary = cv2.threshold(mask_gray, 127, 255, cv2.THRESH_BINARY)
     
-    # 安全区 (限制文字范围) - 直接使用原始蒙版，不额外膨胀
+    # Safe area (limits where text may go) - the original mask is used as it is, without extra dilation
     mask_safe_zone = mask_binary
 
-    # --- 4. 文字图色阶增强 ---
-    # 像 PS 的色阶工具：设定黑场和白场，中间线性拉伸
+    # --- 4. Levels enhancement of the text image ---
+    # Like the Levels tool of Photoshop: set a black point and a white point and stretch linearly in between
     if len(cn_text_img.shape) == 3:
         text_gray = cv2.cvtColor(cn_text_img, cv2.COLOR_BGR2GRAY)
     else:
         text_gray = cn_text_img
 
-    # 参数设置 - 降低对比度，保留更多灰度过渡
-    in_black = 50   # 黑场阈值：降低以保留边缘灰度
-    in_white = max(in_black + 80, pan + 50) # 白场阈值：增大范围让过渡更柔和
+    # Settings - lower contrast, keeping more of the grey transitions
+    in_black = 50   # Black point threshold: lowered to keep the grey at the edges
+    in_white = max(in_black + 80, pan + 50) # White point threshold: a wider range for softer transitions
     if in_white > 255: 
         in_white = 255
     
-    # 构建查找表 (LUT) 进行快速色阶映射
+    # Build a lookup table (LUT) for fast levels mapping
     lut = np.zeros(256, dtype=np.uint8)
     for i in range(256):
         if i <= in_black:
-            val = 0 # 纯黑
+            val = 0 # pure black
         elif i >= in_white:
-            val = 255 # 纯白
+            val = 255 # pure white
         else:
-            # 线性拉伸中间的灰度
+            # Stretch the greys in between linearly
             val = int((i - in_black) / (in_white - in_black) * 255)
         lut[i] = val
         
-    # 应用色阶调整
+    # Apply the levels adjustment
     text_enhanced_gray = cv2.LUT(text_gray, lut)
     
-    # 轻微高斯模糊，进一步柔化边缘
+    # A slight Gaussian blur, to soften the edges further
     text_enhanced_gray = cv2.GaussianBlur(text_enhanced_gray, (3, 3), 0.5)
     
-    # 转回 BGR 方便合并
+    # Convert back to BGR for merging
     text_enhanced_bgr = cv2.cvtColor(text_enhanced_gray, cv2.COLOR_GRAY2BGR)
 
-    # --- 5. 执行合成 ---
+    # --- 5. Composite ---
     result_img = origin_img.copy()
     
-    # 5.1 直接在安全区内进行正片叠底 (Bitwise And)
-    # 因为 origin_img (img_inpainted) 已经被 inpainting 擦除过了，不需要再涂白
+    # 5.1 Multiply (bitwise AND) directly inside the safe area
+    # origin_img (img_inpainted) has already been erased by inpainting, so no white fill is needed
     roi_bg = result_img[mask_safe_zone == 255]
     roi_text = text_enhanced_bgr[mask_safe_zone == 255]
     
-    # 融合：白底(255) & 文字 -> 文字
+    # Blend: white background (255) & text -> text
     fused = cv2.bitwise_and(roi_bg, roi_text)
     
     result_img[mask_safe_zone == 255] = fused
@@ -150,7 +150,7 @@ async def translate_batch_replace_translation(translator, images_with_configs: L
     failed_count = 0
     
     for idx, (image, config) in enumerate(images_with_configs):
-        # ✅ 检查停止标志
+        # ✅ Check the stop flag
         await asyncio.sleep(0)
         translator._check_cancelled()
 
@@ -180,12 +180,12 @@ async def translate_batch_replace_translation(translator, images_with_configs: L
                 await translator._report_progress(f"batch:{global_idx}:{global_idx}:{display_total}:{failed_count}")
                 continue
         
-        # 强制启用 AI断句 和 严格边框模式
+        # Force AI line breaking and strict box mode on
         if config and hasattr(config, 'render'):
             config.render.disable_auto_wrap = True
             config.render.layout_mode = 'strict'
             
-            # 标记为替换翻译模式，以便渲染器识别并应用特殊逻辑（如强制单行不换行）
+            # Mark as replace-translation mode, so the renderer recognises it and applies its special logic (such as forcing a single line without wrapping)
             if hasattr(config, 'cli'):
                 config.cli.replace_translation = True
             
@@ -196,7 +196,7 @@ async def translate_batch_replace_translation(translator, images_with_configs: L
         try:
             translator._set_image_context(config, image)
             
-            # === 步骤1: 查找翻译图 ===
+            # === Step 1: find the translated image ===
             translated_path = find_translated_image(image_name)
             if not translated_path:
                 logger.warning(f"  [Skip] No corresponding translated image found: {os.path.basename(image_name)}")
@@ -212,48 +212,48 @@ async def translate_batch_replace_translation(translator, images_with_configs: L
             
             logger.info(f"  Found translated image: {os.path.basename(translated_path)}")
             
-            # === 步骤2: 对生肉图执行检测+OCR ===
+            # === Step 2: run detection + OCR on the raw image ===
             logger.info("  [1/4] Detecting text and running OCR on the original image...")
-            # ✅ 检查停止标志
+            # ✅ Check the stop flag
             await asyncio.sleep(0)
             translator._check_cancelled()
             
             raw_ctx = await translator._translate_until_translation(image, config)
             raw_ctx.image_name = image_name
-            # 保存原始图片尺寸（用于保存JSON）
+            # Keep the original image size (for saving the JSON)
             if hasattr(image, 'size'):
                 raw_ctx.original_size = image.size
 
             if not raw_ctx.text_regions:
                 logger.warning("  [Skip] No text regions detected in the original image, outputting it unchanged")
-                # 设置result为原图
+                # Set result to the original image
                 raw_ctx.result = image
                 raw_ctx.text_regions = []
-                # 跳转到保存步骤（不使用continue）
+                # Jump to the save step (without continue)
                 skip_to_save = True
             else:
                 skip_to_save = False
             
             if not skip_to_save:
-                # 过滤低置信度区域
+                # Filter out low-confidence regions
                 min_prob = config.ocr.prob if hasattr(config.ocr, 'prob') and config.ocr.prob else 0.1
                 raw_regions_filtered = [r for r in raw_ctx.text_regions if getattr(r, 'prob', 1.0) >= min_prob]
                 logger.info(f"    Original image regions: {len(raw_ctx.text_regions)} -> after filtering: {len(raw_regions_filtered)}")
                 
                 if not raw_regions_filtered:
                     logger.warning("  [Skip] No valid regions remain after filtering, outputting the original image unchanged")
-                    # 设置result为原图
+                    # Set result to the original image
                     raw_ctx.result = image
                     raw_ctx.text_regions = []
                     skip_to_save = True
             
             if not skip_to_save:
-                # 记录生肉图尺寸
+                # Record the size of the raw image
                 raw_size = (raw_ctx.img_rgb.shape[1], raw_ctx.img_rgb.shape[0]) if raw_ctx.img_rgb is not None else (image.width, image.height)
                 
-                # === 步骤3: 对翻译图执行检测+OCR ===
+                # === Step 3: run detection + OCR on the translated image ===
                 logger.info("  [2/4] Detecting text and running OCR on the translated image...")
-                # ✅ 检查停止标志
+                # ✅ Check the stop flag
                 await asyncio.sleep(0)
                 translator._check_cancelled()
                 
@@ -265,22 +265,22 @@ async def translate_batch_replace_translation(translator, images_with_configs: L
                 
                 if not translated_ctx.text_regions:
                     logger.warning("  [Skip] No text regions detected in the translated image, outputting the original image unchanged")
-                    # 设置result为原图
+                    # Set result to the original image
                     raw_ctx.result = image
                     raw_ctx.text_regions = []
                     skip_to_save = True
             
             if not skip_to_save:
-                # 过滤低置信度区域
+                # Filter out low-confidence regions
                 trans_regions_filtered = [r for r in translated_ctx.text_regions if getattr(r, 'prob', 1.0) >= min_prob]
                 logger.info(f"    Translated image regions: {len(translated_ctx.text_regions)} -> after filtering: {len(trans_regions_filtered)}")
                 
-                # 记录翻译图尺寸
+                # Record the size of the translated image
                 trans_size = (translated_ctx.img_rgb.shape[1], translated_ctx.img_rgb.shape[0]) if translated_ctx.img_rgb is not None else (translated_image.width, translated_image.height)
                 
-                # === 步骤4: 区域匹配 ===
+                # === Step 4: region matching ===
                 logger.info("  [3/4] Matching regions...")
-                # ✅ 检查停止标志
+                # ✅ Check the stop flag
                 await asyncio.sleep(0)
                 translator._check_cancelled()
                 
@@ -288,26 +288,26 @@ async def translate_batch_replace_translation(translator, images_with_configs: L
                 logger.info(f"    Translated image size: {trans_size[0]}x{trans_size[1]}")
                 logger.info(f"    Scale factor: x={raw_size[0]/trans_size[0]:.3f}, y={raw_size[1]/trans_size[1]:.3f}")
                 
-                # 将翻译图区域缩放到生肉图尺寸
+                # Scale the regions of the translated image to the size of the raw image
                 scaled_trans_regions = scale_regions_to_target(trans_regions_filtered, trans_size, raw_size)
                 
-                # 执行匹配（使用以小框为基准的重叠率）
+                # Match (the overlap ratio is relative to the smaller box)
                 matches = match_regions(raw_regions_filtered, scaled_trans_regions, iou_threshold=0.3)
                 logger.info(f"    Matching result: {len(matches)} region pairs (overlap ratio >= 0.3, relative to the smaller box)")
                 
-                # 创建匹配后的区域（直接使用翻译框用于渲染）
+                # Create the matched regions (the translated boxes are used directly for rendering)
                 matched_regions, matched_raw_indices = create_matched_regions(
                     raw_regions_filtered, scaled_trans_regions, matches
                 )
                 
-                # 用于修复的区域：只使用翻译框对应的生肉框（去重）
-                # 这样可以避免修复那些在生肉图中存在但翻译图中不存在的区域
+                # Regions to inpaint: only the raw boxes that correspond to translated boxes (without duplicates)
+                # This avoids inpainting regions that exist in the raw image but not in the translated one
                 inpaint_raw_indices = set()
                 for raw_idx, trans_idx, overlap in matches:
                     inpaint_raw_indices.add(raw_idx)
                 inpaint_regions = [raw_regions_filtered[i] for i in sorted(inpaint_raw_indices)]
                 
-                # 找出未被匹配的生肉区域（这些不应该被修复）
+                # Find the raw regions without a match (these should not be inpainted)
                 all_raw_indices = set(range(len(raw_regions_filtered)))
                 unmatched_raw_indices = all_raw_indices - inpaint_raw_indices
                 if unmatched_raw_indices:
@@ -315,45 +315,45 @@ async def translate_batch_replace_translation(translator, images_with_configs: L
                 
                 logger.info(f"    Final regions: {len(matched_regions)} for rendering, {len(inpaint_regions)} for inpainting")
 
-                # === DEBUG: 生成匹配调试图 ===
+                # === DEBUG: build the matching debug image ===
                 if translator.verbose:
                     try:
-                        # 复制生肉图作为画布
+                        # Copy the raw image as the canvas
                         debug_img = raw_ctx.img_rgb.copy()
-                        if len(debug_img.shape) == 2: # 灰度图转RGB
+                        if len(debug_img.shape) == 2: # Greyscale to RGB
                             debug_img = cv2.cvtColor(debug_img, cv2.COLOR_GRAY2BGR)
-                        elif debug_img.shape[2] == 4: # RGBA转RGB
+                        elif debug_img.shape[2] == 4: # RGBA to RGB
                             debug_img = cv2.cvtColor(debug_img, cv2.COLOR_RGBA2BGR)
                         else:
                             debug_img = debug_img.copy() # BGR/RGB
                         
                         logger.info(f"    [DEBUG] Original image boxes: {len(raw_regions_filtered)}, translated image boxes: {len(scaled_trans_regions)}, matching pairs: {len(matches)}")
                         
-                        # 1. 画生肉框 (红色) - 分别绘制每个子框
+                        # 1. Draw the raw boxes (red) - each sub-box separately
                         for i, region in enumerate(raw_regions_filtered):
-                            # lines 包含多个子框，每个子框是4个点，需要分别绘制
-                            # 将 lines reshape 为 (n_boxes, 4, 2)
+                            # lines holds several sub-boxes of 4 points each, which have to be drawn one by one
+                            # Reshape lines to (n_boxes, 4, 2)
                             lines_reshaped = region.lines.reshape(-1, 4, 2)
                             for box in lines_reshaped:
                                 pts = box.reshape((-1, 1, 2)).astype(np.int32)
                                 cv2.polylines(debug_img, [pts], True, (0, 0, 255), 2)
-                            # 使用TextBlock的center属性（整个区域的中心）
+                            # Use the center attribute of the TextBlock (the centre of the whole region)
                             center = region.center.astype(int)
                             cv2.putText(debug_img, f"R{i}", tuple(center), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
 
-                        # 2. 画翻译框 (绿色) - 分别绘制每个子框
+                        # 2. Draw the translated boxes (green) - each sub-box separately
                         for i, region in enumerate(scaled_trans_regions):
-                            # 将 lines reshape 为 (n_boxes, 4, 2)
+                            # Reshape lines to (n_boxes, 4, 2)
                             lines_reshaped = region.lines.reshape(-1, 4, 2)
                             for box in lines_reshaped:
                                 pts = box.reshape((-1, 1, 2)).astype(np.int32)
                                 cv2.polylines(debug_img, [pts], True, (0, 255, 0), 2)
-                            # 使用TextBlock的center属性，稍微偏移避免重叠
+                            # Use the center attribute of the TextBlock, shifted slightly to avoid overlap
                             center = region.center.astype(int)
-                            center[1] += 20  # Y轴偏移
+                            center[1] += 20  # Y offset
                             cv2.putText(debug_img, f"T{i}", tuple(center), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
 
-                        # 3. 画匹配线和重叠率 (黄色) - 使用区域中心
+                        # 3. Draw the match lines and overlap ratios (yellow) - from the region centres
                         for raw_idx, trans_idx, overlap in matches:
                             raw_center = raw_regions_filtered[raw_idx].center.astype(int)
                             trans_center = scaled_trans_regions[trans_idx].center.astype(int)
@@ -361,10 +361,10 @@ async def translate_batch_replace_translation(translator, images_with_configs: L
                             cv2.line(debug_img, tuple(raw_center), tuple(trans_center), (0, 255, 255), 2)
                             
                             mid_point = ((raw_center + trans_center) / 2).astype(int)
-                            # 显示重叠率（以小框为基准）
+                            # Show the overlap ratio (relative to the smaller box)
                             cv2.putText(debug_img, f"{overlap:.2f}", tuple(mid_point), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 255), 2)
 
-                        # 保存调试图
+                        # Save the debug image
                         debug_path = translator._result_path('replace_debug_match.jpg')
                         imwrite_unicode(debug_path, debug_img, logger)
                         logger.info(f"    [DEBUG] Saved match debug image to: {debug_path}")
@@ -373,37 +373,37 @@ async def translate_batch_replace_translation(translator, images_with_configs: L
                         logger.warning(f"    [DEBUG] Failed to generate debug image: {e}")
                         traceback.print_exc()
                 
-                # === 步骤5: 修复生肉图 ===
+                # === Step 5: inpaint the raw image ===
                 logger.info("  [4/4] Inpainting the original image...")
-                # ✅ 检查停止标志
+                # ✅ Check the stop flag
                 await asyncio.sleep(0)
                 translator._check_cancelled()
                 
-                # 检查是否有需要修复的区域
+                # Check whether there are regions to inpaint
                 if not inpaint_regions:
                     logger.warning("  [Skip] No regions require inpainting, saving the original image")
-                    # 设置result为原图，而不是标记为失败
+                    # Set result to the original image instead of marking a failure
                     raw_ctx.result = image
                     raw_ctx.text_regions = []
                     skip_to_save = True
 
             if not skip_to_save:
-                # 临时替换 text_regions 为修复区域
+                # Temporarily replace text_regions with the regions to inpaint
                 original_regions = raw_ctx.text_regions
                 raw_ctx.text_regions = inpaint_regions
                 
-                # 检查修复模型是否为 none
+                # Check whether the inpainting model is none
                 inpainter_model = config.inpainter.inpainter if hasattr(config, 'inpainter') and hasattr(config.inpainter, 'inpainter') else None
                 logger.info(f"    [Debug] Inpainting model configuration: {inpainter_model} (type: {type(inpainter_model)})")
                 
-                # 判断是否为 none（只判断明确设置为 'none' 的情况，不包括 None）
+                # Whether it is none (only when explicitly set to 'none'; None does not count)
                 is_none_inpainter = (inpainter_model == 'none' or 
                                     (hasattr(inpainter_model, 'value') and inpainter_model.value == 'none') or
                                     (inpainter_model is not None and str(inpainter_model) == 'none'))
                 
                 if is_none_inpainter:
-                    # 修复模型为 none，使用替换翻译专用的检测模块
-                    # 重新获取原始蒙版并用 REFINEMASK_INPAINT 精炼（和 win.py 一致）
+                    # The inpainting model is none: use the detection module dedicated to replace-translation
+                    # Get the raw mask again and refine it with REFINEMASK_INPAINT (the same as win.py)
                     logger.info("    [Inpainting model=none] Using the detection module for translation replacement...")
                     
                     try:
@@ -411,12 +411,12 @@ async def translate_batch_replace_translation(translator, images_with_configs: L
                         from ..detection import get_detector
                         from .ctd_replace import detect_for_replace_translation
                         
-                        # 获取 CTD 检测器实例
+                        # Get the CTD detector instance
                         detector = get_detector(Detector.ctd)
                         if not detector.is_loaded():
                             await detector.load(translator.device)
                         
-                        # 使用新模块重新检测，获取原始蒙版和 REFINEMASK_INPAINT 精炼后的蒙版
+                        # Detect again with the new module, to get the raw mask and the mask refined by REFINEMASK_INPAINT
                         _, mask_raw, mask_refined = await detect_for_replace_translation(
                             detector,
                             raw_ctx.img_rgb,
@@ -424,13 +424,13 @@ async def translate_batch_replace_translation(translator, images_with_configs: L
                             verbose=translator.verbose
                         )
                         
-                        raw_ctx.mask_raw = mask_raw  # 更新为真正的原始蒙版
-                        raw_ctx.mask = mask_refined   # 使用 REFINEMASK_INPAINT 精炼后的蒙版
+                        raw_ctx.mask_raw = mask_raw  # Update to the real raw mask
+                        raw_ctx.mask = mask_refined   # Use the mask refined by REFINEMASK_INPAINT
                         logger.info(f"    Detection completed, original mask pixels: {np.count_nonzero(mask_raw)}, refined mask pixels: {np.count_nonzero(mask_refined) if mask_refined is not None else 0}")
                         
                     except Exception as e:
                         logger.warning(f"    [Warning] Detection for translation replacement failed: {e}, falling back to simple dilation")
-                        # 回退方案：简单膨胀
+                        # Fallback: simple dilation
                         if raw_ctx.mask_raw is not None:
                             kernel = np.ones((5, 5), np.uint8)
                             raw_ctx.mask = cv2.dilate(raw_ctx.mask_raw, kernel, iterations=1)
@@ -438,26 +438,26 @@ async def translate_batch_replace_translation(translator, images_with_configs: L
                         else:
                             raw_ctx.mask = None
                     
-                    raw_ctx.mask_is_refined = True  # 标记为已精炼
+                    raw_ctx.mask_is_refined = True  # Mark as refined
                 else:
-                    # 正常流程：生成优化蒙版
+                    # Normal flow: build the refined mask
                     logger.info("    Generating mask for inpainting...")
                     raw_ctx.mask = await translator._run_mask_refinement(config, raw_ctx)
                     
-                    # 保存优化后的蒙版到 mask_raw（用于后续加载时跳过优化）
+                    # Keep the refined mask in mask_raw (so refinement is skipped when it is loaded later)
                     raw_ctx.mask_raw = raw_ctx.mask
                     
-                    # 标记蒙版已优化，保存JSON时会设置 mask_is_refined=True
+                    # Mark the mask as refined; saving the JSON then sets mask_is_refined=True
                     raw_ctx.mask_is_refined = True
                 
-                # 蒙版修复后的额外膨胀（使用配置参数）
+                # Extra dilation after the mask refinement (from the settings)
                 if raw_ctx.mask is not None:
                     kernel_size = config.kernel_size if hasattr(config, 'kernel_size') else 5
                     mask_dilation_offset = config.mask_dilation_offset if hasattr(config, 'mask_dilation_offset') else 0
                     
                     if mask_dilation_offset > 0:
-                        # 根据像素数计算迭代次数：offset / (kernel_size - 1)
-                        # 例如：offset=10, kernel_size=5 -> iterations=10/4=2.5 -> 3次
+                        # Number of iterations from the pixel count: offset / (kernel_size - 1)
+                        # For example: offset=10, kernel_size=5 -> iterations=10/4=2.5 -> 3
                         iterations = max(int(mask_dilation_offset / (kernel_size - 1) + 0.5), 1)
                         kernel = np.ones((kernel_size, kernel_size), np.uint8)
                         raw_ctx.mask = cv2.dilate(raw_ctx.mask, kernel, iterations=iterations)
@@ -465,21 +465,21 @@ async def translate_batch_replace_translation(translator, images_with_configs: L
                     else:
                         logger.info(f"    Skipping additional mask dilation (offset={mask_dilation_offset})")
                 
-                # 根据修复模型配置决定是否执行修复
+                # Whether to inpaint depends on the inpainting model setting
                 if is_none_inpainter:
-                    # 修复模型为 none，使用智能涂白（直接用蒙版涂白）
+                    # The inpainting model is none: use smart white fill (paint the mask white directly)
                     logger.info("    [Inpainting model=none] Using smart white fill, skipping the inpainting model")
-                    # 直接用白色填充蒙版区域
+                    # Fill the mask area with white directly
                     raw_ctx.img_inpainted = raw_ctx.img_rgb.copy()
                     if raw_ctx.mask is not None:
                         raw_ctx.img_inpainted[raw_ctx.mask > 0] = 255
                 else:
-                    # 使用修复模型进行修复
+                    # Inpaint with the inpainting model
                     logger.info(f"    Inpainting with model: {inpainter_model}")
                     raw_ctx.img_inpainted = await translator._run_inpainting(config, raw_ctx)
-                raw_ctx.text_regions = original_regions  # 恢复区域列表
+                raw_ctx.text_regions = original_regions  # Restore the region list
             
-                # 保存修复后的调试图（如果启用verbose）
+                # Save the debug image after inpainting (when verbose is on)
                 if translator.verbose:
                     try:
                         inpainted_path = translator._result_path('inpainted.png')
@@ -488,52 +488,52 @@ async def translate_batch_replace_translation(translator, images_with_configs: L
                     except Exception as e:
                         logger.warning(f"    [DEBUG] Failed to save inpainted debug image: {e}")
             
-                # === 步骤6: 渲染或粘贴 ===
-                # 检查是否启用直接粘贴模式
+                # === Step 6: render or paste ===
+                # Check whether direct paste mode is on
                 if config.render.enable_template_alignment:
                     logger.info("  [5/5] Direct paste mode - using the darken_blend2 compositing algorithm")
 
-                    # 获取图像尺寸
+                    # Image size
                     h, w = raw_ctx.img_inpainted.shape[:2]
 
-                    # 检查翻译图是否有原始蒙版
+                    # Check whether the translated image has a raw mask
                     if not hasattr(translated_ctx, 'mask_raw') or translated_ctx.mask_raw is None:
                         logger.warning("  [Warning] No original mask in the translated image, using the original image mask")
                         translated_mask = raw_ctx.mask
                     else:
                         logger.info("    Using the translated image mask...")
-                        # 确保蒙版不为空
+                        # Make sure the mask is not empty
                         if translated_ctx.mask_raw is not None and translated_ctx.mask_raw.size > 0:
                             translated_mask = translated_ctx.mask_raw.copy()
                         else:
                             logger.warning("  [Warning] Translated image mask is empty, using the original image mask")
                             translated_mask = raw_ctx.mask
 
-                    # 使用直接覆盖方式（在蒙版区域内用翻译图覆盖修复图）
+                    # Overwrite directly (inside the mask area the translated image covers the inpainted image)
                     result_img = raw_ctx.img_inpainted.copy()
                 
-                    # 确保翻译图和修复图尺寸一致
+                    # Make sure the translated image and the inpainted image have the same size
                     h, w = result_img.shape[:2]
                     trans_img = translated_ctx.img_rgb
                     if trans_img.shape[:2] != (h, w):
                         trans_img = cv2.resize(trans_img, (w, h), interpolation=cv2.INTER_LINEAR)
                 
-                    # 缩放蒙版到目标尺寸（如果不同）
+                    # Scale the mask to the target size (when it differs)
                     if translated_mask.shape[:2] != (h, w):
                         translated_mask = cv2.resize(translated_mask, (w, h), interpolation=cv2.INTER_NEAREST)
                 
-                    # 确保蒙版是单通道
+                    # Make sure the mask has a single channel
                     if len(translated_mask.shape) == 3:
                         translated_mask = cv2.cvtColor(translated_mask, cv2.COLOR_BGR2GRAY)
                 
-                    # === 使用配置的膨胀参数处理蒙版 ===
-                    # 二值化
+                    # === Process the mask with the configured dilation settings ===
+                    # Binarise
                     _, thres = cv2.threshold(translated_mask, 127, 255, cv2.THRESH_BINARY)
                 
-                    # 膨胀（使用配置参数）
+                    # Dilate (from the settings)
                     dilation_pixels = config.render.paste_mask_dilation_pixels
                     if dilation_pixels > 0:
-                        # 根据配置计算迭代次数：pixels // 3
+                        # Number of iterations from the settings: pixels // 3
                         iterations = max(dilation_pixels // 3, 1)
                         kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3))
                         translated_mask = cv2.dilate(thres, kernel, iterations=iterations)
@@ -542,29 +542,29 @@ async def translate_batch_replace_translation(translator, images_with_configs: L
                         translated_mask = thres
                         logger.info("    Mask processing: binarization only (dilation disabled)")
                 
-                    # === 使用 darken_blend2 的合成逻辑 ===
-                    # 1. 从翻译图中提取文字（使用蒙版）
+                    # === Composite with the darken_blend2 logic ===
+                    # 1. Extract the text from the translated image (with the mask)
                     text = cv2.bitwise_and(trans_img, trans_img, mask=translated_mask)
                 
-                    # 2. 从修复图中清除对应区域（准备放置文字）
+                    # 2. Clear the matching area in the inpainted image (to make room for the text)
                     result_img = cv2.bitwise_and(result_img, result_img, mask=cv2.bitwise_not(translated_mask))
                 
-                    # 3. 合并：将提取的文字叠加到修复图上
+                    # 3. Merge: lay the extracted text over the inpainted image
                     result_img = cv2.add(result_img, text)
                 
                     logger.info("    Using darken_blend2 compositing: extract text -> clear regions -> overlay and merge")
                 
-                    # 保存调试图（如果启用verbose）
+                    # Save the debug images (when verbose is on)
                     if translator.verbose:
                         try:
-                            # 保存提取的文字
+                            # Save the extracted text
                             debug_text_path = translator._result_path('debug_extracted_text.png')
                             imwrite_unicode(debug_text_path, cv2.cvtColor(text, cv2.COLOR_RGB2BGR), logger)
                             logger.info(f"    [DEBUG] Saved extracted text: {debug_text_path}")
                         except Exception as e:
                             logger.warning(f"    [DEBUG] Failed to save debug image: {e}")
                 
-                    # 使用 dump_image 将结果转换为 PIL Image
+                    # Convert the result to a PIL Image with dump_image
                     raw_ctx.result = dump_image(
                         raw_ctx.input,
                         result_img,
@@ -573,16 +573,16 @@ async def translate_batch_replace_translation(translator, images_with_configs: L
                     )
                 
                 else:
-                    # 原有逻辑：OCR + 重新渲染
+                    # Original logic: OCR + render again
                     logger.info("  [5/5] Rendering mode - rendering text again using OCR results")
                 
-                    # 更新 context 的 text_regions 为匹配后的区域
+                    # Update text_regions of the context to the matched regions
                     raw_ctx.text_regions = matched_regions
                 
-                    # 执行渲染
+                    # Render
                     img_rendered = await translator._run_text_rendering(config, raw_ctx)
                 
-                    # 使用 dump_image 将渲染后的 numpy 数组转换为 PIL Image
+                    # Convert the rendered numpy array to a PIL Image with dump_image
                     raw_ctx.result = dump_image(
                         raw_ctx.input,
                         img_rendered,
@@ -591,10 +591,10 @@ async def translate_batch_replace_translation(translator, images_with_configs: L
                         render_alpha=getattr(raw_ctx, 'img_render_alpha', None),
                     )
             
-            # === 步骤6: 保存结果 ===
+            # === Step 6: save the result ===
             if save_info:
                 try:
-                    # 使用 translator._calculate_output_path 计算输出路径
+                    # Work out the output path with translator._calculate_output_path
                     final_output_path = translator._calculate_output_path(image_name, save_info)
                     final_output_dir = os.path.dirname(final_output_path)
                     
@@ -609,29 +609,29 @@ async def translate_batch_replace_translation(translator, images_with_configs: L
                         )
                         logger.info(f"  -> Saved: {os.path.basename(final_output_path)}")
                         
-                        # 标记成功
+                        # Mark as successful
                         raw_ctx.success = True
                         
-                        # ✅ 保存后清理result以释放内存
+                        # ✅ Clear result after saving to free memory
                         raw_ctx.result = None
                         
-                        # 只有在非直接粘贴模式下才保存 inpainted 和 JSON
+                        # The inpainted image and the JSON are only saved outside direct paste mode
                         if not config.render.enable_template_alignment:
-                            # 保存修复后的图片（inpainted）到新目录结构
-                            # 与正常翻译流程保持一致
+                            # Save the inpainted image to the new folder structure
+                            # The same as in the normal translation flow
                             if translator.save_text and hasattr(raw_ctx, 'img_inpainted') and raw_ctx.img_inpainted is not None:
                                 translator._save_inpainted_image(image_name, raw_ctx.img_inpainted)
                             
-                            # 保存翻译数据JSON
+                            # Save the translation data as JSON
                             if translator.save_text:
                                 translator._save_text_to_file(image_name, raw_ctx, config)
                         else:
                             logger.info("  -> [Direct paste mode] Skipping JSON and inpainted image saving")
                         
-                        # 导出可编辑PSD（如果启用）
+                        # Export an editable PSD (when enabled)
                         from .photoshop_export import psd_export_requested
                         if psd_export_requested(config):
-                            # 直接粘贴模式下也不导出 PSD（因为没有文本区域数据）
+                            # No PSD is exported in direct paste mode either (there is no text region data)
                             if not config.render.enable_template_alignment:
                                 try:
                                     from .photoshop_export import (
@@ -655,7 +655,7 @@ async def translate_batch_replace_translation(translator, images_with_configs: L
                     logger.error(f"  Save failed: {save_err}")
                     raw_ctx.success = False
             else:
-                # 没有 save_info 也标记成功（可能是预览模式）
+                # Without save_info it is still marked as successful (it may be preview mode)
                 raw_ctx.success = True
             
             results.append(raw_ctx)
@@ -663,10 +663,10 @@ async def translate_batch_replace_translation(translator, images_with_configs: L
                 failed_count += 1
             await translator._report_progress(f"batch:{global_idx}:{global_idx}:{display_total}:{failed_count}")
             
-            # ✅ 每处理完一张图片后立即清理内存
+            # ✅ Free memory right after each image
             translator._cleanup_context_memory(raw_ctx, keep_result=True)
             
-            # 如果有翻译图的上下文，也清理
+            # Clear the context of the translated image too, when there is one
             if translated_ctx:
                 translator._cleanup_context_memory(translated_ctx, keep_result=False)
             
@@ -714,13 +714,13 @@ class ReplaceTranslationResult:
                  target_size: Tuple[int, int] = None):
         self.success = success
         self.message = message
-        self.matched_regions = matched_regions or []  # 匹配成功的区域（用于渲染）
-        self.raw_regions = raw_regions or []          # 生肉图过滤后的区域（用于修复）
-        self.translated_regions = translated_regions or []  # 翻译图的区域
-        self.source_path = source_path  # 翻译图路径
-        self.target_path = target_path  # 生肉图路径
-        self.source_size = source_size  # 翻译图尺寸
-        self.target_size = target_size  # 生肉图尺寸
+        self.matched_regions = matched_regions or []  # Matched regions (for rendering)
+        self.raw_regions = raw_regions or []          # Filtered regions of the raw image (for inpainting)
+        self.translated_regions = translated_regions or []  # Regions of the translated image
+        self.source_path = source_path  # Path of the translated image
+        self.target_path = target_path  # Path of the raw image
+        self.source_size = source_size  # Size of the translated image
+        self.target_size = target_size  # Size of the raw image
     
     def __repr__(self):
         return f"ReplaceTranslationResult(success={self.success}, message='{self.message}', " \
@@ -746,22 +746,22 @@ def find_translated_image(raw_image_path: str) -> Optional[str]:
         logger.warning(f"Translated image directory does not exist: {translated_dir}")
         return None
     
-    # 获取生肉图的基础文件名
+    # Base file name of the raw image
     raw_basename = os.path.splitext(os.path.basename(raw_image_path))[0]
     raw_ext = os.path.splitext(raw_image_path)[1].lower()
     
-    # 首先尝试同扩展名
+    # Try the same extension first
     same_ext_path = os.path.join(translated_dir, f"{raw_basename}{raw_ext}")
     if os.path.exists(same_ext_path):
         return same_ext_path
     
-    # 尝试其他受支持的图片扩展名
+    # Try the other supported image extensions
     for ext in SUPPORTED_IMAGE_EXTENSIONS:
         translated_path = os.path.join(translated_dir, f"{raw_basename}{ext}")
         if os.path.exists(translated_path):
             return translated_path
     
-    # 列出目录中的所有文件（帮助用户排查问题）
+    # List every file in the folder (to help the user find the problem)
     try:
         files_in_dir = os.listdir(translated_dir)
         logger.warning(f"No translated image matching '{raw_basename}.*' found; files in directory: {files_in_dir[:5]}{'...' if len(files_in_dir) > 5 else ''}")
@@ -785,14 +785,14 @@ def filter_masks(mask_img: np.ndarray, textlines: List[Tuple[int, int, int, int]
     """
     mask_img = mask_img.copy()
     
-    # 在蒙版上画出文本行边框（1像素黑线），用于分割连通区域
+    # Draw the outlines of the text lines on the mask (1-pixel black lines), to split connected areas
     for (x, y, w, h) in textlines:
         cv2.rectangle(mask_img, (x, y), (x + w, y + h), (0), 1)
     
     if len(textlines) == 0:
         return [], []
     
-    # 连通组件分析
+    # Connected component analysis
     num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(mask_img)
     
     cc2textline_assignment = []
@@ -801,48 +801,48 @@ def filter_masks(mask_img: np.ndarray, textlines: List[Tuple[int, int, int, int]
     ratio_mat = np.zeros(shape=(num_labels, M), dtype=np.float32)
     dist_mat = np.zeros(shape=(num_labels, M), dtype=np.float32)
     
-    for i in range(1, num_labels):  # 跳过背景(0)
-        # 过滤太小的区域
+    for i in range(1, num_labels):  # Skip the background (0)
+        # Filter out areas that are too small
         if stats[i, cv2.CC_STAT_AREA] <= 9:
             continue
         
-        # 提取当前连通组件
+        # Extract the current connected component
         cc = np.zeros_like(mask_img)
         cc[labels == i] = 255
         x1, y1, w1, h1 = cv2.boundingRect(cc)
         area1 = w1 * h1
         
-        # 计算与每个文本行的重叠率和距离
+        # Overlap ratio and distance to each text line
         for j in range(M):
             x2, y2, w2, h2 = textlines[j]
             area2 = w2 * h2
             
-            # 计算重叠面积
+            # Overlap area
             overlapping_area = area_overlap(x1, y1, w1, h1, x2, y2, w2, h2)
             ratio_mat[i, j] = overlapping_area / min(area1, area2) if min(area1, area2) > 0 else 0
             
-            # 计算距离
+            # Distance
             dist_mat[i, j] = rect_distance(x1, y1, x1 + w1, y1 + h1, x2, y2, x2 + w2, y2 + h2)
         
-        # 找到重叠率最大的文本行
+        # Find the text line with the largest overlap ratio
         j = np.argmax(ratio_mat[i])
         
         if ratio_mat[i, j] > keep_threshold:
-            # 重叠率足够，保留
+            # The overlap ratio is high enough: keep it
             cc2textline_assignment.append(j)
             result.append(np.copy(cc))
         else:
-            # 重叠率不够，检查距离
+            # The overlap ratio is too low: check the distance
             j = np.argmin(dist_mat[i])
             x2, y2, w2, h2 = textlines[j]
             area2 = w2 * h2
             unit = min([h1, w1, h2, w2])
             
-            # 如果是小的蒙版片段且距离文本行很近，也保留
+            # A small mask fragment very close to a text line is kept as well
             if dist_mat[i, j] < 0.5 * unit and area1 < area2:
                 cc2textline_assignment.append(j)
                 result.append(np.copy(cc))
-            # else: 丢弃
+            # else: drop it
     
     return result, cc2textline_assignment
 
@@ -915,7 +915,7 @@ def calculate_iou(rect1: Tuple[float, float, float, float],
     x1, y1, w1, h1 = rect1
     x2, y2, w2, h2 = rect2
     
-    # 计算交集
+    # Intersection
     inter_x1 = max(x1, x2)
     inter_y1 = max(y1, y2)
     inter_x2 = min(x1 + w1, x2 + w2)
@@ -926,11 +926,11 @@ def calculate_iou(rect1: Tuple[float, float, float, float],
     
     inter_area = (inter_x2 - inter_x1) * (inter_y2 - inter_y1)
     
-    # 计算两个矩形的面积
+    # Areas of the two rectangles
     area1 = w1 * h1
     area2 = w2 * h2
     
-    # 以较小的框为基准计算重叠率
+    # Overlap ratio relative to the smaller box
     min_area = min(area1, area2)
     
     if min_area <= 0:
@@ -964,18 +964,18 @@ def scale_regions_to_target(regions: List[TextBlock],
         import copy
         new_region = copy.deepcopy(region)
         
-        # 缩放lines坐标
+        # Scale the coordinates of lines
         if new_region.lines is not None:
             new_region.lines[:, :, 0] *= scale_x
             new_region.lines[:, :, 1] *= scale_y
         
-        # 清除缓存的属性，强制重新计算（因为lines已经改变）
-        # cached_property 会在 __dict__ 中缓存结果
+        # Clear the cached attributes to force a recalculation (lines has changed)
+        # cached_property caches its result in __dict__
         for attr in ['xyxy', 'xywh', 'center', 'unrotated_polygons', 'unrotated_min_rect', 'min_rect']:
             if attr in new_region.__dict__:
                 delattr(new_region, attr)
         
-        # 缩放字体大小
+        # Scale the font size
         if new_region.font_size > 0:
             avg_scale = (scale_x + scale_y) / 2
             new_region.font_size = int(new_region.font_size * avg_scale)
@@ -1004,11 +1004,11 @@ def match_regions(raw_regions: List[TextBlock],
     Returns:
         匹配结果列表 [(raw_idx, trans_idx, overlap_ratio), ...]
     """
-    # 计算所有区域的外接矩形
+    # Bounding rectangles of all regions
     raw_rects = [get_bounding_rect(r) for r in raw_regions]
     trans_rects = [get_bounding_rect(r) for r in translated_regions]
     
-    # 计算所有可能的重叠
+    # Work out every possible overlap
     matches = []
     for trans_idx, trans_rect in enumerate(trans_rects):
         matched_raws = []
@@ -1017,20 +1017,20 @@ def match_regions(raw_regions: List[TextBlock],
             if overlap >= iou_threshold:
                 matched_raws.append((raw_idx, overlap))
         
-        # 如果这个翻译框有匹配的生肉框，保留所有匹配
+        # When this translated box has matching raw boxes, keep all the matches
         if matched_raws:
-            # 为每个匹配的生肉框都创建一个匹配记录
-            # 这样可以确保所有匹配的生肉框都会被修复
+            # Create a match record for every matching raw box,
+            # so that every matching raw box gets inpainted
             for raw_idx, overlap in matched_raws:
                 matches.append((raw_idx, trans_idx, overlap))
             
-            # 如果有多个生肉框匹配到这个翻译框，记录日志
+            # Log it when several raw boxes match this translated box
             if len(matched_raws) > 1:
                 raw_indices = [r for r, _ in matched_raws]
                 trans_text = translated_regions[trans_idx].text if hasattr(translated_regions[trans_idx], 'text') else ''
                 logger.info(f"    [Many-to-one] T{trans_idx} (text=\"{trans_text[:20] if trans_text else ''}...\") matched {len(matched_raws)} original image boxes: {raw_indices}; all will be inpainted")
     
-    # 统计未匹配的区域
+    # Count the regions without a match
     matched_trans = set(t for _, t, _ in matches)
     unmatched_trans = set(range(len(translated_regions))) - matched_trans
     
@@ -1089,30 +1089,30 @@ def create_matched_regions(raw_regions: List[TextBlock],
     
     matched_regions = []
     matched_raw_indices = set()
-    added_trans_indices = set()  # 记录已添加的翻译框，避免重复
+    added_trans_indices = set()  # Record the translated boxes already added, to avoid duplicates
     
     for raw_idx, trans_idx, overlap in matches:
-        # 记录生肉框索引（用于修复）
+        # Record the index of the raw box (for inpainting)
         matched_raw_indices.add(raw_idx)
         
-        # 只添加翻译框一次（避免重复渲染）
+        # Add the translated box only once (to avoid rendering it twice)
         if trans_idx in added_trans_indices:
             continue
         added_trans_indices.add(trans_idx)
         
-        # 直接使用翻译框的数据
+        # Use the data of the translated box directly
         region = copy.deepcopy(translated_regions[trans_idx])
         
-        # 关键修复：从 texts 数组重建带 [BR] 的 translation 字段
-        # 因为渲染器使用 translation 字段来渲染文本，并且需要 [BR] 来换行
+        # Key fix: rebuild the translation field, with [BR], from the texts array,
+        # because the renderer draws the translation field and needs [BR] for line breaks
         if region.texts and len(region.texts) > 0:
-            # 有 texts 数组，用 [BR] 连接（即使只有一行也保持一致）
+            # With a texts array, join with [BR] (kept the same even for a single line)
             region.translation = "[BR]".join(region.texts)
         elif region.text:
-            # 没有 texts 数组，使用 text 字段
+            # Without a texts array, use the text field
             region.translation = region.text
         else:
-            # 都没有，使用空字符串
+            # With neither, use an empty string
             region.translation = ""
         
         matched_regions.append(region)
@@ -1155,7 +1155,7 @@ def calculate_template_alignment_offset(raw_img: np.ndarray,
         - vertical_offset: 垂直偏移，>0 向上移，<0 向下移
     """
     try:
-        # 确保图像是BGR格式
+        # Make sure the image is BGR
         if len(translated_img.shape) == 2:
             translated_img = cv2.cvtColor(translated_img, cv2.COLOR_GRAY2BGR)
         if len(raw_img.shape) == 2:
@@ -1163,20 +1163,20 @@ def calculate_template_alignment_offset(raw_img: np.ndarray,
         
         zh, zw = translated_img.shape[:2]
         
-        # 自动计算模板大小（图像短边的1/3到1/2之间）
+        # Choose the template size automatically (between 1/3 and 1/2 of the short side of the image)
         if template_size <= 0:
             min_side = min(zh, zw)
             template_size = min(max(min_side // 3, 200), min_side // 2)
             logger.info(f"    [Alignment] Automatically calculated template size: {template_size} pixels (image size: {zw}x{zh})")
         
-        # 从翻译图中心提取模板
+        # Take the template from the centre of the translated image
         cenx = zw // 2 - template_size // 2
         ceny = zh // 2 - template_size // 2
         
-        # 确保模板不超出边界
+        # Make sure the template stays inside the bounds
         if cenx < 0 or ceny < 0 or cenx + template_size > zw or ceny + template_size > zh:
-            # 自动调整模板大小
-            max_template_size = min(zw, zh) - 20  # 留10像素边距
+            # Adjust the template size automatically
+            max_template_size = min(zw, zh) - 20  # Leave a 10-pixel margin
             if max_template_size < 100:
                 logger.warning(f"Image size {zw}x{zh} is too small for template matching, using the default offset (0, 0)")
                 return (0, 0)
@@ -1187,18 +1187,18 @@ def calculate_template_alignment_offset(raw_img: np.ndarray,
         
         muban = translated_img[ceny:ceny + template_size, cenx:cenx + template_size]
         
-        # 在生肉图中匹配
+        # Match in the raw image
         res = cv2.matchTemplate(raw_img, muban, cv2.TM_CCOEFF)
         _, _, _, max_loc = cv2.minMaxLoc(res)
         
-        # 获得匹配位置
+        # Get the match position
         xdist, ydist = max_loc
         
-        # 计算偏移量
+        # Work out the offset
         horizontal_offset = cenx - xdist
         vertical_offset = ceny - ydist
         
-        # 微调偏移量（与原版逻辑一致）
+        # Fine-tune the offset (the same logic as the original version)
         if horizontal_offset < 0:
             horizontal_offset -= 3
         elif horizontal_offset > 0:
@@ -1219,7 +1219,7 @@ def calculate_template_alignment_offset(raw_img: np.ndarray,
         return (0, 0)
 
 
-# 导出的函数和类
+# Exported functions and classes
 __all__ = [
     'ReplaceTranslationResult',
     'find_translated_image',
@@ -1234,7 +1234,7 @@ __all__ = [
 
 
 # ============================================================================
-# 以下是 win.py 版本的蒙版精炼函数（用于 inpainter=none 模式）
+# Below are the mask refinement functions of the win.py version (for inpainter=none mode)
 # ============================================================================
 
 def _refine_mask_winpy(rgbimg, rawmask):

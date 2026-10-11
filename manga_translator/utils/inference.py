@@ -159,7 +159,7 @@ class ModelWrapper(ABC):
             try:
                 if i > 0:
                     self._model_logger().info(f'Trying fallback URL {i}: "{current_url}"')
-                    # 切换到备用链接时，清除之前下载的残留文件
+                    # When switching to the fallback link, remove what was left of the earlier download
                     if os.path.exists(path):
                         self._model_logger().info(f'Removing incomplete download: "{path}"')
                         os.remove(path)
@@ -263,7 +263,7 @@ class ModelWrapper(ABC):
                 self._model_logger().info('Extracting files')
                 
                 try:
-                    # 处理 .7z 格式
+                    # Handle the .7z format
                     if download_path.endswith('.7z'):
                         try:
                             import py7zr
@@ -278,7 +278,7 @@ class ModelWrapper(ABC):
                 except Exception as e:
                     self._model_logger().error(f'Could not extract "{download_path}": {e}')
                     self._model_logger().warning('Skipping this file and continuing')
-                    # 清理临时文件
+                    # Remove the temporary files
                     try:
                         if os.path.exists(download_path):
                             os.remove(download_path)
@@ -457,7 +457,7 @@ class ModelWrapper(ABC):
         if self.is_loaded():
             await self._unload()
             self._loaded = False
-            # 统一卸载后内存清理，确保检测/修复等模型直接卸载时也回收显存。
+            # Shared memory clean-up after unloading, so GPU memory is also reclaimed when detection, inpainting and other models are unloaded directly.
             try:
                 import gc
                 gc.collect()

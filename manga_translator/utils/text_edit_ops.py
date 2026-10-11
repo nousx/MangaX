@@ -56,9 +56,9 @@ class EditOpRecorder:
 
     def __init__(self) -> None:
         self._ops: List[list] = []
-        # 框内原样文本镜像，用于收窄下一次报告
+        # Mirror of the text in the box as it is, used to narrow the next report
         self._doc_text = ""
-        # 上次 take/reset 时的规范形文本,作为下一份 edit_info 的 pre_text
+        # The canonical text at the last take/reset, used as pre_text of the next edit_info
         self._baseline = ""
 
     def reset(self, current_text: str) -> None:

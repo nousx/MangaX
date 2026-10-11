@@ -74,7 +74,7 @@ class Kumiko:
 		except Exception as e:
 			print(f"无法处理PDF文件 '{pdf_filename}': {e}", file = sys.stderr)
 			print("跳过此PDF文件", file = sys.stderr)
-			# 清理临时文件夹
+			# Remove the temporary folder
 			try:
 				if os.path.exists(self.temp_folder):
 					shutil.rmtree(self.temp_folder)

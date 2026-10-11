@@ -14,17 +14,17 @@ from ..image_formats import (
 )
 from manga_translator.utils.swallowed import note_ignored_error
 
-# 解除 PIL 图片大小限制（防止 DecompressionBombWarning）
-# 可通过环境变量 PIL_MAX_IMAGE_PIXELS 自定义，设为 0 表示无限制
+# Lift the PIL image size limit (prevents DecompressionBombWarning)
+# It can be set through the PIL_MAX_IMAGE_PIXELS environment variable; 0 means no limit
 _max_pixels = os.environ.get('PIL_MAX_IMAGE_PIXELS', '0')
 Image.MAX_IMAGE_PIXELS = int(_max_pixels) if _max_pixels != '0' else None
 
-# 注册 HEIC/HEIF 格式支持（iPhone 默认图片格式）
+# Register HEIC/HEIF support (the default image format of the iPhone)
 try:
     from pillow_heif import register_heif_opener
     register_heif_opener()
 except ImportError:
-    pass  # pillow-heif 未安装时静默跳过
+    pass  # Skipped silently when pillow-heif is not installed
 
 import hashlib
 import json
@@ -212,21 +212,21 @@ def get_image_md5(image) -> str:
     import io
 
     try:
-        # 将PIL Image转换为字节数据进行MD5计算
+        # Convert the PIL Image to bytes for the MD5 calculation
         img_byte_arr = io.BytesIO()
-        # 统一转换为RGB格式以确保一致性
+        # Always convert to RGB, for consistency
         if isinstance(image, Image.Image):
             image = normalize_rgb_image(image)
         image.save(img_byte_arr, format='PNG')
         img_bytes = img_byte_arr.getvalue()
 
-        # 计算MD5哈希值
+        # MD5 hash
         h = hashlib.md5()
         h.update(img_bytes)
-        return h.hexdigest()[:8]  # 只取前8位，避免文件夹名过长
+        return h.hexdigest()[:8]  # Only the first 8 characters, so the folder name does not get too long
     except Exception as ignored_error:
         note_ignored_error(ignored_error, "manga_translator/utils/generic.py:get_image_md5")
-        # 如果计算失败，返回基于时间戳的fallback值
+        # When the calculation fails, return a fallback value based on the timestamp
         import time
         return f"fallback_{int(time.time() * 1000)}"
 
@@ -252,8 +252,8 @@ def normalize_pil_image(img: Image.Image, eager: bool = False, apply_exif: bool 
     统一处理 PIL Image 的方向信息，并按需立即加载像素数据。
     """
     if apply_exif:
-        # Pillow 的 PNG getexif() 会触发整图解码；没有 EXIF 块时不要为了方向信息
-        # 提前付出这笔成本。JPEG/TIFF 仍然正常读取方向，带 EXIF 的其他格式也保留。
+        # Pillow's getexif() for PNG decodes the whole image; without an EXIF chunk, do not pay that cost
+        # early just for the orientation. JPEG/TIFF still read the orientation as usual, and other formats with EXIF keep it too.
         fmt = (getattr(img, 'format', '') or '').upper()
         has_exif_payload = bool(getattr(img, 'info', {}).get('exif'))
         if fmt in {'JPEG', 'JPG', 'TIFF'} or has_exif_payload:
@@ -362,7 +362,7 @@ def download_url_with_progressbar(url: str, path: str, min_speed_kbps: float = 1
         ) as bar:
             with open(path, 'ab' if downloaded_size else 'wb') as f:
                 
-                # 速度监控变量
+                # Speed monitoring variables
                 import time
                 last_check_time = time.time()
                 last_check_size = downloaded_size
@@ -373,14 +373,14 @@ def download_url_with_progressbar(url: str, path: str, min_speed_kbps: float = 1
                     downloaded_size += size
 
                     
-                    # 速度检查：每隔一定时间检查一次下载速度
+                    # Speed check: the download speed is checked at intervals
                     current_time = time.time()
                     elapsed = current_time - last_check_time
                     if elapsed >= speed_check_interval:
                         downloaded_in_interval = downloaded_size - last_check_size
                         speed_kbps = (downloaded_in_interval / 1024) / elapsed
                         
-                        # 如果速度太慢，抛出异常以切换到备用链接
+                        # When it is too slow, raise an exception to switch to the fallback link
                         if speed_kbps < min_speed_kbps:
                             r.close()
                             raise Exception(
@@ -388,12 +388,12 @@ def download_url_with_progressbar(url: str, path: str, min_speed_kbps: float = 1
                                 f'(minimum required: {min_speed_kbps} KB/s)'
                             )
                         
-                        # 更新检查点
+                        # Update the checkpoint
                         last_check_time = current_time
                         last_check_size = downloaded_size
         
-        # 检查下载的文件内容，如果小文件实际是 HTML 错误页才判定失败。
-        # 模型仓库里可能存在合法的小 JSON/YAML 配置文件（例如 100 多字节）。
+        # Check the content of the downloaded file; it only counts as failed when a small file is really an HTML error page.
+        # A model repository may hold legitimate small JSON/YAML configuration files (of a hundred bytes or so, for example).
         final_size = os.path.getsize(path)
         if final_size < 1024:
             with open(path, 'rb') as f:
@@ -516,12 +516,12 @@ def dump_image(
     render_alpha: np.ndarray = None,
 ):
     img_pil = normalize_pil_image(img_pil, eager=False)
-    # 用于 paste 的 mask，可能需要调整尺寸
+    # The mask for paste; it may need resizing
     mask_for_paste = alpha_ch
     
     if alpha_ch is not None:
         if img.shape[2] != 4 :
-            # 将 alpha 通道转换为 numpy 数组
+            # Convert the alpha channel to a numpy array
             if isinstance(alpha_ch, Image.Image) and alpha_ch.size != (img.shape[1], img.shape[0]):
                 mask_for_paste = alpha_ch.resize((img.shape[1], img.shape[0]), Image.Resampling.LANCZOS)
                 alpha_array = np.array(mask_for_paste).astype(np.uint8)
@@ -546,8 +546,8 @@ def dump_image(
                 return Image.fromarray(img)
             img = np.concatenate([img.astype(np.uint8), alpha_array[..., None]], axis = 2)
     else:
-        # 无 alpha 通道时 paste(mask=None) 就是全量覆盖，结果等价于渲染数组本身；
-        # 直接构造 RGB 结果，省去整页 convert('RGBA')/resize/paste 三次拷贝
+        # Without an alpha channel, paste(mask=None) overwrites everything and the result equals the rendered array itself;
+        # build the RGB result directly and save the three full-page copies of convert('RGBA')/resize/paste
         return Image.fromarray(img.astype(np.uint8, copy=False))
     result = img_pil.convert('RGBA').resize((img.shape[1], img.shape[0]))
     result.paste(Image.fromarray(img), mask = mask_for_paste)
@@ -822,9 +822,9 @@ class Quadrilateral(object):
         x2 = np.clip(x2, 0, im_w)
         y2 = np.clip(y2, 0, im_h)
         
-        # 检查裁剪区域是否有效，避免超出边界导致空图像
+        # Check whether the crop area is valid, so an area beyond the bounds does not give an empty image
         if x1 >= x2 or y1 >= y2:
-            # 返回一个小的空白图像以避免错误
+            # Return a small blank image to avoid an error
             if direction == 'h':
                 h = max(int(textheight), 2)
                 w = max(int(textheight / 8), 2)
@@ -916,21 +916,21 @@ class Quadrilateral(object):
 
     def poly_distance(self, other) -> float:
         """计算两个框之间的距离,优先使用平行边的中点距离"""
-        # 获取方向
+        # Get the direction
         dir_a = self.assigned_direction if self.assigned_direction is not None else self.direction
         dir_b = other.assigned_direction if other.assigned_direction is not None else other.direction
 
-        # 如果方向一致,计算平行边的中点距离
+        # With the same direction, measure the distance between the midpoints of the parallel edges
         if dir_a == dir_b:
-            if dir_a == 'h':  # 水平文本
-                # 计算上边和下边的中点
-                # self.pts: [左上, 右上, 右下, 左下]
+            if dir_a == 'h':  # Horizontal text
+                # Midpoints of the top and bottom edges
+                # self.pts: [top-left, top-right, bottom-right, bottom-left]
                 self_top_mid = ((self.pts[0][0] + self.pts[1][0]) / 2, (self.pts[0][1] + self.pts[1][1]) / 2)
                 self_bottom_mid = ((self.pts[2][0] + self.pts[3][0]) / 2, (self.pts[2][1] + self.pts[3][1]) / 2)
                 other_top_mid = ((other.pts[0][0] + other.pts[1][0]) / 2, (other.pts[0][1] + other.pts[1][1]) / 2)
                 other_bottom_mid = ((other.pts[2][0] + other.pts[3][0]) / 2, (other.pts[2][1] + other.pts[3][1]) / 2)
 
-                # 计算四种组合的距离,取最小值
+                # Distances of the four combinations; take the smallest
                 distances = [
                     np.sqrt((self_top_mid[0] - other_top_mid[0])**2 + (self_top_mid[1] - other_top_mid[1])**2),
                     np.sqrt((self_top_mid[0] - other_bottom_mid[0])**2 + (self_top_mid[1] - other_bottom_mid[1])**2),
@@ -938,14 +938,14 @@ class Quadrilateral(object):
                     np.sqrt((self_bottom_mid[0] - other_bottom_mid[0])**2 + (self_bottom_mid[1] - other_bottom_mid[1])**2),
                 ]
                 return min(distances)
-            else:  # 垂直文本 (dir_a == 'v')
-                # 计算左边和右边的中点
+            else:  # Vertical text (dir_a == 'v')
+                # Midpoints of the left and right edges
                 self_left_mid = ((self.pts[0][0] + self.pts[3][0]) / 2, (self.pts[0][1] + self.pts[3][1]) / 2)
                 self_right_mid = ((self.pts[1][0] + self.pts[2][0]) / 2, (self.pts[1][1] + self.pts[2][1]) / 2)
                 other_left_mid = ((other.pts[0][0] + other.pts[3][0]) / 2, (other.pts[0][1] + other.pts[3][1]) / 2)
                 other_right_mid = ((other.pts[1][0] + other.pts[2][0]) / 2, (other.pts[1][1] + other.pts[2][1]) / 2)
 
-                # 计算四种组合的距离,取最小值
+                # Distances of the four combinations; take the smallest
                 distances = [
                     np.sqrt((self_left_mid[0] - other_left_mid[0])**2 + (self_left_mid[1] - other_left_mid[1])**2),
                     np.sqrt((self_left_mid[0] - other_right_mid[0])**2 + (self_left_mid[1] - other_right_mid[1])**2),
@@ -954,7 +954,7 @@ class Quadrilateral(object):
                 ]
                 return min(distances)
 
-        # 如果方向不一致,使用Shapely的多边形距离
+        # With different directions, use the polygon distance of Shapely
         return self.polygon.distance(other.polygon)
 
     def distance(self, other, rho = 0.5) -> float:
@@ -969,7 +969,7 @@ class Quadrilateral(object):
         # x2, y2, w2, h2 = b2.x, b2.y, b2.w, b2.h
         # return rect_distance(x1, y1, x1 + w1, y1 + h1, x2, y2, x2 + w2, y2 + h2)
 
-        # 如果没有assigned_direction,使用direction作为回退
+        # Without assigned_direction, fall back to direction
         dir_a = self.assigned_direction if self.assigned_direction is not None else self.direction
         dir_b = other.assigned_direction if other.assigned_direction is not None else other.direction
 
@@ -1112,33 +1112,33 @@ def quadrilateral_can_merge_region(a: Quadrilateral, b: Quadrilateral, ratio = 1
         return False
     
     # === FORCE MERGE ALIGNED BLOCKS ===
-    # 特殊逻辑：如果两个块在排列方向上高度对齐（重叠），且距离很近，强制允许合并
-    # 解决如 "抱..." 和 "抱歉" 竖排并列未能合并的问题
+    # Special case: two blocks that are well aligned (overlapping) along the layout direction and close together are always allowed to merge
+    # Fixes cases where two short vertical columns standing side by side were not merged
     if a.assigned_direction == b.assigned_direction:
         direction = a.assigned_direction or a.direction
         
-        if direction == 'v': # 竖排文本，检查垂直重叠（Y轴）和水平距离（X轴）
-            # 垂直投影重叠率
+        if direction == 'v': # Vertical text: check the vertical overlap (Y axis) and the horizontal distance (X axis)
+            # Overlap ratio of the vertical projections
             y_overlap = max(0, min(y1 + h1, y2 + h2) - max(y1, y2))
             min_h = min(h1, h2)
             y_overlap_ratio = y_overlap / min_h if min_h > 0 else 0
             
-            # 水平距离（边缘到边缘）
+            # Horizontal distance (edge to edge)
             x_dist = max(0, max(x1, x2) - min(x1 + w1, x2 + w2))
             
-            # 如果垂直高度重叠超过 80%，且水平距离小于 1.5 个字符宽度
+            # When the vertical overlap is above 80% and the horizontal distance is below 1.5 character widths
             if y_overlap_ratio > 0.8 and x_dist < char_size * 1.5:
-                # 进一步放宽条件：如果字体大小也差不多，直接合并
+                # Relaxed further: with similar font sizes as well, merge directly
                 if max(a.font_size, b.font_size) / char_size < 2.5:
                     return True
                     
-        elif direction == 'h': # 横排文本，检查水平重叠（X轴）和垂直距离（Y轴）
-            # 水平投影重叠率
+        elif direction == 'h': # Horizontal text: check the horizontal overlap (X axis) and the vertical distance (Y axis)
+            # Overlap ratio of the horizontal projections
             x_overlap = max(0, min(x1 + w1, x2 + w2) - max(x1, x2))
             min_w = min(w1, w2)
             x_overlap_ratio = x_overlap / min_w if min_w > 0 else 0
             
-            # 垂直距离
+            # Vertical distance
             y_dist = max(0, max(y1, y2) - min(y1 + h1, y2 + h2))
             
             if x_overlap_ratio > 0.8 and y_dist < char_size * 1.5:

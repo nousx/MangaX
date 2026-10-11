@@ -14,15 +14,15 @@ from manga_translator.utils.translation_template import (
     normalize_translation_output_format,
 )
 
-# 工作目录名称常量
+# Constants for the work folder names
 WORK_DIR_NAME = "manga_translator_work"
 JSON_SUBDIR = "json"
 TRANSLATIONS_SUBDIR = "translations"
 ORIGINALS_SUBDIR = "originals"
 YOLO_LABELS_SUBDIR = "yolo_labels"
 INPAINTED_SUBDIR = "inpainted"
-PAINT_OVERLAY_SUBDIR = "paint_overlay"  # 彩色画笔涂鸦图层目录
-TRANSLATED_IMAGES_SUBDIR = "translated_images"  # 已翻译图片目录（替换翻译模式使用）
+PAINT_OVERLAY_SUBDIR = "paint_overlay"  # Folder of the colour brush doodle layers
+TRANSLATED_IMAGES_SUBDIR = "translated_images"  # Folder of translated images (used by replace-translation mode)
 EDITOR_BASE_SUBDIR = "editor_base"
 WORK_DIR_RESERVED_NAMES = {
     JSON_SUBDIR,
@@ -49,14 +49,14 @@ def is_work_image_path(image_path: str) -> bool:
     parent_dir = os.path.dirname(norm_path)
     grandparent_dir = os.path.dirname(parent_dir)
 
-    # 新结构：manga_translator_work/editor_base/xxx.png
+    # New structure: manga_translator_work/editor_base/xxx.png
     if (
         os.path.basename(parent_dir) == EDITOR_BASE_SUBDIR and
         os.path.basename(grandparent_dir) == WORK_DIR_NAME
     ):
         return True
 
-    # 兼容之前已经落在根目录的临时底图
+    # Still accepts temporary base images that were placed in the root folder earlier
     if os.path.basename(parent_dir) == WORK_DIR_NAME:
         return os.path.basename(norm_path) not in WORK_DIR_RESERVED_NAMES
 
@@ -123,7 +123,7 @@ def find_work_image_path(image_path: str) -> Optional[str]:
     if os.path.exists(work_image_path):
         return work_image_path
 
-    # 兼容之前可能已经落在根目录的底图
+    # Still accepts base images that may have been placed in the root folder earlier
     original_path = resolve_original_image_path(image_path)
     legacy_root_work_image = os.path.join(get_work_dir(original_path), os.path.basename(original_path))
     if os.path.exists(legacy_root_work_image):
@@ -335,28 +335,28 @@ def find_translated_source_json(target_image_path: str, translated_dir: str) -> 
     if not translated_dir or not os.path.isdir(translated_dir):
         return None
     
-    # 获取目标图的基础文件名（不含扩展名）
+    # Base file name of the target image (without extension)
     target_basename = os.path.splitext(os.path.basename(target_image_path))[0]
     
-    # 在已翻译目录中查找同名图片
-    # 尝试查找 manga_translator_work/json/文件名_translations.json
+    # Look for an image with the same name in the translated folder
+    # Try manga_translator_work/json/<file name>_translations.json
     translated_work_dir = os.path.join(translated_dir, WORK_DIR_NAME, JSON_SUBDIR)
     if os.path.isdir(translated_work_dir):
         json_path = os.path.join(translated_work_dir, f"{target_basename}_translations.json")
         if os.path.exists(json_path):
             return json_path
     
-    # 向后兼容：查找 已翻译目录/文件名_translations.json
+    # Backward compatibility: look for <translated folder>/<file name>_translations.json
     old_json_path = os.path.join(translated_dir, f"{target_basename}_translations.json")
     if os.path.exists(old_json_path):
         return old_json_path
     
-    # 尝试匹配任意受支持的图片扩展名
+    # Try any supported image extension
     for ext in SUPPORTED_IMAGE_EXTENSIONS:
-        # 构造可能的已翻译图片路径
+        # Build the possible path of the translated image
         possible_translated_image = os.path.join(translated_dir, f"{target_basename}{ext}")
         if os.path.exists(possible_translated_image):
-            # 查找该图片对应的JSON
+            # Find the JSON of that image
             json_path = find_json_path(possible_translated_image)
             if json_path:
                 return json_path
@@ -376,12 +376,12 @@ def find_json_path(image_path: str) -> Optional[str]:
     """
     original_path = resolve_original_image_path(image_path)
 
-    # 1. 优先查找新位置
+    # 1. Look in the new location first
     new_json_path = get_json_path(original_path, create_dir=False)
     if os.path.exists(new_json_path):
         return new_json_path
     
-    # 2. 向后兼容：查找旧位置（图片同目录）
+    # 2. Backward compatibility: look in the old location (next to the image)
     old_json_path = os.path.splitext(original_path)[0] + '_translations.json'
     if os.path.exists(old_json_path):
         return old_json_path
@@ -491,7 +491,7 @@ def migrate_legacy_files(image_path: str, move_files: bool = False) -> dict:
         'skipped': []
     }
     
-    # 检查并迁移JSON文件
+    # Check for a JSON file and migrate it
     old_json = get_legacy_json_path(image_path)
     if os.path.exists(old_json):
         new_json = get_json_path(image_path, create_dir=True)
@@ -507,7 +507,7 @@ def migrate_legacy_files(image_path: str, move_files: bool = False) -> dict:
         else:
             result['skipped'].append(('json', old_json, 'target exists'))
     
-    # 检查并迁移旧版TXT文件
+    # Check for an old TXT file and migrate it
     old_txt = os.path.splitext(image_path)[0] + '_translations.txt'
     if os.path.exists(old_txt):
         new_txt = get_translated_txt_path(image_path, create_dir=True)

@@ -81,7 +81,7 @@ def check_color(image):
     return n > 10
 
 
-# 基于边缘检测的简单方法（原有实现）
+# Simple method based on edge detection (the original implementation)
 def is_ignore_simple(region_img, ignore_bubble = 0):
     """
     Simple edge-based bubble detection.
@@ -128,7 +128,7 @@ def is_ignore_simple(region_img, ignore_bubble = 0):
     return False
 
 
-# 基于气泡边界检测的高级方法（旧版本逻辑）
+# Advanced method based on detecting the bubble border (the logic of the old version)
 def offset_margin(x, y, text_w, text_h, img_gray, sd=10, white_threshold=0.9):
     """
     Check white pixel ratio around text block edges.
@@ -323,19 +323,19 @@ def is_bubble_advanced(img: np.ndarray, x: int, y: int, text_w: int, text_h: int
     # text_block new position
     x, y, text_w, text_h = clear_outerwhite(x, y, text_w, text_h, new_mask_thresh)
     
-    # 正比例：阈值越大越严格，原先的 0.5 映射到 0.8
-    # threshold 0.1 -> white_threshold 0.55 (非常宽松，保留几乎所有区域)
-    # threshold 0.5 -> white_threshold 0.75 (原默认值)
-    # threshold 0.8 -> white_threshold 0.90 (对应原 0.5，新的推荐默认值)
-    # threshold 1.0 -> white_threshold 0.99 (非常严格)
-    white_threshold = 0.50 + threshold * 0.5  # 线性映射
+    # Proportional: a larger threshold is stricter; the earlier 0.5 maps to 0.8
+    # threshold 0.1 -> white_threshold 0.55 (very loose, keeps almost every region)
+    # threshold 0.5 -> white_threshold 0.75 (the old default)
+    # threshold 0.8 -> white_threshold 0.90 (the earlier 0.5; the new recommended default)
+    # threshold 1.0 -> white_threshold 0.99 (very strict)
+    white_threshold = 0.50 + threshold * 0.5  # Linear mapping
     
-    # 正比例：阈值越大，checkset 越大（越严格），原先的 0.5 映射到 0.8
-    # threshold 0.1 -> [1.0, 0.7] (非常宽松)
-    # threshold 0.5 -> [2.6, 2.3] (原默认值)
-    # threshold 0.8 -> [3.2, 2.9] (对应原 0.5，新的推荐默认值)
-    # threshold 1.0 -> [4.0, 3.7] (非常严格)
-    base_check = 0.6 + threshold * 4.0  # 线性映射
+    # Proportional: a larger threshold gives a larger checkset (stricter); the earlier 0.5 maps to 0.8
+    # threshold 0.1 -> [1.0, 0.7] (very loose)
+    # threshold 0.5 -> [2.6, 2.3] (the old default)
+    # threshold 0.8 -> [3.2, 2.9] (the earlier 0.5; the new recommended default)
+    # threshold 1.0 -> [4.0, 3.7] (very strict)
+    base_check = 0.6 + threshold * 4.0  # Linear mapping
     checkset = [base_check, base_check - 0.3]
     
     # sd add to 10

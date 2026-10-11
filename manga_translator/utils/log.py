@@ -18,7 +18,7 @@ class Formatter(logging.Formatter):
         else:
             self._style._fmt = '[%(name)s] %(message)s'
         result = super().formatMessage(record)
-        # ✅ 每次格式化后强制刷新输出
+        # ✅ Flush the output after every formatted record
         sys.stdout.flush()
         return result
 
@@ -44,32 +44,32 @@ def init_logging():
         return
     _initialized = True
     
-    # ✅ 强制刷新标准输出（解决日志卡住问题）
+    # ✅ Force standard output to flush (fixes a log that appears stuck)
     import os
     import sys
-    # 设置环境变量，禁用 Python 输出缓冲
+    # Set the environment variable that turns off Python output buffering
     os.environ['PYTHONUNBUFFERED'] = '1'
-    # 如果 stdout 有 reconfigure 方法，设置为无缓冲
+    # When stdout has a reconfigure method, make it unbuffered
     if hasattr(sys.stdout, 'reconfigure'):
         try:
             sys.stdout.reconfigure(line_buffering=True)
         except Exception:
             pass
     
-    # 强制添加 handler（不依赖 basicConfig）
+    # Add the handler directly (without relying on basicConfig)
     if not logging.root.handlers:
         handler = logging.StreamHandler(sys.stdout)
         handler.setLevel(logging.INFO)
         logging.root.addHandler(handler)
     
-    # 只修改 StreamHandler（控制台），不修改 FileHandler（日志文件）
-    # 这样可以保留 main.py 配置的文件日志处理器的原始格式
+    # Only the StreamHandler (console) is changed, not the FileHandler (log file),
+    # so the original format of the file log handler configured by main.py is kept
     for h in logging.root.handlers:
         if isinstance(h, logging.StreamHandler) and not isinstance(h, logging.FileHandler):
             h.setFormatter(Formatter())
             h.addFilter(Filter())
             h.setLevel(logging.INFO)
-            # ✅ 强制每次日志后刷新输出
+            # ✅ Flush the output after every log record
             h.flush()
     
     # Explicitly set the root logger level
@@ -80,7 +80,7 @@ def set_log_level(level):
     root.setLevel(level)
     # Also set the root logger level to ensure DEBUG messages pass through
     logging.getLogger().setLevel(level)
-    # 同时设置所有handler的级别
+    # Set the level of every handler as well
     for handler in logging.root.handlers:
         handler.setLevel(level)
 

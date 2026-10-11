@@ -129,7 +129,7 @@ class TextBlock(object):
                  shadow_offset: List = [0, 0],
                  prob: float = 1,
                  layout_mode: str = 'default',
-                 adjust_bg_color: bool = True,  # 是否自动调整描边颜色
+                 adjust_bg_color: bool = True,  # Whether the stroke colour is adjusted automatically
                  **kwargs) -> None:
         self.lines = np.array(lines, dtype=np.float64)
         # self.lines.sort()
@@ -151,10 +151,10 @@ class TextBlock(object):
         self.prob = prob
         self.layout_mode = layout_mode
 
-        # 译文/富文本入库：用 is_rich_text_document 显式类型分派。
-        # 解析失败一律"丢样式、保区域"：translation_rich 置 None、其余字段照常
-        # 构造，绝不让 ValueError/TypeError 穿出构造函数——否则 load_text 会把
-        # 整个区域连同原文、坐标一起丢掉并覆盖回写工程文件（F04）。
+        # Storing the translation / rich text: dispatched explicitly by type with is_rich_text_document.
+        # A parse failure always means "drop the styling, keep the region": translation_rich becomes None and the other fields are built
+        # as usual; a ValueError/TypeError must never leave the constructor - otherwise load_text would drop
+        # the whole region, with its original text and coordinates, and write that back over the project file (F04).
         self.translation_rich = None
         if _is_rich_text_value(translation):
             try:
@@ -181,12 +181,12 @@ class TextBlock(object):
                 explicit_rich = None
             if explicit_rich is not None:
                 if not self.translation:
-                    # 先经 setter 写纯文本，再挂富文本（setter 会清 rich，故顺序如此）
+                    # Write the plain text through the setter first, then attach the rich text (the setter clears rich, hence this order)
                     self.translation = _translation_plain_text(explicit_rich)
                 self.translation_rich = explicit_rich
 
-        # 替换前译文(YAML 规则应用前的原始版本)。空时回填 translation,
-        # 保证字段永不为空 — 编辑器和导出可放心读取。
+        # The translation before replacement (the raw version before the YAML rules are applied). When empty it is filled from translation,
+        # so the field is never empty - the editor and the exports can read it safely.
         self.translation_raw = translation_raw if isinstance(translation_raw, str) and translation_raw else _translation_plain_text(self.translation)
         # The translation as it was before automatic line breaking put [BR] into it.
         # Empty for regions that were never wrapped automatically.
@@ -217,7 +217,7 @@ class TextBlock(object):
 
         self._bounding_rect = _bounding_rect
         self.default_stroke_width = default_stroke_width
-        self.adjust_bg_color = adjust_bg_color  # 使用传入的参数
+        self.adjust_bg_color = adjust_bg_color  # Use the argument passed in
 
         self.opacity = opacity
         self.shadow_radius = shadow_radius
@@ -225,7 +225,7 @@ class TextBlock(object):
         self.shadow_color = shadow_color
         self.shadow_offset = shadow_offset
 
-        # 可选：从 JSON 读取的渲染中心（优先于 lines 自动计算中心）
+        # Optional: the render centre read from the JSON (takes precedence over the centre computed from lines)
         center_override = kwargs.get('center', None)
         self._center_override = None
         if isinstance(center_override, (list, tuple, np.ndarray)) and len(center_override) == 2:
@@ -354,9 +354,9 @@ class TextBlock(object):
         new_plain = _translation_plain_text(value)
         changed = getattr(self, '_translation', None) != new_plain
         self._translation = new_plain
-        # 等值赋值不视为编辑：后处理循环（OpenCC 未命中、部分翻译返回、后字典
-        # 无替换等）会把现值原样写回，此时保留 translation_rich；
-        # 只有纯文本真正变化时才失效富文本。
+        # Assigning an equal value does not count as an edit: the post-processing loops (OpenCC without a hit, a partial translation result, a post-dictionary
+        # without replacements and so on) write the current value back unchanged, and translation_rich is kept then;
+        # the rich text is only invalidated when the plain text really changes.
         if changed and hasattr(self, 'translation_rich'):
             self.translation_rich = None
 
@@ -386,10 +386,10 @@ class TextBlock(object):
         # Note: The UI might add/use other fields like 'center' which it calculates itself.
         # This export is from the perspective of the backend pipeline.
         
-        # 将倾斜的多边形反旋转成正矩形（配合angle字段使用）
+        # Rotate the slanted polygon back into an upright rectangle (used together with the angle field)
         import math
         
-        # 计算中心点：使用 lines 的最小外接矩形中心（而非顶点均值）
+        # Centre: the centre of the minimum bounding rectangle of lines (not the mean of the vertices)
         all_vertices = self.lines.reshape((-1, 2)).astype(np.float32)
         if len(all_vertices) >= 3:
             (center_x, center_y), _, _ = cv2.minAreaRect(all_vertices)
@@ -399,8 +399,8 @@ class TextBlock(object):
         else:
             center_x, center_y = 0.0, 0.0
         
-        # 反旋转角度（将倾斜的坐标旋转回正）
-        angle_rad = -math.radians(self.angle)  # 负号表示反旋转
+        # Reverse rotation angle (rotates the slanted coordinates back upright)
+        angle_rad = -math.radians(self.angle)  # The minus sign means reverse rotation
         cos_a = math.cos(angle_rad)
         sin_a = math.sin(angle_rad)
         
@@ -408,21 +408,21 @@ class TextBlock(object):
         for line_poly in self.lines:
             unrotated_poly = []
             for x, y in line_poly:
-                # 平移到原点
+                # Translate to the origin
                 dx = x - center_x
                 dy = y - center_y
-                # 旋转
+                # Rotate
                 new_x = dx * cos_a - dy * sin_a
                 new_y = dx * sin_a + dy * cos_a
-                # 平移回去
+                # Translate back
                 unrotated_poly.append([new_x + center_x, new_y + center_y])
             new_lines.append(unrotated_poly)
 
-        # 保存时走一遍对比度检查，确保 fg/bg 颜色有足够差异
+        # Run the contrast check when saving, so the fg and bg colours differ enough
         fg_out, bg_out = self.get_font_colors()
 
-        # 如果渲染管线已计算出 dst_points，将其转为 render_box_rect_local 保存。
-        # 这是样式计算后的渲染框，不等同于用户手动白框。
+        # When the rendering pipeline has computed dst_points, store them as render_box_rect_local.
+        # This is the render box after the style calculation; it is not the same as the user's manual white box.
         render_box_extra = {}
         if hasattr(self, 'dst_points') and self.dst_points is not None:
             try:
@@ -459,7 +459,7 @@ class TextBlock(object):
             'translation_raw': self.translation_raw,
             'translation_unwrapped': self.translation_unwrapped,
             'angle': self.angle,
-            'font_size': self.font_size,  # 保存最终渲染的字体大小
+            'font_size': self.font_size,  # Keep the font size finally rendered
             'fg_colors': fg_out,
             'bg_colors': bg_out,
             'direction': self.direction,
@@ -598,8 +598,8 @@ class TextBlock(object):
         if self.adjust_bg_color:
             frgb, brgb = fg_bg_compare(frgb, brgb)
 
-        # 颜色是跨编辑器、JSON 和渲染器传递的普通 RGB 值，不应把
-        # TextBlock 内部用于计算的 numpy 类型泄漏给调用方。
+        # Colours are ordinary RGB values passed between the editor, the JSON and the renderer; the numpy types
+        # TextBlock uses internally for calculation should not leak to callers.
         return (
             tuple(np.asarray(frgb).reshape(-1).tolist()),
             tuple(np.asarray(brgb).reshape(-1).tolist()),
@@ -616,7 +616,7 @@ class TextBlock(object):
         if preset in ('h', 'v'):
             return preset
 
-        # 根据 region 中面积最大的文本框的宽高比判断自动排版方向。
+        # Decide the automatic layout direction from the aspect ratio of the text box with the largest area in the region.
         if len(self.lines) > 0:
             max_area = 0
             largest_box_aspect_ratio = 1
@@ -631,7 +631,7 @@ class TextBlock(object):
                     largest_box_aspect_ratio = width / height if height > 0 else 1
             return 'v' if largest_box_aspect_ratio < 1 else 'h'
 
-        # 没有检测框时，使用区域整体的宽高比。
+        # Without detected boxes, use the aspect ratio of the whole region.
         return 'v' if self.aspect_ratio < 1 else 'h'
 
     @property
@@ -656,7 +656,7 @@ class TextBlock(object):
 
     @property
     def stroke_width(self):
-        # 如果用户手动指定了描边颜色（adjust_bg_color=False），则强制使用设定的宽度
+        # When the user set the stroke colour by hand (adjust_bg_color=False), always use the configured width
         if not self.adjust_bg_color:
             return self.default_stroke_width
             
@@ -748,7 +748,7 @@ def _sort_panels_fill(panels: List[Tuple[int, int, int, int]], right_to_left: bo
         # Start a new row from the current top-most panel
         base_y = remaining[0][1]
 
-        # Gather all panels whose top-y 距离 base_y 不超过阈值 → 同一行
+        # Gather all panels whose top-y is within the threshold of base_y -> same row
         row = []
         i = 0
         while i < len(remaining):
@@ -757,7 +757,7 @@ def _sort_panels_fill(panels: List[Tuple[int, int, int, int]], right_to_left: bo
             else:
                 i += 1
 
-        # Sort that row right-to-left (或 LTR) 再加入
+        # Sort that row right-to-left (or LTR), then add it
         row.sort(key=lambda p: (-p[0] if right_to_left else p[0]))
         ordered.extend(row)
  
@@ -842,20 +842,20 @@ def sort_regions(
     xs = [r.center[0] for r in regions]
     ys = [r.center[1] for r in regions]
     
-    # 改进的分散度计算：使用标准差
+    # Improved spread calculation: uses the standard deviation
     if len(regions) > 1:
         x_std = np.std(xs) if len(xs) > 1 else 0
         y_std = np.std(ys) if len(ys) > 1 else 0
         
-        # 使用标准差比值来判断排列方向
+        # Decide the layout direction from the ratio of the standard deviations
         is_horizontal = x_std > y_std
     else:
-        # 只有一个文本块时，默认为纵向
+        # With a single text block, vertical is the default
         is_horizontal = False
 
     sorted_regions = []
     if is_horizontal:
-        # 横向更分散：先 x 再 y
+        # More spread horizontally: x first, then y
         primary = sorted(regions, key=lambda r: -r.center[0] if right_to_left else r.center[0])
         group, prev = [], None
         for r in primary:
@@ -870,7 +870,7 @@ def sort_regions(
             group.sort(key=lambda r: r.center[1])
             sorted_regions += group
     else:
-        # 纵向更分散：先 y 再 x
+        # More spread vertically: y first, then x
         primary = sorted(regions, key=lambda r: r.center[1])
         group, prev = [], None
         for r in primary:
@@ -925,22 +925,22 @@ def visualize_textblocks(canvas: np.ndarray, blk_list: List[TextBlock], show_pan
         x_text = 'x: %s' % bx1
         y_text = 'y: %s' % by1
         
-        # 添加描边效果，文本居中
+        # Add a stroke effect, with the text centred
         def put_text_with_outline(text, center_x, y, font_size=0.8, thickness=2, color=(127,127,255)):
             
             (text_width, text_height), baseline = cv2.getTextSize(
                 text, cv2.FONT_HERSHEY_SIMPLEX, font_size, thickness)
             text_x = center_x - text_width // 2
             
-            # 绘制描边
+            # Draw the stroke
             for dx, dy in [(-1,-1), (-1,1), (1,-1), (1,1), (-2,0), (2,0), (0,-2), (0,2)]:
                 cv2.putText(canvas, text, (text_x+dx, y+dy), 
                           cv2.FONT_HERSHEY_SIMPLEX, font_size, (35,24,22), thickness)
-            # 绘制原始颜色的主文本
+            # Draw the main text in the original colour
             cv2.putText(canvas, text, (text_x, y), 
                       cv2.FONT_HERSHEY_SIMPLEX, font_size, color, thickness)
         
-        # 在文本框水平中央位置绘制带描边的文本
+        # Draw the stroked text at the horizontal centre of the text box
         center_x = center[0]  
         put_text_with_outline(angle_text, center_x, center[1] - 10)
         put_text_with_outline(x_text, center_x, center[1] + 15)

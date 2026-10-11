@@ -20,7 +20,7 @@ from . import Context, load_image, open_pil_image
 from .batch_skip import slice_batch_indices
 from manga_translator.utils.swallowed import note_ignored_error
 
-# 使用 manga_translator 的主 logger，确保日志能被UI捕获
+# Use the main logger of manga_translator, so the UI can capture the log
 logger = logging.getLogger('manga_translator')
 
 
@@ -57,37 +57,37 @@ class ConcurrentPipeline:
         self.translator = translator_instance
         self.batch_size = batch_size
         
-        # ✅ 为每个步骤创建独立的线程池，实现真正的并行处理
-        # 每个线程拥有独立的事件循环，互不阻塞
+        # ✅ A separate thread pool for each step, for real parallel processing
+        # Each thread has its own event loop and does not block the others
         self._detection_executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix='DetectionThread')
         self._translation_executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix='TranslationThread')
         self._inpaint_executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix='InpaintThread')
         self._render_executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix='RenderThread')
         
-        # 线程安全的队列
-        self.translation_queue = queue.Queue(maxsize=max(1, batch_size))  # 翻译队列（带背压）
-        self.inpaint_queue = queue.Queue()      # 修复队列
-        self.render_queue = queue.Queue()       # 渲染队列
+        # Thread-safe queues
+        self.translation_queue = queue.Queue(maxsize=max(1, batch_size))  # Translation queue (with back pressure)
+        self.inpaint_queue = queue.Queue()      # Inpainting queue
+        self.render_queue = queue.Queue()       # Rendering queue
         
-        # 结果存储 {image_name: ctx}
-        # 使用线程锁保护共享数据
+        # Result storage {image_name: ctx}
+        # A thread lock protects the shared data
         self._lock = threading.Lock()
-        self.translation_done = {}  # 翻译完成的ctx（包含翻译后的text_regions）
-        self.inpaint_done = {}      # 修复完成的ctx（包含img_inpainted）
-        self.pending_redo = set()   # 翻译过滤后需要重做修复的图片名（用于协调入渲染队列的时机）
+        self.translation_done = {}  # ctx objects whose translation is done (with the translated text_regions)
+        self.inpaint_done = {}      # ctx objects whose inpainting is done (with img_inpainted)
+        self.pending_redo = set()   # Names of images that need inpainting again after the translation filter (to time when they enter the rendering queue)
         
-        # 存储基础ctx（检测+OCR的结果），供翻译和修复使用
+        # The base ctx objects (results of detection + OCR), for translation and inpainting
         self.base_contexts = {}     # {image_name: ctx}
         
-        # 控制标志
+        # Control flags
         self.stop_workers = False
-        self.detection_ocr_done = False  # 检测+OCR是否全部完成
-        self.translation_thread_done = False  # 翻译线程是否已结束（不会再投递 redo 修复任务）
-        self.has_critical_error = False  # 是否发生严重错误
-        self.critical_error_msg = None   # 严重错误信息
-        self.critical_error_exception = None  # 原始异常对象
+        self.detection_ocr_done = False  # Whether detection + OCR is completely done
+        self.translation_thread_done = False  # Whether the translation thread has ended (no more redo inpainting tasks will be posted)
+        self.has_critical_error = False  # Whether a critical error happened
+        self.critical_error_msg = None   # The critical error message
+        self.critical_error_exception = None  # The original exception object
         
-        # 统计信息
+        # Statistics
         self.start_time = None
         self.total_images = 0
         self.stats = {
@@ -97,11 +97,11 @@ class ConcurrentPipeline:
             'rendering': 0
         }
         
-        # 结果列表（线程安全）
+        # Result list (thread-safe)
         self._results = []
         self._results_lock = threading.Lock()
         
-        # ✅ 线程安全的状态消息队列（用于向主线程报告关键日志）
+        # ✅ Thread-safe status message queue (for reporting key log lines to the main thread)
         self._status_queue = queue.Queue()
         self.failed_images = set()
     
@@ -207,7 +207,7 @@ class ConcurrentPipeline:
         try:
             return loop.run_until_complete(coro)
         finally:
-            # 关闭事件循环前，先取消并回收所有挂起任务，避免 "Task was destroyed but it is pending!"
+            # Before closing the event loop, cancel and collect every pending task, to avoid "Task was destroyed but it is pending!"
             pending = [task for task in asyncio.all_tasks(loop) if not task.done()]
             if pending:
                 for task in pending:
@@ -261,7 +261,7 @@ class ConcurrentPipeline:
             for idx, (file_path, config) in enumerate(zip(file_paths, configs)):
                 self._check_cancelled_or_raise('Detection+OCR', f'Processed {idx}/{len(file_paths)} images')
                 
-                # 检查是否需要停止（其他线程出错）
+                # Check whether to stop (another thread failed)
                 if self.stop_workers:
                     logger.warning(f"[Detection+OCR] Stop signal received, processed {idx}/{len(file_paths)} images")
                     break
@@ -270,14 +270,14 @@ class ConcurrentPipeline:
                 ctx = None
                 current_stage = 'preprocessing'
                 try:
-                    # 分批加载：只在需要时加载图片
+                    # Load in batches: an image is only loaded when it is needed
                     current_stage = 'preprocessing'
                     logger.debug(f"[Detection+OCR] Loading image: {file_path}")
                     with open(file_path, 'rb') as f:
                         image = open_pil_image(f, eager=True)
                     image.name = file_path
                     
-                    # 创建上下文
+                    # Create the context
                     ctx = Context()
                     ctx.input = image
                     ctx.image_name = file_path
@@ -287,17 +287,17 @@ class ConcurrentPipeline:
                     
                     logger.info(f"[Detection+OCR] Processing {idx+1}/{self.total_images}: {ctx.image_name}")
                     
-                    # 检查取消
+                    # Check for cancellation
                     self._check_cancelled_or_raise('Detection+OCR', f'Processed {idx}/{len(file_paths)} images')
                     
-                    # 预处理：上色、超分
+                    # Preprocessing: colorization, upscaling
                     if config.colorizer.colorizer.value != 'none':
                         current_stage = 'colorizing'
                         ctx.img_colorized = await self.translator._run_colorizer(config, ctx)
                     else:
                         ctx.img_colorized = ctx.input
 
-                    # 检查取消
+                    # Check for cancellation
                     self._check_cancelled_or_raise('Detection+OCR', f'Processed {idx}/{len(file_paths)} images')
 
                     if config.upscale.upscale_ratio:
@@ -309,56 +309,56 @@ class ConcurrentPipeline:
                     current_stage = 'preprocessing'
                     self.translator._save_editor_base_if_needed(ctx, config)
 
-                    # 统一转换为 numpy
+                    # Always convert to numpy
                     ctx.img_rgb, ctx.img_alpha = load_image(ctx.upscaled)
                     ctx.bubble_mask = None
                     
-                    # 检查取消
+                    # Check for cancellation
                     self._check_cancelled_or_raise('Detection+OCR', f'Processed {idx}/{len(file_paths)} images')
                     
-                    # 检测
+                    # Detection
                     current_stage = 'detection'
                     ctx.textlines, ctx.mask_raw, ctx.mask = await self.translator._run_detection(config, ctx)
                     
-                    # 检查取消
+                    # Check for cancellation
                     self._check_cancelled_or_raise('Detection+OCR', f'Processed {idx}/{len(file_paths)} images')
                     
                     # OCR
                     current_stage = 'ocr'
                     ctx.textlines = await self.translator._run_ocr(config, ctx)
                     
-                    # 检查取消
+                    # Check for cancellation
                     self._check_cancelled_or_raise('Detection+OCR', f'Processed {idx}/{len(file_paths)} images')
                     
-                    # 文本行合并
+                    # Text line merging
                     if ctx.textlines:
                         current_stage = 'textline_merge'
                         ctx.text_regions = await self.translator._run_textline_merge(config, ctx)
                     
                     self.stats['detection_ocr'] += 1
-                    # ✅ 发送状态日志（每完成一张图）
+                    # ✅ Send a status log line (after each image)
                     text_count = len(ctx.text_regions) if ctx.text_regions else 0
                     self._emit_status(f"[Detection+OCR] Completed {idx+1}/{self.total_images}: {os.path.basename(file_path)} ({text_count} text blocks)")
                     
-                    # 保存图片尺寸
+                    # Keep the image size
                     if hasattr(image, 'size'):
                         ctx.original_size = image.size
                     
                     ctx.input = image
                     
-                    # 保存基础ctx
+                    # Keep the base ctx
                     with self._lock:
                         self.base_contexts[ctx.image_name] = ctx
                     
-                    # 放入翻译队列和修复队列
+                    # Put it in the translation queue and the inpainting queue
                     if ctx.text_regions:
-                        # 保存原始 regions 引用集合,供翻译过滤后做差异检测
+                        # Keep the set of original region references, for detecting differences after the translation filter
                         ctx._initial_region_ids = {id(r) for r in ctx.text_regions}
                         self._enqueue_translation_task(ctx.image_name, config)
                         self.inpaint_queue.put((ctx.image_name, config, False))
                         logger.info(f"[Detection+OCR] Queued {ctx.image_name} for translation and inpainting (translation queue size: {self.translation_queue.qsize()})")
                     else:
-                        # 无文本，直接标记完成并放入渲染队列
+                        # No text: mark as done and put it in the rendering queue directly
                         with self._lock:
                             self.translation_done[ctx.image_name] = []
                             self.inpaint_done[ctx.image_name] = True
@@ -409,7 +409,7 @@ class ConcurrentPipeline:
             self.stop_workers = True
             raise
         finally:
-            # 标记检测+OCR全部完成
+            # Mark detection + OCR as completely done
             self.detection_ocr_done = True
             logger.info("[Detection+OCR thread] Processing completed")
     
@@ -437,7 +437,7 @@ class ConcurrentPipeline:
                         logger.warning(f"[Translation] Critical error detected, stopping translation (completed {self.stats['translation']}/{self.total_images})")
                         break
                     
-                    # 从队列获取任务（非阻塞）
+                    # Get a task from the queue (non-blocking)
                     try:
                         task = self._pop_translation_task(timeout=0.1)
                         if task:
@@ -452,7 +452,7 @@ class ConcurrentPipeline:
                                 break
                             continue
                     
-                    # 收集更多图片直到达到 batch_size
+                    # Collect more images until batch_size is reached
                     while len(batch) < self.batch_size:
                         try:
                             task = self._pop_translation_task(timeout=0.05)
@@ -462,7 +462,7 @@ class ConcurrentPipeline:
                         except queue.Empty:
                             break
                     
-                    # 判断是否应该翻译当前批次
+                    # Decide whether the current batch should be translated
                     should_translate, reason = self._should_translate_batch(batch)
 
                     if should_translate:
@@ -491,7 +491,7 @@ class ConcurrentPipeline:
                     self.stop_workers = True
                     break
             
-            # 处理剩余批次
+            # Handle the remaining batch
             if batch and not self.stop_workers:
                 logger.info(f"[Translation] Translating the remaining {len(batch)} images")
                 await self._process_translation_batch(batch)
@@ -526,18 +526,18 @@ class ConcurrentPipeline:
         
         try:
             self._check_cancelled_or_raise('Translation', f'Translating a batch of {len(batch)} images')
-            # 直接调用翻译（已经在独立线程的事件循环中）
+            # Call the translation directly (already inside the event loop of its own thread)
             translated_batch = await self.translator._batch_translate_contexts(batch, len(batch))
             self._check_cancelled_or_raise('Translation', f'Translating a batch of {len(batch)} images')
             
             self.stats['translation'] += len(batch)
-            # ✅ 发送状态日志
+            # ✅ Send a status log line
             self._emit_status(f"[Translation] Batch completed ({self.stats['translation']}/{self.total_images})")
             
             ready_to_render = 0
-            redo_tasks = []  # 锁外推送，避免锁内阻塞 queue.put
+            redo_tasks = []  # Push outside the lock, so queue.put does not block inside it
             for ctx, config in translated_batch:
-                # 计算翻译过滤是否剔除了 region（仅对成功翻译的 ctx 适用）
+                # Work out whether the translation filter removed regions (only for ctx objects translated successfully)
                 has_filtered = False
                 filtered_count = 0
                 if not getattr(ctx, 'translation_error', None):
@@ -554,19 +554,19 @@ class ConcurrentPipeline:
                         self.base_contexts[ctx.image_name].text_regions = ctx.text_regions
 
                     if has_filtered:
-                        # 翻译过滤掉了 region，标记待重做。首跑可能还没完成，也可能已完成。
-                        # 修复线程首跑分支会因 pending_redo 存在而跳过入渲染，
-                        # redo 任务被处理时再入渲染队列。
+                        # The translation filter removed regions: mark for redo. The first run may or may not be finished yet.
+                        # The first-run branch of the inpainting thread skips entering the rendering queue because pending_redo is set;
+                        # it enters the rendering queue when the redo task is handled.
                         self.pending_redo.add(ctx.image_name)
                         redo_tasks.append((ctx.image_name, config))
                         logger.info(f"[Translation] {ctx.image_name}: filtered out {filtered_count} regions; inpainting will run again")
                     elif ctx.image_name in self.inpaint_done:
-                        # 无差异 + 修复首跑已完成 → 立即入渲染队列
+                        # No difference + the first inpainting run is done -> enter the rendering queue at once
                         self.render_queue.put((ctx, config))
                         ready_to_render += 1
                         logger.info(f"[Translation] Translation and inpainting completed for {ctx.image_name}, immediately queuing for rendering")
 
-            # 锁外推送 redo 任务到修复队列
+            # Push the redo task to the inpainting queue outside the lock
             for image_name, config in redo_tasks:
                 self.inpaint_queue.put((image_name, config, True))
 
@@ -644,9 +644,9 @@ class ConcurrentPipeline:
                         logger.warning(f"[Inpainting] Critical error detected, stopping inpainting (completed {inpaint_count}/{self.total_images})")
                         break
                     
-                    # 检查是否完成所有任务。
-                    # 翻译线程可能在首轮修复队列清空后才发现 region 被过滤，
-                    # 并投递 redo 修复任务；必须等翻译线程结束后才可退出。
+                    # Check whether all tasks are done.
+                    # The translation thread may only find out that regions were filtered after the first inpainting queue has emptied,
+                    # and then post redo inpainting tasks; exiting is only allowed after the translation thread has ended.
                     if (
                         self.detection_ocr_done
                         and self.translation_thread_done
@@ -658,7 +658,7 @@ class ConcurrentPipeline:
                             logger.info(f"[Inpainting thread] All tasks completed ({inpaint_count}/{self.total_images})")
                             break
                     
-                    # 尝试获取任务
+                    # Try to get a task
                     try:
                         image_name, config, is_redo = self.inpaint_queue.get(timeout=1.0)
                     except queue.Empty:
@@ -675,7 +675,7 @@ class ConcurrentPipeline:
 
                     if is_redo:
                         logger.info(f"[Inpainting] Running again after filtering: {ctx.image_name} (remaining regions: {len(ctx.text_regions) if ctx.text_regions else 0})")
-                        # 清除旧 mask 让 _run_mask_refinement 基于过滤后的 regions 重新生成
+                        # Clear the old mask, so _run_mask_refinement rebuilds it from the filtered regions
                         ctx.mask = None
                     else:
                         logger.info(f"[Inpainting] Processing: {ctx.image_name}")
@@ -714,25 +714,25 @@ class ConcurrentPipeline:
                     else:
                         self._emit_status(f"[Inpainting] Repeat run completed: {os.path.basename(ctx.image_name)}")
 
-                    # 标记修复完成
+                    # Mark inpainting as done
                     with self._lock:
                         self.inpaint_done[ctx.image_name] = True
 
                         if is_redo:
-                            # 重做后翻译必已完成，且差异已确认。无条件入渲染队列。
+                            # After a redo the translation is certainly done and the difference confirmed. Enter the rendering queue unconditionally.
                             self.pending_redo.discard(ctx.image_name)
                             render_ctx = self.base_contexts.get(ctx.image_name)
                             if render_ctx:
-                                # text_regions 此时已是翻译过滤后的版本（翻译线程已写回）
+                                # text_regions is already the version after the translation filter (the translation thread wrote it back)
                                 self.render_queue.put((render_ctx, config))
                                 logger.info(f"[Inpainting] Repeat run completed for {ctx.image_name}, queuing for rendering")
                             else:
                                 logger.error(f"[Inpainting] Base context not found for {ctx.image_name}")
                         elif ctx.image_name in self.pending_redo:
-                            # 翻译已确认有过滤，正在等 redo 任务被处理，首跑完成不入队
+                            # The translation confirmed a filter and the redo task is pending; the finished first run does not enter the queue
                             logger.info(f"[Inpainting] First run completed for {ctx.image_name}, waiting to run again")
                         elif ctx.image_name in self.translation_done:
-                            # 翻译已完成且无 region 被过滤，加入渲染队列
+                            # The translation is done and no region was filtered: add to the rendering queue
                             render_ctx = self.base_contexts.get(ctx.image_name)
                             if render_ctx:
                                 translated_regions = self.translation_done.get(ctx.image_name)
@@ -777,11 +777,11 @@ class ConcurrentPipeline:
                         if ctx.image_name in self.base_contexts:
                             self.base_contexts[ctx.image_name] = ctx
                         if is_redo:
-                            # redo 失败：清除 pending_redo，直接推渲染队列
+                            # The redo failed: clear pending_redo and push to the rendering queue directly
                             self.pending_redo.discard(ctx.image_name)
                             self.render_queue.put((ctx, config))
                         else:
-                            # 首跑失败：若已被翻译标为待重做，则让 redo 任务统一推渲染
+                            # The first run failed: when the translation has marked it for redo, let the redo task push to rendering
                             if (ctx.image_name not in self.pending_redo
                                     and ctx.image_name in self.translation_done):
                                 self.render_queue.put((ctx, config))
@@ -831,11 +831,11 @@ class ConcurrentPipeline:
                         logger.warning(f"[Rendering] Critical error detected, stopping rendering (completed {rendered_count}/{self.total_images})")
                         break
                     
-                    # 尝试获取任务
+                    # Try to get a task
                     try:
                         ctx, config = self.render_queue.get(timeout=1.0)
                     except queue.Empty:
-                        # 检查是否应该退出
+                        # Check whether to exit
                         if self.stop_workers:
                             logger.info(f"[Rendering] Stop signal received, rendered {rendered_count}/{self.total_images} images")
                             break
@@ -848,7 +848,7 @@ class ConcurrentPipeline:
                     
                     logger.info(f"[Rendering] Retrieved task from queue: {ctx.image_name} (remaining in queue: {self.render_queue.qsize()})")
                     
-                    # 验证ctx
+                    # Check the ctx
                     with self._lock:
                         verified_ctx = self.base_contexts.get(ctx.image_name)
                     if not verified_ctx:
@@ -872,7 +872,7 @@ class ConcurrentPipeline:
                                 del self.base_contexts[ctx.image_name]
                         continue
                     
-                    # 检查渲染所需的数据是否完整
+                    # Check whether the data needed for rendering is complete
                     if not hasattr(ctx, 'img_rgb') or ctx.img_rgb is None:
                         logger.error("[Rendering] ctx.img_rgb is None, cannot render! Skipping this image")
                         ctx = self.translator._mark_context_failure(ctx, RuntimeError('Missing original image data'), stage='rendering')
@@ -918,10 +918,10 @@ class ConcurrentPipeline:
                     self.stats['rendering'] += 1
                     rendered_count += 1
                     
-                    # ✅ 发送状态日志（每完成一张图）
+                    # ✅ Send a status log line (after each image)
                     self._emit_status(f"[Rendering] Completed {rendered_count}/{self.total_images}: {os.path.basename(ctx.image_name)}")
                     
-                    # 保存
+                    # Save
                     if ctx.result is not None:
                         logger.info(f"[Rendering] ctx.result set, type: {type(ctx.result)}")
                         
@@ -942,7 +942,7 @@ class ConcurrentPipeline:
                                     finally:
                                         inpainted_snapshot = None
                                 
-                                # 保存翻译结果和导出PSD
+                                # Save the translation result and export the PSD
                                 self.translator._save_and_cleanup_context(ctx, save_info, config, "CONCURRENT")
                                 
                                 if (self.translator.save_text or self.translator.text_output_file) and ctx.text_regions is not None:
@@ -960,15 +960,15 @@ class ConcurrentPipeline:
                     else:
                         logger.error("[Rendering] ctx.result is None!")
                     
-                    # 添加到结果列表
+                    # Add to the result list
                     with self._results_lock:
                         self._results.append(ctx)
 
-                    # 清理内存 - 调用统一清理函数
+                    # Free memory - call the shared clean-up function
                     logger.debug(f"[Rendering] Releasing memory: {ctx.image_name}")
                     self.translator._cleanup_context_memory(ctx, keep_result=True)
 
-                    # 清理base_contexts
+                    # Clear base_contexts
                     with self._lock:
                         if ctx.image_name in self.base_contexts:
                             del self.base_contexts[ctx.image_name]
@@ -1036,7 +1036,7 @@ class ConcurrentPipeline:
         logger.info(f"[Concurrent pipeline] Processing {self.total_images} images")
         logger.info("[Concurrent pipeline] Parallel mode: 4 independent threads (detection+OCR / translation / inpainting / rendering)")
         
-        # 重置统计
+        # Reset the statistics
         for key in self.stats:
             self.stats[key] = 0
         self.translation_done.clear()
@@ -1052,7 +1052,7 @@ class ConcurrentPipeline:
         self.critical_error_exception = None
         self._results = []
         
-        # 将 stop_workers 纳入统一取消回调，确保 in-flight API 也能尽快响应停止
+        # Include stop_workers in the single cancel callback, so in-flight API calls respond to a stop quickly too
         original_cancel_callback = getattr(self.translator, "_cancel_check_callback", None)
         if hasattr(self.translator, "set_cancel_check_callback"):
             def _pipeline_cancel_check():
@@ -1069,7 +1069,7 @@ class ConcurrentPipeline:
                 return False
             self.translator.set_cancel_check_callback(_pipeline_cancel_check)
         
-        # 提交4个独立线程任务
+        # Submit the 4 separate thread tasks
         futures = [
             self._detection_executor.submit(self._detection_ocr_thread, file_paths, configs),
             self._translation_executor.submit(self._translation_thread),
@@ -1078,16 +1078,16 @@ class ConcurrentPipeline:
         ]
         
         try:
-            # 等待所有线程完成（在外部循环中检查以便响应取消）
+            # Wait for all threads to finish (checked in an outer loop, to respond to cancellation)
             last_rendered = 0
             while True:
                 done, not_done = wait(futures, timeout=0.5)
                 
-                # ✅ 刷新子线程的状态日志到主线程
+                # ✅ Flush the status log lines of the worker threads to the main thread
                 self._flush_status_to_logger()
                 self._check_cancelled_or_raise('Concurrent pipeline')
                 
-                # ✅ 报告进度（如果渲染数有变化）
+                # ✅ Report progress (when the number of rendered images changed)
                 current_rendered = self.stats['rendering']
                 if current_rendered > last_rendered:
                     try:
@@ -1105,11 +1105,11 @@ class ConcurrentPipeline:
                 
                 if len(not_done) == 0:
                     break
-                # 检查是否有异常
+                # Check for exceptions
                 for f in done:
                     if f.exception():
                         raise f.exception()
-                # 让出控制权，检查取消
+                # Yield control and check for cancellation
                 await asyncio.sleep(0)
                 
         except PipelineAbortError as e:
@@ -1127,15 +1127,15 @@ class ConcurrentPipeline:
             else:
                 logger.info("[Concurrent pipeline] All threads stopped")
         except asyncio.CancelledError:
-            # 用户取消了任务
+            # The user cancelled the task
             logger.info("[Concurrent pipeline] Cancellation signal received")
             self.stop_workers = True
-            # 等待所有线程停止（最多等待10秒）
+            # Wait for all threads to stop (at most 10 seconds)
             logger.info("[Concurrent pipeline] Waiting for all threads to stop...")
             done, not_done = wait(futures, timeout=10.0)
             self._flush_status_to_logger()
             if not_done:
-                # 显示哪些线程没有停止
+                # Show which threads did not stop
                 thread_names = []
                 for i, future in enumerate(futures):
                     if future in not_done:
@@ -1154,13 +1154,13 @@ class ConcurrentPipeline:
             self.stop_workers = True
             if hasattr(self.translator, "set_cancel_check_callback"):
                 self.translator.set_cancel_check_callback(original_cancel_callback)
-            # 关闭所有线程池
+            # Shut down all thread pools
             for executor in [self._detection_executor, self._translation_executor, 
                            self._inpaint_executor, self._render_executor]:
                 if executor:
                     executor.shutdown(wait=False)
         
-        # 检查是否有严重错误
+        # Check for a critical error
         if self.has_critical_error:
             error_msg = self.critical_error_msg or 'Unknown error'
             logger.error(f"[Concurrent pipeline] Processing failed: {error_msg}")
@@ -1169,7 +1169,7 @@ class ConcurrentPipeline:
             else:
                 raise RuntimeError(f'Concurrent pipeline processing failed: {error_msg}')
         
-        # 统计
+        # Statistics
         elapsed = (datetime.now(timezone.utc) - self.start_time).total_seconds()
         logger.info("[Concurrent pipeline] Completed!")
         logger.info(f"  Total time: {elapsed:.2f}s")

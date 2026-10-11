@@ -39,27 +39,27 @@ def resolve_photoshop_font(config) -> str | None:
 
 
 def _translation_plain_text(value) -> str:
-    # 薄委托：富文本→纯文本的唯一实现在 rendering.rich_text.plain_text_of
+    # Thin wrapper: the one rich-text to plain-text implementation is rendering.rich_text.plain_text_of
     return plain_text_of(value)
 
 
-# 对齐方式映射到 Photoshop 的 Justification 枚举
+# Alignment mapped to the Justification enum of Photoshop
 ALIGNMENT_TO_PS_JUSTIFICATION = {
     "left": "Justification.LEFT",
     "right": "Justification.RIGHT",
     "center": "Justification.CENTER",
 }
 
-# 文字方向映射
+# Text direction mapping
 DIRECTION_TO_PS_DIRECTION = {
     "h": "Direction.HORIZONTAL",
     "v": "Direction.VERTICAL",
-    "hr": "Direction.HORIZONTAL",  # 从右到左，需要额外处理
+    "hr": "Direction.HORIZONTAL",  # Right to left needs extra handling
     "vr": "Direction.VERTICAL",
 }
 
 
-# JSX 脚本模板
+# JSX script template
 JSX_TEMPLATE = """
 #target photoshop
 
@@ -283,9 +283,9 @@ try {{
 }}
 """
 
-# 单个文本层的 JSX 代码模板
-# 按 BallonsTranslator 的顺序：类型 -> contents -> position -> width/height -> size
-# 使用点文本（PointText），没有边界框限制
+# JSX code template of a single text layer
+# In the order of BallonsTranslator: type -> contents -> position -> width/height -> size
+# Point text (PointText) is used, which has no bounding box limit
 TEXT_LAYER_TEMPLATE = """
     // 文本层 {index}: {name}
     var textLayer{index} = doc.artLayers.add();
@@ -320,7 +320,7 @@ TEXT_LAYER_TEMPLATE = """
     {tcy_code}
 """
 
-# 修复图层代码模板
+# Code template of the inpainted layer
 INPAINTED_LAYER_TEMPLATE = """
     // 添加修复后的图层
     $.writeln('Adding inpainted layer from: {inpainted_file}');
@@ -336,7 +336,7 @@ INPAINTED_LAYER_TEMPLATE = """
     }}
 """
 
-# 遮罩层代码模板
+# Code template of the mask layer
 MASK_LAYER_TEMPLATE = """
     // 添加遮罩层
     $.writeln('Adding mask layer from: {mask_file}');
@@ -357,22 +357,22 @@ def escape_jsx_string(text: str) -> str:
     """转义 JSX 字符串中的特殊字符（用于单引号包裹的字符串）"""
     if not text:
         return ""
-    # 必须先处理反斜杠，再处理其他转义
-    text = text.replace("\\", "\\\\")   # 反斜杠（如果文本中有）
-    text = text.replace("'", "\\'")    # 单引号
-    text = text.replace("\n", "\\r")   # 换行符（PS 使用 \r）
-    text = text.replace("\r", "\\r")   # 回车符
-    text = text.replace("\t", "    ")  # 制表符转为空格
-    text = text.replace("\t", "    ")  # 制表符转为空格
+    # Backslashes must be handled first, before the other escapes
+    text = text.replace("\\", "\\\\")   # Backslash (when the text has one)
+    text = text.replace("'", "\\'")    # Single quote
+    text = text.replace("\n", "\\r")   # Line feed (Photoshop uses \r)
+    text = text.replace("\r", "\\r")   # Carriage return
+    text = text.replace("\t", "    ")  # Tab to space
+    text = text.replace("\t", "    ")  # Tab to space
     
-    # 使用正则替换 [BR] 及其周围的空白，并不区分大小写
-    # 支持半角 [BR] 和全角 【BR】
+    # Replace [BR] and the whitespace around it with a regular expression, ignoring case
+    # Both the half-width [BR] and the full-width 【BR】 are handled
     import re
     text = re.sub(r'\s*(?:\[|【)BR(?:\]|】)\s*', '\\r', text, flags=re.IGNORECASE)
 
-    # 终极处理：处理所有可能的垂直空白符
-    # 包括 \n, \r, \u2028 (Line Separator), \u2029 (Paragraph Separator), \v (Vertical Tab), \f (Form Feed)
-    # 这一步将所有的物理换行都转换为转义的 \r 字符
+    # Final step: handle every possible vertical whitespace character
+    # That is \n, \r, \u2028 (Line Separator), \u2029 (Paragraph Separator), \v (Vertical Tab), \f (Form Feed)
+    # This turns every physical line break into an escaped \r
     text = re.sub(r'[\r\n\u2028\u2029\v\f]+', '\\r', text)
     
     return text
@@ -388,19 +388,19 @@ def escape_jsx_path(path: str) -> str:
     if not path:
         return ""
 
-    # 先统一路径分隔符，再转义 JSX 字符串中的特殊字符。
+    # Normalise the path separators first, then escape the special characters of a JSX string.
     return path.replace("\\", "/").replace("'", "\\'")
 
 
-# 竖排文字中需要縦中横（横排显示）的符号映射
-# 将多字符符号替换为单个全角字符，避免竖排时分开显示
+# Symbols that need tate-chu-yoko (shown horizontally) in vertical text
+# Replace multi-character symbols with a single full-width character, so they are not split apart in vertical text
 VERTICAL_HORIZONTAL_MAP = {
-    # 组合标点 -> 单个全角字符
-    "!?": "⁉",      # 感叹问号组合
-    "?!": "⁈",      # 问号感叹组合
-    "!!": "‼",      # 双感叹号
-    "??": "⁇",      # 双问号
-    # 半角 -> 全角（竖排时显示更好）
+    # Combined punctuation -> a single full-width character
+    "!?": "⁉",      # Exclamation mark + question mark
+    "?!": "⁈",      # Question mark + exclamation mark
+    "!!": "‼",      # Double exclamation mark
+    "??": "⁇",      # Double question mark
+    # Half-width -> full-width (looks better in vertical text)
     "!": "！",
     "?": "？",
 }
@@ -422,19 +422,19 @@ def preprocess_vertical_text(text: str, is_vertical: bool) -> str:
     
     result = text
     
-    # 处理全角符号组合（中文翻译常用全角）
+    # Full-width symbol combinations (Chinese translations often use full-width)
     result = result.replace("！？", "⁉")
     result = result.replace("？！", "⁈")
     result = result.replace("！！", "‼")
     result = result.replace("？？", "⁇")
     
-    # 处理半角符号组合
+    # Half-width symbol combinations
     result = result.replace("!?", "⁉")
     result = result.replace("?!", "⁈")
     result = result.replace("!!", "‼")
     result = result.replace("??", "⁇")
     
-    # 单个半角 -> 全角
+    # Single half-width -> full-width
     result = result.replace("!", "！")
     result = result.replace("?", "？")
     
@@ -444,19 +444,19 @@ def preprocess_vertical_text(text: str, is_vertical: bool) -> str:
 def generate_text_layer_jsx(index: int, text_region, default_font: str, line_spacing: float = None) -> str:
     """生成单个文本层的 JSX 代码"""
     
-    # 文字方向（提前判断，用于文本预处理）
+    # Text direction (decided early, for the text preprocessing)
     direction = text_region.direction
     is_vertical = direction.startswith('v') if direction else False
     
-    # 文本内容（使用翻译后的文本）
-    # 先进行竖排文字预处理（縦中横等）
+    # Text content (the translated text)
+    # Preprocess for vertical text first (tate-chu-yoko and so on)
     raw_text = _translation_plain_text(text_region.translation)
     processed_text = preprocess_vertical_text(raw_text, is_vertical)
     text = escape_jsx_string(processed_text)
     
-    # 双重保险：强制移除所有可能的物理换行符，防止脚本语法错误
+    # Second safeguard: remove every possible physical line break, to prevent script syntax errors
     if '\n' in text or '\r' in text:
-        # 如果 escape_jsx_string 没有处理干净（理论上不应发生），这里强制处理
+        # If escape_jsx_string did not clean everything (which should not happen), it is forced here
         logger.warning(f"Text layer {index} still contains physical line breaks, removing them")
         text = text.replace('\n', '\\r').replace('\r', '\\r')
     
@@ -466,8 +466,8 @@ def generate_text_layer_jsx(index: int, text_region, default_font: str, line_spa
     
     logger.debug(f"Text layer {index}: source='{' '.join(text_region.text)[:30]}', translation='{raw_text[:30]}'")
     
-    # 位置和尺寸 - 使用渲染阶段计算的 dst_points
-    # dst_points 是 shape (1, 4, 2) 的数组，包含4个角点
+    # Position and size - from the dst_points computed at the rendering stage
+    # dst_points is an array of shape (1, 4, 2) holding the 4 corners
     pts = text_region.dst_points.reshape(-1, 2)
     x_min = float(pts[:, 0].min())
     y_min = float(pts[:, 1].min())
@@ -476,82 +476,82 @@ def generate_text_layer_jsx(index: int, text_region, default_font: str, line_spa
     w = x_max - x_min
     h = y_max - y_min
     
-    # 文字方向（PS枚举值）
+    # Text direction (Photoshop enum value)
     direction_ps = DIRECTION_TO_PS_DIRECTION.get(direction, "Direction.HORIZONTAL")
     
-    # 计算行数 (使用与 escape_jsx_string 相同的正则逻辑)
+    # Number of lines (the same regular expression logic as escape_jsx_string)
     import re
-    # 支持半角 [BR] 和全角 【BR】
+    # Both the half-width [BR] and the full-width 【BR】 are handled
     num_lines = len(re.split(r'\s*(?:\[|【)BR(?:\]|】)\s*', raw_text, flags=re.IGNORECASE))
     
-    # 字体大小
+    # Font size
     font_size = text_region.font_size
     
-    # 行间距系数 (leading factor)
-    # 竖排基准间距 0.2, 横排基准间距 0.01
+    # Line spacing factor (leading factor)
+    # Base spacing 0.2 for vertical text, 0.01 for horizontal text
     base_spacing = 0.2 if is_vertical else 0.01
     multiplier = line_spacing if line_spacing is not None else 1.0
     leading_factor = 1.0 + base_spacing * multiplier
     
-    # 点文本的 position
-    # 居中对齐时，position 应该是第一行(横排)或第一列(竖排)的基线中心点
-    # 需要根据行数进行修正，让整体文本块居中
+    # position of the point text
+    # With centre alignment, position should be the baseline centre of the first line (horizontal) or first column (vertical)
+    # It has to be corrected by the number of lines, so the whole text block is centred
     
     box_center_x = x_min + w / 2
     box_center_y = y_min + h / 2
     
-    # 计算 leading 的像素近似值 (px)
-    # font_size 本身是像素值(px)，因为 text_region.font_size 来自图像分析
+    # Approximate leading in pixels (px)
+    # font_size itself is in pixels (px), because text_region.font_size comes from image analysis
     line_height_px = font_size * leading_factor
     
     if is_vertical:
-        # 竖排：顶对齐 (Justification.LEFT 通常对应 Start/Top)
-        # y 是顶部
+        # Vertical: top aligned (Justification.LEFT usually means Start/Top)
+        # y is the top
         y = y_min
         
-        # x 是第一列的中心
-        # 列从右向左排，所以第一列在最右侧
-        # 为了让Block整体水平居中：
+        # x is the centre of the first column
+        # Columns run from right to left, so the first column is the rightmost one
+        # To centre the whole block horizontally:
         offset_x = (num_lines - 1) * line_height_px / 2
         x = box_center_x + offset_x
         
         justification = "Justification.LEFT"
         
     else:
-        # 横排：居中对齐 (Justification.CENTER)
-        # x 保持中心
+        # Horizontal: centre aligned (Justification.CENTER)
+        # x stays at the centre
         x = box_center_x
         
-        # y 是第一行的基线
+        # y is the baseline of the first line
         baseline_offset = font_size * 0.35
         offset_y = (num_lines - 1) * line_height_px / 2
         y = box_center_y - offset_y + baseline_offset
         
         justification = "Justification.CENTER"
     
-    # 颜色
+    # Colour
     color_r, color_g, color_b = text_region.fg_colors[:3] if len(text_region.fg_colors) >= 3 else (0, 0, 0)
     
-    # 字间距（tracking）- 不设置，使用 Photoshop 默认值
+    # Letter spacing (tracking) - not set, the Photoshop default is used
     tracking_code = ""
     
-    # 行间距（leading）
-    # 确保数值是 float
+    # Line spacing (leading)
+    # Make sure the value is a float
     leading_val_px = float(font_size) * float(leading_factor)
-    # 使用 toFixed(2) 确保 JS 中是数字
+    # toFixed(2) makes sure it is a number in JS
     leading_code = f"""
     var leadingVal{index} = {leading_val_px} * dpiScale{index};
     textItem{index}.useAutoLeading = false;
     textItem{index}.leading = new UnitValue(leadingVal{index}, 'pt');
     """
     
-    # 旋转
+    # Rotation
     rotation_code = ""
-    if abs(text_region.angle) > 1:  # 只有角度大于1度才旋转
-        # 直接使用原始角度值
+    if abs(text_region.angle) > 1:  # Rotate only when the angle is larger than 1 degree
+        # Use the original angle value directly
         rotation_code = f"textLayer{index}.rotate({text_region.angle}, AnchorPosition.MIDDLECENTER);"
     
-    # 縦中横处理（仅竖排文字）
+    # Tate-chu-yoko handling (vertical text only)
     tcy_code = ""
     if is_vertical:
         tcy_chars = ['⁉', '⁈', '‼', '⁇']
@@ -566,7 +566,7 @@ def generate_text_layer_jsx(index: int, text_region, default_font: str, line_spa
     }}
 """
     
-    # 字体设置代码
+    # Font setting code
     if default_font:
         font_setup_code = f"""// 查找字体的 PostScript 名称
     var requestedFont{index} = '{default_font}';
@@ -602,12 +602,12 @@ def generate_text_layer_jsx(index: int, text_region, default_font: str, line_spa
     $.writeln('Using Photoshop default font for layer {index}');
 """
     
-    # 文本层名称：使用译文，但必须移除所有换行符以免破坏 JSX 语法
-    # 1. 删除 [BR] 及全角 【BR】 (替换为空字符串)
+    # Text layer name: the translation, with every line break removed so the JSX syntax is not broken
+    # 1. Remove [BR] and the full-width 【BR】 (replaced with an empty string)
     safe_name = re.sub(r'\s*(?:\[|【)BR(?:\]|】)\s*', '', text_region.translation, flags=re.IGNORECASE)
-    # 2. 删除所有物理换行符 (替换为空字符串)
+    # 2. Remove every physical line break (replaced with an empty string)
     safe_name = re.sub(r'[\r\n\u2028\u2029\v\f]+', '', safe_name)
-    # 3. 转义特殊字符并截断
+    # 3. Escape the special characters and truncate
     name = escape_jsx_string(safe_name[:50])
 
     return TEXT_LAYER_TEMPLATE.format(
@@ -645,16 +645,16 @@ def get_psd_output_path(image_path: str) -> str:
     Returns:
         PSD文件的完整路径
     """
-    # 获取原图所在目录和文件名
+    # Folder and file name of the original image
     image_dir = os.path.dirname(os.path.abspath(image_path))
     image_name = os.path.basename(image_path)
     base_name, _ = os.path.splitext(image_name)
     
-    # 创建 manga_translator_work/psd 目录
+    # Create the manga_translator_work/psd folder
     psd_dir = os.path.join(image_dir, 'manga_translator_work', 'psd')
     os.makedirs(psd_dir, exist_ok=True)
     
-    # 生成PSD文件路径
+    # Build the PSD file path
     psd_path = os.path.join(psd_dir, f"{base_name}.psd")
     
     return psd_path
@@ -708,23 +708,23 @@ def photoshop_export(output_file: str, ctx: Context, default_font: str = None, i
         script_only: 如果为True，只生成JSX脚本而不执行Photoshop
     """
     
-    # 如果 default_font 是文件路径，提取字体名称
+    # When default_font is a file path, take the font name from it
     if default_font and (os.path.sep in default_font or '/' in default_font or default_font.endswith('.ttf') or default_font.endswith('.otf')):
-        # 从路径中提取文件名（不含扩展名）作为字体名称
+        # Take the file name (without extension) from the path as the font name
         font_basename = os.path.splitext(os.path.basename(default_font))[0]
         logger.warning(f"Detected a file path in default_font: {default_font}")
         logger.warning(f"Extracted font name: {font_basename}")
         logger.warning("Tip: Select a font name from the system font list instead of using a font file path")
         default_font = font_basename
     
-    # 创建临时文件（只用于修复图和遮罩）
+    # Create temporary files (only for the inpainted image and the mask)
     temp_dir = tempfile.gettempdir()
     inpainted_file = os.path.join(temp_dir, ".ps_inpainted.png")
     mask_file = os.path.join(temp_dir, ".ps_mask.png")
     jsx_file = os.path.join(temp_dir, ".ps_script.jsx")
     error_file = os.path.join(temp_dir, ".ps_error.txt")
     
-    # 清理旧的错误文件
+    # Remove old error files
     if os.path.exists(error_file):
         try:
             os.unlink(error_file)
@@ -733,7 +733,7 @@ def photoshop_export(output_file: str, ctx: Context, default_font: str = None, i
             pass
     
     try:
-        # PSD底图优先使用 editor_base，保持与编辑器中的“原图层”一致
+        # The PSD base image prefers editor_base, to match the "original layer" in the editor
         if not image_path or not os.path.exists(image_path):
             raise ValueError(f'Original image path is invalid or the file does not exist: {image_path}')
 
@@ -747,7 +747,7 @@ def photoshop_export(output_file: str, ctx: Context, default_font: str = None, i
             input_file = image_path
             logger.info(f"Falling back to the original image as the PSD base image: {input_file}")
 
-        # 修复图优先使用当前会话结果，避免吃到磁盘旧图
+        # The inpainted image prefers the result of the current session, so an old image on disk is not picked up
         inpainted_layer_code = ""
         if hasattr(ctx, 'img_inpainted') and ctx.img_inpainted is not None and _save_image_like_to_temp(ctx.img_inpainted, inpainted_file):
             inpainted_layer_code = INPAINTED_LAYER_TEMPLATE.format(
@@ -764,10 +764,10 @@ def photoshop_export(output_file: str, ctx: Context, default_font: str = None, i
             else:
                 logger.debug(f"No usable inpainted image found: {inpainted_path}")
         
-        # 蒙版层 - 不添加
+        # Mask layer - not added
         mask_layer_code = ""
         
-        # 生成文本层代码
+        # Build the text layer code
         if default_font:
             logger.info(f"Using font for PSD export: {default_font}")
         else:
@@ -779,8 +779,8 @@ def photoshop_export(output_file: str, ctx: Context, default_font: str = None, i
             for i, region in enumerate(filtered_regions):
                 text_layers_code += generate_text_layer_jsx(i, region, default_font, line_spacing)
         
-        # 生成完整的 JSX 脚本
-        # 路径转义：统一使用正斜杠，并转义单引号，避免破坏 JSX 字符串。
+        # Build the complete JSX script
+        # Path escaping: always forward slashes, with single quotes escaped, so the JSX string is not broken.
         jsx_script = JSX_TEMPLATE.format(
             input_file=escape_jsx_path(input_file),
             output_file=escape_jsx_path(output_file),
@@ -790,13 +790,13 @@ def photoshop_export(output_file: str, ctx: Context, default_font: str = None, i
             text_layers_code=text_layers_code,
         )
         
-        # 保存 JSX 脚本（使用UTF-8 BOM编码，确保Photoshop能正确读取中文）
+        # Save the JSX script (UTF-8 with BOM, so Photoshop reads non-ASCII text correctly)
         with open(jsx_file, 'w', encoding='utf-8-sig') as f:
             f.write(jsx_script)
         
         logger.info(f"Generated JSX script: {jsx_file}")
         
-        # 如果启用verbose模式或script_only模式
+        # When verbose mode or script_only mode is on
         saved_script_path = None
         if verbose or script_only:
             try:
@@ -804,13 +804,13 @@ def photoshop_export(output_file: str, ctx: Context, default_font: str = None, i
                 base_name, _ = os.path.splitext(image_name)
 
                 if script_only and image_path:
-                    # script_only 模式下，保存到 manga_translator_work/psd
+                    # In script_only mode, save to manga_translator_work/psd
                     image_dir = os.path.dirname(os.path.abspath(image_path))
                     psd_dir = os.path.join(image_dir, 'manga_translator_work', 'psd')
                     os.makedirs(psd_dir, exist_ok=True)
                     debug_jsx_path = os.path.join(psd_dir, f"{base_name}_photoshop_script.jsx")
                 elif result_path_fn:
-                    # verbose 模式或无 image_path，保存到 result 目录
+                    # In verbose mode, or without image_path, save to the result folder
                     debug_jsx_path = result_path_fn(f"{base_name}_photoshop_script.jsx")
                 else:
                     debug_jsx_path = None
@@ -823,14 +823,14 @@ def photoshop_export(output_file: str, ctx: Context, default_font: str = None, i
             except Exception as e:
                 logger.warning(f"Failed to save JSX script: {e}")
         
-        # 如果只生成脚本，直接返回
+        # When only the script is wanted, return here
         if script_only:
             logger.info("✅ Script generation only: JSX script saved, skipping Photoshop execution")
             if saved_script_path:
                 logger.info(f"   Script path: {saved_script_path}")
             return
         
-        # 执行 Photoshop
+        # Run Photoshop
         ps_executable = find_photoshop_executable()
         if not ps_executable:
             raise FileNotFoundError(
@@ -840,20 +840,20 @@ def photoshop_export(output_file: str, ctx: Context, default_font: str = None, i
         logger.info(f"Using Photoshop: {ps_executable}")
         logger.info(f"Executing script: {jsx_file}")
         
-        # 运行 Photoshop（不等待进程退出，只等待 PSD 文件生成）
+        # Run Photoshop (without waiting for the process to exit; only for the PSD file to appear)
         import time
         
-        # 记录输出文件修改时间（如果已存在）
+        # Record the modification time of the output file (when it already exists)
         old_mtime = os.path.getmtime(output_file) if os.path.exists(output_file) else 0
         
-        # 启动 Photoshop（不等待）
+        # Start Photoshop (without waiting)
         process = subprocess.Popen(
             [ps_executable, '-r', jsx_file],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
         )
         
-        # 轮询等待 PSD 文件生成（最多等待 300 秒）
+        # Poll for the PSD file (wait at most 300 seconds)
         timeout = 300
         poll_interval = 0.5
         elapsed = 0
@@ -862,15 +862,15 @@ def photoshop_export(output_file: str, ctx: Context, default_font: str = None, i
             time.sleep(poll_interval)
             elapsed += poll_interval
             
-            # 检查 PSD 文件是否生成/更新
+            # Check whether the PSD file was created or updated
             if os.path.exists(output_file):
                 new_mtime = os.path.getmtime(output_file)
                 if new_mtime > old_mtime and os.path.getsize(output_file) > 0:
-                    # 文件已生成，等待一小段时间确保写入完成
+                    # The file exists; wait a moment to make sure writing has finished
                     time.sleep(0.5)
                     break
         
-        # 读取输出（非阻塞）
+        # Read the output (non-blocking)
         try:
             stdout, stderr = process.communicate(timeout=1)
             if stdout:
@@ -880,17 +880,17 @@ def photoshop_export(output_file: str, ctx: Context, default_font: str = None, i
                 stderr_text = stderr.decode('utf-8', errors='replace')
                 logger.warning(f"Photoshop error output:\n{stderr_text}")
         except subprocess.TimeoutExpired:
-            # Photoshop 还在运行，这是正常的
+            # Photoshop is still running, which is normal
             pass
             
-        # 检查是否有脚本错误报告
+        # Check for a script error report
         if os.path.exists(error_file):
             with open(error_file, 'r') as f:
                 error_msg = f.read()
             logger.error(f"Photoshop script execution error: {error_msg}")
             raise RuntimeError(f'Photoshop script error: {error_msg}')
         
-        # 检查 PSD 文件是否成功生成
+        # Check whether the PSD file was created successfully
         if os.path.exists(output_file) and os.path.getsize(output_file) > 0:
             logger.info(f"PSD file generated: {output_file}")
         else:
@@ -900,7 +900,7 @@ def photoshop_export(output_file: str, ctx: Context, default_font: str = None, i
                 raise RuntimeError(f'Failed to generate PSD file: {output_file}')
         
     finally:
-        # 清理临时文件
+        # Remove the temporary files
         for temp_file in [inpainted_file, mask_file, error_file]:
             if os.path.exists(temp_file):
                 try:
@@ -908,7 +908,7 @@ def photoshop_export(output_file: str, ctx: Context, default_font: str = None, i
                 except Exception as e:
                     logger.warning(f"Failed to delete temporary file {temp_file}: {e}")
         
-        # 如果不是verbose模式且不是script_only模式，删除JSX脚本
+        # Outside verbose mode and script_only mode, delete the JSX script
         if not verbose and not script_only and os.path.exists(jsx_file):
             try:
                 os.unlink(jsx_file)
@@ -948,7 +948,7 @@ def _find_photoshop_from_environment() -> Optional[str]:
     except ImportError:
         return None
 
-    # os.environ 是进程启动时的快照，系统设置里刚保存的值可能尚未继承。
+    # os.environ is a snapshot from process start; a value just saved in the system settings may not be inherited yet.
     for hkey, subkey, source in [
         (winreg.HKEY_CURRENT_USER, r"Environment", 'user environment variable'),
         (winreg.HKEY_LOCAL_MACHINE,
@@ -983,7 +983,7 @@ def find_photoshop_from_registry() -> Optional[str]:
         logger.warning("Cannot import winreg, skipping registry lookup")
         return None
     
-    # App Paths 的默认值直接指向可执行文件，不受安装盘符限制。
+    # The default value of App Paths points directly at the executable and does not depend on the install drive.
     for hkey in [winreg.HKEY_CURRENT_USER, winreg.HKEY_LOCAL_MACHINE]:
         for view in [winreg.KEY_WOW64_64KEY, winreg.KEY_WOW64_32KEY]:
             try:
@@ -999,20 +999,20 @@ def find_photoshop_from_registry() -> Optional[str]:
             except OSError:
                 continue
 
-    # 可能的注册表路径
+    # Possible registry paths
     registry_paths = [
-        # Photoshop CC 及更新版本
+        # Photoshop CC and newer versions
         (winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\Adobe\Photoshop"),
         (winreg.HKEY_CURRENT_USER, r"SOFTWARE\Adobe\Photoshop"),
-        # 32位程序在64位系统上的路径
+        # Path of a 32-bit program on a 64-bit system
         (winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\WOW6432Node\Adobe\Photoshop"),
     ]
     
     for hkey, subkey_path in registry_paths:
         try:
-            # 打开 Photoshop 主键
+            # Open the Photoshop main key
             with winreg.OpenKey(hkey, subkey_path) as key:
-                # 枚举所有版本子键
+                # Enumerate all version subkeys
                 i = 0
                 versions = []
                 while True:
@@ -1023,15 +1023,15 @@ def find_photoshop_from_registry() -> Optional[str]:
                     except OSError:
                         break
                 
-                # 按版本号降序排序（优先使用最新版本）
+                # Sort by version number, descending (the newest version first)
                 versions.sort(reverse=True)
                 
-                # 尝试每个版本
+                # Try each version
                 for version in versions:
                     try:
                         version_path = f"{subkey_path}\\{version}"
                         with winreg.OpenKey(hkey, version_path) as version_key:
-                            # 尝试读取 ApplicationPath 或 InstallPath
+                            # Try to read ApplicationPath or InstallPath
                             for value_name in ["ApplicationPath", "InstallPath", "Path"]:
                                 try:
                                     install_path, _ = winreg.QueryValueEx(version_key, value_name)
@@ -1067,7 +1067,7 @@ def find_photoshop_executable() -> Optional[str]:
         Photoshop 可执行文件的完整路径，如果未找到则返回 None
     """
     
-    # 1. 优先使用环境变量
+    # 1. Prefer the environment variable
     ps_path = _find_photoshop_from_environment()
     if ps_path:
         return ps_path
@@ -1075,12 +1075,12 @@ def find_photoshop_executable() -> Optional[str]:
     system = platform.system()
     
     if system == "Windows":
-        # 2. 从注册表查找（最可靠）
+        # 2. Look in the registry (the most reliable)
         ps_path = find_photoshop_from_registry()
         if ps_path:
             return ps_path
         
-        # 3. Windows 常见安装路径
+        # 3. Common install paths on Windows
         possible_paths = [
             r"C:\Program Files\Adobe\Adobe Photoshop 2024\Photoshop.exe",
             r"C:\Program Files\Adobe\Adobe Photoshop 2023\Photoshop.exe",
@@ -1090,20 +1090,20 @@ def find_photoshop_executable() -> Optional[str]:
             r"C:\Program Files\Adobe\Adobe Photoshop CC 2018\Photoshop.exe",
         ]
         
-        # 也检查 Program Files (x86)
+        # Check Program Files (x86) as well
         program_files_x86 = os.getenv("ProgramFiles(x86)")
         if program_files_x86:
             for path in list(possible_paths):
                 x86_path = path.replace(r"C:\Program Files", program_files_x86)
                 possible_paths.append(x86_path)
         
-        # 搜索所有可能的路径
+        # Search every possible path
         for path in possible_paths:
             if os.path.exists(path):
                 logger.info(f"Found Photoshop in a common location: {path}")
                 return path
         
-        # 4. 遍历 Program Files 中的 Adobe 目录
+        # 4. Walk the Adobe folder in Program Files
         for program_files_var in ["ProgramFiles", "ProgramFiles(x86)"]:
             program_files = os.getenv(program_files_var)
             if not program_files:
@@ -1112,7 +1112,7 @@ def find_photoshop_executable() -> Optional[str]:
             adobe_dir = os.path.join(program_files, "Adobe")
             if os.path.exists(adobe_dir):
                 try:
-                    folders = sorted(os.listdir(adobe_dir), reverse=True)  # 降序，优先新版本
+                    folders = sorted(os.listdir(adobe_dir), reverse=True)  # Descending, newer versions first
                     for folder in folders:
                         if "Photoshop" in folder:
                             ps_exe = os.path.join(adobe_dir, folder, "Photoshop.exe")

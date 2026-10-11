@@ -49,10 +49,10 @@ class ReplaceTranslationCTD:
             - mask_raw: 原始蒙版（神经网络直接输出）
             - mask_refined: 精炼后的蒙版（使用 REFINEMASK_INPAINT）
         """
-        # 使用检测器的内部方法获取原始输出
+        # Get the raw output through the detector's internal method
         im_h, im_w = image.shape[:2]
         
-        # 调用 det_rearrange_forward 获取原始 mask
+        # Call det_rearrange_forward to get the raw mask
         lines_map, mask = det_rearrange_forward(
             image, 
             self.detector.det_batch_forward_ctd, 
@@ -87,16 +87,16 @@ class ReplaceTranslationCTD:
         idx = np.where(scores[0] > box_thresh)
         lines, scores = lines[0][idx], scores[0][idx]
         
-        # 调整 mask 到原始图像尺寸
+        # Resize the mask to the original image size
         mask = cv2.resize(mask, (im_w, im_h), interpolation=cv2.INTER_LINEAR)
         
-        # 创建 textlines
+        # Create the textlines
         textlines = [Quadrilateral(pts.astype(int), '', score) for pts, score in zip(lines, scores)]
         
-        # 关键：使用 REFINEMASK_INPAINT 模式精炼（和 win.py 一致）
+        # Key point: refine in REFINEMASK_INPAINT mode (the same as win.py)
         mask_refined = refine_mask(image, mask, textlines, refine_mode=REFINEMASK_INPAINT)
         
-        # 清理 GPU 内存
+        # Free GPU memory
         if self.detector.device.startswith('cuda') or self.detector.device == 'mps':
             try:
                 if torch.cuda.is_available():
@@ -105,7 +105,7 @@ class ReplaceTranslationCTD:
                 note_ignored_error(ignored_error, "manga_translator/utils/ctd_replace.py:ReplaceTranslationCTD.detect_with_winpy_refine")
                 pass
         
-        # 返回和 win.py 一样的格式：(textlines, mask_raw, mask_refined)
+        # Return the same format as win.py: (textlines, mask_raw, mask_refined)
         return textlines, mask, mask_refined
 
 
