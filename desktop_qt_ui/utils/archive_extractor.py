@@ -15,10 +15,10 @@ from typing import List, Optional, Tuple
 
 from manga_translator.image_formats import SUPPORTED_IMAGE_EXTENSIONS
 
-# 支持的压缩包/文档格式
+# Supported archive and document formats
 ARCHIVE_EXTENSIONS = {'.pdf', '.epub', '.cbz', '.cbr', '.zip'}
 
-# 支持的图片格式
+# Supported image formats
 IMAGE_EXTENSIONS = SUPPORTED_IMAGE_EXTENSIONS
 
 ORIGINAL_IMAGE_DIRNAME = 'original_images'
@@ -243,12 +243,12 @@ def check_output_extract_conflict(output_base_dir: str, archive_path: str) -> bo
 
     marker_path = get_output_extract_marker_path(output_base_dir, archive_path)
     if not os.path.exists(marker_path):
-        # 兼容旧版本：尝试读取解压目录元数据判断来源
+        # For older versions: try to read the metadata of the extraction folder to identify its source
         extract_dir = get_output_extract_dir(output_base_dir, archive_path)
         cached_meta = _read_extract_meta(extract_dir)
         if cached_meta and cached_meta.get('archive_path') == _normalize_abs_path(archive_path):
             return False
-        # 没有可用元数据时保守视为冲突，避免误复用同名目录
+        # Without usable metadata it is treated as a conflict, the cautious choice, so a folder with the same name is not reused by mistake
         return True
 
     try:
@@ -278,11 +278,11 @@ def write_output_extract_marker(output_base_dir: str, archive_path: str) -> None
 
 def get_temp_extract_dir(archive_path: str) -> str:
     """获取压缩包的临时解压目录"""
-    # 使用系统临时目录下的固定子目录，便于管理
+    # Use a fixed subfolder of the system temporary folder, which is easier to manage
     base_temp = os.path.join(tempfile.gettempdir(), 'manga_translator_archives')
     os.makedirs(base_temp, exist_ok=True)
     
-    # 使用文件名和修改时间生成唯一目录名
+    # Build a unique folder name from the file name and the modification time
     archive_name = os.path.splitext(os.path.basename(archive_path))[0]
     mtime = int(os.path.getmtime(archive_path)) if os.path.exists(archive_path) else 0
     unique_name = f"{archive_name}_{mtime}"
@@ -308,7 +308,7 @@ def extract_images_from_pdf(pdf_path: str, output_dir: str) -> List[str]:
         for page in doc:
             imgs = page.get_images(full=True)
             if imgs:
-                # 提取页面内所有嵌入图片
+                # Extract every embedded image of the page
                 for img in imgs:
                     xref = img[0]
                     try:
@@ -322,7 +322,7 @@ def extract_images_from_pdf(pdf_path: str, output_dir: str) -> List[str]:
                     except Exception:
                         pass
             else:
-                # 无嵌入图（纯文字/矢量页），回退渲染为 PNG
+                # No embedded image (a text-only or vector page): fall back to rendering it as PNG
                 try:
                     mat = fitz.Matrix(2.0, 2.0)
                     pix = page.get_pixmap(matrix=mat)
@@ -380,7 +380,7 @@ def extract_images_from_epub(epub_path: str, output_dir: str) -> List[str]:
             )
             lower_map = {name.lower(): name for name in namelist}
 
-            # 1. 定位 OPF 清单路径
+            # 1. Find the path of the OPF manifest
             opf_path = None
             try:
                 container = ET.fromstring(_read_member_bounded(zf, 'META-INF/container.xml'))
@@ -394,7 +394,7 @@ def extract_images_from_epub(epub_path: str, output_dir: str) -> List[str]:
             if not opf_path:
                 opf_path = next((name for name in namelist if name.lower().endswith('.opf')), None)
 
-            # 2. 解析 OPF 清单与阅读顺序
+            # 2. Parse the OPF manifest and the reading order
             ordered_targets = []
             if opf_path and opf_path in namelist:
                 try:
@@ -439,12 +439,12 @@ def extract_images_from_epub(epub_path: str, output_dir: str) -> List[str]:
                                         ordered_targets.append((real_img, None))
                                         found = True
                             if not found:
-                                # 纯文本/SVG/无独立原图页，记录其在 spine 中的页码以供 fitz 渲染
+                                # A text-only / SVG page, or a page without an image file of its own: record its page number in the spine for rendering with fitz
                                 ordered_targets.append((None, len(ordered_targets)))
                 except Exception:
                     ordered_targets.clear()
 
-            # 3. 按阅读顺序提取原始高清图片（或回退渲染）
+            # 3. Extract the original high-resolution images in reading order (or fall back to rendering)
             extracted_paths = set()
             for zip_rel, spine_page_idx in ordered_targets:
                 if zip_rel:
@@ -469,7 +469,7 @@ def extract_images_from_epub(epub_path: str, output_dir: str) -> List[str]:
                     except Exception:
                         pass
 
-            # 4. 追加未在 spine 显式引用的剩余图片（确保绝对不漏页）
+            # 4. Append the remaining images that the spine does not reference explicitly (so that no page is ever missed)
             remaining = [
                 name for name in namelist
                 if name not in extracted_paths and os.path.splitext(name)[1].lower() in IMAGE_EXTENSIONS
@@ -483,7 +483,7 @@ def extract_images_from_epub(epub_path: str, output_dir: str) -> List[str]:
                     budget.copy_stream(src, out_path)
                 extracted_images.append(out_path)
 
-            # 5. 若未提取出任何图片，通过 fitz 全书渲染兜底
+            # 5. When no image was extracted at all, render the whole book with fitz as a last resort
             if not extracted_images and fitz_doc is not None:
                 for fitz_page in fitz_doc:
                     try:
@@ -522,7 +522,7 @@ def _extract_image_members(archive, archive_path: str, output_dir: str) -> List[
     all_entries = archive.infolist()
     budget.check_entry_count(len(all_entries))
 
-    # 获取所有图片文件并排序
+    # Collect all image files and sort them
     image_files = []
     for file_info in all_entries:
         if file_info.is_dir():
@@ -534,14 +534,14 @@ def _extract_image_members(archive, archive_path: str, output_dir: str) -> List[
     # Fail fast on the declared sizes before anything is written.
     budget.check_declared(file_info.file_size for file_info in image_files)
 
-    # 按文件名自然排序
+    # Natural sort by file name
     image_files.sort(key=lambda x: natural_sort_key(x.filename))
 
     try:
         for idx, file_info in enumerate(image_files):
             # basename only: member paths can never escape output_dir
             base_name = os.path.basename(file_info.filename.replace('\\', '/'))
-            # 添加序号前缀以保持顺序
+            # Add a number prefix to keep the order
             new_name = f"{idx:04d}_{base_name}"
             output_path = os.path.join(output_dir, new_name)
 
@@ -599,7 +599,7 @@ def extract_images_from_archive(archive_path: str, output_dir: Optional[str] = N
     
     expected_meta = _build_extract_meta(archive_path)
 
-    # 如果目录已存在且缓存元数据一致，直接返回缓存结果
+    # When the folder exists and the cache metadata matches, return the cached result directly
     if os.path.exists(output_dir):
         existing_images = []
         for f in os.listdir(output_dir):
@@ -609,7 +609,7 @@ def extract_images_from_archive(archive_path: str, output_dir: Optional[str] = N
         cached_meta = _read_extract_meta(output_dir)
         if existing_images and cached_meta == expected_meta:
             return sorted(existing_images), output_dir
-        # 目录存在但缓存不可用（来源/版本不匹配或残留脏数据），清空后重解压
+        # The folder exists but the cache cannot be used (a source or version mismatch, or leftover data): empty it and extract again
         _clear_extract_output_dir(output_dir)
     else:
         os.makedirs(output_dir, exist_ok=True)

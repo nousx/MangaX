@@ -704,7 +704,7 @@ if __name__ == '__main__':
 	img = util.uint2single(img)
 	print(img)
 	img = img[:448, :448]
-	img_hq = img  # 定义img_hq
+	img_hq = img  # Define img_hq
 	h = img.shape[0] // 4
 	print("resizing to", h)
 	sf = 4

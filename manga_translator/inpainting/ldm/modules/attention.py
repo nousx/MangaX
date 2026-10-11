@@ -15,7 +15,7 @@ try:
     XFORMERS_IS_AVAILABLE = True
 except (ImportError, AttributeError):
     XFORMERS_IS_AVAILABLE = False
-    # 忽略triton相关的AttributeError
+    # Ignore AttributeErrors that come from triton
 
 # CrossAttn precision handling
 import os

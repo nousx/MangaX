@@ -23,19 +23,19 @@ def cleanup_all_model_caches(unload_models: bool = False) -> int:
     """
     cleanup_count = 0
     
-    # 清理翻译器缓存
+    # Clear the translator cache
     try:
         from manga_translator.translators import translator_cache
         if translator_cache:
             if unload_models:
-                # 先卸载所有模型实例
+                # Unload all model instances first
                 for model_instance in list(translator_cache.values()):
                     try:
                         if hasattr(model_instance, '_unload'):
                             model_instance._unload()
                         elif hasattr(model_instance, 'unload'):
                             model_instance.unload()
-                        # 删除模型引用
+                        # Delete the model reference
                         del model_instance
                     except Exception as e:
                         logger.debug(f"Error unloading translator model: {e}")
@@ -45,12 +45,12 @@ def cleanup_all_model_caches(unload_models: bool = False) -> int:
     except Exception as e:
         logger.debug(f"Error clearing translator cache: {e}")
     
-    # 清理OCR缓存
+    # Clear the OCR cache
     try:
         from manga_translator.ocr import ocr_cache
         if ocr_cache:
             if unload_models:
-                # 先卸载所有模型实例
+                # Unload all model instances first
                 for model_instance in list(ocr_cache.values()):
                     try:
                         if hasattr(model_instance, '_unload'):
@@ -66,12 +66,12 @@ def cleanup_all_model_caches(unload_models: bool = False) -> int:
     except Exception as e:
         logger.debug(f"Error clearing OCR cache: {e}")
     
-    # 清理检测器缓存
+    # Clear the detector cache
     try:
         from manga_translator.detection import detector_cache
         if detector_cache:
             if unload_models:
-                # 先卸载所有模型实例
+                # Unload all model instances first
                 for model_instance in list(detector_cache.values()):
                     try:
                         if hasattr(model_instance, '_unload'):
@@ -87,12 +87,12 @@ def cleanup_all_model_caches(unload_models: bool = False) -> int:
     except Exception as e:
         logger.debug(f"Error clearing detector cache: {e}")
     
-    # 清理修复器缓存
+    # Clear the inpainter cache
     try:
         from manga_translator.inpainting import inpainter_cache
         if inpainter_cache:
             if unload_models:
-                # 先卸载所有模型实例
+                # Unload all model instances first
                 for model_instance in list(inpainter_cache.values()):
                     try:
                         if hasattr(model_instance, '_unload'):
@@ -108,12 +108,12 @@ def cleanup_all_model_caches(unload_models: bool = False) -> int:
     except Exception as e:
         logger.debug(f"Error clearing inpainter cache: {e}")
     
-    # 清理超分缓存
+    # Clear the upscaler cache
     try:
         from manga_translator.upscaling import upscaler_cache
         if upscaler_cache:
             if unload_models:
-                # 先卸载所有模型实例
+                # Unload all model instances first
                 for model_instance in list(upscaler_cache.values()):
                     try:
                         if hasattr(model_instance, '_unload'):
@@ -129,12 +129,12 @@ def cleanup_all_model_caches(unload_models: bool = False) -> int:
     except Exception as e:
         logger.debug(f"Error clearing upscaler cache: {e}")
     
-    # 清理着色器缓存
+    # Clear the colorizer cache
     try:
         from manga_translator.colorization import colorizer_cache
         if colorizer_cache:
             if unload_models:
-                # 先卸载所有模型实例
+                # Unload all model instances first
                 for model_instance in list(colorizer_cache.values()):
                     try:
                         if hasattr(model_instance, '_unload'):
@@ -160,10 +160,10 @@ def cleanup_gpu_memory():
     try:
         import torch
         if torch.cuda.is_available():
-            # 清空CUDA缓存
+            # Empty the CUDA cache
             pass
             pass
-            # 清理CUDA内存池
+            # Clear the CUDA memory pool
             try:
                 torch.cuda.reset_peak_memory_stats()
                 torch.cuda.reset_accumulated_memory_stats()
@@ -202,7 +202,7 @@ def cleanup_physical_memory():
         finally:
             kernel32.CloseHandle(process_handle)
     except Exception:
-        pass  # 非Windows系统忽略
+        pass  # Ignored on systems other than Windows
     return False
 
 
@@ -226,17 +226,17 @@ def full_memory_cleanup(log_callback=None, unload_models: bool = False):
         'models_unloaded': unload_models
     }
     
-    # 1. 清理模型缓存
+    # 1. Clear the model caches
     result['caches_cleared'] = cleanup_all_model_caches(unload_models=unload_models)
     
-    # 2. 强制垃圾回收（多次执行确保彻底清理）
+    # 2. Force garbage collection (run several times, to be thorough)
     pass
     pass
     pass
-    # 3. 清理GPU显存
+    # 3. Free GPU memory
     result['gpu_cleared'] = cleanup_gpu_memory()
     
-    # 4. 释放物理内存
+    # 4. Release physical memory
     result['physical_memory_released'] = cleanup_physical_memory()
     
     return result

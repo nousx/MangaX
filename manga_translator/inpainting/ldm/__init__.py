@@ -1,7 +1,7 @@
 import os
 import sys
 
-# 使用绝对路径避免 importlib.invalidate_caches() 时的 KeyError
+# Use an absolute path, to avoid a KeyError on importlib.invalidate_caches()
 _current_dir = os.path.dirname(os.path.abspath(__file__))
 _inpainting_dir = os.path.dirname(_current_dir)
 if _inpainting_dir not in sys.path:

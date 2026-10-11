@@ -26,7 +26,7 @@ from theme_registry import VALID_THEMES as REGISTERED_THEMES
 class TranslatorSettings(TranslatorFields):
     translator: str = "openai_hq"
     target_lang: str = "CHS"
-    # 相对路径，后端会用 BASE_PATH 拼接（打包后=app.exe 同级，开发时=项目根目录）
+    # Relative path; the backend joins it with BASE_PATH (next to app.exe when packaged, the project root in development)
     high_quality_prompt_path: Optional[str] = "dict/prompt_example.yaml"
 
 
@@ -56,8 +56,8 @@ class RenderSettings(RenderFields):
     direction: str = "auto"
     font_family: str = ""
     disable_system_fonts: bool = False
-    line_spacing: Optional[float] = 1.0  # 行间距倍率，默认1.0
-    letter_spacing: Optional[float] = 1.0  # 字间距倍率，默认1.0
+    line_spacing: Optional[float] = 1.0  # Line spacing multiplier, 1.0 by default
+    letter_spacing: Optional[float] = 1.0  # Letter spacing multiplier, 1.0 by default
 
 
 class UpscaleSettings(UpscaleFields):
@@ -76,8 +76,8 @@ class CliSettings(CliFields):
     template: bool = False
     generate_and_export: bool = False
     colorize_only: bool = False
-    upscale_only: bool = False  # 仅超分模式
-    inpaint_only: bool = False  # 仅输出修复图片模式
+    upscale_only: bool = False  # Upscale-only mode
+    inpaint_only: bool = False  # Mode that only outputs the inpainted image
 
 
 _LEGACY_THEME_MIGRATIONS = {
@@ -103,33 +103,33 @@ class AppSection(BaseModel):
     last_output_path: str = ""
     favorite_folders: Optional[List[str]] = None
     folder_dialog_sort: str = "name_ascending"
-    theme: str = "light"  # 主题选项由 theme_registry.py 统一定义
+    theme: str = "light"  # The theme options are defined in one place, theme_registry.py
     theme_user_preference: str = "light"
-    ui_language: str = "auto"  # UI语言：auto(自动检测), zh_CN, en_US, ja_JP, ko_KR 等
-    auto_check_updates: bool = True  # 启动时是否自动检查新版本
-    use_system_proxy: bool = False  # 网络请求是否使用操作系统代理配置
-    current_preset: str = "默认"  # 当前使用的预设名称
-    editor_ocr: str = "mocr"  # 编辑器属性面板使用的 OCR 模型，与主页 OCR 设置分离
-    editor_translator: str = "openai"  # 编辑器属性面板使用的翻译器，与主页翻译设置分离
-    editor_snap_enabled: bool = False  # 编辑器文本框移动/旋转时是否启用吸附
-    editor_rich_text_popup_enabled: bool = True  # 是否显示编辑器富文本浮动弹窗
-    editor_rich_text_popup_pinned: bool = False  # 是否固定富文本浮窗位置并阻止自动隐藏
-    editor_auto_save_on_switch: bool = True  # 切图时自动保存工程数据
-    editor_auto_export_on_switch: bool = True  # 切图时自动导出渲染图片
-    editor_suppress_unsaved_warning: bool = False  # 切图时不再提醒未保存编辑
+    ui_language: str = "auto"  # UI language: auto (detected automatically), zh_CN, en_US, ja_JP, ko_KR and so on
+    auto_check_updates: bool = True  # Whether to check for a new version at start-up
+    use_system_proxy: bool = False  # Whether network requests use the proxy settings of the operating system
+    current_preset: str = "默认"  # Name of the preset in use
+    editor_ocr: str = "mocr"  # OCR model used by the editor's property panel, separate from the OCR setting of the main page
+    editor_translator: str = "openai"  # Translator used by the editor's property panel, separate from the translation setting of the main page
+    editor_snap_enabled: bool = False  # Whether snapping is on when a text box is moved or rotated in the editor
+    editor_rich_text_popup_enabled: bool = True  # Whether the floating rich-text popup of the editor is shown
+    editor_rich_text_popup_pinned: bool = False  # Whether the rich-text popup is pinned in place and kept from hiding automatically
+    editor_auto_save_on_switch: bool = True  # Save the project data automatically when switching images
+    editor_auto_export_on_switch: bool = True  # Export the rendered image automatically when switching images
+    editor_suppress_unsaved_warning: bool = False  # Do not warn about unsaved edits when switching images
     editor_auto_rich_text_rules: bool = (
-        True  # 编辑译文时自动应用富文本规则（命中已带手工富文本则整段跳过）
+        True  # Apply the rich-text rules automatically while editing a translation (a paragraph that already has manual rich text is skipped as a whole)
     )
-    editor_delete_and_recover: bool = False  # 删除文本框时同时移除其蒙版并恢复原图
+    editor_delete_and_recover: bool = False  # When a text box is deleted, also remove its mask and restore the original image
     unload_models_after_translation: bool = (
-        False  # 翻译完成后卸载模型（释放内存更彻底，但下次使用需要重新加载）
+        False  # Unload the models after translation (frees more memory, but they have to be loaded again next time)
     )
-    saved_colors: Optional[List[str]] = None  # 保存的常用颜色列表
+    saved_colors: Optional[List[str]] = None  # Saved list of frequently used colours
     saved_style_presets: Optional[Dict[str, Dict[str, Any]]] = (
-        None  # 编辑器保存的样式组合
+        None  # Style combinations saved by the editor
     )
     saved_rich_text_presets: Optional[Dict[str, Dict[str, Any]]] = (
-        None  # 富文本片段样式预设
+        None  # Style presets for rich-text fragments
     )
 
     @model_validator(mode="before")
@@ -178,10 +178,10 @@ class AppSection(BaseModel):
 
 class AppSettings(BaseModel):
     app: AppSection = Field(default_factory=AppSection)
-    filter_text_enabled: bool = True  # 是否启用过滤列表
+    filter_text_enabled: bool = True  # Whether the filter list is on
     kernel_size: int = 3
     mask_dilation_offset: int = 70
-    use_custom_api_params: bool = False  # 是否使用自定义API参数配置文件（通用）
+    use_custom_api_params: bool = False  # Whether the custom API parameter file is used (general)
     translator: TranslatorSettings = Field(default_factory=TranslatorSettings)
     ocr: OcrSettings = Field(default_factory=OcrSettings)
     detector: DetectorSettings = Field(default_factory=DetectorSettings)

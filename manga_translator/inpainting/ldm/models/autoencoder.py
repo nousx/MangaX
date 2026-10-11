@@ -14,7 +14,7 @@ from packaging import version
 try:
     from ldm.modules.vqvae.quantize import VectorQuantizer
 except ImportError:
-    # 如果VectorQuantizer不存在，创建一个占位类
+    # When VectorQuantizer does not exist, create a placeholder class
     class VectorQuantizer:
         def __init__(self, *args, **kwargs):
             raise NotImplementedError("VectorQuantizer not available")

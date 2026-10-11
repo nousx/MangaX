@@ -20,5 +20,5 @@ class CustomJSONEncoder(json.JSONEncoder):
         elif isinstance(obj, (np.bool_, bool)):
             return bool(obj)
 
-        # 调用父类的默认方法
+        # Call the default method of the parent class
         return super().default(obj)
