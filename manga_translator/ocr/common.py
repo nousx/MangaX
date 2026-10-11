@@ -68,7 +68,7 @@ class CommonOCR(InfererModule):
         """
         from ..utils.bubble import is_ignore
 
-        # 模型气泡过滤（与 ignore_bubble 同阶段，但基于检测模型）
+        # Model-based bubble filter (the same stage as ignore_bubble, but based on the detection model)
         use_model_filter = bool(getattr(ocr_config, 'use_model_bubble_filter', False)) if ocr_config is not None else False
         if use_model_filter and full_image is not None and textline is not None:
             bbox = textline.aabb
@@ -84,14 +84,14 @@ class CommonOCR(InfererModule):
                     )
                     return True
         
-        # 如果提供了完整图像和文本行，使用高级方法
+        # With the full image and the text line available, use the advanced method
         if full_image is not None and textline is not None:
-            # 获取文本行的边界框
+            # Bounding box of the text line
             bbox = textline.aabb
             x, y, w, h = int(bbox.x), int(bbox.y), int(bbox.w), int(bbox.h)
             return is_ignore(region_img, ignore_bubble, full_image, [x, y, w, h])
         
-        # 否则使用简单方法
+        # Otherwise use the simple method
         return is_ignore(region_img, ignore_bubble)
 
     async def recognize(self, image: np.ndarray, textlines: List[Quadrilateral], config: OcrConfig, verbose: bool = False, bubble_mask: np.ndarray = None) -> List[Quadrilateral]:
@@ -114,7 +114,7 @@ class OfflineOCR(CommonOCR, ModelWrapper):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.use_gpu = False  # 子类应该在 _load 中设置这个标志
+        self.use_gpu = False  # Subclasses should set this flag in _load
 
     async def _recognize(self, *args, **kwargs):
         result = await self.infer(*args, **kwargs)
@@ -144,7 +144,7 @@ class OfflineOCR(CommonOCR, ModelWrapper):
         """
 #         import gc
         
-        # 删除传入的对象
+        # Delete the objects passed in
         for obj in objects:
             try:
                 del obj
@@ -152,7 +152,7 @@ class OfflineOCR(CommonOCR, ModelWrapper):
                 note_ignored_error(ignored_error, "manga_translator/ocr/common.py:OfflineOCR._cleanup_ocr_memory")
                 pass
         
-        # 如果使用 GPU 或强制清理，清理 GPU 显存
+        # With a GPU, or when clean-up is forced, free GPU memory
         if force_gpu_cleanup or (hasattr(self, 'use_gpu') and self.use_gpu):
             try:
                 import torch
@@ -162,8 +162,8 @@ class OfflineOCR(CommonOCR, ModelWrapper):
                 note_ignored_error(ignored_error, "manga_translator/ocr/common.py:OfflineOCR._cleanup_ocr_memory")
                 pass
         
-        # 轻量级垃圾回收（不强制完整 GC，避免性能影响）
-        # 主进程会在批次结束时进行完整的 gc.collect()
+        # Light garbage collection (no forced full GC, to avoid a performance cost)
+        # The main process runs a full gc.collect() at the end of the batch
         
     def _cleanup_batch_data(self, *data_lists, force_gpu_cleanup: bool = False):
         """
@@ -196,7 +196,7 @@ class OfflineOCR(CommonOCR, ModelWrapper):
                 note_ignored_error(ignored_error, "manga_translator/ocr/common.py:OfflineOCR._cleanup_batch_data")
                 pass
         
-        # GPU 清理
+        # GPU clean-up
         if force_gpu_cleanup or (hasattr(self, 'use_gpu') and self.use_gpu):
             try:
                 import torch

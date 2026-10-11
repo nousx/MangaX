@@ -40,13 +40,13 @@ class LamaInpainter(LamaMPEInpainter):
         """如果ONNX模型存在，跳过PyTorch模型检查"""
         onnx_path = self._get_file_path('lamampe.onnx')
         if os.path.isfile(onnx_path):
-            return True  # ONNX存在，不检查.ckpt
+            return True  # The ONNX file exists: the .ckpt is not checked
         return super()._check_downloaded_map(map_key)
 
     async def _load(self, device: str):
         self.device = device
         
-        # ✅ CPU模式使用ONNX（解决虚拟内存泄漏）
+        # ✅ CPU mode uses ONNX (fixes the virtual memory leak)
         if not device.startswith('cuda') and device != 'mps':
             try:
                 ort = import_onnxruntime(
@@ -56,7 +56,7 @@ class LamaInpainter(LamaMPEInpainter):
                 onnx_path = self._get_file_path('lamampe.onnx')
                 self.logger.info(f"Using ONNX model (CPU-optimized, default model): {onnx_path}")
                 
-                # 🔧 内存优化配置
+                # 🔧 Memory optimisation settings
                 sess_options = create_session_options(
                     ort,
                     log_severity_level=3,
@@ -76,7 +76,7 @@ class LamaInpainter(LamaMPEInpainter):
             except Exception as e:
                 self.logger.warning(f"Failed to load ONNX; falling back to PyTorch: {e}")
         
-        # ✅ GPU模式或ONNX失败时使用PyTorch
+        # ✅ PyTorch is used in GPU mode or when ONNX fails
         model = get_generator()
         sd = torch.load(self._get_file_path('inpainting_lama.ckpt'), map_location='cpu')
         model.load_state_dict(sd['model'] if 'model' in sd else sd)
@@ -96,13 +96,13 @@ class LamaInpainter(LamaMPEInpainter):
             del self.model
     
     async def _infer(self, image: np.ndarray, mask: np.ndarray, config, inpainting_size: int = 1024, verbose: bool = False) -> np.ndarray:
-        # ✅ ONNX推理（default模型，2个输入），失败时自动降级到PyTorch
+        # ✅ ONNX inference (default model, 2 inputs), falling back to PyTorch automatically on failure
         if hasattr(self, 'backend') and self.backend == 'onnx':
             try:
                 return await self._infer_onnx_default(image, mask, inpainting_size, verbose)
             except Exception as e:
                 self.logger.warning(f"ONNX inference failed ({str(e)[:100]}); falling back to PyTorch for this run")
-                # 降级：需要加载PyTorch模型
+                # Fallback: the PyTorch model has to be loaded
                 if not hasattr(self, 'model'):
                     self.logger.info("Loading PyTorch model...")
                     model = get_generator()
@@ -113,7 +113,7 @@ class LamaInpainter(LamaMPEInpainter):
                     if self.device.startswith('cuda') or self.device == 'mps':
                         self.model.to(self.device)
         
-        # ✅ PyTorch推理（调用父类）
+        # ✅ PyTorch inference (calls the parent class)
         return await super()._infer(image, mask, config, inpainting_size, verbose)
     
     async def _infer_onnx_default(self, image: np.ndarray, mask: np.ndarray, inpainting_size: int = 1024, verbose: bool = False) -> np.ndarray:
@@ -139,28 +139,28 @@ class LamaInpainter(LamaMPEInpainter):
         
         # Padding
         img_pad = np.pad(image, ((0, new_h - h), (0, new_w - w), (0, 0)), mode='symmetric')
-        # 根据 mask_original_resized 的维度决定 padding 参数
+        # Choose the padding parameters by the number of dimensions of mask_original_resized
         if len(mask_original_resized.shape) == 3:
             mask_pad = np.pad(mask_original_resized, ((0, new_h - h), (0, new_w - w), (0, 0)), mode='symmetric')
         else:
             mask_pad = np.pad(mask_original_resized, ((0, new_h - h), (0, new_w - w)), mode='symmetric')
-            mask_pad = mask_pad[:, :, None]  # 扩展为3维
+            mask_pad = mask_pad[:, :, None]  # Expand to 3 dimensions
         
-        # 准备输入（0-1归一化）
+        # Prepare the inputs (normalised to 0-1)
         img = img_pad.astype(np.float32) / 255.0
         img = np.transpose(img, (2, 0, 1))[None, ...]  # [1, 3, H, W]
         
         mask_input = mask_pad.astype(np.float32)[:, :, 0:1]
         mask_input = np.transpose(mask_input, (2, 0, 1))[None, ...]  # [1, 1, H, W]
         
-        # ONNX推理（只需2个输入：image和mask）
+        # ONNX inference (only 2 inputs: image and mask)
         ort_inputs = {
             'image': img.astype(np.float32),
             'mask': mask_input.astype(np.float32)
         }
         img_inpainted = self.session.run(None, ort_inputs)[0]
         
-        # 后处理
+        # Post-processing
         img_inpainted = np.transpose(img_inpainted[0], (1, 2, 0))  # [H, W, 3]
         img_inpainted = (img_inpainted * 255.).astype(np.uint8)
         

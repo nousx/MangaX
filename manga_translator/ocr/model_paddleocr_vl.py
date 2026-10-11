@@ -59,7 +59,7 @@ class ModelPaddleOCRVL(OfflineOCR):
             }
             for filename, sha256 in _PADDLEOCR_VL_16_FILES.items()
         },
-        # 48px 颜色预测模型
+        # 48px colour prediction model
         'color_model': {
             'url': [
                 'https://github.com/zyddnys/manga-image-translator/releases/download/beta-0.3/ocr_ar_48px.ckpt',
@@ -76,7 +76,7 @@ class ModelPaddleOCRVL(OfflineOCR):
         },
     }
 
-    # 模型子目录名（在 models/ocr/ 下）
+    # Model subfolder name (under models/ocr/)
     MODEL_DIR_NAME = "PaddleOCR-VL-1.6"
     _OCR_VL_LANGUAGE_HINTS = {
         "auto": "OCR: Extract all text.",
@@ -160,7 +160,7 @@ class ModelPaddleOCRVL(OfflineOCR):
         self.model = None
         self.processor = None
         self.device = None
-        self.color_model = None  # 48px 模型用于颜色预测
+        self.color_model = None  # The 48px model is used for colour prediction
 
     async def _download(self):
         os.makedirs(os.path.join(self.model_dir, self.MODEL_DIR_NAME), exist_ok=True)
@@ -168,14 +168,14 @@ class ModelPaddleOCRVL(OfflineOCR):
 
     async def _load(self, device: str):
         """加载模型"""
-        # 确定模型路径 - 使用 models/ocr/PaddleOCR-VL-1.6
+        # Model path - models/ocr/PaddleOCR-VL-1.6
         model_path = os.path.join(self.model_dir, self.MODEL_DIR_NAME)
 
-        # 设置设备
+        # Set the device
         if device == 'cuda' and torch.cuda.is_available():
             self.device = 'cuda'
             self.use_gpu = True
-            # 使用 bfloat16 以节省显存
+            # Use bfloat16 to save GPU memory
             model_dtype = torch.bfloat16
         elif device == 'mps' and hasattr(torch.backends, 'mps') and torch.backends.mps.is_available():
             self.device = 'mps'
@@ -231,7 +231,7 @@ class ModelPaddleOCRVL(OfflineOCR):
 
         self.model.eval()
 
-        # 加载 48px 模型用于颜色预测
+        # Load the 48px model for colour prediction
         await self._load_color_model(device)
 
     async def _load_color_model(self, device: str):
@@ -332,7 +332,7 @@ class ModelPaddleOCRVL(OfflineOCR):
         Returns:
             识别的文本
         """
-        # 转换为 PIL Image
+        # Convert to a PIL Image
         if isinstance(img, np.ndarray):
             pil_img = Image.fromarray(img)
         else:
@@ -356,12 +356,12 @@ class ModelPaddleOCRVL(OfflineOCR):
                 }
             ]
 
-            # 直接使用 tokenizer 的聊天模板
+            # Use the tokenizer's chat template directly
             text = self.processor.tokenizer.apply_chat_template(
                 messages, tokenize=False, add_generation_prompt=True
             )
 
-            # 预处理
+            # Preprocess
             inputs = self.processor(
                 text=[text],
                 images=[pil_img],
@@ -369,21 +369,21 @@ class ModelPaddleOCRVL(OfflineOCR):
                 padding=True
             )
 
-            # 移除模型不需要的 token_type_ids
+            # Remove token_type_ids, which the model does not need
             if 'token_type_ids' in inputs:
                 del inputs['token_type_ids']
 
-            # 移动到设备
+            # Move to the device
             inputs = {k: v.to(self.device) if isinstance(v, torch.Tensor) else v for k, v in inputs.items()}
 
-            # 生成文本
+            # Generate the text
             with torch.no_grad():
                 generated_ids = self.model.generate(
                     **inputs,
                     **generation_config,
                 )
 
-            # 解码 - 只取新生成的部分
+            # Decode - only the newly generated part
             input_len = inputs["input_ids"].shape[1]
             generated_ids_trimmed = generated_ids[:, input_len:]
             output_text = self.processor.batch_decode(
@@ -409,7 +409,7 @@ class ModelPaddleOCRVL(OfflineOCR):
     def _estimate_colors_48px(self, image: np.ndarray, textline: Quadrilateral, direction: str):
         """使用 48px 模型预测前景色和背景色"""
         try:
-            # 如果 48px 模型未加载，使用默认颜色
+            # When the 48px model is not loaded, use the default colours
             if self.color_model is None:
                 textline.fg_r = textline.fg_g = textline.fg_b = 0
                 textline.bg_r = textline.bg_g = textline.bg_b = 255
@@ -425,18 +425,18 @@ class ModelPaddleOCRVL(OfflineOCR):
             image_tensor = (torch.from_numpy(batch_region).float() - 127.5) / 127.5
             image_tensor = einops.rearrange(image_tensor, 'N H W C -> N C H W')
 
-            # GPU 加速
+            # GPU acceleration
             if self.use_gpu:
                 image_tensor = image_tensor.to(self.device)
 
-            # 使用 48px 模型推理
+            # Inference with the 48px model
             with torch.no_grad():
                 ret = self.color_model.infer_beam_batch_tensor(image_tensor, [new_w], beams_k=5, max_seq_length=255)
 
             if ret and len(ret) > 0:
                 pred_chars_index, prob, fg_pred, bg_pred, fg_ind_pred, bg_ind_pred = ret[0]
 
-                # 计算颜色
+                # Work out the colours
                 has_fg = (fg_ind_pred[:, 1] > fg_ind_pred[:, 0])
                 has_bg = (bg_ind_pred[:, 1] > bg_ind_pred[:, 0])
 
@@ -453,18 +453,18 @@ class ModelPaddleOCRVL(OfflineOCR):
                         continue
                     if ch == '</S>':
                         break
-                    # 处理前景色
+                    # Foreground colour
                     if h_fg.item():
                         fr(int(c_fg[0] * 255))
                         fg(int(c_fg[1] * 255))
                         fb(int(c_fg[2] * 255))
-                    # 处理背景色
+                    # Background colour
                     if h_bg.item():
                         br(int(c_bg[0] * 255))
                         bg(int(c_bg[1] * 255))
                         bb(int(c_bg[2] * 255))
                     else:
-                        # 如果没有背景色，使用前景色作为背景色
+                        # Without a background colour, use the foreground colour as the background
                         br(int(c_fg[0] * 255))
                         bg(int(c_fg[1] * 255))
                         bb(int(c_fg[2] * 255))
@@ -476,12 +476,12 @@ class ModelPaddleOCRVL(OfflineOCR):
                 textline.bg_g = min(max(int(bg()), 0), 255)
                 textline.bg_b = min(max(int(bb()), 0), 255)
             else:
-                # 如果推理失败，设置默认颜色
+                # When inference fails, set the default colours
                 textline.fg_r = textline.fg_g = textline.fg_b = 0
                 textline.bg_r = textline.bg_g = textline.bg_b = 255
 
         except Exception as e:
-            # 如果出错，设置默认颜色
+            # On error, set the default colours
             textline.fg_r = textline.fg_g = textline.fg_b = 0
             textline.bg_r = textline.bg_g = textline.bg_b = 255
             self.logger.debug(f"48px color prediction failed: {e}")
@@ -499,20 +499,20 @@ class ModelPaddleOCRVL(OfflineOCR):
         Returns:
             带有识别文本的 Quadrilateral 列表
         """
-        text_height = 48  # 仅供气泡过滤和颜色预测使用
+        text_height = 48  # Only for the bubble filter and colour prediction
         ignore_bubble = config.ignore_bubble
         use_model_bubble_filter = bool(getattr(config, 'use_model_bubble_filter', False))
         ocr_prompt = self._build_ocr_prompt(config)
         image_height, image_width = image.shape[:2]
 
-        # 生成文本方向信息
+        # Build the text direction information
         quadrilaterals = list(self._generate_text_direction(textlines))
 
         output_regions = []
 
         for idx, (q, direction) in enumerate(quadrilaterals):
             q.assigned_direction = direction
-            # VLM 直接识别原尺寸文本框；48px 变换只留给传统过滤和颜色模型。
+            # The VLM reads text boxes at their original size; the 48px transform is only for the traditional filter and the colour model.
             x1 = max(int(np.floor(q.pts[:, 0].min())), 0)
             y1 = max(int(np.floor(q.pts[:, 1].min())), 0)
             x2 = min(int(np.ceil(q.pts[:, 0].max())) + 1, image_width)
@@ -521,7 +521,7 @@ class ModelPaddleOCRVL(OfflineOCR):
             if region_img.size == 0:
                 region_img = np.full((2, 2, 3), 255, dtype=np.uint8)
 
-            # 过滤非气泡区域
+            # Filter out regions that are not bubbles
             if ignore_bubble > 0 or use_model_bubble_filter:
                 filter_region = q.get_transformed_region(image, direction, text_height)
                 should_ignore = self._should_ignore_region(filter_region, ignore_bubble, image, q, config, bubble_mask=bubble_mask)
@@ -532,7 +532,7 @@ class ModelPaddleOCRVL(OfflineOCR):
                     continue
 
             try:
-                # 识别文本
+                # Recognise the text
                 text = self._recognize_single(region_img, ocr_prompt)
 
                 if not text:
@@ -542,9 +542,9 @@ class ModelPaddleOCRVL(OfflineOCR):
                 else:
                     self.logger.info(f'[OCR] Region {idx}: {text}')
                     q.text = text
-                    q.prob = 0.9  # VLM 模型没有置信度输出，使用固定值
+                    q.prob = 0.9  # The VLM gives no confidence value, so a fixed one is used
 
-                # 使用 48px 模型预测颜色
+                # Predict the colours with the 48px model
                 self._estimate_colors_48px(image, q, direction)
 
                 output_regions.append(q)
@@ -553,15 +553,15 @@ class ModelPaddleOCRVL(OfflineOCR):
                 self.logger.error(f'[ERROR] Region {idx} OCR failed: {e}')
                 q.text = ''
                 q.prob = 0.0
-                # 设置默认颜色
+                # Set the default colours
                 q.fg_r = q.fg_g = q.fg_b = 0
                 q.bg_r = q.bg_g = q.bg_b = 255
                 output_regions.append(q)
 
-            # 清理内存
+            # Free memory
             self._cleanup_ocr_memory(region_img)
 
-        # 清理 GPU 显存
+        # Free GPU memory
         if self.use_gpu:
             pass
 

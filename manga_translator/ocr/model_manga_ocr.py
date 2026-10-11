@@ -10,11 +10,11 @@ import numpy as np
 import torch
 from PIL import Image
 
-# 在导入 transformers 之前配置 HuggingFace 镜像
+# Configure the HuggingFace mirror before importing transformers
 os.environ.setdefault('HF_ENDPOINT', 'https://hf-mirror.com')
 os.environ.setdefault('HF_HUB_ENDPOINT', 'https://hf-mirror.com')
 
-# 禁用 SSL 验证（解决 hf-mirror.com 证书问题）
+# Disable SSL verification (works around the certificate problem of hf-mirror.com)
 import ssl
 
 # import urllib.request
@@ -23,7 +23,7 @@ os.environ['CURL_CA_BUNDLE'] = ''
 os.environ['REQUESTS_CA_BUNDLE'] = ''
 os.environ['HF_HUB_DISABLE_SSL_VERIFY'] = '1'
 
-# 直接导入 transformers 组件，不依赖 manga_ocr 库
+# Import the transformers components directly, without depending on the manga_ocr library
 from transformers import BertJapaneseTokenizer, VisionEncoderDecoderModel, ViTImageProcessor
 
 from ..config import OcrConfig
@@ -32,7 +32,7 @@ from ..utils.generic import AvgMeter
 from .common import OfflineOCR
 from .model_48px import OCR
 
-# ============ 内置 MangaOCR 功能（不依赖 manga_ocr 库）============
+# ============ Built-in MangaOCR (does not depend on the manga_ocr library) ============
 
 class InternalMangaOcr:
     """
@@ -42,12 +42,12 @@ class InternalMangaOcr:
     def __init__(self, pretrained_model_name_or_path="kha-white/manga-ocr-base", device="cpu", logger=None):
         self.logger = logger
 
-        # 加载模型组件
+        # Load the model components
         self.processor = ViTImageProcessor.from_pretrained(pretrained_model_name_or_path)
         self.tokenizer = BertJapaneseTokenizer.from_pretrained(pretrained_model_name_or_path)
         self.model = VisionEncoderDecoderModel.from_pretrained(pretrained_model_name_or_path)
         
-        # 移动到指定设备
+        # Move to the given device
         self.device = device
         self.model.to(device)
         self.model.eval()
@@ -69,42 +69,42 @@ class InternalMangaOcr:
         else:
             raise ValueError(f"img_or_path must be a path or PIL.Image; got: {type(img_or_path)}")
         
-        # 转换为灰度再转回 RGB（manga_ocr 的预处理方式）
+        # Convert to greyscale and back to RGB (the preprocessing of manga_ocr)
         img = img.convert("L").convert("RGB")
         
-        # 预处理
+        # Preprocess
         pixel_values = self.processor(img, return_tensors="pt").pixel_values
         pixel_values = pixel_values.to(self.device)
         
-        # 生成文本
+        # Generate the text
         with torch.no_grad():
             generated_ids = self.model.generate(pixel_values, max_length=300)[0].cpu()
         
-        # 解码
+        # Decode
         text = self.tokenizer.decode(generated_ids, skip_special_tokens=True)
         
-        # 后处理
+        # Post-process
         text = self._post_process(text)
         
         return text
     
     def _post_process(self, text):
         """后处理识别的文本"""
-        # 移除所有空格
+        # Remove all spaces
         text = "".join(text.split())
         
-        # 替换省略号
+        # Replace the ellipsis
         text = text.replace("…", "...")
         
-        # 处理连续的点
+        # Handle runs of dots
         text = re.sub("[・.]{2,}", lambda x: (x.end() - x.start()) * ".", text)
         
-        # 半角转全角（ASCII 和数字）
+        # Half-width to full-width (ASCII and digits)
         try:
             import jaconv
             text = jaconv.h2z(text, ascii=True, digit=True)
         except ImportError:
-            # 如果没有 jaconv，使用简单的转换
+            # Without jaconv, use a simple conversion
             pass
         
         return text
@@ -125,7 +125,7 @@ class ModelMangaOCR(OfflineOCR):
             ],
             'hash': 'f5722368146aa0fbcc9f4726866e4efc3203318ebb66c811d8cbbe915576538a',
         },
-        # MangaOCR 模型文件（从 GitHub Release 下载）
+        # MangaOCR model files (downloaded from the GitHub release)
         'manga_ocr_model': {
             'url': [
                 'https://github.com/hgmzhn/manga-translator-ui/releases/download/v1.9.5/manga_ocr_model.7z',
@@ -158,15 +158,15 @@ class ModelMangaOCR(OfflineOCR):
 
         self.model = OCR(dictionary, 768)
         
-        # 使用内置的 MangaOCR 实现（不依赖 manga_ocr 库）
+        # Use the built-in MangaOCR implementation (does not depend on the manga_ocr library)
         local_manga_ocr_path = os.path.join(self.model_dir, 'manga_ocr')
         model_path = None
         
-        # 1. 优先使用本地下载的模型
+        # 1. Prefer the locally downloaded model
         if os.path.exists(local_manga_ocr_path) and os.path.exists(os.path.join(local_manga_ocr_path, 'config.json')):
             model_path = local_manga_ocr_path
         else:
-            # 2. 兼容旧版本：查找 HuggingFace 缓存
+            # 2. For older versions: look in the HuggingFace cache
             hf_cache_dir = os.path.expanduser('~/.cache/huggingface/hub')
             if os.path.exists(hf_cache_dir):
                 for item in os.listdir(hf_cache_dir):
@@ -180,11 +180,11 @@ class ModelMangaOCR(OfflineOCR):
                                     model_path = hf_model_path
                                     break
         
-        # 3. 如果都没找到，使用在线模型
+        # 3. When neither is found, use the online model
         if model_path is None:
             model_path = "kha-white/manga-ocr-base"
         
-        # 使用内置实现
+        # Use the built-in implementation
         manga_ocr_device = device if device in ['cuda', 'mps'] else 'cpu'
         self.mocr = InternalMangaOcr(
             pretrained_model_name_or_path=model_path,
@@ -268,19 +268,19 @@ class ModelMangaOCR(OfflineOCR):
         for idx in range(len(merged_region_imgs)):
             texts[idx] = self.mocr(Image.fromarray(merged_region_imgs[idx]))
         
-        # ✅ 使用统一的清理方法清理合并后的 region 图像
+        # ✅ Clear the merged region images with the shared clean-up method
         self._cleanup_batch_data(merged_region_imgs)
             
         ix = 0
         out_regions = {}
         for indices in chunks(perm, max_chunk_size):
-            # 先过滤掉非气泡区域
+            # Filter out regions that are not bubbles first
             valid_indices = []
             valid_region_imgs = []
             valid_widths = []
             
             for idx in indices:
-                # 使用基类的通用气泡过滤方法（支持高级检测）
+                # Use the shared bubble filter of the base class (supports advanced detection)
                 if ignore_bubble > 0 or use_model_bubble_filter:
                     textline = quadrilaterals[idx][0]
                     if self._should_ignore_region(region_imgs[idx], ignore_bubble, image, textline, config, bubble_mask=bubble_mask):
@@ -292,7 +292,7 @@ class ModelMangaOCR(OfflineOCR):
                 valid_widths.append(region_imgs[idx].shape[1])
                 ix += 1
             
-            # 如果所有区域都被过滤了，跳过这个 chunk
+            # When every region was filtered out, skip this chunk
             if len(valid_indices) == 0:
                 continue
             
@@ -395,7 +395,7 @@ class ModelMangaOCR(OfflineOCR):
 
                 out_regions[idx_keys[i]] = cur_region
             
-            # ✅ 使用统一的清理方法清理 chunk 数据
+            # ✅ Clear the chunk data with the shared clean-up method
             self._cleanup_ocr_memory(ret, region, image_tensor, force_gpu_cleanup=True)
                 
         output_regions = []
@@ -452,7 +452,7 @@ class ModelMangaOCR(OfflineOCR):
                 cur_region.update_font_colors(np.array([fr, fg, fb]), np.array([br, bg, bb]))
             output_regions.append(cur_region)
         
-        # ✅ 使用统一的清理方法清理最终数据
+        # ✅ Clear the final data with the shared clean-up method
         self._cleanup_batch_data(region_imgs, quadrilaterals, merged_quadrilaterals, out_regions, force_gpu_cleanup=True)
 
         if is_quadrilaterals:

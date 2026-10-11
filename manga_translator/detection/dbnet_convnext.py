@@ -595,7 +595,7 @@ class DBConvNextDetector(OfflineDetector):
             polys = polys.astype(np.int64)
 
         textlines = [Quadrilateral(pts.astype(int), '', score) for pts, score in zip(polys, scores)]
-        textlines = list(filter(lambda q: q.area > 16, textlines))  # 保留最小面积过滤
+        textlines = list(filter(lambda q: q.area > 16, textlines))  # Keep the minimum area filter
         mask_resized = cv2.resize(mask, (mask.shape[1] * 2, mask.shape[0] * 2), interpolation=cv2.INTER_LINEAR)
         if pad_h > 0:
             mask_resized = mask_resized[:-pad_h, :]
@@ -609,7 +609,7 @@ class DBConvNextDetector(OfflineDetector):
         #         cv2.polylines(img_bbox_raw, [txtln.pts], True, color=(255, 0, 0), thickness=2)
         #     cv2.imwrite(f'result/bboxes_unfiltered.png', cv2.cvtColor(img_bbox_raw, cv2.COLOR_RGB2BGR))
 
-        # ✅ Detection完成后立即清理GPU内存
+        # ✅ Free GPU memory right after detection
         if (self.device.startswith('cuda') or self.device == 'mps'):
             try:
                 import torch

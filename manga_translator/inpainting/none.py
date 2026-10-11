@@ -10,14 +10,14 @@ class NoneInpainter(CommonInpainter):
         import cv2
         img_inpainted = np.copy(image)
         
-        # 确保蒙版是单通道
+        # Make sure the mask has a single channel
         if len(mask.shape) == 3:
             mask = cv2.cvtColor(mask, cv2.COLOR_BGR2GRAY)
         
-        # 二值化蒙版，统一按 >0 处理
+        # Binarise the mask; everything > 0 counts
         mask_binary = np.where(mask > 0, 255, 0).astype(np.uint8)
         
-        # 将蒙版区域涂成纯白色
+        # Paint the masked area pure white
         img_inpainted[mask_binary > 0] = np.array([255, 255, 255], np.uint8)
         
         return img_inpainted

@@ -78,7 +78,7 @@ def solid_fill_pure_bubbles(
         if np.max(std_rgb) >= inpaint_thresh:
             continue
 
-        # 气泡蒙版只负责识别候选气泡；实际填色严格限制在修复蒙版内。
+        # The bubble mask only identifies candidate bubbles; the actual fill is strictly limited to the inpainting mask.
         fill_region = (region_bubble > 0) & (mask > 0)
         if not np.any(fill_region):
             continue

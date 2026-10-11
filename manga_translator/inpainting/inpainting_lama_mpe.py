@@ -161,7 +161,7 @@ class LamaMPEInpainter(OfflineInpainter):
     async def _load(self, device: str, **kwargs):
         self.device = device
         
-        # ✅ CPU模式使用ONNX（解决虚拟内存泄漏）
+        # ✅ CPU mode uses ONNX (fixes the virtual memory leak)
         if not device.startswith('cuda') and device != 'mps':
             try:
                 ort = import_onnxruntime(
@@ -171,7 +171,7 @@ class LamaMPEInpainter(OfflineInpainter):
                 onnx_path = self._get_file_path('lamampe.onnx')
                 self.logger.info(f"Using ONNX model (CPU-optimized): {onnx_path}")
                 
-                # 🔧 内存优化配置
+                # 🔧 Memory optimisation settings
                 sess_options = create_session_options(
                     ort,
                     log_severity_level=3,
@@ -191,7 +191,7 @@ class LamaMPEInpainter(OfflineInpainter):
             except Exception as e:
                 self.logger.warning(f"Failed to load ONNX; falling back to PyTorch: {e}")
         
-        # ✅ GPU模式或ONNX失败时使用PyTorch
+        # ✅ PyTorch is used in GPU mode or when ONNX fails
         self.model = load_lama_mpe(self._get_file_path('inpainting_lama_mpe.ckpt'), device='cpu')
         self.model.eval()
         self.backend = 'torch'
@@ -208,14 +208,14 @@ class LamaMPEInpainter(OfflineInpainter):
             del self.model
 
     async def _infer(self, image: np.ndarray, mask: np.ndarray, config: InpainterConfig, inpainting_size: int = 1024, verbose: bool = False) -> np.ndarray:
-        # ✅ ONNX推理（lamampe.onnx 包含完整的 MPE 支持：4个输入 image, mask, rel_pos, direct）
+        # ✅ ONNX inference (lamampe.onnx has full MPE support: 4 inputs image, mask, rel_pos, direct)
         if hasattr(self, 'backend') and self.backend == 'onnx':
             try:
-                # 调用包含MPE的ONNX推理
+                # Run ONNX inference with MPE
                 return await self._infer_onnx(image, mask, inpainting_size, verbose)
             except Exception as e:
                 self.logger.warning(f"ONNX inference failed ({str(e)[:100]}); falling back to PyTorch for this run")
-                # 降级：加载PyTorch模型（.ckpt 应该已经在初始化时下载）
+                # Fallback: load the PyTorch model (the .ckpt should have been downloaded at initialisation)
                 if not hasattr(self, 'model'):
                     self.logger.info("Loading PyTorch model...")
                     self.model = load_lama_mpe(self._get_file_path('inpainting_lama_mpe.ckpt'), device='cpu')
@@ -223,7 +223,7 @@ class LamaMPEInpainter(OfflineInpainter):
                     if self.device.startswith('cuda') or self.device == 'mps':
                         self.model.to(self.device)
         
-        # ✅ PyTorch推理（原有逻辑）
+        # ✅ PyTorch inference (the original logic)
         img_original = np.copy(image)
         mask_original = np.copy(mask)
         mask_original = np.where(mask_original > 0, 1, 0).astype(np.uint8)
@@ -285,10 +285,10 @@ class LamaMPEInpainter(OfflineInpainter):
         if new_h != height or new_w != width:
             img_inpainted = cv2.resize(img_inpainted, (width, height), interpolation = cv2.INTER_LINEAR)
         
-        # 确保所有数组尺寸匹配
+        # Make sure all array sizes match
         self.logger.debug(f"Before blend - img_inpainted: {img_inpainted.shape}, img_original: {img_original.shape}, mask_original: {mask_original.shape}")
         
-        # 如果mask_original尺寸不匹配，resize它
+        # Resize mask_original when its size does not match
         if mask_original.shape[:2] != img_inpainted.shape[:2]:
             self.logger.warning(f"Resizing mask_original from {mask_original.shape} to match img_inpainted {img_inpainted.shape[:2]}")
             mask_original = cv2.resize(mask_original, (img_inpainted.shape[1], img_inpainted.shape[0]), interpolation = cv2.INTER_NEAREST)
@@ -308,7 +308,7 @@ class LamaMPEInpainter(OfflineInpainter):
         
         height, width, c = image.shape
         
-        # 步骤1: 保持宽高比缩放（如果需要）
+        # Step 1: scale keeping the aspect ratio (when needed)
         if max(image.shape[0: 2]) > inpainting_size:
             image = resize_keep_aspect(image, inpainting_size)
             mask_resized = resize_keep_aspect(mask, inpainting_size)
@@ -319,8 +319,8 @@ class LamaMPEInpainter(OfflineInpainter):
         mask_resized = np.where(mask_resized > 0, 255, 0).astype(np.uint8)
         mask_original_resized = np.where(mask_original_resized > 0, 1, 0).astype(np.uint8)
         
-        # 步骤2: Padding到64的倍数（Lama FFT架构需要更大对齐值避免维度不匹配）
-        # 原先 pad_size=8 在某些尺寸下会导致 FFT 中间层维度不匹配（如 168 vs 169）
+        # Step 2: pad to a multiple of 64 (the LaMa FFT architecture needs a larger alignment to avoid dimension mismatches)
+        # The earlier pad_size=8 gave mismatched dimensions in the FFT middle layers for some sizes (such as 168 vs 169)
         pad_size = 64
         h, w, c = image.shape
         new_h = h if h % pad_size == 0 else (pad_size - (h % pad_size)) + h
@@ -328,32 +328,32 @@ class LamaMPEInpainter(OfflineInpainter):
         
         self.logger.info(f'Inpainting resolution: {new_w}x{new_h}')
         
-        # ✅ 使用 padding 而非 resize（保持图像不变形）
+        # ✅ Pad instead of resizing (the image is not distorted)
         img_pad = np.pad(image, ((0, new_h - h), (0, new_w - w), (0, 0)), mode='symmetric')
         mask_pad_single = np.pad(mask_resized, ((0, new_h - h), (0, new_w - w)), mode='constant', constant_values=0)
         
-        # 处理 mask_original_resized 的 padding
+        # Pad mask_original_resized
         if len(mask_original_resized.shape) == 3:
             mask_pad = np.pad(mask_original_resized, ((0, new_h - h), (0, new_w - w), (0, 0)), mode='symmetric')
         else:
             mask_pad = np.pad(mask_original_resized, ((0, new_h - h), (0, new_w - w)), mode='symmetric')
             mask_pad = mask_pad[:, :, None]
         
-        # 计算MPE输入
+        # Compute the MPE inputs
         rel_pos, direct = load_masked_position_encoding(mask_pad_single)
         
-        # 准备输入（0-1归一化）
+        # Prepare the inputs (normalised to 0-1)
         img = img_pad.astype(np.float32) / 255.0
         img = np.transpose(img, (2, 0, 1))[None, ...]  # [1, 3, H, W]
         
         mask_input = mask_pad.astype(np.float32)[:, :, 0:1]
         mask_input = np.transpose(mask_input, (2, 0, 1))[None, ...]  # [1, 1, H, W]
         
-        # MPE输入格式
+        # MPE input format
         rel_pos_input = rel_pos[None, ...].astype(np.int64)
         direct_input = direct[None, ...].astype(np.int64)
         
-        # ONNX推理
+        # ONNX inference
         ort_inputs = {
             'image': img.astype(np.float32),
             'mask': mask_input.astype(np.float32),
@@ -362,14 +362,14 @@ class LamaMPEInpainter(OfflineInpainter):
         }
         img_inpainted = self.session.run(None, ort_inputs)[0]
         
-        # 后处理
+        # Post-processing
         img_inpainted = np.transpose(img_inpainted[0], (1, 2, 0))
         img_inpainted = (img_inpainted * 255.).astype(np.uint8)
         
-        # 移除 padding
+        # Remove the padding
         img_inpainted = img_inpainted[:h, :w, :]
         
-        # 还原到原始尺寸（使用双三次插值，与Rust一致）
+        # Restore the original size (bicubic interpolation, as in the Rust version)
         if max(height, width) > inpainting_size:
             img_inpainted = cv2.resize(img_inpainted, (width, height), interpolation=cv2.INTER_CUBIC)
             mask_original_resized = cv2.resize(mask_original_resized, (width, height), interpolation=cv2.INTER_NEAREST)
@@ -399,7 +399,7 @@ class LamaMPEInpainter(OfflineInpainter):
         mask_resized = np.where(mask_resized > 0, 255, 0).astype(np.uint8)
         mask_original_resized = np.where(mask_original_resized > 0, 1, 0).astype(np.uint8)
         
-        # Padding到64的倍数（Lama FFT架构需要更大对齐值）
+        # Pad to a multiple of 64 (the LaMa FFT architecture needs a larger alignment)
         pad_size = 64
         h, w, c = image.shape
         new_h = h if h % pad_size == 0 else (pad_size - (h % pad_size)) + h
@@ -408,28 +408,28 @@ class LamaMPEInpainter(OfflineInpainter):
         # Padding
         img_pad = np.pad(image, ((0, new_h - h), (0, new_w - w), (0, 0)), mode='symmetric')
         mask_pad_single = np.pad(mask_resized, ((0, new_h - h), (0, new_w - w)), mode='constant', constant_values=0)
-        # 根据 mask_original_resized 的维度决定 padding 参数
+        # Choose the padding parameters by the number of dimensions of mask_original_resized
         if len(mask_original_resized.shape) == 3:
             mask_pad = np.pad(mask_original_resized, ((0, new_h - h), (0, new_w - w), (0, 0)), mode='symmetric')
         else:
             mask_pad = np.pad(mask_original_resized, ((0, new_h - h), (0, new_w - w)), mode='symmetric')
-            mask_pad = mask_pad[:, :, None]  # 扩展为3维
+            mask_pad = mask_pad[:, :, None]  # Expand to 3 dimensions
         
-        # ✅ 计算MPE输入（使用padding后的mask）
+        # ✅ Compute the MPE inputs (with the padded mask)
         rel_pos, direct = load_masked_position_encoding(mask_pad_single)
         
-        # 准备输入（0-1归一化）
+        # Prepare the inputs (normalised to 0-1)
         img = img_pad.astype(np.float32) / 255.0
         img = np.transpose(img, (2, 0, 1))[None, ...]  # [1, 3, H, W]
         
         mask_input = mask_pad.astype(np.float32)[:, :, 0:1]
         mask_input = np.transpose(mask_input, (2, 0, 1))[None, ...]  # [1, 1, H, W]
         
-        # MPE输入格式：[1, H, W] for rel_pos, [1, H, W, 4] for direct
+        # MPE input format: [1, H, W] for rel_pos, [1, H, W, 4] for direct
         rel_pos_input = rel_pos[None, ...].astype(np.int64)  # [1, H, W]
         direct_input = direct[None, ...].astype(np.int64)    # [1, H, W, 4]
         
-        # ONNX推理（4个输入）
+        # ONNX inference (4 inputs)
         ort_inputs = {
             'image': img.astype(np.float32),
             'mask': mask_input.astype(np.float32),
@@ -438,7 +438,7 @@ class LamaMPEInpainter(OfflineInpainter):
         }
         img_inpainted = self.session.run(None, ort_inputs)[0]
         
-        # 后处理
+        # Post-processing
         img_inpainted = np.transpose(img_inpainted[0], (1, 2, 0))  # [H, W, 3]
         img_inpainted = (img_inpainted * 255.).astype(np.uint8)
         
@@ -462,7 +462,7 @@ class LamaLargeInpainter(LamaMPEInpainter):
 
     _MODEL_MAPPING = {
         'model': {
-            # 使用 Hugging Face 镜像站（自动遵循 HF_ENDPOINT 环境变量）
+            # Use the Hugging Face mirror (follows the HF_ENDPOINT environment variable automatically)
             'url': [
                 'https://hf-mirror.com/dreMaz/AnimeMangaInpainting/resolve/main/lama_large_512px.ckpt',
                 'https://www.modelscope.cn/models/hgmzhn/manga-translator-ui/resolve/master/lama_large_512px.ckpt',
@@ -487,14 +487,14 @@ class LamaLargeInpainter(LamaMPEInpainter):
         - 如果是 'onnx' key，只检查 ONNX 文件
         - 如果是 'model' key：必须确保 .ckpt 文件存在（用于降级）
         """
-        # 如果检查的是 onnx key，直接调用父类检查
+        # When the onnx key is checked, call the parent check directly
         if map_key == 'onnx':
             return super()._check_downloaded_map(map_key)
         
-        # 如果检查的是 model key（.ckpt）
+        # When the model key (.ckpt) is checked
         if map_key == 'model':
             ckpt_path = self._get_file_path('lama_large_512px.ckpt')
-            # 必须确保 .ckpt 存在，用于 ONNX 失败时降级
+            # The .ckpt must exist, as the fallback when ONNX fails
             return os.path.isfile(ckpt_path)
         
         return super()._check_downloaded_map(map_key)
@@ -502,7 +502,7 @@ class LamaLargeInpainter(LamaMPEInpainter):
     async def _load(self, device: str, force_torch: bool = False):
         self.device = device
         
-        # ✅ CPU模式使用ONNX（除非强制使用PyTorch）
+        # ✅ CPU mode uses ONNX (unless PyTorch is forced)
         if not device.startswith('cuda') and device != 'mps' and not force_torch:
             try:
                 ort = import_onnxruntime(
@@ -512,20 +512,20 @@ class LamaLargeInpainter(LamaMPEInpainter):
                 onnx_path = self._get_file_path('lamalarge.onnx')
                 ckpt_path = self._get_file_path('lama_large_512px.ckpt')
                 
-                # 检查 ONNX 文件是否存在
+                # Check whether the ONNX file exists
                 if not os.path.isfile(onnx_path):
                     self.logger.info("ONNX model does not exist; download required")
-                    # 标记为未下载，触发下载
+                    # Mark as not downloaded, to start the download
                     self._downloaded = False
                     await self._download()
                     self._downloaded = True
                 
-                # ⚠️ 检查备用的 PyTorch 模型是否存在（用于 ONNX 失败时降级）
+                # ⚠️ Check whether the fallback PyTorch model exists (used when ONNX fails)
                 if not os.path.isfile(ckpt_path):
                     self.logger.warning(f"Fallback PyTorch model does not exist: {ckpt_path}")
                     self.logger.info("Downloading fallback PyTorch model...")
                     try:
-                        # 临时标记为未下载，触发下载
+                        # Mark as not downloaded for now, to start the download
                         old_downloaded = self._downloaded
                         self._downloaded = False
                         await self._download()
@@ -537,7 +537,7 @@ class LamaLargeInpainter(LamaMPEInpainter):
                 
                 self.logger.info(f"Using ONNX model (CPU-optimized): {onnx_path}")
                 
-                # 🔧 ONNX Runtime 配置
+                # 🔧 ONNX Runtime settings
                 sess_options = create_session_options(
                     ort,
                     log_severity_level=3,
@@ -559,22 +559,22 @@ class LamaLargeInpainter(LamaMPEInpainter):
             except Exception as e:
                 self.logger.warning(f"Failed to load ONNX; falling back to PyTorch: {e}")
         
-        # ✅ 强制使用PyTorch或GPU模式
+        # ✅ PyTorch is forced, or GPU mode
         if force_torch:
             self.logger.info("'Force PyTorch' is enabled; skipping ONNX")
         
-        # ✅ GPU模式或ONNX失败时使用PyTorch
+        # ✅ PyTorch is used in GPU mode or when ONNX fails
         ckpt_path = self._get_file_path('lama_large_512px.ckpt')
         
-        # 检查 .ckpt 文件是否存在
+        # Check whether the .ckpt file exists
         if not os.path.isfile(ckpt_path):
             self.logger.info("PyTorch model (.ckpt) does not exist; download required")
-            # 标记为未下载，触发下载
+            # Mark as not downloaded, to start the download
             self._downloaded = False
             await self._download()
             self._downloaded = True
         
-        # 直接加载到目标设备，避免重复移动
+        # Load directly onto the target device, to avoid moving it again
         target_device = device if (device.startswith('cuda') or device == 'mps') else 'cpu'
         self.model = load_lama_mpe(ckpt_path, device=target_device, use_mpe=False, large_arch=True, weights_only=True)
         self.model.eval()
@@ -692,13 +692,13 @@ class LamaLargeInpainter(LamaMPEInpainter):
         return self._restore_large_output(img_inpainted, prep)
 
     async def _infer(self, image: np.ndarray, mask: np.ndarray, config: InpainterConfig, inpainting_size: int = 1024, verbose: bool = False) -> np.ndarray:
-        # ✅ ONNX推理，失败时自动降级到PyTorch
+        # ✅ ONNX inference, falling back to PyTorch automatically on failure
         if hasattr(self, 'backend') and self.backend == 'onnx':
             try:
                 return await self._infer_onnx(image, mask, inpainting_size, verbose)
             except Exception as e:
                 self.logger.warning(f"ONNX inference failed ({str(e)[:100]}); falling back to PyTorch for this run")
-                # 降级：需要加载PyTorch模型
+                # Fallback: the PyTorch model has to be loaded
                 if not hasattr(self, 'model'):
                     self.logger.info("Loading PyTorch model...")
                     ckpt_path = self._get_file_path('lama_large_512px.ckpt')
@@ -711,7 +711,7 @@ class LamaLargeInpainter(LamaMPEInpainter):
                     if self.device.startswith('cuda') or self.device == 'mps':
                         self.model.to(self.device)
 
-        # ✅ PyTorch推理：与 ONNX 保持一致的缩放/补边逻辑
+        # ✅ PyTorch inference: the same scaling and padding as ONNX
         return await self._infer_torch_large(image, mask, config, inpainting_size, verbose)
     
     async def _infer_onnx(self, image: np.ndarray, mask: np.ndarray, inpainting_size: int = 1024, verbose: bool = False) -> np.ndarray:
@@ -729,17 +729,17 @@ class LamaLargeInpainter(LamaMPEInpainter):
             mask_input = np.transpose(mask_input, (2, 0, 1))[None, ...]  # [1, 1, H, W]
             del image_pad, mask_pad
 
-            # ONNX推理
+            # ONNX inference
             ort_inputs = {
                 'image': img,
                 'mask': mask_input
             }
             img_inpainted = self.session.run(None, ort_inputs)[0]
             
-            # 立即释放输入数据
+            # Release the input data at once
             del img, mask_input, ort_inputs
             
-            # 后处理
+            # Post-processing
             img_inpainted = np.transpose(img_inpainted[0], (1, 2, 0))
             img_inpainted = (img_inpainted * 255.).astype(np.uint8)
 
@@ -1439,14 +1439,14 @@ def load_lama_mpe(model_path, device, use_mpe: bool = True, large_arch: bool = F
         model.mpe.load_state_dict(sd['str_state_dict'])
     model.eval()
     
-    # 使用 to_empty() 来避免 meta tensor 错误
+    # Use to_empty() to avoid the meta tensor error
     if device != 'cpu':
         try:
-            # 先尝试直接移动
+            # Try a direct move first
             model.to(device)
         except NotImplementedError as e:
             if 'meta tensor' in str(e):
-                # 如果遇到 meta tensor 错误，使用 to_empty()
+                # On a meta tensor error, use to_empty()
                 model.generator = model.generator.to_empty(device=device)
                 model.generator.load_state_dict(sd['gen_state_dict'])
                 if use_mpe and model.mpe is not None:

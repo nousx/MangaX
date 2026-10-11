@@ -201,9 +201,9 @@ class CRAFTDetector(OfflineDetector):
         mask = cv2.dilate(mask, kern)
 
         textlines = [Quadrilateral(pts.astype(int), '', 1) for pts in polys_ret]
-        textlines = list(filter(lambda q: q.area > 16, textlines))  # 保留最小面积过滤
+        textlines = list(filter(lambda q: q.area > 16, textlines))  # Keep the minimum area filter
 
-        # ✅ Detection完成后立即清理GPU内存
+        # ✅ Free GPU memory right after detection
         del x, y, y_refiner, feature
         if (self.device.startswith('cuda') or self.device == 'mps') and torch.cuda.is_available():
             pass

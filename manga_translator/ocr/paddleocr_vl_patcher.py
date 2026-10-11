@@ -55,7 +55,7 @@ def patch_paddleocr_vl_files(model_path: str):
     Args:
         model_path: 模型目录路径
     """
-    # 1. 创建 __init__.py 文件（如果不存在）
+    # 1. Create the __init__.py file (when it does not exist)
     init_file = os.path.join(model_path, '__init__.py')
     if not os.path.exists(init_file):
         init_content = '''# 将 ernie4_5 映射到当前模块，避免 transformers 查找不存在的模块
@@ -81,23 +81,23 @@ if 'transformers.models.ernie4_5_moe' not in sys.modules:
         with open(init_file, 'w', encoding='utf-8') as f:
             f.write(init_content)
     
-    # 2. 修补 modeling_paddleocr_vl.py 文件（注释掉 @check_model_inputs 装饰器）
+    # 2. Patch modeling_paddleocr_vl.py (comment out the @check_model_inputs decorator)
     modeling_file = os.path.join(model_path, 'modeling_paddleocr_vl.py')
     if os.path.exists(modeling_file):
         with open(modeling_file, 'r', encoding='utf-8') as f:
             content = f.read()
         changed = False
 
-        # 检查是否需要修补
+        # Check whether a patch is needed
         if '@check_model_inputs' in content and '# @check_model_inputs' not in content:
-            # 替换 @check_model_inputs 为注释
+            # Replace @check_model_inputs with a comment
             content = content.replace(
                 '    @check_model_inputs',
                 '    # @check_model_inputs  # 注释掉此装饰器以避免参数检查问题'
             )
             changed = True
 
-        # transformers 4.57+ 的 create_causal_mask 参数名从 inputs_embeds 改为 input_embeds
+        # In transformers 4.57+ the parameter of create_causal_mask was renamed from inputs_embeds to input_embeds
         legacy_mask_block = """        causal_mask = create_causal_mask(
             config=self.config,
             inputs_embeds=inputs_embeds,
@@ -118,7 +118,7 @@ if 'transformers.models.ernie4_5_moe' not in sys.modules:
             content = content.replace(legacy_mask_block, patched_mask_block)
             changed = True
 
-        # 上面的兼容修补只应作用于 create_causal_mask，其他 forward / generation 调用仍需保留 inputs_embeds
+        # The compatibility patch above must only apply to create_causal_mask; other forward and generation calls still need inputs_embeds
         accidental_replacements = (
             (
                 """        outputs: BaseModelOutputWithPast = self.model(
@@ -218,7 +218,7 @@ def register_ernie_modules(model_path: str):
     Args:
         model_path: 模型目录路径
     """
-    # 预先导入模块以注册 ernie4_5 映射
+    # Import the module in advance to register the ernie4_5 mapping
     if os.path.exists(model_path):
         sys.path.insert(0, model_path)
         try:

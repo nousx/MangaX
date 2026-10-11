@@ -42,7 +42,7 @@ class CommonDetector(InfererModule):
             result_path_fn,
             det_rearrange_min_effective_short_side,
         )
-        # 面积过滤已移至文本行合并后进行（基于合并后的大框）
+        # Area filtering moved to after text line merging (based on the merged box)
 
         # Remove filters
         if add_border:
@@ -97,7 +97,7 @@ class CommonDetector(InfererModule):
             points[:,0] = np.clip(points[:,0], 0, old_w)
             points[:,1] = np.clip(points[:,1], 0, old_h)
             new_txtln = Quadrilateral(points, txtln.text, txtln.prob)
-            # 保留自定义属性（如 det_label, yolo_label, is_yolo_box）
+            # Keep the custom attributes (such as det_label, yolo_label, is_yolo_box)
             for attr in ('det_label', 'yolo_label', 'is_yolo_box'):
                 if hasattr(txtln, attr):
                     setattr(new_txtln, attr, getattr(txtln, attr))

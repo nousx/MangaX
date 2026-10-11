@@ -100,13 +100,13 @@ class Model48pxOCR(OfflineOCR):
 
         ix = 0
         for indices in chunks(perm, max_chunk_size):
-            # 先过滤掉非气泡区域
+            # Filter out regions that are not bubbles first
             valid_indices = []
             valid_region_imgs = []
             valid_widths = []
             
             for idx in indices:
-                # 使用基类的通用气泡过滤方法（支持高级检测）
+                # Use the shared bubble filter of the base class (supports advanced detection)
                 if ignore_bubble > 0 or use_model_bubble_filter:
                     textline = quadrilaterals[idx][0]
                     if self._should_ignore_region(region_imgs[idx], ignore_bubble, image, textline, config, bubble_mask=bubble_mask):
@@ -119,7 +119,7 @@ class Model48pxOCR(OfflineOCR):
                 valid_widths.append(region_imgs[idx].shape[1])
                 ix += 1
             
-            # 如果所有区域都被过滤了，跳过这个 chunk
+            # When every region was filtered out, skip this chunk
             if len(valid_indices) == 0:
                 continue
             
@@ -130,16 +130,16 @@ class Model48pxOCR(OfflineOCR):
                 W = valid_region_imgs[i].shape[1]
                 region[i, :, : W, :] = valid_region_imgs[i]
                 if verbose:
-                    # 保存OCR调试图片，使用优化的保存方式
+                    # Save the OCR debug image in a space-saving way
                     ocr_result_dir = os.environ.get('MANGA_OCR_RESULT_DIR', 'result/ocrs/')
                     os.makedirs(ocr_result_dir, exist_ok=True)
                     
-                    # 转换图片数据
+                    # Convert the image data
                     img_data = cv2.cvtColor(region[i, :, :, :], cv2.COLOR_RGB2BGR)
                     if quadrilaterals[idx][1] == 'v':
                         img_data = cv2.rotate(img_data, cv2.ROTATE_90_CLOCKWISE)
                     
-                    # 限制OCR调试图片最大尺寸为200像素（OCR图片通常很小）
+                    # Limit OCR debug images to at most 200 pixels (OCR images are usually small)
                     max_ocr_size = 200
                     height, width = img_data.shape[:2]
                     if max(height, width) > max_ocr_size:
@@ -148,7 +148,7 @@ class Model48pxOCR(OfflineOCR):
                         new_height = int(height * scale)
                         img_data = cv2.resize(img_data, (new_width, new_height), interpolation=cv2.INTER_AREA)
                     
-                    # 使用高压缩保存
+                    # Save with high compression
                     compression_params = [cv2.IMWRITE_PNG_COMPRESSION, 9]
                     imwrite_unicode(os.path.join(ocr_result_dir, f'{ix-N+i}.png'), img_data, self.logger, compression_params)
             image_tensor = (torch.from_numpy(region).float() - 127.5) / 127.5
@@ -242,7 +242,7 @@ class Model48pxOCR(OfflineOCR):
 
                 out_regions.append(cur_region)
 
-        # 清理 GPU 显存
+        # Free GPU memory
         self._cleanup_ocr_memory(force_gpu_cleanup=False)
 
         if is_quadrilaterals:
@@ -743,7 +743,7 @@ class OCR(nn.Module):
                 self.color_pred_bg_ind(color_feats)
             result.append((cur_hypo.out_idx[1:], cur_hypo.prob(), fg_pred[0], bg_pred[0], fg_ind_pred[0], bg_ind_pred[0]))
         
-        # ✅ 清理 beam search 的大张量（必须在函数内部直接删除局部变量）
+        # ✅ Free the large beam search tensors (the local variables have to be deleted inside the function itself)
         del memory, finished_hypos
         if 'input_mask' in locals():
             del input_mask
@@ -881,7 +881,7 @@ class OCR(nn.Module):
                 self.color_pred_bg_ind(color_feats)
             result.append((final_idx[1:], prob, fg_pred[0], bg_pred[0], fg_ind_pred[0], bg_ind_pred[0]))
 
-        # ✅ 清理 beam search 的大张量（必须在函数内部直接删除局部变量）
+        # ✅ Free the large beam search tensors (the local variables have to be deleted inside the function itself)
         del memory, input_mask, cached_activations, finished_hypos
         if 'out_idx' in locals():
             del out_idx

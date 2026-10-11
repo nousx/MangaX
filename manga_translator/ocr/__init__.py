@@ -9,7 +9,7 @@ from .model_32px import Model32pxOCR
 from .model_48px import Model48pxOCR
 from .model_48px_ctc import Model48pxCTCOCR
 
-# ModelMangaOCR 延迟导入，避免未使用时下载模型
+# ModelMangaOCR is imported lazily, so the model is not downloaded when it is not used
 from .model_paddleocr import (
     ModelPaddleOCR,
     ModelPaddleOCRKorean,
@@ -50,13 +50,13 @@ OCRS = {
     Ocr.ocr32px: Model32pxOCR,
     Ocr.ocr48px: Model48pxOCR,
     Ocr.ocr48px_ctc: Model48pxCTCOCR,
-    Ocr.mocr: _get_manga_ocr_class,  # 延迟导入
+    Ocr.mocr: _get_manga_ocr_class,  # Lazy import
     Ocr.paddleocr: ModelPaddleOCR,
     Ocr.paddleocr_korean: ModelPaddleOCRKorean,
     Ocr.paddleocr_latin: ModelPaddleOCRLatin,
     Ocr.paddleocr_thai: ModelPaddleOCRThai,
-    Ocr.paddleocr_vl: _get_paddleocr_vl_class,  # 延迟导入 PaddleOCR-VL
-    Ocr.hayai_ocr_v2: _get_hayai_ocr_class,  # 延迟导入 Hayai OCR
+    Ocr.paddleocr_vl: _get_paddleocr_vl_class,  # Lazy import of PaddleOCR-VL
+    Ocr.hayai_ocr_v2: _get_hayai_ocr_class,  # Lazy import of Hayai OCR
     Ocr.openai_ocr: _get_openai_ocr_class,
     Ocr.gemini_ocr: _get_gemini_ocr_class,
 }
@@ -83,9 +83,9 @@ def get_ocr(key: Ocr, *args, **kwargs) -> CommonOCR:
     # Use cache to avoid reloading models in the same translation session
     if key not in ocr_cache:
         ocr_class = OCRS[key]
-        # 处理延迟导入的情况
+        # Handle the lazily imported case
         if not isinstance(ocr_class, type):
-            ocr_class = ocr_class()  # 调用函数获取真正的类
+            ocr_class = ocr_class()  # Call the function to get the real class
         ocr_cache[key] = ocr_class(*args, **kwargs)
     return ocr_cache[key]
 

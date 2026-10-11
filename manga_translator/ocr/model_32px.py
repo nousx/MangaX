@@ -85,7 +85,7 @@ class Model32pxOCR(OfflineOCR):
             for i, idx in enumerate(indices):
                 W = region_imgs[idx].shape[1]
                 tmp = region_imgs[idx]
-                # 使用基类的通用气泡过滤方法（支持高级检测）
+                # Use the shared bubble filter of the base class (supports advanced detection)
                 if ignore_bubble > 0 or use_model_bubble_filter:
                     textline = quadrilaterals[idx][0]
                     if self._should_ignore_region(region_imgs[idx], ignore_bubble, image, textline, config, bubble_mask=bubble_mask):
@@ -172,7 +172,7 @@ class Model32pxOCR(OfflineOCR):
 
                 out_regions.append(cur_region)
 
-        # 清理 GPU 显存
+        # Free GPU memory
         self._cleanup_ocr_memory(force_gpu_cleanup=False)
 
         if is_quadrilaterals:
@@ -633,7 +633,7 @@ class OCR(nn.Module):
                 self.bg_b_pred(color_feats)
             result.append((cur_hypo.out_idx, cur_hypo.prob(), fg_r, fg_g, fg_b, bg_r, bg_g, bg_b))
         
-        # ✅ 清理 beam search 的大张量（必须在函数内部直接删除局部变量）
+        # ✅ Free the large beam search tensors (the local variables have to be deleted inside the function itself)
         del memory, finished_hypos
         if 'input_mask' in locals():
             del input_mask

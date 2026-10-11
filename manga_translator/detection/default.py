@@ -67,7 +67,7 @@ class DefaultDetector(OfflineDetector):
             raw_mask: Raw detection mask
             bbox_debug_img: Debug image with all bboxes and scores (only if verbose=True), otherwise None
         """
-        # 验证输入图片
+        # Check the input image
         if image is None or image.size == 0:
             self.logger.error("Input image is empty or invalid")
             return [], np.zeros((100, 100), dtype=np.uint8), None
@@ -102,23 +102,23 @@ class DefaultDetector(OfflineDetector):
 
         mask = mask[0, 0, :, :]
         
-        # 在verbose模式下，从mask直接提取所有连通区域用于调试图
+        # In verbose mode, extract every connected area directly from the mask for the debug image
         bbox_debug_img = None
         if verbose:
             try:
                 self.logger.info(f'[DEBUG] mask shape: {mask.shape}, image shape: {image.shape}, text_threshold: {text_threshold}')
-                # 诊断mask和db的数值分布
+                # Diagnose the value distribution of mask and db
                 mid_values_ratio_mask = np.sum((mask > 0.1) & (mask < 0.9)) / mask.size * 100
                 self.logger.info(f"[DEBUG] mask value distribution: min={mask.min():.3f}, max={mask.max():.3f}, mean={mask.mean():.3f}")
                 self.logger.info(f"[DEBUG] mask mid-range values (0.1-0.9): {mid_values_ratio_mask:.2f}%")
                 
-                # 检查db的分布（用于对比）
+                # Check the distribution of db (for comparison)
                 db_slice = db[0, 0, :, :]
                 mid_values_ratio_db = np.sum((db_slice > 0.1) & (db_slice < 0.9)) / db_slice.size * 100
                 self.logger.info(f"[DEBUG] db value distribution: min={db_slice.min():.3f}, max={db_slice.max():.3f}, mean={db_slice.mean():.3f}")
                 self.logger.info(f"[DEBUG] db mid-range values (0.1-0.9): {mid_values_ratio_db:.2f}%")
                 
-                # resize mask和db到和原图相同的尺寸（用于调试图）
+                # Resize mask and db to the size of the original image (for the debug image)
                 mask_resized_debug = cv2.resize(mask, (mask.shape[1] * 2, mask.shape[0] * 2), interpolation=cv2.INTER_LINEAR)
                 db_resized_debug = cv2.resize(db_slice, (db_slice.shape[1] * 2, db_slice.shape[0] * 2), interpolation=cv2.INTER_LINEAR)
                 if pad_h > 0:
@@ -130,12 +130,12 @@ class DefaultDetector(OfflineDetector):
                 
                 self.logger.info(f'[DEBUG] mask_resized_debug shape: {mask_resized_debug.shape}')
                 
-                # 对mask进行二值化（只使用text_threshold，不使用box_threshold）
+                # Binarise the mask (with text_threshold only, not box_threshold)
                 binary_mask = (mask_resized_debug > text_threshold).astype(np.uint8)
                 num_white_pixels = np.sum(binary_mask)
                 self.logger.info(f'[DEBUG] binary_mask has {num_white_pixels} white pixels out of {binary_mask.size} total')
                 
-                # 找到所有连通区域
+                # Find all connected areas
                 contours, _ = cv2.findContours(binary_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
                 self.logger.info(f'[DEBUG] Found {len(contours)} contours from mask')
                 
@@ -144,38 +144,38 @@ class DefaultDetector(OfflineDetector):
                     all_scores = []
                     
                     for contour in contours:
-                        # 获取最小外接矩形
+                        # Minimum bounding rectangle
                         rect = cv2.minAreaRect(contour)
                         box_points = cv2.boxPoints(rect).astype(np.float64)
                         
-                        # 调整坐标到原图尺寸（和正常流程一样）
+                        # Move the coordinates to the original image size (as in the normal flow)
                         box_points = craft_utils.adjustResultCoordinates(np.array([box_points]), ratio_w, ratio_h, ratio_net=1)
                         box_points = box_points[0].astype(np.int64)
                         
-                        # 计算该区域的平均置信度作为得分（使用db）
-                        # 创建与db_resized_debug相同尺寸的mask
+                        # Use the mean confidence of the area as its score (from db)
+                        # Create a mask of the same size as db_resized_debug
                         contour_mask = np.zeros(db_resized_debug.shape, dtype=np.uint8)
                         cv2.drawContours(contour_mask, [contour], 0, 1, -1)
                         region_score = float(np.mean(db_resized_debug[contour_mask > 0]))
                         
-                        # 创建Quadrilateral并检查面积
+                        # Create the Quadrilateral and check its area
                         quad = Quadrilateral(box_points, '', region_score)
-                        # 保留最小面积过滤（area > 16）
+                        # Keep the minimum area filter (area > 16)
                         if quad.area > 16:
                             all_textlines.append(quad)
                             all_scores.append(region_score)
                     
                     self.logger.info(f'[DEBUG] Found {len(all_textlines)} regions from mask (before box_threshold filtering)')
                     
-                    # 创建调试图像（使用原图）
+                    # Create the debug image (from the original image)
                     debug_img = image.copy()
                     
-                    # 生成不同的颜色
+                    # Generate different colours
                     np.random.seed(42)
                     colors = [(np.random.randint(0, 255), np.random.randint(0, 255), np.random.randint(0, 255)) 
                              for _ in range(len(all_textlines))]
                     
-                    # 绘制每个边框和得分
+                    # Draw each box and its score
                     for txtln, color in zip(all_textlines, colors):
                         cv2.polylines(debug_img, [txtln.pts], True, color=color, thickness=2)
                         
@@ -203,19 +203,19 @@ class DefaultDetector(OfflineDetector):
                     bbox_debug_img = cv2.cvtColor(debug_img, cv2.COLOR_RGB2BGR)
                     self.logger.info(f'Generated bbox debug image with {len(all_textlines)} regions from mask')
                     
-                    # 同时生成经过text_threshold筛选后的二值化mask
+                    # Also build the binary mask after filtering by text_threshold
                     binary_mask_bgr = cv2.cvtColor(binary_mask * 255, cv2.COLOR_GRAY2BGR)
-                    # 返回tuple: (bbox_debug_img, binary_mask_img)
+                    # Return a tuple: (bbox_debug_img, binary_mask_img)
                     bbox_debug_img = (bbox_debug_img, binary_mask_bgr)
             except Exception as e:
                 self.logger.error(f'Failed to create bbox debug image from mask: {e}')
         
-        # 正常的检测流程（使用box_threshold）
+        # The normal detection flow (uses box_threshold)
         det = dbnet_utils.SegDetectorRepresenter(text_threshold, box_threshold, unclip_ratio=unclip_ratio)
         boxes, scores = det({'shape':[(img_resized_h, img_resized_w)]}, db)
         boxes, scores = boxes[0], scores[0]
         
-        # 过滤boxes
+        # Filter the boxes
         if boxes.size == 0:
             polys = []
             filtered_scores = []
@@ -228,22 +228,22 @@ class DefaultDetector(OfflineDetector):
 
         textlines = [Quadrilateral(pts.astype(int), '', score) for pts, score in zip(polys, filtered_scores)]
         
-        # 使用mask生成raw_mask（用于inpainting修复）
+        # Build raw_mask from the mask (for inpainting)
         mask_resized = cv2.resize(mask, (mask.shape[1] * 2, mask.shape[0] * 2), interpolation=cv2.INTER_LINEAR)
-        # 修复：去除padding时需要同时处理pad_h和pad_w，而不是用elif
+        # Fix: removing the padding has to handle pad_h and pad_w together, not with elif
         if pad_h > 0:
             mask_resized = mask_resized[:-pad_h, :]
         if pad_w > 0:
             mask_resized = mask_resized[:, :-pad_w]
         
-        # 修复：将mask缩放回原图尺寸，与textlines坐标系统保持一致
+        # Fix: scale the mask back to the original image size, in the same coordinate system as the textlines
         original_h, original_w = image.shape[:2]
         if mask_resized.shape[0] != original_h or mask_resized.shape[1] != original_w:
             mask_resized = cv2.resize(mask_resized, (original_w, original_h), interpolation=cv2.INTER_LINEAR)
         
         raw_mask = np.clip(mask_resized * 255, 0, 255).astype(np.uint8)
         
-        # 在verbose模式下，同时生成db版本用于对比
+        # In verbose mode, also build the db version for comparison
         if verbose:
             db_slice = db[0, 0, :, :]
             db_resized = cv2.resize(db_slice, (db_slice.shape[1] * 2, db_slice.shape[0] * 2), interpolation=cv2.INTER_LINEAR)
@@ -253,11 +253,11 @@ class DefaultDetector(OfflineDetector):
                 db_resized = db_resized[:, :-pad_w]
             raw_mask_db = np.clip(db_resized * 255, 0, 255).astype(np.uint8)
             
-            # 在bbox_debug_img中添加db热力图用于对比
+            # Add the db heat map to bbox_debug_img for comparison
             if bbox_debug_img and isinstance(bbox_debug_img, tuple):
                 bbox_debug_img = (*bbox_debug_img, raw_mask_db)
         
-        # ✅ Detection完成后立即清理GPU内存
+        # ✅ Free GPU memory right after detection
         if (self.device.startswith('cuda') or self.device == 'mps'):
             try:
                 import torch

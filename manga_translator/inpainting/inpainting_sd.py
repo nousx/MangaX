@@ -133,7 +133,7 @@ class StableDiffusionInpainter(OfflineInpainter):
             img_inpainted = cv2.resize(img_inpainted, (width, height), interpolation = cv2.INTER_LINEAR)
         ans = img_inpainted * mask_original + img_original * (1 - mask_original)
         
-        # ✅ Inpainting完成后立即清理GPU内存和numpy数组（不删除输入参数）
+        # ✅ Free GPU memory and the numpy arrays right after inpainting (the input arguments are not deleted)
         del img, img_inpainted, img_original, mask_original
         return ans
 

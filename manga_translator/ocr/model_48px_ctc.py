@@ -84,13 +84,13 @@ class Model48pxCTCOCR(OfflineOCR):
 
         ix = 0
         for indices in chunks(perm, max_chunk_size):
-            # 先过滤掉非气泡区域
+            # Filter out regions that are not bubbles first
             valid_indices = []
             valid_region_imgs = []
             valid_widths = []
             
             for idx in indices:
-                # 使用基类的通用气泡过滤方法（支持高级检测）
+                # Use the shared bubble filter of the base class (supports advanced detection)
                 if ignore_bubble > 0 or use_model_bubble_filter:
                     textline = quadrilaterals[idx][0]
                     if self._should_ignore_region(region_imgs[idx], ignore_bubble, image, textline, config, bubble_mask=bubble_mask):
@@ -102,7 +102,7 @@ class Model48pxCTCOCR(OfflineOCR):
                 valid_widths.append(region_imgs[idx].shape[1])
                 ix += 1
             
-            # 如果所有区域都被过滤了，跳过这个 chunk
+            # When every region was filtered out, skip this chunk
             if len(valid_indices) == 0:
                 continue
             
@@ -192,7 +192,7 @@ class Model48pxCTCOCR(OfflineOCR):
 
                 out_regions.append(cur_region)
             
-            # ✅ 使用统一的清理方法清理 chunk 数据
+            # ✅ Clear the chunk data with the shared clean-up method
             self._cleanup_ocr_memory(region, images, texts, force_gpu_cleanup=True)
 
         if is_quadrilaterals:

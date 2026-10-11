@@ -105,7 +105,7 @@ class ModelPaddleOCR(OfflineOCR):
             'hash': '57f5406f94bb6688fb7077f7be65f08bbd71cecf48c01ea26c522cb5c4836b7a',
             'file': '.',
         },
-        # 48px 模型用于颜色预测
+        # The 48px model is used for colour prediction
         'model_48px': {
             'url': [
                 'https://github.com/zyddnys/manga-image-translator/releases/download/beta-0.3/ocr_ar_48px.ckpt',
@@ -167,8 +167,8 @@ class ModelPaddleOCR(OfflineOCR):
         self.session = None
         self.char_dict = None
         self.device = 'cpu'
-        self.color_model = None  # 48px 模型用于颜色预测
-        self.use_gpu = False  # 初始化 use_gpu 标志
+        self.color_model = None  # The 48px model is used for colour prediction
+        self.use_gpu = False  # Initialise the use_gpu flag
 
     async def _load(self, device: str):
         """Load PP-OCR ONNX model and 48px color prediction model"""
@@ -205,7 +205,7 @@ class ModelPaddleOCR(OfflineOCR):
                 f"classes, dictionary has {len(self.char_dict)} entries"
             )
 
-        # 加载 48px 模型用于颜色预测
+        # Load the 48px model for colour prediction
         try:
             dict_48px_path = self._get_file_path('alphabet-all-v7.txt')
             ckpt_48px_path = self._get_file_path('ocr_ar_48px.ckpt')
@@ -340,9 +340,9 @@ class ModelPaddleOCR(OfflineOCR):
                 else:
                     region_bgr = region
 
-                # 使用基类的通用气泡过滤方法 - 缩放到 48px 后再过滤（与其他 OCR 模型一致）
+                # Use the shared bubble filter of the base class - scale to 48px before filtering (as the other OCR models do)
                 if ignore_bubble > 0 or use_model_bubble_filter:
-                    # 缩放到 48px 高度用于过滤（与 _preprocess 一致）
+                    # Scale to a height of 48px for filtering (the same as _preprocess)
                     h, w = region.shape[:2]
                     ratio = w / float(h)
                     resized_w = int(math.ceil(48 * ratio))
@@ -378,10 +378,10 @@ class ModelPaddleOCR(OfflineOCR):
 
         # Batch inference with chunking (max 16 regions per batch)
         if regions:
-            max_chunk_size = 16  # 每批最多处理 16 个文本区域，与其他 OCR 保持一致
+            max_chunk_size = 16  # At most 16 text regions per batch, as in the other OCR models
             
             try:
-                # 分批处理所有区域
+                # Process all regions in batches
                 for region_indices in self._iter_region_batches(regions, max_chunk_size):
                     chunk_regions = [regions[i] for i in region_indices]
                     chunk_indices = [valid_indices[i] for i in region_indices]
@@ -440,7 +440,7 @@ class ModelPaddleOCR(OfflineOCR):
             except Exception as e:
                 self.logger.error(f"Inference failed: {e}")
 
-        # 清理 GPU 显存
+        # Free GPU memory
         self._cleanup_ocr_memory(force_gpu_cleanup=False)
 
         return textlines
@@ -572,26 +572,26 @@ class ModelPaddleOCR(OfflineOCR):
                 return []
             
             text_height = 48
-            max_chunk_size = 16  # 与 mocr 保持一致
+            max_chunk_size = 16  # The same as mocr
             results = [None] * len(regions)
             
-            # 分批处理（与 mocr 相同）
+            # Process in batches (the same as mocr)
             for indices in chunks(range(len(regions)), max_chunk_size):
                 N = len(indices)
                 
-                # 准备批量数据
+                # Prepare the batch data
                 widths = []
                 resized_regions = []
                 
                 for idx in indices:
                     region = regions[idx]
-                    # 将 BGR 转换为 RGB
+                    # Convert BGR to RGB
                     if len(region.shape) == 3 and region.shape[2] == 3:
                         region_rgb = cv2.cvtColor(region, cv2.COLOR_BGR2RGB)
                     else:
                         region_rgb = region
                     
-                    # 调整大小到 48px 高度
+                    # Resize to a height of 48px
                     h, w = region_rgb.shape[:2]
                     ratio = w / float(h)
                     new_w = int(round(ratio * text_height))
@@ -602,7 +602,7 @@ class ModelPaddleOCR(OfflineOCR):
                     resized_regions.append(region_resized)
                     widths.append(new_w)
                 
-                # 打包成 batch
+                # Pack into a batch
                 max_width = self._get_ocr_canvas_width(widths, base_align=4)
                 batch_region = np.zeros((N, text_height, max_width, 3), dtype=np.uint8)
                 
@@ -610,19 +610,19 @@ class ModelPaddleOCR(OfflineOCR):
                     W = region_resized.shape[1]
                     batch_region[i, :, :W, :] = region_resized
                 
-                # 转换为 tensor
+                # Convert to a tensor
                 image_tensor = (torch.from_numpy(batch_region).float() - 127.5) / 127.5
                 image_tensor = einops.rearrange(image_tensor, 'N H W C -> N C H W')
                 
-                # GPU 加速
+                # GPU acceleration
                 if self.use_gpu:
                     image_tensor = image_tensor.to(self.device)
                 
-                # 批量推理
+                # Batch inference
                 with torch.no_grad():
                     ret = self.color_model.infer_beam_batch_tensor(image_tensor, widths, beams_k=5, max_seq_length=255)
                 
-                # 处理结果（与 mocr 完全相同的逻辑）
+                # Handle the results (exactly the same logic as mocr)
                 for i, (pred_chars_index, prob, fg_pred, bg_pred, fg_ind_pred, bg_ind_pred) in enumerate(ret):
                     has_fg = (fg_ind_pred[:, 1] > fg_ind_pred[:, 0])
                     has_bg = (bg_ind_pred[:, 1] > bg_ind_pred[:, 0])
@@ -640,18 +640,18 @@ class ModelPaddleOCR(OfflineOCR):
                             continue
                         if ch == '</S>':
                             break
-                        # 处理前景色
+                        # Foreground colour
                         if h_fg.item():
                             fr(int(c_fg[0] * 255))
                             fg(int(c_fg[1] * 255))
                             fb(int(c_fg[2] * 255))
-                        # 处理背景色
+                        # Background colour
                         if h_bg.item():
                             br(int(c_bg[0] * 255))
                             bg(int(c_bg[1] * 255))
                             bb(int(c_bg[2] * 255))
                         else:
-                            # 如果没有背景色，使用前景色作为背景色
+                            # Without a background colour, use the foreground colour as the background
                             br(int(c_fg[0] * 255))
                             bg(int(c_fg[1] * 255))
                             bb(int(c_fg[2] * 255))
@@ -669,7 +669,7 @@ class ModelPaddleOCR(OfflineOCR):
             
         except Exception as e:
             self.logger.warning(f"Batch color prediction failed: {e}")
-            # 返回默认颜色
+            # Return the default colours
             return [(0, 0, 0, 255, 255, 255)] * len(regions)
 
     def _estimate_colors_48px(self, region: np.ndarray, textline: Quadrilateral):
@@ -677,19 +677,19 @@ class ModelPaddleOCR(OfflineOCR):
         from ..utils.generic import AvgMeter
         
         try:
-            # 如果 48px 模型未加载，使用默认颜色
+            # When the 48px model is not loaded, use the default colours
             if self.color_model is None:
                 textline.fg_r = textline.fg_g = textline.fg_b = 0
                 textline.bg_r = textline.bg_g = textline.bg_b = 255
                 return
             
-            # 将 BGR 转换为 RGB
+            # Convert BGR to RGB
             if len(region.shape) == 3 and region.shape[2] == 3:
                 region_rgb = cv2.cvtColor(region, cv2.COLOR_BGR2RGB)
             else:
                 region_rgb = region
             
-            # 调整大小到 48px 高度
+            # Resize to a height of 48px
             text_height = 48
             h, w = region_rgb.shape[:2]
             ratio = w / float(h)
@@ -706,18 +706,18 @@ class ModelPaddleOCR(OfflineOCR):
             image_tensor = (torch.from_numpy(batch_region).float() - 127.5) / 127.5
             image_tensor = einops.rearrange(image_tensor, 'N H W C -> N C H W')
             
-            # GPU 加速
+            # GPU acceleration
             if self.use_gpu:
                 image_tensor = image_tensor.to(self.device)
             
-            # 使用 48px 模型推理
+            # Inference with the 48px model
             with torch.no_grad():
                 ret = self.color_model.infer_beam_batch_tensor(image_tensor, [new_w], beams_k=5, max_seq_length=255)
             
             if ret and len(ret) > 0:
                 pred_chars_index, prob, fg_pred, bg_pred, fg_ind_pred, bg_ind_pred = ret[0]
                 
-                # 计算颜色 - 与 mocr 保持一致的逻辑
+                # Work out the colours - the same logic as mocr
                 has_fg = (fg_ind_pred[:, 1] > fg_ind_pred[:, 0])
                 has_bg = (bg_ind_pred[:, 1] > bg_ind_pred[:, 0])
                 
@@ -734,18 +734,18 @@ class ModelPaddleOCR(OfflineOCR):
                         continue
                     if ch == '</S>':
                         break
-                    # 处理前景色
+                    # Foreground colour
                     if h_fg.item():
                         fr(int(c_fg[0] * 255))
                         fg(int(c_fg[1] * 255))
                         fb(int(c_fg[2] * 255))
-                    # 处理背景色
+                    # Background colour
                     if h_bg.item():
                         br(int(c_bg[0] * 255))
                         bg(int(c_bg[1] * 255))
                         bb(int(c_bg[2] * 255))
                     else:
-                        # 如果没有背景色，使用前景色作为背景色
+                        # Without a background colour, use the foreground colour as the background
                         br(int(c_fg[0] * 255))
                         bg(int(c_fg[1] * 255))
                         bb(int(c_fg[2] * 255))
@@ -757,13 +757,13 @@ class ModelPaddleOCR(OfflineOCR):
                 textline.bg_g = min(max(int(bg()), 0), 255)
                 textline.bg_b = min(max(int(bb()), 0), 255)
             else:
-                # 如果推理失败，设置默认颜色
+                # When inference fails, set the default colours
                 textline.fg_r = textline.fg_g = textline.fg_b = 0
                 textline.bg_r = textline.bg_g = textline.bg_b = 255
                 self.logger.debug("48px color prediction returned no results, using default colors")
                 
         except Exception as e:
-            # 如果出错，设置默认颜色
+            # On error, set the default colours
             textline.fg_r = textline.fg_g = textline.fg_b = 0
             textline.bg_r = textline.bg_g = textline.bg_b = 255
             self.logger.debug(f"48px color prediction failed: {e}, using default colors")
@@ -785,7 +785,7 @@ class ModelPaddleOCR(OfflineOCR):
         try:
             assert len(points) == 4, "points must have 4 corners"
 
-            # 先裁剪包围框区域，避免在整个大图上做透视变换（与 48px 模型相同的策略）
+            # Crop the bounding box first, to avoid a perspective transform over the whole large image (the same strategy as the 48px model)
             src_pts = points.astype(np.int64).copy()
             im_h, im_w = img.shape[:2]
 
@@ -795,14 +795,14 @@ class ModelPaddleOCR(OfflineOCR):
             x2 = np.clip(x2, 0, im_w)
             y2 = np.clip(y2, 0, im_h)
             
-            # 检查裁剪区域是否有效
+            # Check whether the crop area is valid
             if x1 >= x2 or y1 >= y2:
                 return None
             
-            # 裁剪局部区域
+            # Crop the local area
             img_cropped = img[y1:y2, x1:x2]
             
-            # 调整点坐标到局部坐标系
+            # Move the point coordinates into the local coordinate system
             src_pts[:, 0] -= x1
             src_pts[:, 1] -= y1
 

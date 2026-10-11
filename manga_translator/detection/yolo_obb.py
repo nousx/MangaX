@@ -473,8 +473,8 @@ class YOLOOBBDetector(OfflineDetector):
                     if x_max <= stripe_l or x_min >= stripe_r:
                         continue
 
-                    # 重排条带之间有重叠区；把重叠区视为该条带的边缘，
-                    # 这样同一个气泡在相邻条带中被截断时才能配对。
+                    # The rearranged strips overlap; the overlap is treated as the edge of the strip,
+                    # so that a bubble cut off in two neighbouring strips can be paired up.
                     edge_sides = 0
                     if pidx > 0:
                         previous_end = source_starts[pidx - 1] + patch_size
