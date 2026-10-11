@@ -37,7 +37,7 @@ class LamaInpainter(LamaMPEInpainter):
     }
     
     def _check_downloaded_map(self, map_key: str) -> bool:
-        """如果ONNX模型存在，跳过PyTorch模型检查"""
+        """When the ONNX model exists, skip the check of the PyTorch model"""
         onnx_path = self._get_file_path('lamampe.onnx')
         if os.path.isfile(onnx_path):
             return True  # The ONNX file exists: the .ckpt is not checked
@@ -117,7 +117,7 @@ class LamaInpainter(LamaMPEInpainter):
         return await super()._infer(image, mask, config, inpainting_size, verbose)
     
     async def _infer_onnx_default(self, image: np.ndarray, mask: np.ndarray, inpainting_size: int = 1024, verbose: bool = False) -> np.ndarray:
-        """ONNX推理方法（default模型，只需image和mask）"""
+        """ONNX inference method (default model; only image and mask are needed)"""
         import cv2
         img_original = np.copy(image)
         mask_original = np.copy(mask)

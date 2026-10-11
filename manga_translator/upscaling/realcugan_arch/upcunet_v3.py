@@ -1,8 +1,8 @@
 '''
 cache_mode:
-0:使用cache缓存必要参数
-1:使用cache缓存必要参数，对cache进行8bit量化节省显存，带来小许延时增长
-2:不使用cache，耗时约为mode0的2倍，但是显存不受输入图像分辨率限制，tile_mode填得够大，1.5G显存可超任意比例
+0: cache the necessary parameters
+1: cache the necessary parameters and quantise the cache to 8 bits to save GPU memory, at the cost of a slightly longer delay
+2: no cache; takes about twice as long as mode 0, but GPU memory does not depend on the resolution of the input image; with a large enough tile_mode, 1.5G of GPU memory can upscale by any ratio
 '''
 import os
 import sys

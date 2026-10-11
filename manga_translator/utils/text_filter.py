@@ -23,16 +23,16 @@ _DEFAULT_FILTER_LIST_DATA = {
 
 def _get_filter_list_path() -> str:
     """
-    获取 JSON 过滤列表文件路径
+    Get the path of the JSON filter list file
 
-    打包环境：可执行文件同级/config/filter_list.json
-    开发环境：项目根目录/config/filter_list.json
+    Packaged: config/filter_list.json next to the executable
+    Development: config/filter_list.json in the project root
     """
     return os.path.join(get_config_dir(), _FILTER_LIST_FILENAME)
 
 
 def _get_legacy_filter_list_path() -> str:
-    """获取旧版 TXT 过滤列表文件路径。"""
+    """Get the path of the old TXT filter list file."""
     return os.path.join(get_config_dir(), _LEGACY_FILTER_LIST_FILENAME)
 
 
@@ -110,10 +110,10 @@ def _migrate_legacy_filter_list() -> bool:
 
 def ensure_filter_list_exists() -> str:
     """
-    确保过滤列表文件存在，如果不存在则创建默认 JSON 文件。
+    Make sure the filter list file exists; when it does not, create the default JSON file.
 
     Returns:
-        过滤列表文件路径
+        The path of the filter list file
     """
     filter_path = _get_filter_list_path()
 
@@ -134,7 +134,7 @@ def ensure_filter_list_exists() -> str:
 
 def load_filter_list_config() -> Dict[str, List[str]]:
     """
-    加载过滤列表 JSON 配置，保留原始大小写。
+    Load the filter list JSON configuration, keeping the original letter case.
     """
     filter_path = ensure_filter_list_exists()
 
@@ -157,7 +157,7 @@ def load_filter_list_config() -> Dict[str, List[str]]:
 
 def save_filter_list_config(data: Dict[str, Any]) -> str:
     """
-    保存过滤列表 JSON 配置。
+    Save the filter list JSON configuration.
     """
     global _filter_lists
 
@@ -169,13 +169,13 @@ def save_filter_list_config(data: Dict[str, Any]) -> str:
 
 def load_filter_list(force_reload: bool = False) -> Tuple[List[str], List[str]]:
     """
-    加载过滤列表。
+    Load the filter list.
 
     Args:
-        force_reload: 是否强制重新加载
+        force_reload: whether a reload is forced
 
     Returns:
-        (包含过滤列表, 精确过滤列表)，都是小写
+        (contains filter list, exact filter list), both in lower case
     """
     global _filter_lists
 
@@ -200,14 +200,14 @@ def load_filter_list(force_reload: bool = False) -> Tuple[List[str], List[str]]:
 
 def match_filter(text: str) -> Optional[Tuple[str, str]]:
     """
-    检查文本是否匹配过滤列表。
+    Check whether a text matches the filter list.
 
     Args:
-        text: 要检查的文本
+        text: the text to check
 
     Returns:
-        (匹配的过滤词, 匹配类型)，如果没有匹配返回 None
-        匹配类型: "包含" 或 "精确"
+        (the filter word that matched, the kind of match), or None when nothing matches.
+        The kind of match is one of two fixed strings, for a "contains" match and for an "exact" match
     """
     if not text:
         return None
@@ -228,12 +228,12 @@ def match_filter(text: str) -> Optional[Tuple[str, str]]:
 
 def should_filter(text: str) -> bool:
     """
-    检查文本是否应该被过滤。
+    Check whether a text should be filtered out.
 
     Args:
-        text: 要检查的文本
+        text: the text to check
 
     Returns:
-        True 如果应该过滤，False 否则
+        True when it should be filtered out, otherwise False
     """
     return match_filter(text) is not None

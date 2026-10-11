@@ -36,8 +36,8 @@ from .model_48px import OCR
 
 class InternalMangaOcr:
     """
-    内置的 MangaOCR 实现，不依赖外部 manga_ocr 库
-    基于 transformers 的 VisionEncoderDecoderModel
+    Built-in MangaOCR implementation that does not depend on the external manga_ocr library.
+    Based on VisionEncoderDecoderModel of transformers
     """
     def __init__(self, pretrained_model_name_or_path="kha-white/manga-ocr-base", device="cpu", logger=None):
         self.logger = logger
@@ -54,13 +54,13 @@ class InternalMangaOcr:
     
     def __call__(self, img_or_path):
         """
-        识别图像中的文本
-        
+        Recognise the text in an image
+
         Args:
-            img_or_path: PIL.Image 或图像路径
-            
+            img_or_path: a PIL.Image or an image path
+
         Returns:
-            str: 识别的文本
+            str: the recognised text
         """
         if isinstance(img_or_path, str):
             img = open_pil_image(img_or_path, eager=False)
@@ -89,7 +89,7 @@ class InternalMangaOcr:
         return text
     
     def _post_process(self, text):
-        """后处理识别的文本"""
+        """Post-process the recognised text"""
         # Remove all spaces
         text = "".join(text.split())
         

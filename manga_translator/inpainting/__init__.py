@@ -168,7 +168,7 @@ async def _dispatch_with_split(
     verbose: bool,
 ) -> np.ndarray:
     """
-    对极端长宽比的图片进行切割修复。
+    Inpaint an image with an extreme aspect ratio in pieces.
     """
     h, w = image.shape[:2]
     is_vertical = h > w

@@ -1,8 +1,8 @@
 """
 PaddleOCR-VL-1.6 OCR Model
 
-基于 PaddleOCR-VL-1.6 的 OCR 模型
-模型来源: https://huggingface.co/PaddlePaddle/PaddleOCR-VL-1.6
+An OCR model based on PaddleOCR-VL-1.6
+Model source: https://huggingface.co/PaddlePaddle/PaddleOCR-VL-1.6
 """
 
 import os
@@ -44,10 +44,10 @@ _PADDLEOCR_VL_16_FILES = {
 
 class ModelPaddleOCRVL(OfflineOCR):
     """
-    PaddleOCR-VL-1.6 OCR 模型
+    PaddleOCR-VL-1.6 OCR model
 
-    这是一个基于 VLM 的 OCR 模型。
-    模型使用 transformers 库加载，支持 GPU 加速。
+    This is an OCR model based on a VLM.
+    The model is loaded with the transformers library and supports GPU acceleration.
     """
 
     _MODEL_MAPPING = {
@@ -167,7 +167,7 @@ class ModelPaddleOCRVL(OfflineOCR):
         await super()._download()
 
     async def _load(self, device: str):
-        """加载模型"""
+        """Load the model"""
         # Model path - models/ocr/PaddleOCR-VL-1.6
         model_path = os.path.join(self.model_dir, self.MODEL_DIR_NAME)
 
@@ -235,7 +235,7 @@ class ModelPaddleOCRVL(OfflineOCR):
         await self._load_color_model(device)
 
     async def _load_color_model(self, device: str):
-        """加载 48px 颜色预测模型"""
+        """Load the 48px colour prediction model"""
         from .model_48px import OCR
 
         try:
@@ -275,7 +275,7 @@ class ModelPaddleOCRVL(OfflineOCR):
             self.color_model = None
 
     async def _unload(self):
-        """卸载模型"""
+        """Unload the model"""
         if self.model is not None:
             del self.model
             self.model = None
@@ -324,13 +324,13 @@ class ModelPaddleOCRVL(OfflineOCR):
 
     def _recognize_single(self, img: np.ndarray, prompt_text: str) -> str:
         """
-        识别单个图像区域的文本
+        Recognise the text of a single image region
 
         Args:
-            img: numpy 数组格式的图像 (RGB)
+            img: the image as a numpy array (RGB)
 
         Returns:
-            识别的文本
+            The recognised text
         """
         # Convert to a PIL Image
         if isinstance(img, np.ndarray):
@@ -407,7 +407,7 @@ class ModelPaddleOCRVL(OfflineOCR):
 
 
     def _estimate_colors_48px(self, image: np.ndarray, textline: Quadrilateral, direction: str):
-        """使用 48px 模型预测前景色和背景色"""
+        """Predict the foreground and background colours with the 48px model"""
         try:
             # When the 48px model is not loaded, use the default colours
             if self.color_model is None:
@@ -488,16 +488,16 @@ class ModelPaddleOCRVL(OfflineOCR):
 
     async def _infer(self, image: np.ndarray, textlines: List[Quadrilateral], config: OcrConfig, verbose: bool = False, bubble_mask: np.ndarray = None) -> List[Quadrilateral]:
         """
-        推理主函数
+        Main inference function
 
         Args:
-            image: 完整图像
-            textlines: 检测到的文本行边界框
-            config: OCR 配置
-            verbose: 是否详细输出
+            image: the full image
+            textlines: the bounding boxes of the detected text lines
+            config: the OCR configuration
+            verbose: whether output is verbose
 
         Returns:
-            带有识别文本的 Quadrilateral 列表
+            The list of Quadrilateral objects with their recognised text
         """
         text_height = 48  # Only for the bubble filter and colour prediction
         ignore_bubble = config.ignore_bubble

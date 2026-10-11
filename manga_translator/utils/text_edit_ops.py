@@ -1,14 +1,14 @@
-"""纯文本编辑操作的采集与最小化收窄(后端逻辑,UI 层只转发事件)。
+"""Collecting and minimally narrowing plain-text edit operations (backend logic; the UI layer only forwards events).
 
-Qt 文本框的 ``contentsChange`` 给出 ``(位置, 删除数, 插入数)``,但有两个怪癖:
-- 改动涉及文档末尾时,删除/插入计数会把末尾段落分隔符也算进去(多 1);
-- IME 预编辑与提交会把整篇文档报成一次"全量替换"。
+``contentsChange`` of a Qt text box gives ``(position, removed count, inserted count)``, with two quirks:
+- when a change reaches the end of the document, the removed and inserted counts include the final paragraph separator (1 too many);
+- IME pre-editing and committing report the whole document as one "full replacement".
 
-本模块对照改动前的镜像文本,把每次报告收窄成最小真实操作
-``[pos, removed_len, inserted_text]``;预编辑期间文本未变的"假替换"收窄后
-为空,直接丢弃。这是对已记录操作的精确收窄,不是模糊 diff。
+This module compares each report with a mirror of the text from before the change and narrows it to the smallest real operation
+``[pos, removed_len, inserted_text]``; a "fake replacement" during pre-editing, where the text did not change, is empty after narrowing
+and is dropped. This is an exact narrowing of recorded operations, not a fuzzy diff.
 
-坐标口径与编辑框一致，直接使用真实 ``\n`` 换行；每个换行仍占一个字符。
+The coordinate convention is that of the edit box, with real ``\\n`` line breaks; each line break still counts as one character.
 """
 
 from __future__ import annotations
@@ -23,11 +23,11 @@ def minimal_edit_op(
     chars_removed: int,
     chars_added: int,
 ) -> Optional[list]:
-    """把一次 contentsChange 收窄成最小操作;无实际改动返回 ``None``。
+    """Narrow one contentsChange to the smallest operation; ``None`` is returned when nothing really changed.
 
-    ``mirror`` 是改动前的文本,``current`` 是改动后的文本;裁掉报告区间
-    首尾未变的部分,还原出真实的插入/删除/替换区间。计数虚报(末尾段落
-    分隔符)由切片越界自然钳制。
+    ``mirror`` is the text before the change and ``current`` the text after it; the unchanged start and end of the reported range
+    are trimmed, which restores the real inserted, removed or replaced range. Overstated counts (the final paragraph
+    separator) are clamped naturally by slicing out of range.
     """
     pos = max(0, int(position))
     removed_text = mirror[pos : pos + max(0, int(chars_removed))]
@@ -45,13 +45,13 @@ def minimal_edit_op(
 
 
 class EditOpRecorder:
-    """跟踪一个文本框的编辑操作序列,产出富文本同步用的 edit_info。
+    """Track the sequence of edit operations of one text box and produce the edit_info used for rich-text sync.
 
-    UI 层的职责只剩三件事:
-    - 文本每次变化时调 :meth:`record_change`(用户编辑)或
-      :meth:`invalidate`(程序化写入,操作作废);
-    - 程序化刷新完成后调 :meth:`reset` 重建基线;
-    - 发射修改信号时调 :meth:`take_edit_info` 取走操作并推进基线。
+    Only three things are left for the UI layer to do:
+    - on every text change, call :meth:`record_change` (a user edit) or
+      :meth:`invalidate` (a programmatic write, which voids the operations);
+    - after a programmatic refresh, call :meth:`reset` to rebuild the baseline;
+    - when emitting the change signal, call :meth:`take_edit_info` to take the operations and advance the baseline.
     """
 
     def __init__(self) -> None:
@@ -62,13 +62,13 @@ class EditOpRecorder:
         self._baseline = ""
 
     def reset(self, current_text: str) -> None:
-        """以当前文本为准重建基线(程序化刷新后调用)。"""
+        """Rebuild the baseline from the current text (called after a programmatic refresh)."""
         self._doc_text = current_text
         self._ops = []
         self._baseline = current_text
 
     def invalidate(self, current_text: str) -> None:
-        """程序化写入:镜像跟进,累积操作作废;基线由随后的 reset 统一重建。"""
+        """A programmatic write: the mirror follows and the accumulated operations are void; the baseline is rebuilt by the reset that follows."""
         self._doc_text = current_text
         self._ops = []
 
@@ -79,7 +79,7 @@ class EditOpRecorder:
         chars_removed: int,
         chars_added: int,
     ) -> None:
-        """记录一次用户编辑(contentsChange 报告 + 改动后全文)。"""
+        """Record one user edit (the contentsChange report + the full text after the change)."""
         mirror = self._doc_text
         self._doc_text = current_text
         op = minimal_edit_op(mirror, current_text, position, chars_removed, chars_added)
@@ -87,7 +87,7 @@ class EditOpRecorder:
             self._ops.append(op)
 
     def take_edit_info(self, current_text: str) -> dict:
-        """取走累积操作,返回 {ops, pre_text, post_text}(\\n 口径)并推进基线。"""
+        """Take the accumulated operations, return {ops, pre_text, post_text} (in \\n convention) and advance the baseline."""
         post_text = current_text
         edit_info = {
             "ops": self._ops,

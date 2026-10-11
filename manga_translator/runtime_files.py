@@ -21,7 +21,7 @@ def _upgrade_default_file(
     label: str,
     logger: Any = None,
 ) -> bool:
-    """旧默认文件命中哈希时删除，后续 ensure 流程会重新创建。"""
+    """Delete an old default file when its hash matches; the ensure flow that follows creates it again."""
     if not os.path.exists(path):
         return False
     try:
@@ -40,7 +40,7 @@ def _upgrade_default_file(
 
 
 def _upgrade_runtime_defaults(logger: Any = None) -> None:
-    """统一升级仍保持历史内置内容的运行时配置文件。"""
+    """Upgrade, in one place, the run-time configuration files that still have their old built-in content."""
     migrations = (
         (
             "translation_template",

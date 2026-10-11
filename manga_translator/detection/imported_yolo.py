@@ -62,9 +62,9 @@ def load_imported_yolo_textlines(
     logger=None,
 ) -> List[Quadrilateral]:
     """
-    读取固定目录中的 YOLO 标注文件，并转换为 Quadrilateral 列表。
+    Read the YOLO label file in the fixed folder and convert it to a list of Quadrilateral objects.
 
-    导入时忽略类别标签，所有框都进入前向流程。
+    Class labels are ignored on import; every box enters the forward flow.
     """
     if image is None or getattr(image, "size", 0) == 0 or not image_path:
         return []
@@ -128,7 +128,7 @@ def load_imported_yolo_textlines(
 
 def build_mask_from_textlines(image_shape: Tuple[int, ...], textlines: List[Quadrilateral]) -> np.ndarray:
     """
-    根据导入框生成兜底 mask_raw。
+    Build a fallback mask_raw from the imported boxes.
     """
     mask = np.zeros(image_shape[:2], dtype=np.uint8)
     polygons = []

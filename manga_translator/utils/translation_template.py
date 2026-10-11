@@ -29,7 +29,7 @@ _OUTPUT_FORMAT_LINE_RE = re.compile(
 
 
 def normalize_translation_output_format(value: object) -> str:
-    """规范化模板输出扩展名，允许任意安全的文件格式名称。"""
+    """Normalise the output extension of a template; any safe file format name is allowed."""
     output_format = str(value or '').strip().lower().lstrip('.')
     if _SAFE_OUTPUT_FORMAT_RE.fullmatch(output_format):
         return output_format
@@ -43,7 +43,7 @@ def normalize_translation_output_format(value: object) -> str:
 
 
 def parse_translation_template_config(template_string: str) -> Tuple[str, str]:
-    """读取模板级配置，并返回不含配置行的实际文本模板。"""
+    """Read the template-level configuration and return the actual text template without the configuration line."""
     match = _OUTPUT_FORMAT_LINE_RE.search(template_string or '')
     if not match:
         return DEFAULT_TRANSLATION_OUTPUT_FORMAT, template_string
@@ -54,7 +54,7 @@ def parse_translation_template_config(template_string: str) -> Tuple[str, str]:
 
 
 def get_translation_output_format(template_path: Optional[str] = None) -> str:
-    """读取模板配置的导出扩展名；文件缺失或无参数时默认 JSON。"""
+    """Read the export extension configured in the template; JSON by default when the file is missing or has no parameter."""
     final_path = template_path or _DEFAULT_TEMPLATE_PATH
     try:
         with open(final_path, 'r', encoding='utf-8') as f:
@@ -69,7 +69,7 @@ def get_translation_output_format(template_path: Optional[str] = None) -> str:
 
 
 def _write_default_template(file_path: Optional[str] = None) -> str:
-    """写入当前内置默认翻译模板。"""
+    """Write the current built-in default translation template."""
     final_path = file_path or _DEFAULT_TEMPLATE_PATH
     os.makedirs(os.path.dirname(final_path), exist_ok=True)
     with open(final_path, 'w', encoding='utf-8') as f:
@@ -78,7 +78,7 @@ def _write_default_template(file_path: Optional[str] = None) -> str:
 
 
 def ensure_translation_template_exists() -> str:
-    """确保翻译模板存在；历史默认模板升级由启动初始化统一处理。"""
+    """Make sure the translation template exists; upgrading old default templates is handled in one place by the start-up initialisation."""
     if os.path.exists(_DEFAULT_TEMPLATE_PATH):
         return _DEFAULT_TEMPLATE_PATH
 

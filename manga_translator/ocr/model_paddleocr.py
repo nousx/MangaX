@@ -563,7 +563,7 @@ class ModelPaddleOCR(OfflineOCR):
         return text, confidence
 
     def _estimate_colors_batch(self, regions: List[np.ndarray]) -> List[tuple]:
-        """批量预测前景色和背景色（复用 mocr 的批量处理逻辑）"""
+        """Predict foreground and background colours as a batch (reuses the batch logic of mocr)"""
         from ..utils import chunks
         from ..utils.generic import AvgMeter
         
@@ -673,7 +673,7 @@ class ModelPaddleOCR(OfflineOCR):
             return [(0, 0, 0, 255, 255, 255)] * len(regions)
 
     def _estimate_colors_48px(self, region: np.ndarray, textline: Quadrilateral):
-        """使用 48px 模型预测前景色和背景色"""
+        """Predict the foreground and background colours with the 48px model"""
         from ..utils.generic import AvgMeter
         
         try:

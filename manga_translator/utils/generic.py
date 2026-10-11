@@ -208,7 +208,7 @@ def get_digest(file_path: str) -> str:
     return h.hexdigest()
 
 def get_image_md5(image) -> str:
-    """计算PIL Image对象的MD5哈希值，确保相同图片内容产生相同的哈希值"""
+    """Compute the MD5 hash of a PIL Image object, so that the same image content gives the same hash"""
     import io
 
     try:
@@ -249,7 +249,7 @@ def _preserve_runtime_image_attrs(src: Image.Image, dst: Image.Image) -> Image.I
 
 def normalize_pil_image(img: Image.Image, eager: bool = False, apply_exif: bool = True) -> Image.Image:
     """
-    统一处理 PIL Image 的方向信息，并按需立即加载像素数据。
+    Handle the orientation information of a PIL Image in one place, and load the pixel data at once when asked.
     """
     if apply_exif:
         # Pillow's getexif() for PNG decodes the whole image; without an EXIF chunk, do not pay that cost
@@ -274,10 +274,10 @@ def normalize_pil_image(img: Image.Image, eager: bool = False, apply_exif: bool 
 
 def open_pil_image(source, eager: bool = False, apply_exif: bool = True) -> Image.Image:
     """
-    统一打开图片入口。
+    Single entry point for opening images.
 
-    eager=True: 立即解码，适合文件句柄会马上关闭的场景。
-    eager=False: 尽量懒加载，只在需要 EXIF 方向修正时提前解码。
+    eager=True: decode at once, for cases where the file handle is closed right away.
+    eager=False: load lazily where possible, decoding early only when an EXIF orientation fix is needed.
     """
     image = Image.open(source)
     try:
@@ -308,14 +308,14 @@ def get_filename_from_url(url: str, default: str = '') -> str:
 
 def download_url_with_progressbar(url: str, path: str, min_speed_kbps: float = 100, speed_check_interval: int = 10, timeout: int = 30):
     """
-    下载文件并显示进度条
-    
+    Download a file and show a progress bar
+
     Args:
-        url: 下载链接
-        path: 保存路径
-        min_speed_kbps: 最低速度要求（KB/s），低于此速度会抛出异常
-        speed_check_interval: 速度检查间隔（秒）
-        timeout: 连接超时时间（秒）
+        url: the download link
+        path: where to save
+        min_speed_kbps: minimum speed required (KB/s); an exception is raised below it
+        speed_check_interval: interval between speed checks (seconds)
+        timeout: connection timeout (seconds)
     """
     if os.path.basename(path) in ('.', '') or os.path.isdir(path):
         new_filename = get_filename_from_url(url)
@@ -436,13 +436,13 @@ class AvgMeter():
 
 def load_image(img: Image.Image) -> Tuple[np.ndarray, Optional[Image.Image]]:
     """
-    将 PIL Image 转换为 RGB numpy 数组，并提取 alpha 通道（如果有）。
-    
+    Convert a PIL Image to an RGB numpy array and extract the alpha channel (when there is one).
+
     Args:
-        img: PIL.Image.Image 对象
-        
+        img: a PIL.Image.Image object
+
     Returns:
-        Tuple[np.ndarray, Optional[Image.Image]]: RGB 数组和 alpha 通道
+        Tuple[np.ndarray, Optional[Image.Image]]: the RGB array and the alpha channel
     """
     img = normalize_pil_image(img, eager=False)
     if pil_image_has_alpha(img):
@@ -915,7 +915,7 @@ class Quadrilateral(object):
         return self.polygon.area
 
     def poly_distance(self, other) -> float:
-        """计算两个框之间的距离,优先使用平行边的中点距离"""
+        """Distance between two boxes, preferring the distance between the midpoints of parallel edges"""
         # Get the direction
         dir_a = self.assigned_direction if self.assigned_direction is not None else self.direction
         dir_b = other.assigned_direction if other.assigned_direction is not None else other.direction
@@ -1324,8 +1324,9 @@ def color_difference(rgb1: List, rgb2: List) -> float:
     return diff.item()
 
 def fg_bg_compare(fg, bg):
-    """比较前景色和背景色，如果对比度不足则自动修正背景色。
-    描边是灰色或色差不足时，根据前景亮度选纯黑或纯白。"""
+    """Compare the foreground and background colours and correct the background colour automatically when the contrast is too low.
+    When the stroke is grey or the colour difference is too small, pure black or pure white is chosen by the brightness of the foreground.
+    """
     fg_avg = np.mean(fg)
     bg_is_gray = (max(bg) - min(bg)) < 10
     if bg_is_gray or color_difference(fg, bg) < 30:
@@ -1340,10 +1341,10 @@ def hex2rgb(h):
     return tuple(int(h[i:i+2], 16) for i in (0, 2, 4))
 
 def parse_color(value, default=None):
-    """宽容的颜色解析：#RGB / #RRGGBB / (r,g,b) 序列，越界钳制，非法回退 default。
+    """Lenient colour parsing: #RGB / #RRGGBB / an (r,g,b) sequence; out-of-range values are clamped and invalid input falls back to default.
 
-    与 hex2rgb 的区别：hex2rgb 只接受 6 位且非法直接抛异常；本函数是各渲染/
-    样式入口共用的"用户输入"解析器，永不抛错。
+    Difference from hex2rgb: hex2rgb only accepts 6 digits and raises on invalid input; this function is the parser for "user input"
+    shared by the render and style entry points and never raises.
     """
     if value is None:
         return default
@@ -1571,9 +1572,9 @@ def det_unrearrange_patch_maps(
     Merge rearranged patch outputs back into original image coordinates.
     Supports patch inputs in CHW / HWC / HW.
 
-    重叠区按「离条带切割边缘的距离」羽化加权：条带在自己被切断的上/下边缘附近
-    权重线性趋 0，由相邻条带的完整视角主导接缝区，避免被切断文字的近零响应
-    把完整视角的强响应等权摊薄导致丢框。全图首尾不是切割边，不做羽化。
+    Overlaps are feathered by "distance from the cut edge of the strip": near the top and bottom edges where a strip was cut,
+    its weight falls linearly to 0, and the complete view of the neighbouring strip dominates the seam, so the near-zero response of text that was cut off
+    does not dilute the strong response of the complete view with equal weight and lose boxes. The first and last edges of the whole image are not cut edges and are not feathered.
     """
     if not patch_lst:
         raise ValueError('patch_lst must not be empty')

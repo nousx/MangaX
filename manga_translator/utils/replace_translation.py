@@ -1,21 +1,21 @@
 """
-替换翻译模块 - 将翻译图的OCR结果应用到生肉图上
+Replace-translation module - applies the OCR result of a translated image to the raw image
 
-功能说明：
-1. 对生肉图执行检测+OCR，过滤低置信度区域
-2. 对翻译图执行检测+OCR，保留子框信息用于断句
-3. 区域匹配：根据尺寸缩放对齐坐标，计算重叠区域
-4. 过滤：移除生肉独有和翻译独有的区域
-5. 合并：将翻译图的OCR结果作为translation字段
-6. 可选：模板匹配对齐 - 自动计算中日文图的偏移量并调整文字位置
+What it does:
+1. Run detection + OCR on the raw image and filter out low-confidence regions
+2. Run detection + OCR on the translated image, keeping the sub-box information for line breaking
+3. Region matching: align the coordinates by size scaling and compute the overlapping areas
+4. Filtering: remove the regions that only the raw image or only the translated image has
+5. Merging: the OCR result of the translated image becomes the translation field
+6. Optional: template matching alignment - computes the offset between the two images automatically and adjusts the text position
 
-使用场景：
-- 同一本漫画的不同版本（如修复版/原版）
-- 不同分辨率版本
-- 无JSON数据时的翻译迁移
+Use cases:
+- Different editions of the same manga (such as a restored edition and the original)
+- Versions in different resolutions
+- Moving a translation over when there is no JSON data
 
-作者: manga-translator-ui
-日期: 2026-01-01
+Author: manga-translator-ui
+Date: 2026-01-01
 """
 
 import asyncio
@@ -38,18 +38,18 @@ logger = logging.getLogger(__name__)
 
 def get_text_to_img_solid_ink(mask_final, cn_text_img, origin_img, mengban=8, pan=150):
     """
-    超清锐利版文字合成函数
-    核心逻辑：使用 Lanczos4 插值 + 色阶压缩 (Levels)，最大程度还原源图的锐利度。
-    
+    Text compositing function for a very sharp result.
+    Core logic: Lanczos4 interpolation + levels compression, to restore the sharpness of the source image as far as possible.
+
     Args:
-        mask_final: 蒙版图像
-        cn_text_img: 翻译图（要提取文字的图）
-        origin_img: 生肉图（底图）
-        mengban: 蒙版膨胀核大小
-        pan: 白场阈值偏移
-    
+        mask_final: the mask image
+        cn_text_img: the translated image (the one the text is taken from)
+        origin_img: the raw image (the base)
+        mengban: size of the mask dilation kernel
+        pan: offset of the white point threshold
+
     Returns:
-        合成后的图像
+        The composited image
     """
     # --- 1. Basic checks ---
     if mask_final is None or cn_text_img is None or origin_img is None:
@@ -128,20 +128,20 @@ def get_text_to_img_solid_ink(mask_final, cn_text_img, origin_img, mengban=8, pa
 
 async def translate_batch_replace_translation(translator, images_with_configs: List[tuple], save_info: dict = None, global_offset: int = 0, global_total: int = None) -> List[Context]:
     """
-    替换翻译模式：从翻译图提取OCR结果并应用到生肉图
-    
-    流程：
-    1. 对生肉图执行检测+OCR，过滤低置信度区域
-    2. 查找对应的翻译图，执行检测+OCR
-    3. 区域匹配（考虑尺寸缩放）
-    4. 使用匹配的区域执行修复和渲染
-    
+    Replace-translation mode: extract the OCR result from the translated image and apply it to the raw image
+
+    Flow:
+    1. Run detection + OCR on the raw image and filter out low-confidence regions
+    2. Find the matching translated image and run detection + OCR on it
+    3. Match the regions (taking size scaling into account)
+    4. Inpaint and render with the matched regions
+
     Args:
-        translator: MangaTranslator实例
+        translator: the MangaTranslator instance
         images_with_configs: List of (image, config) tuples
-        save_info: 保存配置
-        global_offset: 全局偏移量
-        global_total: 全局总图片数
+        save_info: the save settings
+        global_offset: global offset
+        global_total: global total number of images
     """
     logger.info(f"Starting replace translation mode with {len(images_with_configs)} images")
     results = []
@@ -700,7 +700,7 @@ async def translate_batch_replace_translation(translator, images_with_configs: L
 
 
 class ReplaceTranslationResult:
-    """替换翻译结果"""
+    """Result of a replace-translation"""
     
     def __init__(self, 
                  success: bool = False,
@@ -729,15 +729,15 @@ class ReplaceTranslationResult:
 
 def find_translated_image(raw_image_path: str) -> Optional[str]:
     """
-    查找生肉图对应的翻译图
-    
-    在 manga_translator_work/translated_images/ 目录下查找同名图片
-    
+    Find the translated image that belongs to a raw image
+
+    Looks for an image with the same name in the manga_translator_work/translated_images/ folder
+
     Args:
-        raw_image_path: 生肉图路径
-        
+        raw_image_path: path of the raw image
+
     Returns:
-        翻译图路径，如果不存在返回None
+        The path of the translated image, or None when it does not exist
     """
     work_dir = get_work_dir(raw_image_path)
     translated_dir = os.path.join(work_dir, TRANSLATED_IMAGES_SUBDIR)
@@ -773,15 +773,15 @@ def find_translated_image(raw_image_path: str) -> Optional[str]:
 
 def filter_masks(mask_img: np.ndarray, textlines: List[Tuple[int, int, int, int]], keep_threshold: float = 1e-2) -> Tuple[List[np.ndarray], List[int]]:
     """
-    过滤蒙版，只保留与文本行相关的连通组件
-    
+    Filter the mask, keeping only the connected components related to text lines
+
     Args:
-        mask_img: 蒙版图像（二值图）
-        textlines: 文本行列表 [(x, y, w, h), ...]
-        keep_threshold: 保留阈值（重叠率）
-        
+        mask_img: the mask image (binary)
+        textlines: list of text lines [(x, y, w, h), ...]
+        keep_threshold: threshold for keeping (overlap ratio)
+
     Returns:
-        (保留的连通组件列表, 组件到文本行的分配列表)
+        (list of the connected components kept, list assigning components to text lines)
     """
     mask_img = mask_img.copy()
     
@@ -848,14 +848,14 @@ def filter_masks(mask_img: np.ndarray, textlines: List[Tuple[int, int, int, int]
 
 
 def area_overlap(x1, y1, w1, h1, x2, y2, w2, h2) -> float:
-    """计算两个矩形的重叠面积"""
+    """Overlap area of two rectangles"""
     x_overlap = max(0, min(x1 + w1, x2 + w2) - max(x1, x2))
     y_overlap = max(0, min(y1 + h1, y2 + h2) - max(y1, y2))
     return x_overlap * y_overlap
 
 
 def rect_distance(x1, y1, x1b, y1b, x2, y2, x2b, y2b) -> float:
-    """计算两个矩形之间的距离"""
+    """Distance between two rectangles"""
     def dist(x1, y1, x2, y2):
         return np.sqrt((x1 - x2) * (x1 - x2) + (y1 - y2) * (y1 - y2))
     
@@ -886,7 +886,7 @@ def rect_distance(x1, y1, x1b, y1b, x2, y2, x2b, y2b) -> float:
 
 def get_bounding_rect(region: TextBlock) -> Tuple[float, float, float, float]:
     """
-    获取TextBlock的最小外接矩形 (x, y, w, h)
+    Get the minimum bounding rectangle (x, y, w, h) of a TextBlock
     """
     if region.lines is None or len(region.lines) == 0:
         return (0, 0, 0, 0)
@@ -903,14 +903,14 @@ def get_bounding_rect(region: TextBlock) -> Tuple[float, float, float, float]:
 def calculate_iou(rect1: Tuple[float, float, float, float], 
                   rect2: Tuple[float, float, float, float]) -> float:
     """
-    计算两个矩形的重叠率（以较小框为基准）
-    
+    Overlap ratio of two rectangles (relative to the smaller box)
+
     Args:
-        rect1, rect2: (x, y, w, h) 格式的矩形
-        
+        rect1, rect2: rectangles in (x, y, w, h) form
+
     Returns:
-        重叠率 (0-1)，计算方式：交集面积 / min(area1, area2)
-        这样可以更好地判断小框是否被大框包含
+        The overlap ratio (0-1), computed as intersection area / min(area1, area2),
+        which shows better whether a small box is contained in a large one
     """
     x1, y1, w1, h1 = rect1
     x2, y2, w2, h2 = rect2
@@ -943,15 +943,15 @@ def scale_regions_to_target(regions: List[TextBlock],
                             source_size: Tuple[int, int], 
                             target_size: Tuple[int, int]) -> List[TextBlock]:
     """
-    将区域坐标从源图尺寸缩放到目标图尺寸
-    
+    Scale region coordinates from the size of the source image to the size of the target image
+
     Args:
-        regions: 原始区域列表
-        source_size: 源图尺寸 (width, height)
-        target_size: 目标图尺寸 (width, height)
-        
+        regions: the original list of regions
+        source_size: size of the source image (width, height)
+        target_size: size of the target image (width, height)
+
     Returns:
-        缩放后的区域列表（新对象）
+        The list of scaled regions (new objects)
     """
     if source_size == target_size:
         return regions
@@ -989,20 +989,20 @@ def match_regions(raw_regions: List[TextBlock],
                   translated_regions: List[TextBlock],
                   iou_threshold: float = 0.3) -> List[Tuple[int, int, float]]:
     """
-    匹配生肉图和翻译图的区域 - 简化版
-    
-    逻辑：
-    1. 计算所有生肉框和翻译框的重叠率
-    2. 只要重叠率 >= 阈值，就保留翻译框
-    3. 一个翻译框可以被多个生肉框匹配（多对一）
-    
+    Match the regions of the raw image and the translated image - simplified version
+
+    Logic:
+    1. Compute the overlap ratio of every raw box with every translated box
+    2. Whenever the overlap ratio >= the threshold, the translated box is kept
+    3. One translated box may be matched by several raw boxes (many to one)
+
     Args:
-        raw_regions: 生肉图区域列表
-        translated_regions: 翻译图区域列表（已缩放到生肉图尺寸）
-        iou_threshold: 重叠率阈值（以小框为基准）
-        
+        raw_regions: list of regions of the raw image
+        translated_regions: list of regions of the translated image (already scaled to the size of the raw image)
+        iou_threshold: overlap ratio threshold (relative to the smaller box)
+
     Returns:
-        匹配结果列表 [(raw_idx, trans_idx, overlap_ratio), ...]
+        The list of matches [(raw_idx, trans_idx, overlap_ratio), ...]
     """
     # Bounding rectangles of all regions
     raw_rects = [get_bounding_rect(r) for r in raw_regions]
@@ -1049,13 +1049,13 @@ def match_regions(raw_regions: List[TextBlock],
 def merge_rects(rect1: Tuple[float, float, float, float],
                 rect2: Tuple[float, float, float, float]) -> Tuple[float, float, float, float]:
     """
-    合并两个矩形，返回包含两者的最小外接矩形
-    
+    Merge two rectangles and return the minimum bounding rectangle that contains both
+
     Args:
-        rect1, rect2: (x, y, w, h) 格式的矩形
-        
+        rect1, rect2: rectangles in (x, y, w, h) form
+
     Returns:
-        合并后的矩形 (x, y, w, h)
+        The merged rectangle (x, y, w, h)
     """
     x1, y1, w1, h1 = rect1
     x2, y2, w2, h2 = rect2
@@ -1072,18 +1072,18 @@ def create_matched_regions(raw_regions: List[TextBlock],
                            translated_regions: List[TextBlock],
                            matches: List[Tuple[int, int, float]]) -> Tuple[List[TextBlock], set]:
     """
-    创建匹配后的区域列表 - 简化版
-    
-    直接使用翻译框的所有数据（框、文本、样式）
-    注意：一个翻译框可能匹配多个生肉框，但只添加一次到渲染列表
-    
+    Create the list of matched regions - simplified version
+
+    All data of the translated box is used directly (box, text, style).
+    Note: one translated box may match several raw boxes, but it is added to the render list only once
+
     Args:
-        raw_regions: 生肉图区域（用于记录哪些被匹配了）
-        translated_regions: 翻译图区域
-        matches: 匹配结果 [(raw_idx, trans_idx, overlap), ...]
-        
+        raw_regions: regions of the raw image (to record which ones were matched)
+        translated_regions: regions of the translated image
+        matches: the matches [(raw_idx, trans_idx, overlap), ...]
+
     Returns:
-        (匹配后的区域列表, 已匹配的生肉区域索引集合)
+        (list of matched regions, set of indexes of the matched raw regions)
     """
     import copy
     
@@ -1123,14 +1123,14 @@ def create_matched_regions(raw_regions: List[TextBlock],
 def filter_raw_regions_for_inpainting(raw_regions: List[TextBlock],
                                       matched_indices: set) -> List[TextBlock]:
     """
-    获取用于修复的生肉区域（只保留匹配成功的）
-    
+    Get the raw regions to inpaint (only the ones that were matched)
+
     Args:
-        raw_regions: 所有生肉区域
-        matched_indices: 匹配成功的索引集合
-        
+        raw_regions: all raw regions
+        matched_indices: set of the indexes that were matched
+
     Returns:
-        用于修复的区域列表
+        The list of regions to inpaint
     """
     return [raw_regions[i] for i in sorted(matched_indices)]
 
@@ -1139,20 +1139,20 @@ def calculate_template_alignment_offset(raw_img: np.ndarray,
                                         translated_img: np.ndarray,
                                         template_size: int = 440) -> Tuple[int, int]:
     """
-    使用模板匹配计算中日文图的对齐偏移量
-    
-    从中文图（翻译图）中心提取模板，在日文图（生肉图）中匹配，
-    计算需要移动的水平和垂直偏移量
-    
+    Compute the alignment offset between the two images by template matching
+
+    A template is taken from the centre of the translated image and matched in the raw image,
+    which gives the horizontal and vertical offset to move by
+
     Args:
-        raw_img: 生肉图（BGR格式）
-        translated_img: 翻译图（BGR格式）
-        template_size: 模板大小（像素），如果为0则自动计算
-        
+        raw_img: the raw image (BGR)
+        translated_img: the translated image (BGR)
+        template_size: template size (pixels); computed automatically when 0
+
     Returns:
         (horizontal_offset, vertical_offset)
-        - horizontal_offset: 水平偏移，>0 向左移，<0 向右移
-        - vertical_offset: 垂直偏移，>0 向上移，<0 向下移
+        - horizontal_offset: horizontal offset, >0 moves left, <0 moves right
+        - vertical_offset: vertical offset, >0 moves up, <0 moves down
     """
     try:
         # Make sure the image is BGR
@@ -1239,8 +1239,8 @@ __all__ = [
 
 def _refine_mask_winpy(rgbimg, rawmask):
     """
-    win.py 版本的 refine_mask 函数
-    使用 DenseCRF 优化蒙版边缘
+    The refine_mask function of the win.py version.
+    Refines the mask edges with DenseCRF
     """
     try:
         import pydensecrf.densecrf as dcrf
@@ -1276,8 +1276,8 @@ def _refine_mask_winpy(rgbimg, rawmask):
 
 def _complete_mask_winpy(img_np: np.ndarray, ccs: List[np.ndarray], textlines: List[Tuple[int, int, int, int]], cc2textline_assignment):
     """
-    win.py 版本的 complete_mask 函数
-    完成蒙版精炼
+    The complete_mask function of the win.py version.
+    Completes the mask refinement
     """
     from tqdm import tqdm
     

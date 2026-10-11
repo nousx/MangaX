@@ -498,7 +498,7 @@ class QuadMetric():
 
 def shrink_polygon_py(polygon, shrink_ratio):
     """
-    对框进行缩放，返回去的比例为1/shrink_ratio 即可
+    Shrink or grow a box; to go back, use a ratio of 1/shrink_ratio
     """
     cx = polygon[:, 0].mean()
     cy = polygon[:, 1].mean()
@@ -536,7 +536,7 @@ class MakeShrinkMap():
 
     def __call__(self, data: dict) -> dict:
         """
-        从scales中随机选择一个尺度，对图片和文本框进行缩放
+        Pick one scale from scales at random and scale the image and the text boxes by it
         :param data: {'imgs':,'text_polys':,'texts':,'ignore_tags':}
         :return:
         """
@@ -598,7 +598,7 @@ class MakeBorderMap():
 
     def __call__(self, data: dict) -> dict:
         """
-        从scales中随机选择一个尺度，对图片和文本框进行缩放
+        Pick one scale from scales at random and scale the image and the text boxes by it
         :param data: {'imgs':,'text_polys':,'texts':,'ignore_tags':}
         :return:
         """

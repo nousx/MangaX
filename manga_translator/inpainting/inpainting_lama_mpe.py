@@ -151,10 +151,10 @@ class LamaMPEInpainter(OfflineInpainter):
         super().__init__(*args, **kwargs)
     
     def _check_downloaded_map(self, map_key: str) -> bool:
-        """检查模型文件是否存在
-        
-        lama_mpe 的 ONNX 模型有设计缺陷会导致降级到 PyTorch，
-        因此需要确保两个模型文件都下载，不跳过任何检查。
+        """Check whether the model files exist
+
+        The ONNX model of lama_mpe has a design flaw that makes it fall back to PyTorch,
+        so both model files have to be downloaded and no check is skipped.
         """
         return super()._check_downloaded_map(map_key)
 
@@ -300,7 +300,7 @@ class LamaMPEInpainter(OfflineInpainter):
         return ans
     
     async def _infer_onnx(self, image: np.ndarray, mask: np.ndarray, inpainting_size: int = 1024, verbose: bool = False) -> np.ndarray:
-        """ONNX推理方法（包含MPE计算）- 采用Rust策略：padding而非resize"""
+        """ONNX inference method (with the MPE calculation) - follows the Rust strategy: padding instead of resizing"""
         img_original = np.copy(image)
         mask_original = np.copy(mask)
         mask_original = np.where(mask_original > 0, 1, 0).astype(np.uint8)
@@ -382,7 +382,7 @@ class LamaMPEInpainter(OfflineInpainter):
         return ans
     
     async def _infer_onnx_mpe(self, image: np.ndarray, mask: np.ndarray, inpainting_size: int = 1024, verbose: bool = False) -> np.ndarray:
-        """ONNX专用推理方法（MPE版本）"""
+        """Inference method for ONNX only (MPE version)"""
         img_original = np.copy(image)
         mask_original = np.copy(mask)
         mask_original = np.where(mask_original > 0, 1, 0).astype(np.uint8)
@@ -481,11 +481,11 @@ class LamaLargeInpainter(LamaMPEInpainter):
     }
     
     def _check_downloaded_map(self, map_key: str) -> bool:
-        """检查模型文件是否存在
-        
-        逻辑：
-        - 如果是 'onnx' key，只检查 ONNX 文件
-        - 如果是 'model' key：必须确保 .ckpt 文件存在（用于降级）
+        """Check whether the model files exist
+
+        Logic:
+        - for the 'onnx' key, only the ONNX file is checked
+        - for the 'model' key, the .ckpt file must exist (for the fallback)
         """
         # When the onnx key is checked, call the parent check directly
         if map_key == 'onnx':
@@ -715,7 +715,7 @@ class LamaLargeInpainter(LamaMPEInpainter):
         return await self._infer_torch_large(image, mask, config, inpainting_size, verbose)
     
     async def _infer_onnx(self, image: np.ndarray, mask: np.ndarray, inpainting_size: int = 1024, verbose: bool = False) -> np.ndarray:
-        """ONNX专用推理方法 - 采用Rust策略：padding而非resize"""
+        """Inference method for ONNX only - follows the Rust strategy: padding instead of resizing"""
         try:
             prep = self._prepare_large_image(image, mask, inpainting_size, verbose)
 

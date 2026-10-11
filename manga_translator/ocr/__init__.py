@@ -19,30 +19,30 @@ from .model_paddleocr import (
 
 
 def _get_manga_ocr_class():
-    """延迟导入 ModelMangaOCR，只有在真正使用 mocr 时才导入"""
+    """Import ModelMangaOCR lazily, only when mocr is really used"""
     from .model_manga_ocr import ModelMangaOCR
     return ModelMangaOCR
 
 
 def _get_paddleocr_vl_class():
-    """延迟导入 ModelPaddleOCRVL，只有在真正使用 paddleocr_vl 时才导入"""
+    """Import ModelPaddleOCRVL lazily, only when paddleocr_vl is really used"""
     from .model_paddleocr_vl import ModelPaddleOCRVL
     return ModelPaddleOCRVL
 
 def _get_hayai_ocr_class():
-    """延迟导入 ModelHayaiOCR，只有在真正使用 hayai_ocr_v2 时才导入"""
+    """Import ModelHayaiOCR lazily, only when hayai_ocr_v2 is really used"""
     from .model_hayai import ModelHayaiOCR
     return ModelHayaiOCR
 
 
 def _get_openai_ocr_class():
-    """延迟导入 ModelOpenAIOCR，只有在真正使用 openai_ocr 时才导入"""
+    """Import ModelOpenAIOCR lazily, only when openai_ocr is really used"""
     from .model_api_ocr import ModelOpenAIOCR
     return ModelOpenAIOCR
 
 
 def _get_gemini_ocr_class():
-    """延迟导入 ModelGeminiOCR，只有在真正使用 gemini_ocr 时才导入"""
+    """Import ModelGeminiOCR lazily, only when gemini_ocr is really used"""
     from .model_api_ocr import ModelGeminiOCR
     return ModelGeminiOCR
 

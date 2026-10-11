@@ -51,16 +51,16 @@ async def dispatch(detector_key: Detector, image: np.ndarray, detect_size: int, 
                    use_sfx_filter: bool = False, sfx_filter_include_bubble_text: bool = False,
                    bubble_mask: Optional[np.ndarray] = None):
     """
-    检测调度函数，支持混合检测模式
-    
+    Detection dispatch function; supports the hybrid detection mode
+
     Args:
-        use_yolo_obb: 是否启用YOLO OBB辅助检测器
-        use_sfx_filter: 是否过滤既未被 other 包裹、也未与 YOLO 文本框重叠的主检测框
-        sfx_filter_include_bubble_text: 是否让气泡内文本也参与拟声词过滤
-        yolo_obb_conf: YOLO OBB检测器的置信度阈值
-        min_box_area_ratio: 最小检测框面积占比（相对图片总像素）
-        result_path_fn: 结果路径生成函数（用于保存调试图）
-        det_rearrange_min_effective_short_side: 长图检测重排后的最低有效短边分辨率
+        use_yolo_obb: whether the YOLO OBB auxiliary detector is on
+        use_sfx_filter: whether main detector boxes that are neither enclosed by an "other" box nor overlap a YOLO text box are filtered out
+        sfx_filter_include_bubble_text: whether text inside bubbles also takes part in the sound-effect filter
+        yolo_obb_conf: confidence threshold of the YOLO OBB detector
+        min_box_area_ratio: minimum area ratio of a detected box (relative to the total pixels of the image)
+        result_path_fn: function that builds result paths (used to save debug images)
+        det_rearrange_min_effective_short_side: lowest effective short-side resolution after rearranging a long image for detection
     """
     # Run the main detector
     detector = get_detector(detector_key)
@@ -123,7 +123,7 @@ async def dispatch(detector_key: Detector, image: np.ndarray, detect_size: int, 
 
 
 def get_detector_instance(key: str, detector_class):
-    """获取或创建检测器实例（用于辅助检测器）"""
+    """Get or create a detector instance (for the auxiliary detector)"""
     if key not in detector_cache:
         detector_cache[key] = detector_class()
     return detector_cache[key]
@@ -140,8 +140,8 @@ def _get_box_label(box: Quadrilateral) -> Optional[str]:
 
 def _apply_yolo_label_infection(main_boxes: List[Quadrilateral], yolo_boxes: List[Quadrilateral], min_overlap_ratio: float = 0.05) -> None:
     """
-    让每个 YOLO 框按照重叠率“感染”一个主检测器框标签（最多感染一个）。
-    只写入标签，不改动框几何。
+    Let each YOLO box "pass" its label to one main detector box, chosen by overlap ratio (at most one).
+    Only the label is written; the box geometry is not changed.
     """
     if not main_boxes or not yolo_boxes:
         return
@@ -225,9 +225,9 @@ def _box_direction(box: Quadrilateral) -> Optional[str]:
 
 def _is_axis_wrapped_pair(box_a: Quadrilateral, box_b: Quadrilateral, eps: float = 2.0) -> bool:
     """
-    主轴包裹判定（按用户规则）：
-    - 竖排(v)：看 X 区间是否一方包含另一方
-    - 横排(h)：看 Y 区间是否一方包含另一方
+    Main-axis enclosure test (the user's rule):
+    - vertical (v): whether the X interval of one contains that of the other
+    - horizontal (h): whether the Y interval of one contains that of the other
     """
     dir_a = _box_direction(box_a)
     dir_b = _box_direction(box_b)
@@ -251,7 +251,7 @@ def _is_axis_wrapped_pair(box_a: Quadrilateral, box_b: Quadrilateral, eps: float
 
 
 def _aabb_overlap_ratio(box_a: Quadrilateral, box_b: Quadrilateral) -> float:
-    """返回两个 AABB 交集占较小框面积的比例。"""
+    """Return the intersection of two AABBs as a ratio of the area of the smaller box."""
     a_min_x, a_max_x, a_min_y, a_max_y = _box_aabb(box_a)
     b_min_x, b_max_x, b_min_y, b_max_y = _box_aabb(box_b)
     a_area = max(0.0, a_max_x - a_min_x) * max(0.0, a_max_y - a_min_y)
@@ -266,7 +266,7 @@ def _aabb_overlap_ratio(box_a: Quadrilateral, box_b: Quadrilateral) -> float:
 
 
 def _detect_sfx_bubble_mask(image: np.ndarray) -> Optional[np.ndarray]:
-    """用 MangaLens 生成全图气泡掩码；失败时返回 None，此时不做气泡豁免。"""
+    """Build the bubble mask of the whole image with MangaLens; None is returned on failure, and no bubble exemption is made then."""
     try:
         result = detect_bubbles_with_mangalens(image, return_annotated=False, verbose=False)
         return build_bubble_mask_from_mangalens_result(result, image.shape[:2])
@@ -287,11 +287,11 @@ def _get_sfx_filtered_main_indices(
     bubble_mask: Optional[np.ndarray] = None,
 ) -> set[int]:
     """
-    找出缺少 YOLO 支持的主检测框：
-    - YOLO `other` 必须完整包裹主框；或
-    - 任一非 `other` YOLO 框与主框的重叠率达到阈值。
-    两项均不满足时，再用 MangaLens 模型掩码判定是否在气泡内；气泡内文本仍保留。
-    sfx_filter_include_bubble_text=True 时跳过气泡保护。
+    Find the main detector boxes that lack YOLO support:
+    - a YOLO `other` box must fully enclose the main box; or
+    - the overlap ratio of any non-`other` YOLO box with the main box reaches the threshold.
+    When neither holds, the MangaLens model mask decides whether the box is inside a bubble; text inside a bubble is still kept.
+    With sfx_filter_include_bubble_text=True the bubble protection is skipped.
     """
     # Even when the user sets the merge threshold to 0, a real intersection is still required, so an arbitrary YOLO box
     # does not let every main detector box on the page pass the filter.
@@ -346,28 +346,28 @@ def merge_detection_boxes(
     bubble_mask: Optional[np.ndarray] = None,
 ) -> List[Quadrilateral]:
     """
-    合并主检测器和YOLO检测器的框，智能替换逻辑：
-    0. 高优先级结构替换：
-       若同方向主框中存在“主轴包裹”成对关系（竖排看X、横排看Y），且某个YOLO框完整覆盖该对主框，
-       则直接用该YOLO框替换这对主框。
-    1. 如果YOLO框与主检测器框重叠
-    2. 且YOLO框完全包含主检测器框
-    3. 且YOLO框面积 >= 主检测器框面积 * 2
-    4. 且YOLO框与其他未替换的主检测器框的重叠率 < overlap_threshold
-    5. 则删除被包含的主检测器框，使用YOLO框替代
-    6. 其他情况：如果重叠率 >= overlap_threshold，删除重叠的YOLO框，保留主检测器框
-    7. 不重叠或重叠率 < overlap_threshold 的YOLO框直接添加
-    
+    Merge the boxes of the main detector and the YOLO detector, with smart replacement:
+    0. High-priority structural replacement:
+       when main boxes of the same direction form a "main-axis enclosure" pair (X for vertical, Y for horizontal) and a YOLO box fully covers that pair,
+       the pair is replaced by that YOLO box directly.
+    1. If a YOLO box overlaps a main detector box
+    2. and the YOLO box fully contains the main detector box
+    3. and the YOLO box area >= the main detector box area * 2
+    4. and the overlap ratio of the YOLO box with the other main detector boxes that are not replaced < overlap_threshold
+    5. then the contained main detector box is removed and the YOLO box is used instead
+    6. Otherwise: when the overlap ratio >= overlap_threshold, the overlapping YOLO box is removed and the main detector box kept
+    7. YOLO boxes without overlap, or with an overlap ratio < overlap_threshold, are added directly
+
     Args:
-        yolo_boxes: YOLO OBB检测器的检测框
-        main_boxes: 主检测器的检测框
-        overlap_threshold: 重叠率阈值（0.0-1.0）。重叠率 >= 该值时删除YOLO框。设为1.0则保留所有框。
-        use_sfx_filter: 过滤既未被 YOLO other 框包裹、也未与其他 YOLO 框达到重叠阈值的主检测框。
-        image: 原图，供 MangaLens 气泡掩码判断未获 YOLO 支持的主框；模型失败时不做气泡豁免。
-        sfx_filter_include_bubble_text: 让气泡内文本也参与拟声词过滤。
-    
+        yolo_boxes: the boxes of the YOLO OBB detector
+        main_boxes: the boxes of the main detector
+        overlap_threshold: overlap ratio threshold (0.0-1.0). A YOLO box is removed when the overlap ratio >= this value. With 1.0 all boxes are kept.
+        use_sfx_filter: filter out main detector boxes that are neither enclosed by a YOLO other box nor reach the overlap threshold with another YOLO box.
+        image: the original image, for the MangaLens bubble mask that judges main boxes without YOLO support; no bubble exemption is made when the model fails.
+        sfx_filter_include_bubble_text: let text inside bubbles also take part in the sound-effect filter.
+
     Returns:
-        合并后的检测框列表
+        The merged list of boxes
     """
     if len(main_boxes) == 0:
         return yolo_boxes
@@ -535,16 +535,16 @@ def merge_detection_boxes(
 
 def draw_detection_debug_image(image: np.ndarray, main_boxes: List[Quadrilateral], yolo_boxes: List[Quadrilateral], overlap_threshold: float = 0.1) -> np.ndarray:
     """
-    绘制检测框调试图片，并标注重叠率
-    
+    Draw the debug image of the detected boxes, labelled with the overlap ratio
+
     Args:
-        image: 原始图像
-        main_boxes: 主检测器的检测框
-        yolo_boxes: YOLO检测器的检测框
-        overlap_threshold: 重叠率阈值
-    
+        image: the original image
+        main_boxes: the boxes of the main detector
+        yolo_boxes: the boxes of the YOLO detector
+        overlap_threshold: overlap ratio threshold
+
     Returns:
-        绘制了检测框的调试图片
+        The debug image with the boxes drawn
     """
     # Make a copy of the image
     debug_img = image.copy()

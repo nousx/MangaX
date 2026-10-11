@@ -154,8 +154,8 @@ def _aabb_area(txtln: Quadrilateral) -> float:
 
 def _required_uniform_shrink_scale(inner: Quadrilateral, outer: Quadrilateral, eps: float = 1.0) -> float:
     """
-    返回 outer 围绕中心等比例缩小时，仍能包裹 inner 所需的最小 scale（越小越“抗缩”）。
-    若 outer 退化（宽/高为 0），返回 inf。
+    Return the smallest scale at which outer, shrunk in proportion about its centre, still encloses inner (the smaller, the more it "resists shrinking").
+    When outer is degenerate (width or height 0), inf is returned.
     """
     inner_x1, inner_y1, inner_x2, inner_y2 = _aabb_bounds(inner)
     outer_x1, outer_y1, outer_x2, outer_y2 = _aabb_bounds(outer)
@@ -176,11 +176,11 @@ def _required_uniform_shrink_scale(inner: Quadrilateral, outer: Quadrilateral, e
 
 def _group_by_full_wrap(candidates: List[Quadrilateral], wrap_eps: float = 1.0) -> List[Set[int]]:
     """
-    使用“完全包裹”关系分组：只有存在 A 包裹 B 或 B 包裹 A 才连接。
-    对同一个非 other 框，如果被多个 other 包裹，只保留一个 other 连接：
-    以“outer 等比例缩小时仍可包裹 inner 的最小所需 scale”作为主判据（越小越优）。
-    这样可避免 one-to-many 的 other 占用把多个 other 粘成同一连通组。
-    其中 other 作为包裹辅助框时，允许对 inner 的 AABB 覆盖率 > 90%。
+    Group by the "fully encloses" relation: boxes are only connected when A encloses B or B encloses A.
+    When one non-other box is enclosed by several other boxes, only one other connection is kept:
+    the main criterion is "the smallest scale at which outer, shrunk in proportion, still encloses inner" (the smaller the better).
+    This keeps a one-to-many other from gluing several other boxes into one connected group.
+    When an other box serves as an enclosing helper, a coverage of more than 90% of the AABB of inner is accepted.
     """
     node_count = len(candidates)
     labels = [_get_det_label(txtln) for txtln in candidates]
@@ -228,8 +228,8 @@ def _group_by_full_wrap(candidates: List[Quadrilateral], wrap_eps: float = 1.0) 
 
 def _sort_group_textlines(txtlns: List[Quadrilateral]) -> List[Quadrilateral]:
     """
-    对特殊预合并分组内文本线做稳定排序，避免 set 导致的随机顺序。
-    规则与原合并流程保持一致：横排按 y 从上到下，竖排按 x 从右到左。
+    Sort the text lines inside a special pre-merge group in a stable way, to avoid the random order a set gives.
+    The rule is the same as in the original merge flow: horizontal text by y from top to bottom, vertical text by x from right to left.
     """
     if len(txtlns) <= 1:
         return txtlns

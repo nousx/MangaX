@@ -1,6 +1,6 @@
 """
-YOLO 辅助检测器
-使用 Ultralytics YOLO 运行时进行推理。
+YOLO auxiliary detector.
+Inference runs on the Ultralytics YOLO runtime.
 """
 
 import os
@@ -16,7 +16,7 @@ from .common import OfflineDetector
 
 
 class YOLOOBBDetector(OfflineDetector):
-    """YOLO 辅助检测器 - 基于 Ultralytics YOLO 运行时"""
+    """YOLO auxiliary detector - based on the Ultralytics YOLO runtime"""
 
     supports_detection_rearrange = True
 
@@ -114,7 +114,7 @@ class YOLOOBBDetector(OfflineDetector):
         return int(getattr(self, "input_size", detect_size))
 
     def xyxy2xyxyxyxy(self, boxes: np.ndarray) -> np.ndarray:
-        """将轴对齐框从 xyxy 转换为四角点"""
+        """Convert axis-aligned boxes from xyxy to four corner points"""
         x1 = boxes[:, 0:1]
         y1 = boxes[:, 1:2]
         x2 = boxes[:, 2:3]
@@ -133,7 +133,7 @@ class YOLOOBBDetector(OfflineDetector):
         distance_threshold: float = 10.0,
         iou_threshold: float = 0.3,
     ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
-        """后处理去重：移除中心点距离很近或高度重叠的框"""
+        """De-duplication in post-processing: remove boxes whose centres are very close or that overlap heavily"""
         if len(boxes) == 0:
             return boxes, scores, class_ids
 
@@ -183,10 +183,10 @@ class YOLOOBBDetector(OfflineDetector):
         edge_sides: np.ndarray,
         other_class_id: int = 5,
     ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
-        """合并跨重排切片边缘重复出的 ``other`` 框。
+        """Merge ``other`` boxes that appear twice across the edges of rearranged tiles.
 
-        只处理相邻切片的 ``bottom -> top`` 边缘框，普通图像内部的重叠
-        ``other`` 框保持不变。
+        Only the ``bottom -> top`` edge boxes of adjacent tiles are handled; overlapping ``other`` boxes inside an
+        ordinary image are left as they are.
         """
         if len(boxes) < 2:
             return boxes, scores, class_ids
@@ -350,7 +350,7 @@ class YOLOOBBDetector(OfflineDetector):
         rearrange_plan: Optional[dict] = None,
         det_rearrange_min_effective_short_side: float = 341.0,
     ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
-        """使用与主检测器相同的切割逻辑进行检测"""
+        """Detect with the same cutting logic as the main detector"""
         if image is None or image.size == 0:
             self.logger.error("YOLO OBB: invalid input image")
             return self._empty_results()
@@ -554,7 +554,7 @@ class YOLOOBBDetector(OfflineDetector):
         det_rearrange_min_effective_short_side: float = 341.0,
     ):
         """
-        执行检测推理（支持长图分割检测）
+        Run detection inference (supports detecting a long image in pieces)
 
         Returns:
             textlines: List[Quadrilateral]

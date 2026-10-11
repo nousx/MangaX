@@ -1,4 +1,4 @@
-"""纯色气泡填色与逐块修复辅助。"""
+"""Helpers for solid-colour bubble filling and block-by-block inpainting."""
 from typing import List, Tuple
 
 import cv2
@@ -21,18 +21,18 @@ def solid_fill_pure_bubbles(
     overlap_threshold: float,
 ) -> Tuple[np.ndarray, np.ndarray, int]:
     """
-    对匹配的纯色气泡，只在修复蒙版与气泡蒙版的交集内直接用背景中位色填充，避免覆盖修复蒙版之外的气泡内容。
+    For matching solid-colour bubbles, fill directly with the median background colour only inside the intersection of the inpainting mask and the bubble mask, so bubble content outside the inpainting mask is not covered.
 
     Args:
-        img: RGB 或 RGBA 工作图
-        mask: 精修（膨胀）后的修复掩码，与 img 同高宽；填色区域会从中清零
-        text_regions: 文本区域列表，用现有模型气泡重叠逻辑选择对应气泡
-        mask_tight: 膨胀后的原始文字蒙版，仅用于从气泡中扣除文字像素、采样背景色
-        bubble_mask: 已按比例内缩的气泡模型输出蒙版，用于识别匹配的气泡连通块
-        overlap_threshold: 文本框位于模型气泡内的最小重叠率
+        img: the RGB or RGBA working image
+        mask: the refined (dilated) inpainting mask, the same height and width as img; the filled areas are cleared from it
+        text_regions: list of text regions; the existing model bubble overlap logic picks the matching bubbles
+        mask_tight: the dilated raw text mask, only used to cut the text pixels out of the bubble and sample the background colour
+        bubble_mask: the mask output by the bubble model, already shrunk in proportion, used to identify the matching bubble components
+        overlap_threshold: minimum overlap ratio for a text box to count as inside a model bubble
 
     Returns:
-        (filled_img, remaining_mask, filled_region_count)，不修改输入。
+        (filled_img, remaining_mask, filled_region_count); the inputs are not modified.
     """
     filled_img = img.copy()
     remaining_mask = mask.copy()
@@ -92,21 +92,21 @@ def solid_fill_pure_bubbles(
 async def inpaint_regions_per_block(img: np.ndarray, remaining_mask: np.ndarray,
                                     inpaint_fn) -> Tuple[np.ndarray, int]:
     """
-    逐块修复：将填色后优化蒙版的每个孤立连通块，
-    按自身外接框裁 2 倍窗口单独修复再贴回。
+    Block-by-block inpainting: each isolated connected component of the refined mask after filling
+    is inpainted on its own in a window twice the size of its bounding box and pasted back.
 
-    与整页修复的差异：
-    - 逐块小窗口内掩码占比大，LaMa 修复质量远好于整页长条掩码（整页会留文字鬼影）
-    - 每次只传入当前连通块的优化蒙版，不受文本行框和邻近蒙版影响
-    - 图与掩码一起反射补成正方形：给模型足够上下文；掩码同步反射，
-      否则镜像出来的文字没有掩码，模型会照着镜像把文字原样画回来
-    - 补成正方形后调用普通修复入口，长宽比为 1，不会进入长图切片流程
+    Differences from whole-page inpainting:
+    - In a small per-block window the mask takes up a large share, and LaMa inpaints far better than with a long strip mask on a whole page (which leaves ghosts of the text)
+    - Only the refined mask of the current component is passed in each time, unaffected by text line boxes and neighbouring masks
+    - Image and mask are reflect-padded to a square together: the model gets enough context; the mask is reflected too,
+      otherwise the mirrored text would have no mask and the model would paint the text back from the mirror image
+    - After padding to a square the ordinary inpainting entry is called; the aspect ratio is 1, so the long-image tiling flow is not entered
 
     Args:
         inpaint_fn: async (crop, mask) -> inpainted crop
     Returns:
-        (result_img, inpainted_block_count)。img 不被修改；
-        remaining_mask 会被原地清零已修复连通块。
+        (result_img, inpainted_block_count). img is not modified;
+        the components that were inpainted are cleared in place from remaining_mask.
     """
     result = img.copy()
     im_h, im_w = result.shape[:2]

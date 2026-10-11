@@ -369,7 +369,7 @@ def _complete_mask_core(
     kernel_size=3,
     show_progress=True,
 ):
-    """complete_mask 的核心实现，处理单个区块"""
+    """Core implementation of complete_mask; handles a single block"""
     bboxes = [txtln.aabb.xywh for txtln in textlines]
     polys = [Polygon(txtln.pts) for txtln in textlines]
     for (x, y, w, h) in bboxes:
@@ -473,7 +473,7 @@ def _complete_mask_core(
 
 def complete_mask(img: np.ndarray, mask: np.ndarray, textlines: List[Quadrilateral], keep_threshold = 1e-2, dilation_offset = 0, kernel_size=3):
     """
-    完成 mask 精修。是否切割仅由 detector rearrange 条件决定。
+    Complete the mask refinement. Whether to cut is decided only by the detector rearrange condition.
     """
     import logging
     logger = logging.getLogger(__name__)

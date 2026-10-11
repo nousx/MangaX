@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-路径管理模块
-提供统一的文件路径生成和查找功能，支持新的目录结构和向后兼容
+Path management module.
+One place for building and finding file paths; supports the new folder structure and stays backward compatible
 """
 
 import os
@@ -37,13 +37,13 @@ WORK_DIR_RESERVED_NAMES = {
 
 
 def normalize_image_path(image_path: str) -> str:
-    """规范化图片路径。"""
+    """Normalise an image path."""
     return os.path.normpath(os.path.abspath(image_path))
 
 
 def is_work_image_path(image_path: str) -> bool:
     """
-    判断路径是否是编辑器专用的上色/超分底图。
+    Whether the path is a colorized or upscaled base image kept for the editor.
     """
     norm_path = normalize_image_path(image_path)
     parent_dir = os.path.dirname(norm_path)
@@ -65,7 +65,7 @@ def is_work_image_path(image_path: str) -> bool:
 
 def resolve_original_image_path(image_path: str) -> str:
     """
-    将工作目录中的统一底图路径还原为原图路径，其它路径保持原样。
+    Turn the path of a unified base image in the work folder back into the path of the original image; other paths are returned as they are.
     """
     norm_path = normalize_image_path(image_path)
     if not is_work_image_path(norm_path):
@@ -87,13 +87,13 @@ def resolve_original_image_path(image_path: str) -> str:
 
 def get_work_dir(image_path: str) -> str:
     """
-    获取图片对应的工作目录路径
-    
+    Get the work folder path that belongs to an image
+
     Args:
-        image_path: 原图片路径
-        
+        image_path: path of the original image
+
     Returns:
-        工作目录的绝对路径
+        The absolute path of the work folder
     """
     image_dir = os.path.dirname(resolve_original_image_path(image_path))
     return os.path.join(image_dir, WORK_DIR_NAME)
@@ -101,7 +101,7 @@ def get_work_dir(image_path: str) -> str:
 
 def get_work_image_path(image_path: str, create_dir: bool = True) -> str:
     """
-    获取编辑器专用的上色/超分底图路径。
+    Get the path of the colorized or upscaled base image kept for the editor.
     """
     if is_work_image_path(image_path):
         work_image_path = normalize_image_path(image_path)
@@ -118,7 +118,7 @@ def get_work_image_path(image_path: str, create_dir: bool = True) -> str:
 
 
 def find_work_image_path(image_path: str) -> Optional[str]:
-    """查找编辑器专用的上色/超分底图。"""
+    """Find the colorized or upscaled base image kept for the editor."""
     work_image_path = get_work_image_path(image_path, create_dir=False)
     if os.path.exists(work_image_path):
         return work_image_path
@@ -134,7 +134,7 @@ def find_work_image_path(image_path: str) -> Optional[str]:
 
 def get_legacy_inpainted_path(image_path: str, create_dir: bool = True) -> str:
     """
-    获取旧版修复图路径（manga_translator_work/inpainted/*_inpainted.ext）。
+    Get the path of the old-style inpainted image (manga_translator_work/inpainted/*_inpainted.ext).
     """
     original_path = resolve_original_image_path(image_path)
     work_dir = get_work_dir(original_path)
@@ -150,14 +150,14 @@ def get_legacy_inpainted_path(image_path: str, create_dir: bool = True) -> str:
 
 def get_json_path(image_path: str, create_dir: bool = True) -> str:
     """
-    获取JSON配置文件的路径
-    
+    Get the path of the JSON file
+
     Args:
-        image_path: 原图片路径
-        create_dir: 是否自动创建目录
-        
+        image_path: path of the original image
+        create_dir: whether the folder is created automatically
+
     Returns:
-        JSON文件的绝对路径
+        The absolute path of the JSON file
     """
     work_dir = get_work_dir(image_path)
     json_dir = os.path.join(work_dir, JSON_SUBDIR)
@@ -181,14 +181,14 @@ def get_original_txt_path(
     output_format: Optional[str] = None,
 ) -> str:
     """
-    获取原文导出文件的路径。
-    
+    Get the path of the original-text export file.
+
     Args:
-        image_path: 原图片路径
-        create_dir: 是否自动创建目录
-        
+        image_path: path of the original image
+        create_dir: whether the folder is created automatically
+
     Returns:
-        原文导出文件的绝对路径
+        The absolute path of the original-text export file
     """
     work_dir = get_work_dir(image_path)
     originals_dir = os.path.join(work_dir, ORIGINALS_SUBDIR)
@@ -207,14 +207,14 @@ def get_translated_txt_path(
     output_format: Optional[str] = None,
 ) -> str:
     """
-    获取译文导出文件的路径。
-    
+    Get the path of the translation export file.
+
     Args:
-        image_path: 原图片路径
-        create_dir: 是否自动创建目录
-        
+        image_path: path of the original image
+        create_dir: whether the folder is created automatically
+
     Returns:
-        译文导出文件的绝对路径
+        The absolute path of the translation export file
     """
     work_dir = get_work_dir(image_path)
     translations_dir = os.path.join(work_dir, TRANSLATIONS_SUBDIR)
@@ -229,14 +229,14 @@ def get_translated_txt_path(
 
 def get_yolo_labels_dir(image_path: str, create_dir: bool = True) -> str:
     """
-    获取 YOLO 标注目录路径。
+    Get the path of the YOLO label folder.
 
     Args:
-        image_path: 原图片路径
-        create_dir: 是否自动创建目录
+        image_path: path of the original image
+        create_dir: whether the folder is created automatically
 
     Returns:
-        YOLO 标注目录的绝对路径
+        The absolute path of the YOLO label folder
     """
     work_dir = get_work_dir(image_path)
     yolo_labels_dir = os.path.join(work_dir, YOLO_LABELS_SUBDIR)
@@ -249,14 +249,14 @@ def get_yolo_labels_dir(image_path: str, create_dir: bool = True) -> str:
 
 def get_yolo_label_path(image_path: str, create_dir: bool = True) -> str:
     """
-    获取图片对应的 YOLO 标注文件路径。
+    Get the path of the YOLO label file that belongs to an image.
 
     Args:
-        image_path: 原图片路径
-        create_dir: 是否自动创建目录
+        image_path: path of the original image
+        create_dir: whether the folder is created automatically
 
     Returns:
-        YOLO 标注文件的绝对路径
+        The absolute path of the YOLO label file
     """
     yolo_labels_dir = get_yolo_labels_dir(image_path, create_dir=create_dir)
     base_name = os.path.splitext(os.path.basename(resolve_original_image_path(image_path)))[0]
@@ -265,13 +265,13 @@ def get_yolo_label_path(image_path: str, create_dir: bool = True) -> str:
 
 def find_yolo_label_path(image_path: str) -> Optional[str]:
     """
-    查找图片对应的 YOLO 标注文件。
+    Find the YOLO label file that belongs to an image.
 
     Args:
-        image_path: 原图片路径
+        image_path: path of the original image
 
     Returns:
-        找到的 YOLO 标注文件路径，如果不存在返回 None
+        The path of the YOLO label file that was found, or None when it does not exist
     """
     original_path = resolve_original_image_path(image_path)
     yolo_label_path = get_yolo_label_path(original_path, create_dir=False)
@@ -287,28 +287,28 @@ def find_yolo_label_path(image_path: str) -> Optional[str]:
 
 def get_inpainted_path(image_path: str, create_dir: bool = True) -> str:
     """
-    获取修复后图片的路径
-    
+    Get the path of the inpainted image
+
     Args:
-        image_path: 原图片路径
-        create_dir: 是否自动创建目录
-        
+        image_path: path of the original image
+        create_dir: whether the folder is created automatically
+
     Returns:
-        修复后图片的绝对路径
+        The absolute path of the inpainted image
     """
     return get_legacy_inpainted_path(image_path, create_dir=create_dir)
 
 
 def get_translated_images_dir(image_path: str, create_dir: bool = True) -> str:
     """
-    获取已翻译图片目录的路径
-    
+    Get the path of the folder of translated images
+
     Args:
-        image_path: 原图片路径
-        create_dir: 是否自动创建目录
-        
+        image_path: path of the original image
+        create_dir: whether the folder is created automatically
+
     Returns:
-        已翻译图片目录的绝对路径
+        The absolute path of the folder of translated images
     """
     work_dir = get_work_dir(image_path)
     translated_dir = os.path.join(work_dir, TRANSLATED_IMAGES_SUBDIR)
@@ -321,16 +321,16 @@ def get_translated_images_dir(image_path: str, create_dir: bool = True) -> str:
 
 def find_translated_source_json(target_image_path: str, translated_dir: str) -> Optional[str]:
     """
-    在已翻译图片目录中查找与目标图同名的翻译数据JSON
-    
-    用于替换翻译模式：根据生肉图的文件名，在已翻译目录中查找同名图片的JSON
-    
+    In the folder of translated images, find the translation data JSON of the image with the same name as the target
+
+    For replace-translation mode: by the file name of the raw image, find the JSON of the image with the same name in the translated folder
+
     Args:
-        target_image_path: 目标图片（生肉）的路径
-        translated_dir: 已翻译图片所在目录
-        
+        target_image_path: path of the target (raw) image
+        translated_dir: folder that holds the translated images
+
     Returns:
-        找到的JSON文件路径，如果不存在返回None
+        The path of the JSON file that was found, or None when it does not exist
     """
     if not translated_dir or not os.path.isdir(translated_dir):
         return None
@@ -366,13 +366,13 @@ def find_translated_source_json(target_image_path: str, translated_dir: str) -> 
 
 def find_json_path(image_path: str) -> Optional[str]:
     """
-    查找JSON配置文件，优先查找新位置，支持向后兼容
-    
+    Find the JSON file, looking in the new location first, with backward compatibility
+
     Args:
-        image_path: 原图片路径
-        
+        image_path: path of the original image
+
     Returns:
-        找到的JSON文件路径，如果不存在返回None
+        The path of the JSON file that was found, or None when it does not exist
     """
     original_path = resolve_original_image_path(image_path)
 
@@ -391,13 +391,13 @@ def find_json_path(image_path: str) -> Optional[str]:
 
 def find_inpainted_path(image_path: str) -> Optional[str]:
     """
-    查找修复后的图片文件
-    
+    Find the inpainted image file
+
     Args:
-        image_path: 原图片路径
-        
+        image_path: path of the original image
+
     Returns:
-        找到的修复后图片路径，如果不存在返回None
+        The path of the inpainted image that was found, or None when it does not exist
     """
     inpainted_path = get_inpainted_path(image_path, create_dir=False)
     if os.path.exists(inpainted_path):
@@ -408,17 +408,17 @@ def find_inpainted_path(image_path: str) -> Optional[str]:
 
 def get_paint_overlay_path(image_path: str, create_dir: bool = True) -> str:
     """
-    获取彩色画笔涂鸦图层（paint overlay）的保存路径。
+    Get the path where the colour brush doodle layer (paint overlay) is saved.
 
-    存放在 manga_translator_work/paint_overlay/<basename>_overlay.png。
-    统一使用 PNG 以保留 alpha 通道。
+    It is stored at manga_translator_work/paint_overlay/<basename>_overlay.png.
+    PNG is always used, to keep the alpha channel.
 
     Args:
-        image_path: 原图片路径
-        create_dir: 是否自动创建目录
+        image_path: path of the original image
+        create_dir: whether the folder is created automatically
 
     Returns:
-        paint overlay 图片的绝对路径
+        The absolute path of the paint overlay image
     """
     original_path = resolve_original_image_path(image_path)
     work_dir = get_work_dir(original_path)
@@ -432,7 +432,7 @@ def get_paint_overlay_path(image_path: str, create_dir: bool = True) -> str:
 
 
 def find_paint_overlay_path(image_path: str) -> Optional[str]:
-    """查找已保存的彩色画笔涂鸦图层文件。"""
+    """Find the saved colour brush doodle layer file."""
     overlay_path = get_paint_overlay_path(image_path, create_dir=False)
     if os.path.exists(overlay_path):
         return overlay_path
@@ -441,13 +441,13 @@ def find_paint_overlay_path(image_path: str) -> Optional[str]:
 
 def find_txt_files(image_path: str) -> Tuple[Optional[str], Optional[str]]:
     """
-    查找当前模板格式的原文和译文导出文件。
-    
+    Find the original-text and translation export files of the current template format.
+
     Args:
-        image_path: 原图片路径
-        
+        image_path: path of the original image
+
     Returns:
-        (原文路径, 译文路径)，不存在的返回None
+        (original-text path, translation path); None for one that does not exist
     """
     original_path = get_original_txt_path(image_path, create_dir=False)
     translated_path = get_translated_txt_path(image_path, create_dir=False)
@@ -460,28 +460,28 @@ def find_txt_files(image_path: str) -> Tuple[Optional[str], Optional[str]]:
 
 def get_legacy_json_path(image_path: str) -> str:
     """
-    获取旧版JSON文件路径（图片同目录）
-    用于向后兼容
-    
+    Get the path of the old-style JSON file (next to the image).
+    For backward compatibility
+
     Args:
-        image_path: 原图片路径
-        
+        image_path: path of the original image
+
     Returns:
-        旧版JSON文件路径
+        The path of the old-style JSON file
     """
     return os.path.splitext(image_path)[0] + '_translations.json'
 
 
 def migrate_legacy_files(image_path: str, move_files: bool = False) -> dict:
     """
-    迁移旧版文件到新目录结构
-    
+    Migrate old-style files to the new folder structure
+
     Args:
-        image_path: 原图片路径
-        move_files: 是否移动文件（True）还是复制文件（False）
-        
+        image_path: path of the original image
+        move_files: whether files are moved (True) or copied (False)
+
     Returns:
-        迁移结果字典，包含成功和失败的文件列表
+        A dictionary with the migration result, holding the lists of files that succeeded and failed
     """
     import shutil
     

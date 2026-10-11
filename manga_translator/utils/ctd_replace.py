@@ -1,10 +1,10 @@
 """
-替换翻译专用的检测模块
+Detection module dedicated to replace-translation
 
-和 win.py 的流程一致：
-1. 调用 CTD 检测器获取原始蒙版（跳过检测器内部的精炼）
-2. 使用 ctd_utils/textmask.refine_mask 处理原始蒙版
-3. 使用 REFINEMASK_INPAINT 模式（会进行5x5膨胀）
+The same flow as win.py:
+1. Call the CTD detector to get the raw mask (skipping the refinement inside the detector)
+2. Process the raw mask with ctd_utils/textmask.refine_mask
+3. Use REFINEMASK_INPAINT mode (which dilates by 5x5)
 """
 
 from typing import List, Tuple
@@ -23,9 +23,9 @@ from manga_translator.utils.swallowed import note_ignored_error
 
 class ReplaceTranslationCTD:
     """
-    替换翻译专用的 CTD 检测器封装
-    
-    和 win.py 完全一致的蒙版精炼流程
+    Wrapper of the CTD detector dedicated to replace-translation
+
+    Exactly the same mask refinement flow as win.py
     """
     
     def __init__(self, detector: ComicTextDetector):
@@ -41,13 +41,13 @@ class ReplaceTranslationCTD:
         verbose: bool = False
     ) -> Tuple[List[Quadrilateral], np.ndarray, np.ndarray]:
         """
-        使用 win.py 风格的蒙版精炼流程
-        
+        Mask refinement flow in the style of win.py
+
         Returns:
             (textlines, mask_raw, mask_refined)
-            - textlines: 检测到的文本行
-            - mask_raw: 原始蒙版（神经网络直接输出）
-            - mask_refined: 精炼后的蒙版（使用 REFINEMASK_INPAINT）
+            - textlines: the detected text lines
+            - mask_raw: the raw mask (direct output of the neural network)
+            - mask_refined: the refined mask (with REFINEMASK_INPAINT)
         """
         # Get the raw output through the detector's internal method
         im_h, im_w = image.shape[:2]
@@ -119,9 +119,9 @@ async def detect_for_replace_translation(
     verbose: bool = False
 ) -> Tuple[List[Quadrilateral], np.ndarray, np.ndarray]:
     """
-    替换翻译专用的检测函数
-    
-    和 win.py 完全一致：返回 (textlines, mask_raw, mask_refined)
+    Detection function dedicated to replace-translation
+
+    Exactly as in win.py: returns (textlines, mask_raw, mask_refined)
     """
     wrapper = ReplaceTranslationCTD(detector)
     return await wrapper.detect_with_winpy_refine(

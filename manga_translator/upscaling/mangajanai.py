@@ -39,15 +39,15 @@ _KNOWN_MODELS = {
 
 def is_color_image(image, threshold: float = 0.05) -> bool:
     """
-    检测图片是否为彩色图片
-    使用多个指标综合判断，提高准确性
-    
+    Detect whether an image is a colour image.
+    Several indicators are combined for a more accurate decision
+
     Args:
-        image: PIL Image 或 numpy array
-        threshold: 饱和度阈值（默认0.05）
-    
+        image: a PIL Image or a numpy array
+        threshold: saturation threshold (0.05 by default)
+
     Returns:
-        True 如果是彩色图片，False 如果是黑白/灰度图片
+        True for a colour image, False for a black-and-white or greyscale image
     """
     # Always convert to a PIL Image
     if isinstance(image, np.ndarray):
@@ -106,12 +106,12 @@ def enhance_contrast(image) -> Image.Image:
     """
     Auto-adjust levels to enhance contrast, similar to MangaJaNaiConverterGui.
     Finds black/white points from histogram and stretches the range.
-    
+
     Args:
-        image: PIL Image 或 numpy array
-        
+        image: a PIL Image or a numpy array
+
     Returns:
-        PIL Image 对象
+        A PIL Image object
     """
     # Always convert to a PIL Image
     if isinstance(image, np.ndarray):
@@ -346,12 +346,12 @@ class MangaJaNaiUpscaler(OfflineUpscaler):
     def _select_best_model(self, img) -> str:
         """
         Select best model from candidates based on image resolution and color
-        
+
         Args:
-            img: PIL Image 或 numpy array
-            
+            img: a PIL Image or a numpy array
+
         Returns:
-            模型文件名
+            The model file name
         """
         if not self.is_auto_mode:
             return self.model_file
@@ -466,7 +466,7 @@ class MangaJaNaiUpscaler(OfflineUpscaler):
         self.current_loaded_model_file = filename
 
     async def _unload(self):
-        """卸载模型"""
+        """Unload the model"""
         if self.model:
             del self.model
             self.model = None
@@ -517,14 +517,14 @@ class MangaJaNaiUpscaler(OfflineUpscaler):
 
     def _process_single(self, img, device: torch.device) -> Image.Image:
         """
-        处理单张图片
-        
+        Process a single image
+
         Args:
-            img: PIL Image 或 numpy array
-            device: torch 设备
-            
+            img: a PIL Image or a numpy array
+            device: the torch device
+
         Returns:
-            处理后的 PIL Image
+            The processed PIL Image
         """
         # Make sure the input is a PIL Image
         if isinstance(img, np.ndarray):
@@ -580,15 +580,15 @@ class MangaJaNaiUpscaler(OfflineUpscaler):
 
     def _process_with_tiles(self, img, device: torch.device, tile_size: int) -> Image.Image:
         """
-        使用分块处理图片
-        
+        Process an image in tiles
+
         Args:
-            img: PIL Image 或 numpy array
-            device: torch 设备
-            tile_size: 分块大小
-            
+            img: a PIL Image or a numpy array
+            device: the torch device
+            tile_size: tile size
+
         Returns:
-            处理后的 PIL Image
+            The processed PIL Image
         """
         # Make sure the input is a PIL Image
         if isinstance(img, np.ndarray):

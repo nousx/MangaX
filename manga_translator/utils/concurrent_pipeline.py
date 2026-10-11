@@ -1,7 +1,7 @@
 """
-并发流水线处理模块 - 真正的并行架构
-实现流水线并发：检测+OCR、翻译、修复、渲染 四个步骤在独立线程中运行
-每个线程拥有独立的事件循环，互不阻塞
+Concurrent pipeline module - a truly parallel architecture.
+Pipeline concurrency: the four steps detection+OCR, translation, inpainting and rendering run in separate threads.
+Each thread has its own event loop and does not block the others
 """
 import asyncio
 import contextlib
@@ -25,34 +25,34 @@ logger = logging.getLogger('manga_translator')
 
 
 class PipelineAbortError(asyncio.CancelledError):
-    """内部停止信号：用于中止其他工作线程，但不应被当作用户取消。"""
+    """Internal stop signal: used to stop the other worker threads; it should not be treated as a cancellation by the user."""
 
 
 
 class ConcurrentPipeline:
     """
-    流水线并发处理器 - 真正的并行架构
-    
-    4个独立线程，每个拥有自己的事件循环，互不阻塞：
-    1. 检测+OCR线程 → 完成后放入翻译队列和修复队列
-    2. 翻译线程 → 批量处理翻译队列（HTTP 请求不会被 GPU 操作阻塞）
-    3. 修复线程 → 处理修复队列（GPU 推理不会阻塞翻译）
-    4. 渲染线程 → 翻译+修复完成后渲染出图
-    
-    batch_size 控制翻译批量大小（一次翻译多少张图片），
-    同时也限制等待翻译的队列长度，避免 API 太慢时检测/OCR 无限堆积。
-    
-    使用 queue.Queue 和 threading.Lock 进行线程间通信和同步。
+    Concurrent pipeline processor - a truly parallel architecture
+
+    4 separate threads, each with its own event loop, none blocking another:
+    1. Detection+OCR thread → puts finished items in the translation queue and the inpainting queue
+    2. Translation thread → handles the translation queue in batches (HTTP requests are not blocked by GPU work)
+    3. Inpainting thread → handles the inpainting queue (GPU inference does not block translation)
+    4. Rendering thread → renders the output once translation and inpainting are done
+
+    batch_size controls the translation batch size (how many images are translated at once)
+    and also limits the length of the queue waiting for translation, so detection/OCR does not pile up without bound when the API is slow.
+
+    queue.Queue and threading.Lock are used for communication and synchronisation between the threads.
     """
     
     def __init__(self, translator_instance, batch_size: int = 3, max_workers: int = 4):
         """
-        初始化并发流水线
-        
+        Initialise the concurrent pipeline
+
         Args:
-            translator_instance: MangaTranslator实例
-            batch_size: 批量大小（一次翻译多少张图片）
-            max_workers: 每个步骤的线程池大小
+            translator_instance: the MangaTranslator instance
+            batch_size: batch size (how many images are translated at once)
+            max_workers: thread pool size of each step
         """
         self.translator = translator_instance
         self.batch_size = batch_size
@@ -106,11 +106,11 @@ class ConcurrentPipeline:
         self.failed_images = set()
     
     def _emit_status(self, message: str):
-        """向主线程发送状态消息（线程安全）"""
+        """Send a status message to the main thread (thread-safe)"""
         self._status_queue.put(message)
     
     def _flush_status_to_logger(self):
-        """将队列中的状态消息输出到 logger（在主线程调用）"""
+        """Write the status messages in the queue to the logger (called on the main thread)"""
         while not self._status_queue.empty():
             try:
                 msg = self._status_queue.get_nowait()
@@ -119,7 +119,7 @@ class ConcurrentPipeline:
                 break
 
     def _record_failed_image(self, image_name: str | None):
-        """记录已失败文件数，避免同一文件在多个阶段重复计数。"""
+        """Record the number of failed files, so the same file is not counted again at several stages."""
         normalized_name = str(image_name or "").strip()
         if not normalized_name:
             return
@@ -130,13 +130,13 @@ class ConcurrentPipeline:
             return len(self.failed_images)
 
     def _get_runtime_skipped_count(self) -> int:
-        """读取已完成结果中的运行时跳过数量。"""
+        """Read the number of run-time skips from the finished results."""
         with self._results_lock:
             return sum(1 for ctx in self._results if getattr(ctx, "skipped", False))
 
 
     def _pop_translation_task(self, timeout: float):
-        """从翻译队列取一个任务。"""
+        """Take one task from the translation queue."""
         image_name, config = self.translation_queue.get(timeout=timeout)
         with self._lock:
             ctx = self.base_contexts.get(image_name)
@@ -146,7 +146,7 @@ class ConcurrentPipeline:
         return ctx, config
 
     def _should_translate_batch(self, batch: List[tuple]):
-        """根据图片数判断当前批次是否应该立刻翻译。"""
+        """Decide from the number of images whether the current batch should be translated right away."""
         if not batch:
             return False, ""
 
@@ -160,8 +160,8 @@ class ConcurrentPipeline:
 
     def _enqueue_translation_task(self, image_name: str, config):
         """
-        向翻译队列提交任务。
-        当翻译 API 过慢时，这里会形成背压，阻止检测/OCR 无限领先。
+        Submit a task to the translation queue.
+        When the translation API is too slow, back pressure builds up here and keeps detection/OCR from running ahead without bound.
         """
         waited = False
         while not self.stop_workers:
@@ -183,7 +183,7 @@ class ConcurrentPipeline:
         raise RuntimeError('Concurrent pipeline has stopped; cannot enqueue translation tasks')
 
     def _check_cancelled_or_raise(self, stage: str, detail: str = ""):
-        """统一取消检查：区分用户取消与内部停机。"""
+        """Single cancellation check: tells a cancellation by the user from an internal stop."""
         if self.has_critical_error:
             raise PipelineAbortError(self.critical_error_msg or 'Critical error in concurrent pipeline')
 
@@ -201,7 +201,7 @@ class ConcurrentPipeline:
             raise
     
     def _run_async_in_thread(self, coro):
-        """在当前线程中创建事件循环并运行协程"""
+        """Create an event loop in the current thread and run the coroutine"""
         loop = self._create_worker_event_loop()
         asyncio.set_event_loop(loop)
         try:
@@ -230,8 +230,8 @@ class ConcurrentPipeline:
 
     def _create_worker_event_loop(self):
         """
-        为工作线程创建事件循环。
-        在 Windows 下优先使用 SelectorEventLoop，避免 Proactor 在线程场景下的兼容性问题。
+        Create an event loop for a worker thread.
+        On Windows SelectorEventLoop is preferred, to avoid the compatibility problems of Proactor in threads.
         """
         if os.name == 'nt' and hasattr(asyncio, 'SelectorEventLoop'):
             try:
@@ -242,8 +242,8 @@ class ConcurrentPipeline:
     
     def _detection_ocr_thread(self, file_paths: List[str], configs: List):
         """
-        检测+OCR工作线程（在独立线程中运行）
-        完成后将上下文放入翻译队列和修复队列
+        Detection+OCR worker (runs in its own thread).
+        Puts the finished context in the translation queue and the inpainting queue
         """
         self._emit_status("[Detection+OCR] Thread started")
         try:
@@ -252,7 +252,7 @@ class ConcurrentPipeline:
             self._emit_status(f"[Detection+OCR] Thread completed ({self.stats['detection_ocr']}/{self.total_images})")
     
     async def _detection_ocr_async(self, file_paths: List[str], configs: List):
-        """检测+OCR的异步实现"""
+        """Asynchronous implementation of detection+OCR"""
         self._check_cancelled_or_raise('Detection+OCR')
         
         logger.info(f"[Detection+OCR thread] Processing {len(file_paths)} images (loading in batches)")
@@ -414,7 +414,7 @@ class ConcurrentPipeline:
             logger.info("[Detection+OCR thread] Processing completed")
     
     def _translation_thread(self):
-        """翻译工作线程（在独立线程中运行）"""
+        """Translation worker (runs in its own thread)"""
         self._emit_status("[Translation] Thread started")
         try:
             self._run_async_in_thread(self._translation_async())
@@ -423,7 +423,7 @@ class ConcurrentPipeline:
             self._emit_status(f"[Translation] Thread completed ({self.stats['translation']}/{self.total_images})")
     
     async def _translation_async(self):
-        """翻译的异步实现"""
+        """Asynchronous implementation of translation"""
         batch = []
         try:
             self._check_cancelled_or_raise('Translation')
@@ -505,7 +505,7 @@ class ConcurrentPipeline:
             logger.info("[Translation thread] Stopped")
     
     async def _process_translation_batch(self, batch: List[tuple]):
-        """处理一个翻译批次"""
+        """Handle one translation batch"""
         if not batch:
             return
         batch_items = [(ctx.image_name, config) for ctx, config in batch]
@@ -615,7 +615,7 @@ class ConcurrentPipeline:
                 self.stop_workers = True
     
     def _inpaint_thread(self):
-        """修复工作线程（在独立线程中运行）"""
+        """Inpainting worker (runs in its own thread)"""
         self._emit_status("[Inpainting] Thread started")
         try:
             self._run_async_in_thread(self._inpaint_async())
@@ -623,7 +623,7 @@ class ConcurrentPipeline:
             self._emit_status(f"[Inpainting] Thread completed ({self.stats['inpaint']}/{self.total_images})")
     
     async def _inpaint_async(self):
-        """修复的异步实现"""
+        """Asynchronous implementation of inpainting"""
         self._check_cancelled_or_raise('Inpainting')
         
         logger.info("[Inpainting thread] Started")
@@ -805,7 +805,7 @@ class ConcurrentPipeline:
             logger.info("[Inpainting thread] Stopped")
     
     def _render_thread(self):
-        """渲染工作线程（在独立线程中运行）"""
+        """Rendering worker (runs in its own thread)"""
         self._emit_status("[Rendering] Thread started")
         try:
             self._run_async_in_thread(self._render_async())
@@ -813,7 +813,7 @@ class ConcurrentPipeline:
             self._emit_status(f"[Rendering] Thread completed ({self.stats['rendering']}/{self.total_images})")
     
     async def _render_async(self):
-        """渲染的异步实现"""
+        """Asynchronous implementation of rendering"""
         self._check_cancelled_or_raise('Rendering')
         
         logger.info("[Rendering thread] Started")

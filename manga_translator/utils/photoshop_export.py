@@ -1,6 +1,6 @@
 """
-Photoshop PSD 导出模块
-使用 ExtendScript (.jsx) 生成可编辑的 PSD 文件
+Photoshop PSD export module.
+Uses ExtendScript (.jsx) to produce an editable PSD file
 """
 
 import logging
@@ -30,7 +30,7 @@ def psd_export_requested(config) -> bool:
 
 
 def resolve_photoshop_font(config) -> str | None:
-    """获取 PSD 文本层使用的渲染字体。"""
+    """Get the render font used by the PSD text layers."""
     render_cfg = getattr(config, 'render', None)
     font_family = getattr(render_cfg, 'font_family', None)
     if isinstance(font_family, str) and font_family.strip():
@@ -354,7 +354,7 @@ MASK_LAYER_TEMPLATE = """
 
 
 def escape_jsx_string(text: str) -> str:
-    """转义 JSX 字符串中的特殊字符（用于单引号包裹的字符串）"""
+    """Escape the special characters of a JSX string (for strings wrapped in single quotes)"""
     if not text:
         return ""
     # Backslashes must be handled first, before the other escapes
@@ -379,11 +379,11 @@ def escape_jsx_string(text: str) -> str:
 
 
 def escape_jsx_path(path: str) -> str:
-    """将文件路径转换为可安全嵌入 JSX 单引号字符串的形式。
+    """Turn a file path into a form that is safe to embed in a single-quoted JSX string.
 
-    Photoshop 的 ExtendScript 使用单引号包裹路径；路径中的英文单引号
-    必须转义，否则会提前结束字符串并导致脚本语法错误。Windows 反斜杠
-    同时统一转换为正斜杠，避免被 JSX 当作转义序列解析。
+    Photoshop's ExtendScript wraps paths in single quotes; an ASCII single quote in the path
+    has to be escaped, otherwise it ends the string early and causes a script syntax error. Windows backslashes
+    are turned into forward slashes at the same time, so JSX does not parse them as escape sequences.
     """
     if not path:
         return ""
@@ -408,14 +408,14 @@ VERTICAL_HORIZONTAL_MAP = {
 
 def preprocess_vertical_text(text: str, is_vertical: bool) -> str:
     """
-    预处理竖排文字，处理縦中横（横排内嵌）
-    
+    Preprocess vertical text, handling tate-chu-yoko (horizontal text set inside a vertical line)
+
     Args:
-        text: 原始文本
-        is_vertical: 是否为竖排文字
-        
+        text: the original text
+        is_vertical: whether the text is vertical
+
     Returns:
-        处理后的文本
+        The processed text
     """
     if not is_vertical or not text:
         return text
@@ -442,7 +442,7 @@ def preprocess_vertical_text(text: str, is_vertical: bool) -> str:
 
 
 def generate_text_layer_jsx(index: int, text_region, default_font: str, line_spacing: float = None) -> str:
-    """生成单个文本层的 JSX 代码"""
+    """Build the JSX code of a single text layer"""
     
     # Text direction (decided early, for the text preprocessing)
     direction = text_region.direction
@@ -635,15 +635,15 @@ def generate_text_layer_jsx(index: int, text_region, default_font: str, line_spa
 
 def get_psd_output_path(image_path: str) -> str:
     """
-    获取PSD文件的输出路径
-    
-    在原图所在目录下创建 manga_translator_work/psd/ 文件夹
-    
+    Get the output path of the PSD file
+
+    Creates the manga_translator_work/psd/ folder next to the original image
+
     Args:
-        image_path: 原图路径
-        
+        image_path: path of the original image
+
     Returns:
-        PSD文件的完整路径
+        The full path of the PSD file
     """
     # Folder and file name of the original image
     image_dir = os.path.dirname(os.path.abspath(image_path))
@@ -661,7 +661,7 @@ def get_psd_output_path(image_path: str) -> str:
 
 
 def _save_image_like_to_temp(image_data, target_path: str) -> bool:
-    """将当前会话图像数据保存为临时文件，供 PSD 导出复用。"""
+    """Save the image data of the current session as temporary files, for the PSD export to reuse."""
     try:
         import numpy as np
         from PIL import Image
@@ -689,23 +689,23 @@ def _save_image_like_to_temp(image_data, target_path: str) -> bool:
 
 def photoshop_export(output_file: str, ctx: Context, default_font: str = None, image_path: str = None, verbose: bool = False, result_path_fn=None, line_spacing: float = None, script_only: bool = False):
     """
-    使用 Photoshop 导出 PSD 文件
-    
-    图层结构（从下到上）：
-    1. 原图 (original) - 优先使用 editor_base，回退原图，锁定
-    2. 修复图 (inpainted) - 优先使用当前会话修复图，回退工作目录
-    3. 遮罩 (mask) - 如果有
-    4. 文字图层 - 可编辑
-    
+    Export a PSD file with Photoshop
+
+    Layer structure (bottom to top):
+    1. Original image (original) - editor_base when available, otherwise the original image; locked
+    2. Inpainted image (inpainted) - the one of the current session when available, otherwise from the work folder
+    3. Mask (mask) - when there is one
+    4. Text layers - editable
+
     Args:
-        output_file: 输出 PSD 文件路径
-        ctx: 翻译上下文，包含图片和文本区域信息
-        default_font: 默认字体名称，如果为 None 则使用 Photoshop 默认字体
-        image_path: 原图路径（用于查找 editor_base 和工作目录中的修复图）
-        verbose: 是否启用调试模式（保存JSX脚本到result文件夹）
-        result_path_fn: 结果路径生成函数（用于保存调试脚本）
-        line_spacing: 行间距系数
-        script_only: 如果为True，只生成JSX脚本而不执行Photoshop
+        output_file: path of the output PSD file
+        ctx: the translation context, with the image and the text region information
+        default_font: default font name; when None the Photoshop default font is used
+        image_path: path of the original image (used to find editor_base and the inpainted image in the work folder)
+        verbose: whether debug mode is on (saves the JSX script to the result folder)
+        result_path_fn: function that builds result paths (used to save the debug script)
+        line_spacing: line spacing factor
+        script_only: when True, only the JSX script is produced and Photoshop is not run
     """
     
     # When default_font is a file path, take the font name from it
@@ -917,7 +917,7 @@ def photoshop_export(output_file: str, ctx: Context, default_font: str = None, i
 
 
 def _normalize_photoshop_path(value) -> Optional[str]:
-    """接受带引号的可执行文件路径或安装目录，并确认目标是文件。"""
+    """Accept a quoted executable path or an install folder, and confirm that the target is a file."""
     if not isinstance(value, str):
         return None
     path = value.strip()
@@ -932,7 +932,7 @@ def _normalize_photoshop_path(value) -> Optional[str]:
 
 
 def _find_photoshop_from_environment() -> Optional[str]:
-    """检查进程环境及 Windows 已保存的变量，兼容启动后修改系统变量。"""
+    """Check the process environment and the variables saved in Windows, so a system variable changed after start-up is still seen."""
     value = os.getenv("PHOTOSHOP_PATH")
     if value:
         path = _normalize_photoshop_path(value)
@@ -969,10 +969,10 @@ def _find_photoshop_from_environment() -> Optional[str]:
 
 def find_photoshop_from_registry() -> Optional[str]:
     """
-    从 Windows 注册表查找 Photoshop 安装路径
-    
+    Find the Photoshop install path in the Windows registry
+
     Returns:
-        Photoshop 可执行文件路径，如果未找到则返回 None
+        The path of the Photoshop executable, or None when it is not found
     """
     if platform.system() != "Windows":
         return None
@@ -1055,16 +1055,16 @@ def find_photoshop_from_registry() -> Optional[str]:
 
 def find_photoshop_executable() -> Optional[str]:
     """
-    查找 Photoshop 可执行文件路径
-    
-    查找顺序：
-    1. 环境变量 PHOTOSHOP_PATH（含 Windows 当前保存的用户/系统变量）
-    2. Windows 注册表（仅 Windows）
-    3. 常见安装路径
-    4. 遍历 Adobe 目录
-    
+    Find the path of the Photoshop executable
+
+    Search order:
+    1. The PHOTOSHOP_PATH environment variable (including the user and system variables currently saved in Windows)
+    2. The Windows registry (Windows only)
+    3. Common install paths
+    4. Walking the Adobe folder
+
     Returns:
-        Photoshop 可执行文件的完整路径，如果未找到则返回 None
+        The full path of the Photoshop executable, or None when it is not found
     """
     
     # 1. Prefer the environment variable
@@ -1142,10 +1142,10 @@ def find_photoshop_executable() -> Optional[str]:
 
 def test_photoshop_installation() -> bool:
     """
-    测试 Photoshop 是否已正确安装并可用
-    
+    Test whether Photoshop is installed correctly and usable
+
     Returns:
-        如果 Photoshop 可用返回 True，否则返回 False
+        True when Photoshop is usable, otherwise False
     """
     ps_exe = find_photoshop_executable()
     if not ps_exe:

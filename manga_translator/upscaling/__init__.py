@@ -52,7 +52,7 @@ async def dispatch(upscaler_key: Upscaler, image_batch: List[Image.Image], upsca
     return await upscaler.upscale(image_batch, upscale_ratio)
 
 async def unload(upscaler_key: Upscaler, **kwargs):
-    """卸载超分模型并清理显存"""
+    """Unload the upscaling model and free GPU memory"""
     cache_key_parts = [str(upscaler_key)]
     if upscaler_key == Upscaler.realcugan and 'model_name' in kwargs:
         cache_key_parts.append(kwargs['model_name'])

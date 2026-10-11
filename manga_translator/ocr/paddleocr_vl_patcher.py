@@ -1,7 +1,7 @@
 """
-PaddleOCR-VL 模型文件自动修补工具
+Automatic patching tool for the PaddleOCR-VL model files
 
-在加载模型前自动应用必要的修改，避免手动修改模型文件
+Applies the necessary changes automatically before the model is loaded, so the model files do not have to be edited by hand
 """
 
 import os
@@ -50,10 +50,10 @@ def patch_transformers_paddleocr_vl_docs(module_file: str | None = None) -> bool
 
 def patch_paddleocr_vl_files(model_path: str):
     """
-    自动修补 PaddleOCR-VL 模型文件
-    
+    Patch the PaddleOCR-VL model files automatically
+
     Args:
-        model_path: 模型目录路径
+        model_path: path of the model folder
     """
     # 1. Create the __init__.py file (when it does not exist)
     init_file = os.path.join(model_path, '__init__.py')
@@ -213,10 +213,10 @@ if 'transformers.models.ernie4_5_moe' not in sys.modules:
 
 def register_ernie_modules(model_path: str):
     """
-    注册 ernie4_5 模块映射
-    
+    Register the ernie4_5 module mapping
+
     Args:
-        model_path: 模型目录路径
+        model_path: path of the model folder
     """
     # Import the module in advance to register the ernie4_5 mapping
     if os.path.exists(model_path):
