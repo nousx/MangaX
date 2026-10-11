@@ -2,10 +2,10 @@
 import json
 from pathlib import Path
 
-from PyQt6.QtCore import QPoint, QSettings, Qt
-from PyQt6.QtGui import QFont, QGuiApplication
+from PyQt6.QtCore import QPoint, QRectF, QSettings, Qt
+from PyQt6.QtGui import QColor, QFont, QGuiApplication, QPainter
 from PyQt6.QtWidgets import QHBoxLayout, QWidget
-from qfluentwidgets import BodyLabel, ComboBox, PushButton
+from qfluentwidgets import BodyLabel, ComboBox, PushButton, isDarkTheme
 
 from .font_list import (
     FONT_COVERAGE_FULL,
@@ -25,6 +25,10 @@ ALIASES = {'itim': 'ไอติม', 'mali': 'มะลิ', 'sriracha': 'ศ�
            'purisa': 'ภูริษา', 'sawasdee': 'สวัสดี', 'garuda': 'ครุฑ', 'loma': 'โลมา',
            'umpush': 'อัมพุช', 'waree': 'วารี', 'kinnari': 'กินรี', 'norasi': 'นรสีห์',
            'laksaman': 'ลักษมัณ'}
+
+# Space between the panel edge and the controls, and the corner radius of the panel.
+_PANEL_PADDING = 8
+_PANEL_RADIUS = 8
 
 
 class ThaiFontMenu(_FontComboBoxMenu):
@@ -101,6 +105,23 @@ class ThaiFontMenu(_FontComboBoxMenu):
              or self.groups[self.family_entries[row][0]] == group))
         proxy.invalidateRowsFilter()
         self._layout_for_anchor()
+
+    def paintEvent(self, _event):
+        """Paint an opaque panel behind every control.
+
+        The popup is a see-through window and only the list paints a
+        background of its own, so without the panel the search field, the
+        preview and the buttons would float over whatever is behind the popup.
+        """
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        dark = isDarkTheme()
+        panel = QRectF(self._container.geometry().adjusted(
+            -_PANEL_PADDING, -_PANEL_PADDING, _PANEL_PADDING, _PANEL_PADDING,
+        ).intersected(self.rect())).adjusted(0.5, 0.5, -0.5, -0.5)
+        painter.setPen(QColor(255, 255, 255, 24) if dark else QColor(0, 0, 0, 30))
+        painter.setBrush(QColor(32, 32, 32) if dark else QColor(243, 243, 243))
+        painter.drawRoundedRect(panel, _PANEL_RADIUS, _PANEL_RADIUS)
 
     def adjustSize(self):
         QWidget.adjustSize(self)
