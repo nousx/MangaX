@@ -102,7 +102,7 @@ class EnvService:
         if show_values:
             return self.env_vars.copy()
         else:
-            # 隐藏敏感值
+            # Hide sensitive values
             return {
                 key: self._mask_value(value)
                 for key, value in self.env_vars.items()
@@ -136,13 +136,13 @@ class EnvService:
             key = validate_env_key(key)
             value = normalize_env_value(value)
 
-            # 更新内存中的值
+            # Update the value in memory
             self.env_vars[key] = value
             
-            # 同时更新系统环境变量
+            # Update the system environment variable as well
             os.environ[key] = value
             
-            # 保存到文件
+            # Save to the file
             success = self.save_env_file()
             
             if success:
@@ -167,11 +167,11 @@ class EnvService:
             if key in self.env_vars:
                 del self.env_vars[key]
                 
-                # 同时从系统环境变量中删除
+                # Remove it from the system environment variables as well
                 if key in os.environ:
                     del os.environ[key]
                 
-                # 保存到文件
+                # Save to the file
                 success = self.save_env_file()
                 
                 if success:
@@ -197,7 +197,7 @@ class EnvService:
         try:
             env_path = Path(self.env_file)
             
-            # 检查文件是否存在
+            # Check whether the file exists
             if not env_path.exists():
                 logger.warning(f".env file not found at {self.env_file}")
                 return self.env_vars
@@ -226,5 +226,5 @@ class EnvService:
         if len(value) <= 4:
             return '*' * len(value)
         else:
-            # 显示前2个和后2个字符
+            # Show the first 2 and the last 2 characters
             return value[:2] + '*' * (len(value) - 4) + value[-2:]

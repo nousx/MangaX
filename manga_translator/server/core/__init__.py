@@ -4,12 +4,12 @@
 提供配置管理、身份验证、日志管理、任务管理、响应工具、数据模型和持久化功能。
 """
 
-# 数据模型
-# 服务
+# Data models
+# Services
 from manga_translator.server.core.account_service import AccountService
 from manga_translator.server.core.audit_service import AuditService
 
-# 配置管理
+# Configuration management
 from manga_translator.server.core.config_manager import (
     ADMIN_CONFIG_PATH,
     AVAILABLE_WORKFLOWS,
@@ -26,7 +26,7 @@ from manga_translator.server.core.config_manager import (
 )
 from manga_translator.server.core.env_service import EnvService
 
-# 日志管理
+# Log management
 from manga_translator.server.core.logging_manager import (
     WebLogHandler,
     add_log,
@@ -40,7 +40,7 @@ from manga_translator.server.core.logging_manager import (
     task_logs,
 )
 
-# 认证和授权中间件（新版）
+# Authentication and authorisation middleware (new version)
 from manga_translator.server.core.middleware import (
     check_concurrent_limit,
     check_daily_quota,
@@ -63,7 +63,7 @@ from manga_translator.server.core.models import (
 )
 from manga_translator.server.core.permission_service import PermissionService
 
-# 持久化工具
+# Persistence tools
 from manga_translator.server.core.persistence import (
     atomic_write_json,
     cleanup_old_backups,
@@ -72,7 +72,7 @@ from manga_translator.server.core.persistence import (
     load_json,
 )
 
-# 响应工具
+# Response tools
 from manga_translator.server.core.response_utils import (
     apply_user_env_vars,
     transform_to_bytes,
@@ -81,14 +81,14 @@ from manga_translator.server.core.response_utils import (
 )
 from manga_translator.server.core.session_service import SessionService
 
-# 系统初始化
+# System initialisation
 from manga_translator.server.core.system_init import (
     SystemInitializer,
     get_system_initializer,
     init_system,
 )
 
-# 任务管理
+# Task management
 from manga_translator.server.core.task_manager import (
     active_tasks,
     cancel_task,
@@ -108,28 +108,28 @@ from manga_translator.server.core.task_manager import (
 )
 
 __all__ = [
-    # 数据模型
+    # Data models
     'UserPermissions',
     'UserAccount',
     'Session',
     'AuditEvent',
-    # 持久化工具
+    # Persistence tools
     'atomic_write_json',
     'load_json',
     'create_backup',
     'cleanup_old_backups',
     'ensure_directory',
-    # 服务
+    # Services
     'AccountService',
     'SessionService',
     'PermissionService',
     'AuditService',
     'EnvService',
-    # 系统初始化
+    # System initialisation
     'SystemInitializer',
     'init_system',
     'get_system_initializer',
-    # 配置管理
+    # Configuration management
     'ADMIN_CONFIG_PATH',
     'SERVER_CONFIG_PATH',
     'DEFAULT_ADMIN_SETTINGS',
@@ -142,7 +142,7 @@ __all__ = [
     'get_available_workflows',
     'temp_env_vars',
     'init_server_config_file',
-    # 认证和授权中间件（新版）
+    # Authentication and authorisation middleware (new version)
     'init_middleware_services',
     'get_services',
     'create_error_response',
@@ -155,7 +155,7 @@ __all__ = [
     'increment_task_count',
     'decrement_task_count',
     'increment_daily_usage',
-    # 日志管理
+    # Log management
     'task_logs',
     'global_log_queue',
     'generate_task_id',
@@ -166,7 +166,7 @@ __all__ = [
     'export_logs',
     'WebLogHandler',
     'setup_log_handler',
-    # 任务管理
+    # Task management
     'translation_semaphore',
     'server_config',
     'active_tasks',
@@ -182,7 +182,7 @@ __all__ = [
     'get_server_config',
     'cleanup_after_request',
     'cleanup_context',
-    # 响应工具
+    # Response tools
     'transform_to_image',
     'transform_to_json',
     'transform_to_bytes',

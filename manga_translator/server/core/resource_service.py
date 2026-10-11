@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 class ResourceManagementService:
     """资源管理服务"""
     
-    # 支持的文件格式
+    # Supported file formats
     PROMPT_FORMATS = {'.txt', '.json'}
     FONT_FORMATS = {'.ttf', '.otf', '.ttc'}
     
@@ -42,7 +42,7 @@ class ResourceManagementService:
         self.fonts_repo = fonts_repo
         self.base_path = Path(base_path)
         
-        # 确保目录存在
+        # Make sure the folders exist
         self.prompts_path = self.base_path / "prompts"
         self.fonts_path = self.base_path / "fonts"
         self.prompts_path.mkdir(parents=True, exist_ok=True)
@@ -64,11 +64,11 @@ class ResourceManagementService:
         Raises:
             ValueError: 如果文件格式不支持或文件无效
         """
-        # 验证文件
+        # Validate the file
         if not file or not file.filename:
             raise ValueError("无效的文件")
         
-        # 验证文件格式
+        # Validate the file format
         file_format = self._get_file_extension(file.filename)
         if not self.validate_file_format(file.filename, 'prompt'):
             raise ValueError(
@@ -76,26 +76,26 @@ class ResourceManagementService:
                 f"支持的格式: {', '.join(self.PROMPT_FORMATS)}"
             )
         
-        # 创建用户目录
+        # Create the user folder
         user_dir = self.prompts_path / user_id
         user_dir.mkdir(parents=True, exist_ok=True)
         
-        # 生成安全的文件名（避免路径遍历攻击）
+        # Build a safe file name (to prevent path traversal attacks)
         safe_filename = self._sanitize_filename(file.filename)
         file_path = user_dir / safe_filename
         
-        # 如果文件已存在，添加数字后缀
+        # When the file already exists, add a number suffix
         file_path = self._get_unique_filepath(file_path)
         
         try:
-            # 保存文件
+            # Save the file
             content = await file.read()
             with open(file_path, 'wb') as f:
                 f.write(content)
             
             file_size = file_path.stat().st_size
             
-            # 创建资源记录
+            # Create the resource record
             resource = PromptResource.create(
                 user_id=user_id,
                 filename=file_path.name,
@@ -104,14 +104,14 @@ class ResourceManagementService:
                 file_format=file_format
             )
             
-            # 保存到索引
+            # Save to the index
             self.prompts_repo.add_resource(resource)
             
             logger.info(f"Uploaded prompt for user {user_id}: {file_path.name}")
             return resource
             
         except Exception as e:
-            # 如果保存失败，清理文件
+            # When saving fails, remove the file
             if file_path.exists():
                 file_path.unlink()
             logger.error(f"Failed to upload prompt: {e}")
@@ -131,11 +131,11 @@ class ResourceManagementService:
         Raises:
             ValueError: 如果文件格式不支持或文件无效
         """
-        # 验证文件
+        # Validate the file
         if not file or not file.filename:
             raise ValueError("无效的文件")
         
-        # 验证文件格式
+        # Validate the file format
         file_format = self._get_file_extension(file.filename)
         if not self.validate_file_format(file.filename, 'font'):
             raise ValueError(
@@ -143,29 +143,29 @@ class ResourceManagementService:
                 f"支持的格式: {', '.join(self.FONT_FORMATS)}"
             )
         
-        # 创建用户目录
+        # Create the user folder
         user_dir = self.fonts_path / user_id
         user_dir.mkdir(parents=True, exist_ok=True)
         
-        # 生成安全的文件名
+        # Build a safe file name
         safe_filename = self._sanitize_filename(file.filename)
         file_path = user_dir / safe_filename
         
-        # 如果文件已存在，添加数字后缀
+        # When the file already exists, add a number suffix
         file_path = self._get_unique_filepath(file_path)
         
         try:
-            # 保存文件
+            # Save the file
             content = await file.read()
             with open(file_path, 'wb') as f:
                 f.write(content)
             
             file_size = file_path.stat().st_size
             
-            # 尝试提取字体族名称（可选）
+            # Try to extract the font family name (optional)
             font_family = self._extract_font_family(file_path)
             
-            # 创建资源记录
+            # Create the resource record
             resource = FontResource.create(
                 user_id=user_id,
                 filename=file_path.name,
@@ -175,14 +175,14 @@ class ResourceManagementService:
                 font_family=font_family
             )
             
-            # 保存到索引
+            # Save to the index
             self.fonts_repo.add_resource(resource)
             
             logger.info(f"Uploaded font for user {user_id}: {file_path.name}")
             return resource
             
         except Exception as e:
-            # 如果保存失败，清理文件
+            # When saving fails, remove the file
             if file_path.exists():
                 file_path.unlink()
             logger.error(f"Failed to upload font: {e}")
@@ -272,16 +272,16 @@ class ResourceManagementService:
         Raises:
             ValueError: 如果资源不存在或用户无权删除
         """
-        # 获取资源
+        # Get the resource
         resource_data = repo.get_resource_by_id(resource_id)
         if not resource_data:
             raise ValueError(f"资源不存在: {resource_id}")
         
-        # 验证所有权
+        # Verify ownership
         if resource_data['user_id'] != user_id:
             raise ValueError("无权删除此资源")
         
-        # 删除文件
+        # Delete the file
         file_path = self.base_path / resource_data['file_path']
         try:
             if file_path.exists():
@@ -289,9 +289,9 @@ class ResourceManagementService:
                 logger.info(f"Deleted {resource_type} file: {file_path}")
         except Exception as e:
             logger.error(f"Failed to delete {resource_type} file: {e}")
-            # 继续删除索引记录，即使文件删除失败
+            # Carry on and delete the index record even when deleting the file failed
         
-        # 从索引中删除
+        # Remove from the index
         success = repo.delete_resource(resource_id)
         if success:
             logger.info(f"Deleted {resource_type} resource: {resource_id}")
@@ -340,10 +340,10 @@ class ResourceManagementService:
         Returns:
             str: 安全的文件名
         """
-        # 只保留文件名部分，去除路径
+        # Keep only the file name part, dropping the path
         filename = os.path.basename(filename)
         
-        # 移除危险字符
+        # Remove dangerous characters
         dangerous_chars = ['..', '/', '\\', '\0']
         for char in dangerous_chars:
             filename = filename.replace(char, '_')
@@ -363,12 +363,12 @@ class ResourceManagementService:
         if not file_path.exists():
             return file_path
         
-        # 分离文件名和扩展名
+        # Split the file name and the extension
         stem = file_path.stem
         suffix = file_path.suffix
         parent = file_path.parent
         
-        # 添加数字后缀
+        # Add a number suffix
         counter = 1
         while True:
             new_path = parent / f"{stem}_{counter}{suffix}"
@@ -387,9 +387,9 @@ class ResourceManagementService:
             Optional[str]: 字体族名称，如果提取失败返回 None
         """
         try:
-            # 这里可以使用 fontTools 库来提取字体信息
-            # 为了简化，暂时返回 None
-            # TODO: 实现字体族名称提取
+            # The fontTools library could be used here to extract the font information
+            # To keep it simple, None is returned for now
+            # TODO: implement extraction of the font family name
             return None
         except Exception as e:
             logger.debug(f"Failed to extract font family: {e}")

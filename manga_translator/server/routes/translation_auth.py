@@ -50,40 +50,40 @@ def filter_disabled_parameters(config: Config, username: str, permission_service
         permission_service: 权限服务
     """
     try:
-        # 获取服务
+        # Get the services
         account_service, _, _ = get_services()
         group_service = get_group_management_service()
         
-        # 获取用户信息
+        # Get the user information
         user_account = account_service.get_user(username)
         if not user_account:
             return
         
         group_id = user_account.group if hasattr(user_account, 'group') else 'default'
         
-        # 获取用户组的参数配置
+        # Get the parameter configuration of the user group
         group = group_service.get_group(group_id)
         group_param_config = group.get('parameter_config', {}) if group else {}
         
-        # 获取用户的权限配置
+        # Get the permission configuration of the user
         user_permissions = user_account.permissions if hasattr(user_account, 'permissions') else None
         
-        # 用户的白名单和黑名单
-        user_allowed_params = set()  # 用户白名单
-        user_denied_params = set()   # 用户黑名单
+        # The user's whitelist and blacklist
+        user_allowed_params = set()  # User whitelist
+        user_denied_params = set()   # User blacklist
         if user_permissions:
             allowed = getattr(user_permissions, 'allowed_parameters', ['*'])
             denied = getattr(user_permissions, 'denied_parameters', [])
-            # 只有非通配符才是有效白名单
+            # Only a non-wildcard entry is a real whitelist
             if '*' not in allowed:
                 user_allowed_params = set(allowed)
             user_denied_params = set(denied)
         
-        # 用户组黑名单（disabled=True的参数）
-        # 注意：禁用配置可能嵌套在 parameter_config.parameter_config 中
+        # Group blacklist (parameters with disabled=True)
+        # Note: the disable configuration may be nested in parameter_config.parameter_config
         group_disabled = {}
         
-        # 检查是否有嵌套的 parameter_config（新格式）
+        # Check for a nested parameter_config (new format)
         nested_param_config = group_param_config.get('parameter_config', {})
         if nested_param_config:
             logger.debug(f"Found nested parameter_config for user {username}: {list(nested_param_config.keys())}")
@@ -92,100 +92,100 @@ def filter_disabled_parameters(config: Config, username: str, permission_service
                     group_disabled[full_key] = settings
                     logger.debug(f"Parameter {full_key} is disabled for group {group_id}, default: {settings.get('default_value')}")
         
-        # 也检查旧格式（直接在 parameter_config 中的禁用配置）
+        # Check the old format too (disable configuration directly in parameter_config)
         for full_key, settings in group_param_config.items():
             if full_key == 'parameter_config':
-                continue  # 跳过嵌套的配置
+                continue  # Skip the nested configuration
             if isinstance(settings, dict) and settings.get('disabled', False):
                 group_disabled[full_key] = settings
         
         logger.debug(f"Total disabled parameters for user {username}: {list(group_disabled.keys())}")
         
-        # 获取用户级别的参数配置（用于默认值）
+        # Get the user-level parameter configuration (for default values)
         user_param_config = {}
-        user_disabled = {}  # 用户的禁用配置
+        user_disabled = {}  # The user's disable configuration
         if hasattr(user_account, 'parameter_config') and user_account.parameter_config:
             user_param_config = user_account.parameter_config
-            # 检查用户配置中是否有嵌套的 parameter_config（禁用配置）
+            # Check whether the user configuration has a nested parameter_config (disable configuration)
             nested_user_param = user_param_config.get('parameter_config', {})
             if nested_user_param:
                 for full_key, settings in nested_user_param.items():
                     if isinstance(settings, dict) and settings.get('disabled', False):
                         user_disabled[full_key] = settings
         
-        # 计算最终禁用的参数
-        # 最终禁用 = 用户黑名单 + (用户组黑名单 - 用户白名单)
+        # Work out the parameters that end up disabled
+        # Finally disabled = user blacklist + (group blacklist - user whitelist)
         final_disabled = {}
         
-        # 1. 用户黑名单（最高优先级）
+        # 1. User blacklist (highest priority)
         for param in user_denied_params:
             final_disabled[param] = {'disabled': True, 'source': 'user'}
         
-        # 2. 用户组黑名单，但用户白名单可以解锁
+        # 2. Group blacklist, which the user whitelist can unlock
         for full_key, settings in group_disabled.items():
-            # 如果用户白名单包含此参数，则解锁（不禁用）
+            # When the user whitelist contains this parameter, it is unlocked (not disabled)
             if full_key in user_allowed_params:
                 continue
-            # 如果已经在用户黑名单中，保持用户黑名单的设置
+            # When it is already in the user blacklist, the user blacklist setting stays
             if full_key not in final_disabled:
                 final_disabled[full_key] = {**settings, 'source': 'group'}
         
         if not final_disabled:
             return
         
-        # 遍历禁用的参数，用默认值覆盖用户提交的值
-        # 默认值优先级：用户配置 > 用户组配置 > 服务器默认
+        # Go through the disabled parameters and overwrite the values the user submitted with the defaults
+        # Priority of default values: user configuration > group configuration > server default
         for full_key, settings in final_disabled.items():
-            # 解析参数路径，如 "translator.translator" -> section="translator", key="translator"
+            # Parse the parameter path, such as "translator.translator" -> section="translator", key="translator"
             parts = full_key.split('.')
             if len(parts) != 2:
                 continue
             
             section, key = parts
             
-            # 获取默认值（按优先级）
+            # Get the default value (by priority)
             default_value = None
             
-            # 1. 优先使用用户禁用配置中的默认值
+            # 1. Prefer the default in the user's disable configuration
             if full_key in user_disabled:
                 user_setting = user_disabled[full_key]
                 if isinstance(user_setting, dict) and 'default_value' in user_setting:
                     default_value = user_setting['default_value']
             
-            # 2. 其次使用用户配置的值（用户配置格式: {"section": {"key": value}}）
+            # 2. Then the value from the user configuration (format: {"section": {"key": value}})
             if default_value is None and section in user_param_config:
                 user_section = user_param_config[section]
                 if isinstance(user_section, dict) and key in user_section:
                     default_value = user_section[key]
             
-            # 3. 再次使用用户组禁用配置中的默认值
+            # 3. Then the default in the group's disable configuration
             if default_value is None and isinstance(settings, dict):
                 default_value = settings.get('default_value')
             
-            # 4. 最后尝试从用户组的参数配置中获取默认值（非禁用配置部分）
+            # 4. Finally try the default from the group's parameter configuration (the part that is not disable configuration)
             if default_value is None:
-                # 从 group_param_config 中获取对应 section.key 的值
+                # Get the value of section.key from group_param_config
                 section_config = group_param_config.get(section, {})
                 if isinstance(section_config, dict) and key in section_config:
                     section_value = section_config[key]
-                    # 如果是简单值（非禁用配置对象），直接使用
+                    # A simple value (not a disable configuration object) is used directly
                     if not isinstance(section_value, dict) or 'disabled' not in section_value:
                         default_value = section_value
             
-            # AppSettings 有 cli 属性，可以直接设置 cli.attempts
-            # 根据section找到config中对应的子对象
+            # AppSettings has a cli attribute, so cli.attempts can be set directly
+            # Find the sub-object of config for the section
             if hasattr(config, section):
                 section_obj = getattr(config, section)
                 if hasattr(section_obj, key) and default_value is not None:
-                    # 获取目标属性的类型注解
+                    # Get the type annotation of the target attribute
                     field_type = None
                     if hasattr(section_obj.__class__, '__annotations__'):
                         field_type = section_obj.__class__.__annotations__.get(key)
                     
-                    # 如果目标类型是枚举，且当前值是字符串，则转换为枚举
+                    # When the target type is an enum and the current value is a string, convert it to the enum
                     if field_type and isinstance(field_type, type) and issubclass(field_type, Enum):
                         if isinstance(default_value, str):
-                            # 尝试通过字符串值找到对应的枚举成员
+                            # Try to find the enum member by its string value
                             try:
                                 default_value = field_type(default_value)
                             except (ValueError, KeyError):
@@ -291,11 +291,11 @@ async def verify_translation_auth(
     username = session.username
     ip_address = request.client.host if request.client else "unknown"
     
-    # 将会话ID存储到配置中，用于日志追踪
+    # Store the session ID in the configuration, for log tracing
     config._session_id = session_token
     
-    # 【重要】先应用禁用参数的默认值，再检查权限
-    # 这样如果翻译器参数被禁用，会使用管理员设置的默认翻译器
+    # [Important] Apply the defaults of disabled parameters first, then check the permissions,
+    # so that when the translator parameter is disabled, the default translator set by the administrator is used
     filter_disabled_parameters(config, username, permission_service)
     
     # Extract translator from config (after filter_disabled_parameters applied defaults)
@@ -417,8 +417,8 @@ async def verify_translation_auth(
                 '渲染器',
             )
     
-    # 注意：并发限制检查和计数增加由路由层的 track_task_start/track_task_end 负责
-    # 这里只做认证和权限检查，不修改计数器
+    # Note: checking the concurrency limit and increasing the count is done by track_task_start/track_task_end in the route layer;
+    # only authentication and permission checks happen here, and the counters are not changed
     
     logger.info(
         f"Translation auth verified: user='{username}', translator='{translator}'"
@@ -486,26 +486,26 @@ def track_task_start(username: str) -> None:
     Raises:
         HTTPException: If concurrent limit or daily quota exceeded
     """
-    # 先增加并发计数
+    # Increase the concurrency count first
     increment_task_count(username)
     
-    # 获取当前计数用于日志
+    # Get the current count for the log
     _, _, permission_service = get_services()
     current_count = permission_service.get_active_task_count(username)
-    # 使用有效的并发限制（优先从用户组获取）
+    # Use the effective concurrency limit (from the user group first)
     max_tasks = permission_service.get_effective_max_concurrent(username)
     print(f"[并发检查] 用户 '{username}': 当前任务数={current_count}, 最大允许={max_tasks}")
     
     try:
-        # 检查并发限制
+        # Check the concurrency limit
         check_concurrent_limit(username)
-        # 检查每日配额
+        # Check the daily quota
         check_daily_quota(username)
-        # 增加每日使用量
+        # Increase the daily usage
         increment_daily_usage(username)
         print(f"[并发检查] 用户 '{username}': 检查通过，任务开始")
     except Exception as e:
-        # 检查失败，回滚并发计数
+        # The check failed: roll back the concurrency count
         print(f"[并发检查] 用户 '{username}': 检查失败，回滚计数 - {e}")
         decrement_task_count(username)
         raise

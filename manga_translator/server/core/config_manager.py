@@ -15,38 +15,38 @@ from manga_translator.runtime_paths import get_config_path
 from manga_translator.server_paths import ADMIN_CONFIG_FILE, ensure_server_data_layout
 from manga_translator.utils import BASE_PATH
 
-# 配置文件路径
+# Configuration file paths
 ADMIN_CONFIG_PATH = str(ADMIN_CONFIG_FILE)
-# 默认配置文件：打包后位于 app.exe 同级的 config/config.json。
+# Default configuration file: config/config.json next to app.exe when packaged.
 SERVER_CONFIG_PATH = get_config_path('config.json')
 
-# 文件目录路径
+# Folder paths
 FONTS_DIR = os.path.join(BASE_PATH, 'fonts')
 PROMPTS_DIR = os.path.join(BASE_PATH, 'dict')
 PROMPTS_DIR = os.path.abspath(PROMPTS_DIR)
 
-# 确保目录存在
+# Make sure the folders exist
 os.makedirs(FONTS_DIR, exist_ok=True)
 os.makedirs(PROMPTS_DIR, exist_ok=True)
 ensure_server_data_layout()
 
-# i18n 相关路径
+# i18n paths
 desktop_locales_dir = os.path.join(BASE_PATH, 'desktop_qt_ui', 'locales')
 desktop_locales_dir = os.path.abspath(desktop_locales_dir)
 
-# 全局翻译字典缓存
+# Global cache of the translation dictionaries
 translations_cache = {}
 
 print(f"[INFO] i18n locales directory: {desktop_locales_dir}")
 print(f"[INFO] Fonts directory: {FONTS_DIR}")
 print(f"[INFO] Prompts directory: {PROMPTS_DIR}")
 
-# 默认管理端配置
+# Default admin configuration
 DEFAULT_ADMIN_SETTINGS = {
     'visible_sections': ['translator', 'cli', 'detector', 'ocr', 'inpainter', 'render', 'upscale', 'colorizer'],
     'hidden_keys': [
         'upscale.realcugan_model',
-        # CLI配置默认隐藏
+        # CLI configuration is hidden by default
         'cli.format',
         'cli.save_quality',
         'cli.overwrite',
@@ -56,22 +56,22 @@ DEFAULT_ADMIN_SETTINGS = {
         'cli.load_text',
         'cli.translate_json_only',
         'cli.template',
-        # 'cli.attempts',  # 不再隐藏，让用户可以设置重试次数
+        # 'cli.attempts',  # no longer hidden, so users can set the number of retries
         'cli.ignore_errors',
         'cli.batch_size',
         'cli.batch_concurrent',
         'cli.use_gpu',
         'cli.verbose',
-        'cli.psd_script_only',  # Web UI隐藏PSD脚本模式参数
+        'cli.psd_script_only',  # The web UI hides the PSD script mode parameter
         'cli.generate_and_export',
         'cli.colorize_only',
         'cli.upscale_only',
         'cli.inpaint_only',
-        # Qt UI 专属参数（替换翻译模式相关）
+        # Parameters only for the Qt UI (replace-translation mode)
         'cli.replace_translation',
         'render.enable_template_alignment',
         'render.paste_mask_dilation_pixels',
-        # 翻译器高级配置
+        # Advanced translator configuration
         'translator.enable_post_translation_check',
         'translator.post_check_max_retry_attempts',
         'translator.post_check_repetition_threshold',
@@ -79,9 +79,9 @@ DEFAULT_ADMIN_SETTINGS = {
         'translator.translator_chain',
         'translator.selective_translation',
         'translator.skip_lang',
-         'use_custom_api_params',  # 仅用于服务器端，Web UI 用户端不显示
+         'use_custom_api_params',  # Server side only; not shown to users of the web UI
          'render.gimp_font',
-         'detector.import_yolo_labels',  # Qt UI 专属 - 导入固定YOLO框
+         'detector.import_yolo_labels',  # Qt UI only - import fixed YOLO boxes
       ],
     'readonly_keys': [],
     'default_values': {},
@@ -115,13 +115,13 @@ DEFAULT_ADMIN_SETTINGS = {
         'type': 'info',
     },
     'registration': {
-        'enabled': False,  # 是否开启用户注册
-        'default_group': 'default',  # 新注册用户的默认用户组
-        'require_approval': False,  # 是否需要管理员审批（预留）
+        'enabled': False,  # Whether user registration is open
+        'default_group': 'default',  # Default user group of newly registered users
+        'require_approval': False,  # Whether administrator approval is required (reserved)
     },
 }
 
-# 所有可用的翻译流程
+# All available translation workflows
 AVAILABLE_WORKFLOWS = [
     'normal',
     'export_trans',
@@ -140,12 +140,12 @@ def load_admin_settings() -> dict:
             with open(ADMIN_CONFIG_PATH, 'r', encoding='utf-8') as f:
                 loaded_settings = json.load(f)
                 print(f"[INFO] Loaded admin settings from: {ADMIN_CONFIG_PATH}")
-                # 合并默认配置和加载的配置
+                # Merge the default configuration with the loaded one
                 import copy
                 settings = copy.deepcopy(DEFAULT_ADMIN_SETTINGS)
                 for key, value in loaded_settings.items():
                     if key in settings and isinstance(settings[key], list) and isinstance(value, list):
-                        # 列表类型：以默认值为基础，追加文件中有但默认没有的项
+                        # List type: start from the defaults and append items the file has but the defaults do not
                         default_set = set(settings[key])
                         merged = list(settings[key])
                         for item in value:
@@ -153,19 +153,19 @@ def load_admin_settings() -> dict:
                                 merged.append(item)
                         settings[key] = merged
                     elif key in settings and isinstance(settings[key], dict) and isinstance(value, dict):
-                        # 字典类型：深度合并
+                        # Dictionary type: deep merge
                         merged_dict = copy.deepcopy(settings[key])
                         merged_dict.update(value)
                         settings[key] = merged_dict
                     else:
                         settings[key] = value
                 
-                # 如果配置文件中没有密码，尝试从环境变量读取
+                # When the configuration file has no password, try the environment variable
                 if not settings.get('admin_password'):
                     env_password = os.environ.get('MANGA_TRANSLATOR_ADMIN_PASSWORD')
                     if env_password and len(env_password) >= 6:
                         settings['admin_password'] = env_password
-                        # 保存到配置文件
+                        # Save to the configuration file
                         save_admin_settings(settings)
                         print("[INFO] Admin password set from environment variable MANGA_TRANSLATOR_ADMIN_PASSWORD")
                     elif env_password:
@@ -179,11 +179,11 @@ def load_admin_settings() -> dict:
         print(f"[INFO] Admin config file not found, using defaults: {ADMIN_CONFIG_PATH}")
         settings = DEFAULT_ADMIN_SETTINGS.copy()
         
-        # 首次启动时，尝试从环境变量读取密码
+        # On first start, try to read the password from the environment variable
         env_password = os.environ.get('MANGA_TRANSLATOR_ADMIN_PASSWORD')
         if env_password and len(env_password) >= 6:
             settings['admin_password'] = env_password
-            # 保存到配置文件
+            # Save to the configuration file
             save_admin_settings(settings)
             print("[INFO] Admin password set from environment variable MANGA_TRANSLATOR_ADMIN_PASSWORD")
         elif env_password:
@@ -240,7 +240,7 @@ def parse_config(config_str: str) -> Config:
         return load_default_config()
     else:
         config = Config.parse_raw(config_str)
-        # Config 现在有 cli 属性，cli.attempts 会自动存储
+        # Config now has a cli attribute; cli.attempts is stored automatically
         return config
 
 
@@ -255,7 +255,7 @@ def get_available_workflows(mode: str = 'user', admin_settings: Optional[dict] =
     Returns:
         可用的工作流列表
     """
-    # 如果是用户模式且管理员设置了允许的流程列表
+    # In user mode, when the administrator has set a list of allowed workflows
     if mode == 'user' and admin_settings and admin_settings.get('allowed_workflows'):
         allowed = admin_settings['allowed_workflows']
         return [wf for wf in AVAILABLE_WORKFLOWS if wf in allowed]
@@ -280,25 +280,25 @@ def temp_env_vars(env_vars: dict):
     logger = logging.getLogger('manga_translator.server')
     
     if not env_vars:
-        # 没有用户环境变量，直接使用服务器默认值
+        # No user environment variables: use the server defaults directly
         yield
         return
     
     logger.debug(f"[TempEnv] Setting temporary env vars: {list(env_vars.keys())}")
     
-    # 保存原始值
+    # Keep the original values
     original_values = {}
     for key in env_vars:
         original_values[key] = os.environ.get(key)
     
     try:
-        # 设置新值
+        # Set the new values
         for key, value in env_vars.items():
-            if value:  # 只设置非空值
+            if value:  # Only non-empty values are set
                 os.environ[key] = str(value)
                 logger.debug(f"[TempEnv] Set {key}=***")
         
-        # 清除翻译器缓存，强制重新创建（这样才能读取新的环境变量）
+        # Clear the translator cache to force it to be created again (only then are the new environment variables read)
         try:
             from manga_translator.translators import translator_cache
             translator_cache.clear()
@@ -308,7 +308,7 @@ def temp_env_vars(env_vars: dict):
         
         yield
     finally:
-        # 恢复原始值
+        # Restore the original values
         for key, original_value in original_values.items():
             if original_value is None:
                 os.environ.pop(key, None)
@@ -317,7 +317,7 @@ def temp_env_vars(env_vars: dict):
         
         logger.debug("[TempEnv] Restored original env vars")
         
-        # 再次清除缓存，确保下次使用服务器的
+        # Clear the cache once more, so the server's values are used next time
         try:
             from manga_translator.translators import translator_cache
             translator_cache.clear()
@@ -375,16 +375,16 @@ def get_available_locales() -> dict:
     if os.path.exists(desktop_locales_dir):
         for filename in os.listdir(desktop_locales_dir):
             if filename.endswith('.json'):
-                locale_code = filename[:-5]  # 移除 .json
+                locale_code = filename[:-5]  # Remove .json
                 locales[locale_code] = locale_code
     return locales
 
 
 # ============================================================================
-# 配置热加载
+# Hot reloading of the configuration
 # ============================================================================
 
-# 记录配置文件的修改时间，用于检测变化
+# Record the modification time of the configuration file, to detect changes
 _admin_config_mtime = 0
 
 
@@ -406,13 +406,13 @@ def reload_admin_settings_if_changed() -> bool:
         if current_mtime > _admin_config_mtime:
             old_concurrent = admin_settings.get('max_concurrent_tasks', 3)
             
-            # 重新加载配置
+            # Reload the configuration
             admin_settings = load_admin_settings()
             _admin_config_mtime = current_mtime
             
             new_concurrent = admin_settings.get('max_concurrent_tasks', 3)
             
-            # 如果并发数变化，更新 semaphore
+            # When the concurrency changed, update the semaphore
             if old_concurrent != new_concurrent:
                 from .task_manager import update_server_config
                 update_server_config({'max_concurrent_tasks': new_concurrent})
@@ -438,10 +438,10 @@ def get_admin_settings() -> dict:
 # Module Initialization
 # ============================================================================
 
-# 加载管理端配置（模块级别）
+# Load the admin configuration (module level)
 admin_settings = load_admin_settings()
 
-# 初始化配置文件修改时间
+# Initialise the modification time of the configuration file
 if os.path.exists(ADMIN_CONFIG_PATH):
     _admin_config_mtime = os.path.getmtime(ADMIN_CONFIG_PATH)
 

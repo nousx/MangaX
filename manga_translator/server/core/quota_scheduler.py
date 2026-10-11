@@ -56,26 +56,26 @@ class QuotaScheduler:
         """运行调度器主循环"""
         logger.info("QuotaScheduler main loop started")
         
-        # 记录上次重置的日期
+        # Record the date of the last reset
         last_reset_date = datetime.now(timezone.utc).date()
         
         while self._running:
             try:
                 current_date = datetime.now(timezone.utc).date()
                 
-                # 检查是否需要重置配额（新的一天）
+                # Check whether the quotas have to be reset (a new day)
                 if current_date > last_reset_date:
                     logger.info(f"New day detected, resetting daily quotas (last reset: {last_reset_date})")
                     self._reset_all_daily_quotas()
                     last_reset_date = current_date
                 
-                # 每小时检查一次
+                # Check once an hour
                 if self._stop_event.wait(timeout=3600):  # 1 hour
                     break
                     
             except Exception as e:
                 logger.error(f"Error in quota scheduler loop: {e}", exc_info=True)
-                # 发生错误时等待一段时间再继续
+                # After an error, wait a while before continuing
                 if self._stop_event.wait(timeout=60):  # 1 minute
                     break
         

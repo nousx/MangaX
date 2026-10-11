@@ -69,10 +69,10 @@ class CleanupService:
                     logger.info("Automatic cleanup disabled; stopping the cleanup loop")
                     break
                 
-                # 执行清理
+                # Run the clean-up
                 await self.run_cleanup()
                 
-                # 等待下一次清理
+                # Wait for the next clean-up
                 interval_hours = settings.get('interval_hours', 24)
                 await asyncio.sleep(interval_hours * 3600)
                 
@@ -80,7 +80,7 @@ class CleanupService:
                 break
             except Exception as e:
                 logger.error(f"Automatic cleanup failed: {e}")
-                await asyncio.sleep(3600)  # 出错后等待1小时重试
+                await asyncio.sleep(3600)  # After an error, wait 1 hour and retry
     
     async def run_cleanup(self) -> dict:
         """执行清理"""
@@ -95,7 +95,7 @@ class CleanupService:
         now = datetime.now(timezone.utc)
         cutoff_time = now - timedelta(days=max_age_days)
         
-        # 1. 清理过期文件
+        # 1. Remove expired files
         for dir_name, dir_path in self.directories.items():
             if not os.path.exists(dir_path):
                 continue
@@ -104,7 +104,7 @@ class CleanupService:
             total_freed += freed
             files_deleted += deleted
         
-        # 2. 如果总大小超过限制，继续清理最旧的文件
+        # 2. When the total size is above the limit, go on removing the oldest files
         total_size = self._get_total_size()
         if total_size > max_size_bytes:
             extra_freed, extra_deleted = self._cleanup_by_size(max_size_bytes)
@@ -137,7 +137,7 @@ class CleanupService:
                 except (OSError, IOError) as e:
                     logger.warning(f"Failed to delete file: {file_path}, error: {e}")
         
-        # 清理空目录
+        # Remove empty folders
         self._remove_empty_dirs(directory)
         
         return freed, deleted
@@ -147,7 +147,7 @@ class CleanupService:
         freed = 0
         deleted = 0
         
-        # 收集所有文件及其修改时间
+        # Collect all files and their modification times
         all_files = []
         for dir_name, dir_path in self.directories.items():
             if not os.path.exists(dir_path):
@@ -163,10 +163,10 @@ class CleanupService:
                     except (OSError, IOError):
                         pass
         
-        # 按修改时间排序（最旧的在前）
+        # Sort by modification time (oldest first)
         all_files.sort(key=lambda x: x[1])
         
-        # 删除最旧的文件直到低于限制
+        # Delete the oldest files until below the limit
         current_size = self._get_total_size()
         for file_path, mtime, size in all_files:
             if current_size <= max_size_bytes:
@@ -207,7 +207,7 @@ class CleanupService:
                     pass
 
 
-# 全局实例
+# Global instance
 _cleanup_service: Optional[CleanupService] = None
 
 
@@ -220,7 +220,7 @@ def get_cleanup_service() -> CleanupService:
 
 
 # ============================================================================
-# CleanupSchedulerService - 兼容现有路由的清理调度服务
+# CleanupSchedulerService - a clean-up scheduling service that fits the existing routes
 # ============================================================================
 
 class CleanupRule:
@@ -310,11 +310,11 @@ class CleanupSchedulerService:
         report = CleanupReport()
         
         try:
-            # 使用基础清理服务执行清理
+            # Run the clean-up with the basic clean-up service
             import asyncio
             loop = asyncio.get_event_loop()
             if loop.is_running():
-                # 如果在异步上下文中，创建新任务
+                # Inside an asynchronous context, create a new task
                 result = {"freed_bytes": 0, "files_deleted": 0}
             else:
                 result = loop.run_until_complete(self.cleanup_service.run_cleanup())
@@ -347,7 +347,7 @@ class CleanupSchedulerService:
         return self.history[-limit:]
 
 
-# 全局调度服务实例
+# Global scheduling service instance
 _scheduler_service: Optional[CleanupSchedulerService] = None
 
 

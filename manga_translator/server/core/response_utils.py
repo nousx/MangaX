@@ -32,18 +32,18 @@ def transform_to_image(ctx):
     Returns:
         图像字节数据
     """
-    # 检查 ctx.result 是否存在
+    # Check whether ctx.result exists
     if ctx.result is None:
         raise HTTPException(500, detail="Translation failed: no result image generated")
     
-    # 检查是否使用占位符（在web模式下final.png保存后会设置此标记）
+    # Check whether a placeholder is used (in web mode this flag is set after final.png is saved)
     if hasattr(ctx, 'use_placeholder') and ctx.use_placeholder:
-        # ctx.result已经是1x1占位符图片，快速传输
+        # ctx.result is already a 1x1 placeholder image, which transfers quickly
         img_byte_arr = io.BytesIO()
         ctx.result.save(img_byte_arr, format="PNG")
         return img_byte_arr.getvalue()
 
-    # 返回完整的翻译结果
+    # Return the full translation result
     img_byte_arr = io.BytesIO()
     ctx.result.save(img_byte_arr, format="PNG")
     return img_byte_arr.getvalue()
@@ -104,7 +104,7 @@ async def apply_user_env_vars(user_env_vars_str: str, config: Config, admin_sett
     require_user_keys = policy.get('require_user_keys', False)
     allow_server_keys = policy.get('allow_server_keys', True)
     
-    # 先尝试解析用户直接提供的 API Keys
+    # Try to parse the API keys the user provided directly first
     user_env_vars = None
     if user_env_vars_str and user_env_vars_str.strip() not in ('{}', ''):
         try:
@@ -115,7 +115,7 @@ async def apply_user_env_vars(user_env_vars_str: str, config: Config, admin_sett
         except json.JSONDecodeError:
             pass
     
-    # 用户没有直接提供完整配置时，尝试与预设合并
+    # When the user did not provide a full configuration directly, try to merge with the preset
     logger.info(f"[EnvVars] Resolving preset env vars for user '{username}'")
     preset_state = await get_user_preset_env_state(username) if username else None
     preset_env_vars = (preset_state or {}).get('env_vars')
@@ -144,18 +144,18 @@ async def apply_user_env_vars(user_env_vars_str: str, config: Config, admin_sett
         apply_runtime_api_overrides(config, merged_env_vars)
         return merged_env_vars
     
-    # 没有用户 API Keys 也没有预设
+    # No user API keys and no preset
     logger.info(f"[EnvVars] No preset env vars for user '{username}', using server defaults")
     if require_user_keys:
-        # 强制要求用户提供 API Keys
+        # The user is required to provide API keys
         raise HTTPException(403, detail="User API keys are required")
     
     if not allow_server_keys:
-        # 不允许使用服务器的 API Keys，但用户也没提供
+        # Using the server's API keys is not allowed, and the user provided none either
         raise HTTPException(403, detail="Server API keys are not allowed, please provide your own")
     
-    # 允许使用服务器的 API Keys（已经在环境变量中）
-    # 清除 config 中的用户级 API Key，确保使用服务器默认值
+    # Using the server's API keys is allowed (they are already in the environment variables)
+    # Clear the per-user API key in config, so the server default is used
     config._allow_server_api_keys = True
     config.translator.user_api_key = None
     config.translator.user_api_base = None
@@ -255,7 +255,7 @@ def _apply_env_vars_to_config(
             ),
         )
     
-    # 最终确认
+    # Final confirmation
     logger.info(f"[EnvVars->Config] Final config.translator: user_api_key={'SET' if config.translator.user_api_key else 'NOT SET'}, user_api_base={config.translator.user_api_base}, user_api_model={config.translator.user_api_model}")
 
 
@@ -289,7 +289,7 @@ async def get_user_preset_env_state(username: str) -> dict:
         
         config_service = ConfigManagementService()
         
-        # 获取用户配置
+        # Get the user configuration
         user_config = config_service.get_user_config(username)
         logger.info(f"[Preset] User '{username}' config: {user_config}")
 
@@ -314,24 +314,24 @@ async def get_user_preset_env_state(username: str) -> dict:
             logger.info(f"[Preset] No preset selected for user '{username}'")
             return None
         
-        # 获取预设配置（解密）
+        # Get the preset configuration (decrypted)
         preset = config_service.get_preset(preset_id, decrypt=True)
         logger.info(f"[Preset] Preset '{preset_id}' loaded: {preset is not None}")
         if not preset:
             logger.warning(f"[Preset] Preset '{preset_id}' not found")
             return None
         
-        # 从预设配置中提取 API Keys
+        # Extract the API keys from the preset configuration
         preset_config = preset.get('config', {})
         logger.info(f"[Preset] Preset config keys: {list(preset_config.keys())}")
         if not preset_config:
             logger.info(f"[Preset] Preset '{preset_id}' has no config")
             return None
         
-        # 提取环境变量（大写的键）
+        # Extract the environment variables (upper-case keys)
         env_vars = {k: v for k, v in preset_config.items() if v and k.isupper()}
         
-        # 仅记录解密到的键名，不记录任何值或前缀
+        # Only the names of the decrypted keys are logged, never a value or a prefix
         for key in env_vars:
             if 'API_KEY' in key:
                 value = env_vars[key]

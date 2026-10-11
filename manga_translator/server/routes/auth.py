@@ -404,11 +404,11 @@ async def get_auth_status(req: Request):
     if not _account_service:
         raise HTTPException(500, detail="Services not initialized")
     
-    # 检查是否有任何用户
+    # Check whether there is any user
     users = _account_service.list_users()
     need_setup = len(users) == 0
     
-    # 获取注册设置
+    # Get the registration settings
     registration_config = admin_settings.get('registration', {})
     registration_enabled = registration_config.get('enabled', False)
     
@@ -429,7 +429,7 @@ async def initial_setup(request: InitialSetupRequest, req: Request):
     if not _account_service or not _session_service or not _audit_service:
         raise HTTPException(500, detail="Services not initialized")
     
-    # 检查是否已有用户
+    # Check whether a user already exists
     users = _account_service.list_users()
     if len(users) > 0:
         raise HTTPException(
@@ -442,14 +442,14 @@ async def initial_setup(request: InitialSetupRequest, req: Request):
     setup_access = _require_setup_access(req, request.setup_token)
     _require_valid_new_username(request.username)
     
-    # 验证用户名
+    # Validate the user name
     if not request.username or len(request.username) < 2:
         raise HTTPException(
             status_code=400,
             detail="用户名至少需要2个字符"
         )
     
-    # 验证密码
+    # Validate the password
     if not request.password or len(request.password) < 6:
         raise HTTPException(
             status_code=400,
@@ -460,7 +460,7 @@ async def initial_setup(request: InitialSetupRequest, req: Request):
     user_agent = req.headers.get("user-agent", "unknown")
     
     try:
-        # 创建管理员账户
+        # Create the administrator account
         from manga_translator.server.core.models import UserPermissions
         
         admin_permissions = UserPermissions(
@@ -480,7 +480,7 @@ async def initial_setup(request: InitialSetupRequest, req: Request):
             permissions=admin_permissions
         )
         
-        # 创建会话
+        # Create the session
         session = _session_service.create_session(
             username=account.username,
             role=account.role,
@@ -488,7 +488,7 @@ async def initial_setup(request: InitialSetupRequest, req: Request):
             user_agent=user_agent
         )
         
-        # 记录审计日志
+        # Write the audit log
         _audit_service.log_event(
             event_type="initial_setup",
             username=request.username,
@@ -531,7 +531,7 @@ async def register_user(request: RegisterRequest, req: Request):
     client_ip = _client_ip(req)
     _consume_registration_attempt(client_ip)
     
-    # 检查是否开启注册
+    # Check whether registration is open
     registration_config = admin_settings.get('registration', {})
     if not registration_config.get('enabled', False):
         raise HTTPException(
@@ -539,14 +539,14 @@ async def register_user(request: RegisterRequest, req: Request):
             detail="注册功能未开启，请联系管理员"
         )
     
-    # 验证用户名
+    # Validate the user name
     if not request.username or len(request.username) < 2:
         raise HTTPException(
             status_code=400,
             detail="用户名至少需要2个字符"
         )
     
-    # 验证密码
+    # Validate the password
     if not request.password or len(request.password) < 6:
         raise HTTPException(
             status_code=400,
@@ -555,7 +555,7 @@ async def register_user(request: RegisterRequest, req: Request):
     
     _require_valid_new_username(request.username)
 
-    # 检查用户名是否已存在
+    # Check whether the user name already exists
     existing_user = _account_service.get_user(request.username)
     if existing_user:
         raise HTTPException(
@@ -566,10 +566,10 @@ async def register_user(request: RegisterRequest, req: Request):
     user_agent = req.headers.get("user-agent", "unknown")
     
     try:
-        # 获取默认用户组
+        # Get the default user group
         default_group = registration_config.get('default_group', 'default')
         
-        # 创建普通用户账户
+        # Create the ordinary user account
         account = _account_service.create_user(
             username=request.username,
             password=request.password,
@@ -577,7 +577,7 @@ async def register_user(request: RegisterRequest, req: Request):
             group=default_group
         )
         
-        # 创建会话
+        # Create the session
         session = _session_service.create_session(
             username=account.username,
             role=account.role,
@@ -585,7 +585,7 @@ async def register_user(request: RegisterRequest, req: Request):
             user_agent=user_agent
         )
         
-        # 记录审计日志
+        # Write the audit log
         _audit_service.log_event(
             event_type="register",
             username=request.username,

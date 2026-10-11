@@ -37,14 +37,14 @@ class SessionService:
         self.session_timeout_minutes = session_timeout_minutes
         self.enable_persistence = enable_persistence
         
-        # 内存中的会话存储: token -> Session
+        # In-memory session storage: token -> Session
         self.sessions_by_token: Dict[str, Session] = {}
-        # 按会话ID索引: session_id -> Session
+        # Index by session ID: session_id -> Session
         self.sessions_by_id: Dict[str, Session] = {}
-        # 按用户名索引: username -> List[Session]
+        # Index by user name: username -> List[Session]
         self.sessions_by_username: Dict[str, List[Session]] = {}
         
-        # 如果启用持久化，加载会话
+        # When persistence is on, load the sessions
         if self.enable_persistence and self.sessions_file:
             self._load_sessions()
     
@@ -67,11 +67,11 @@ class SessionService:
         Returns:
             Session: 创建的会话对象
         """
-        # 生成唯一的会话ID和令牌
+        # Generate a unique session ID and token
         session_id = str(uuid4())
         token = secrets.token_urlsafe(32)
         
-        # 创建会话对象
+        # Create the session object
         from datetime import timezone
         now = datetime.now(timezone.utc)
         session = Session(
@@ -86,7 +86,7 @@ class SessionService:
             is_active=True
         )
         
-        # 保存到内存索引
+        # Keep in the in-memory indexes
         self.sessions_by_token[token] = session
         self.sessions_by_id[session_id] = session
         
@@ -94,7 +94,7 @@ class SessionService:
             self.sessions_by_username[username] = []
         self.sessions_by_username[username].append(session)
         
-        # 持久化（如果启用）
+        # Persist (when enabled)
         if self.enable_persistence:
             self._save_sessions()
         
@@ -116,7 +116,7 @@ class SessionService:
         if not session:
             return None
         
-        # 检查会话是否过期
+        # Check whether the session has expired
         if self._is_session_expired(session):
             logger.debug(f"Session expired: {session.session_id}")
             self._deactivate_session(session)
@@ -147,11 +147,11 @@ class SessionService:
             List[Session]: 活动会话列表
         """
         if username:
-            # 返回指定用户的活动会话
+            # Return the active sessions of the given user
             user_sessions = self.sessions_by_username.get(username, [])
             return [s for s in user_sessions if s.is_active and not self._is_session_expired(s)]
         else:
-            # 返回所有活动会话
+            # Return all active sessions
             return [
                 s for s in self.sessions_by_token.values()
                 if s.is_active and not self._is_session_expired(s)
@@ -172,16 +172,16 @@ class SessionService:
         if not session or not session.is_active:
             return False
         
-        # 检查会话是否过期
+        # Check whether the session has expired
         if self._is_session_expired(session):
             self._deactivate_session(session)
             return False
         
-        # 更新最后活动时间
+        # Update the last activity time
         from datetime import timezone
         session.last_activity = datetime.now(timezone.utc)
         
-        # 持久化（如果启用）
+        # Persist (when enabled)
         if self.enable_persistence:
             self._save_sessions()
         
@@ -203,7 +203,7 @@ class SessionService:
             logger.warning(f"Session not found: {session_id}")
             return False
         
-        # 标记为非活动
+        # Mark as inactive
         self._deactivate_session(session)
         
         logger.info(f"Terminated session: {session_id} (user: {session.username})")
@@ -264,7 +264,7 @@ class SessionService:
         session = self.get_session(token)
         
         if session:
-            # 更新活动时间
+            # Update the activity time
             self.update_activity(token)
         
         return session
@@ -282,7 +282,7 @@ class SessionService:
         self.sessions_by_id.clear()
         self.sessions_by_username.clear()
         
-        # 持久化（如果启用）
+        # Persist (when enabled)
         if self.enable_persistence:
             self._save_sessions()
         
@@ -315,11 +315,11 @@ class SessionService:
         """
         session.is_active = False
         
-        # 从令牌索引中移除
+        # Remove from the token index
         if session.token in self.sessions_by_token:
             del self.sessions_by_token[session.token]
         
-        # 持久化（如果启用）
+        # Persist (when enabled)
         if self.enable_persistence:
             self._save_sessions()
     
@@ -337,7 +337,7 @@ class SessionService:
                 try:
                     session = Session.from_dict(session_data)
                     
-                    # 只加载活动且未过期的会话
+                    # Only active sessions that have not expired are loaded
                     if session.is_active and not self._is_session_expired(session):
                         self.sessions_by_token[session.token] = session
                         self.sessions_by_id[session.session_id] = session
@@ -359,7 +359,7 @@ class SessionService:
             return
         
         try:
-            # 只保存活动会话
+            # Only active sessions are saved
             active_sessions = [
                 s for s in self.sessions_by_id.values()
                 if s.is_active

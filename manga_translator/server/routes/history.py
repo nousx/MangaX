@@ -42,7 +42,7 @@ class BatchDownloadRequest(BaseModel):
     session_tokens: List[str]
     filename: Optional[str] = None
 
-# 全局服务实例（将在服务器启动时初始化）
+# Global service instance (initialised when the server starts)
 _history_service: HistoryManagementService = None
 _search_service: SearchService = None
 _permission_service: IntegratedPermissionService = None
@@ -53,7 +53,7 @@ def init_history_routes(
     history_service: HistoryManagementService,
     permission_service: IntegratedPermissionService,
     search_service: Optional[SearchService] = None,
-    **kwargs  # 兼容旧的调用方式
+    **kwargs  # Kept for the old way of calling
 ) -> None:
     """
     初始化历史记录路由使用的服务实例
@@ -180,7 +180,7 @@ async def download_by_ticket(ticket: str):
 
 
 # ============================================================================
-# 用户历史查询端点
+# Endpoints for querying the user's history
 # ============================================================================
 
 @router.get("", response_model=dict)
@@ -211,7 +211,7 @@ async def get_user_history(
     Raises:
         HTTPException: 如果权限不足或查询失败
     """
-    # 检查查看权限
+    # Check the view permission
     view_permission = permission_service.get_view_history_permission(session.username)
     
     if view_permission == 'none':
@@ -221,7 +221,7 @@ async def get_user_history(
         )
     
     try:
-        # 构建筛选条件
+        # Build the filter conditions
         filters = {}
         if start_date:
             filters['start_date'] = start_date
@@ -230,7 +230,7 @@ async def get_user_history(
         if status:
             filters['status'] = status
         
-        # 获取用户历史
+        # Get the user's history
         results = history_service.get_user_history(session.username, filters)
         
         return {
@@ -263,7 +263,7 @@ async def get_session_details(
     Returns:
         dict: 会话详细信息
     """
-    # 检查查看权限
+    # Check the view permission
     view_permission = permission_service.get_view_history_permission(session.username)
     
     if view_permission == 'none':
@@ -273,10 +273,10 @@ async def get_session_details(
         )
     
     try:
-        # 确定用户ID（管理员可以查看所有）
+        # Decide the user ID (an administrator can view everything)
         user_id = _get_history_user_id(session)
         
-        # 直接通过 history_service 获取会话，它会自动检查所有权
+        # Get the session directly through history_service, which checks ownership itself
         result = history_service.get_session_by_token(session_token, user_id)
         
         if not result:
@@ -285,7 +285,7 @@ async def get_session_details(
                 detail="会话不存在"
             )
         
-        # 获取会话文件列表
+        # Get the file list of the session
         files = [
             Path(file_path).name
             for file_path in history_service.get_session_files(session_token, user_id)
@@ -338,7 +338,7 @@ async def create_session_download_ticket(
 
 
 # ============================================================================
-# 管理员历史查询端点
+# Endpoints for the administrator's history queries
 # ============================================================================
 
 @router.get("/admin/all", response_model=dict)
@@ -371,7 +371,7 @@ async def get_all_history(
         dict: 包含所有历史记录列表
     """
     try:
-        # 构建筛选条件
+        # Build the filter conditions
         filters = {}
         if user_id:
             filters['user_id'] = user_id
@@ -382,18 +382,18 @@ async def get_all_history(
         if status:
             filters['status'] = status
         
-        # 获取所有历史
+        # Get all history
         all_results = history_service.get_all_history(filters)
         total = len(all_results)
         
-        # 应用分页
+        # Apply paging
         paginated_results = all_results[offset:offset + limit]
         
-        # 转换为前端期望的格式
+        # Convert to the format the frontend expects
         records = []
         for result in paginated_results:
             result_dict = result.to_dict()
-            # 映射字段名以匹配前端期望
+            # Map the field names to what the frontend expects
             records.append({
                 'id': result_dict.get('session_token', result_dict.get('id', '')),
                 'username': result_dict.get('user_id', ''),
@@ -409,7 +409,7 @@ async def get_all_history(
             "success": True,
             "records": records,
             "total": total,
-            # 保留旧格式以兼容
+            # Keep the old format for compatibility
             "history": [result.to_dict() for result in paginated_results],
             "count": len(paginated_results)
         }
@@ -420,7 +420,7 @@ async def get_all_history(
 
 
 # ============================================================================
-# 搜索端点
+# Search endpoints
 # ============================================================================
 
 @router.get("/search", response_model=dict)
@@ -453,7 +453,7 @@ async def search_history(
     Raises:
         HTTPException: 如果权限不足或搜索失败
     """
-    # 检查查看权限
+    # Check the view permission
     view_permission = permission_service.get_view_history_permission(session.username)
     
     if view_permission == 'none':
@@ -463,7 +463,7 @@ async def search_history(
         )
     
     try:
-        # 构建筛选条件
+        # Build the filter conditions
         filters = {}
         if start_date:
             filters['start_date'] = start_date
@@ -472,13 +472,13 @@ async def search_history(
         if status:
             filters['status'] = status
         
-        # 确定搜索范围
+        # Decide the search scope
         user_id = _get_history_user_id(session)
         
-        # 执行搜索
+        # Run the search
         results = search_service.search(q, filters, user_id)
         
-        # 获取搜索统计
+        # Get the search statistics
         stats = search_service.get_search_stats(q, filters, user_id)
         
         return {
@@ -495,7 +495,7 @@ async def search_history(
 
 
 # ============================================================================
-# 下载端点
+# Download endpoints
 # ============================================================================
 
 @router.get("/{session_token}/download")
@@ -520,7 +520,7 @@ async def download_session(
     Returns:
         FileResponse: ZIP文件
     """
-    # 检查查看权限
+    # Check the view permission
     view_permission = permission_service.get_view_history_permission(session.username)
     
     if view_permission == 'none':
@@ -530,11 +530,11 @@ async def download_session(
         )
     
     try:
-        # 确定用户ID（管理员可以下载所有）
+        # Decide the user ID (an administrator can download everything)
         is_admin = session.role == 'admin'
         user_id = None if is_admin else session.username
         
-        # 创建ZIP文件（history_service 会自动检查所有权）
+        # Create the ZIP file (history_service checks ownership itself)
         zip_path = history_service.create_download_archive(session_token, user_id)
         
         if not zip_path or not os.path.exists(zip_path):
@@ -543,16 +543,16 @@ async def download_session(
                 detail="会话不存在"
             )
         
-        # 添加后台任务清理临时文件
+        # Add a background task that removes the temporary file
         background_tasks.add_task(history_service.cleanup_temp_file, zip_path)
         
-        # 使用自定义文件名或默认文件名
+        # Use the custom file name or the default one
         download_filename = _sanitize_download_filename(
             filename,
             f"history_{session_token[:8]}.zip",
         )
         
-        # 返回文件
+        # Return the file
         return FileResponse(
             path=zip_path,
             filename=download_filename,
@@ -616,7 +616,7 @@ async def batch_download_sessions(
     Returns:
         FileResponse: ZIP文件
     """
-    # 检查查看权限
+    # Check the view permission
     view_permission = permission_service.get_view_history_permission(session.username)
     
     if view_permission == 'none':
@@ -625,7 +625,7 @@ async def batch_download_sessions(
             detail="您没有下载历史记录的权限"
         )
     
-    # 限制批量下载数量
+    # Limit the number of batch downloads
     if len(request.session_tokens) > 50:
         raise HTTPException(
             status_code=400,
@@ -633,10 +633,10 @@ async def batch_download_sessions(
         )
     
     try:
-        # 确定用户ID（管理员可以下载所有）
+        # Decide the user ID (an administrator can download everything)
         user_id = _get_history_user_id(session)
         
-        # 创建批量ZIP文件
+        # Create the batch ZIP file
         zip_path = history_service.create_batch_download_archive(
             request.session_tokens,
             user_id
@@ -648,10 +648,10 @@ async def batch_download_sessions(
                 detail="无法创建下载文件或您没有访问权限"
             )
         
-        # 添加后台任务清理临时文件
+        # Add a background task that removes the temporary file
         background_tasks.add_task(history_service.cleanup_temp_file, zip_path)
         
-        # 返回文件
+        # Return the file
         return FileResponse(
             path=zip_path,
             filename=os.path.basename(zip_path),
@@ -666,7 +666,7 @@ async def batch_download_sessions(
 
 
 # ============================================================================
-# 历史删除端点
+# Endpoints for deleting history
 # ============================================================================
 
 @router.get("/{session_token}/file/{filename}")
@@ -688,7 +688,7 @@ async def get_history_file(
     Returns:
         FileResponse: 文件内容
     """
-    # 检查查看权限
+    # Check the view permission
     view_permission = permission_service.get_view_history_permission(session.username)
     
     if view_permission == 'none':
@@ -698,17 +698,17 @@ async def get_history_file(
         )
     
     try:
-        # 确定用户ID（管理员可以查看所有）
+        # Decide the user ID (an administrator can view everything)
         is_admin = session.role == 'admin'
         user_id = None if is_admin else session.username
         
-        # 直接通过 history_service 获取会话，它会自动检查所有权
+        # Get the session directly through history_service, which checks ownership itself
         result = history_service.get_session_by_token(session_token, user_id)
         
         if not result:
             raise HTTPException(status_code=404, detail="会话不存在或您没有访问权限")
         
-        # 构建文件路径
+        # Build the file path
         file_path = _resolve_history_file_path(
             history_service.result_directory,
             result.result_path,
@@ -716,7 +716,7 @@ async def get_history_file(
         )
         media_type = mimetypes.guess_type(file_path.name)[0] or "application/octet-stream"
         
-        # 返回文件
+        # Return the file
         return FileResponse(
             path=file_path,
             filename=file_path.name,
@@ -782,7 +782,7 @@ async def delete_session(
     Returns:
         dict: 删除结果
     """
-    # 检查删除权限
+    # Check the delete permission
     is_admin = session.role == 'admin'
     can_delete_own = permission_service.check_delete_own_files_permission(session.username)
     
@@ -793,7 +793,7 @@ async def delete_session(
         )
     
     try:
-        # 删除会话（history_service 会自动检查所有权）
+        # Delete the session (history_service checks ownership itself)
         user_id = None if is_admin else session.username
         success = history_service.delete_session(session_token, user_id)
         

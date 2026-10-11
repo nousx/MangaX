@@ -177,7 +177,7 @@ class GroupRepository(BaseJSONRepository):
         Returns:
             True if updated successfully, False if group doesn't exist
         """
-        # 直接使用 update_group 来更新所有传入的字段
+        # Use update_group directly to update every field passed in
         return self.update_group(group_id, config)
     
     def update_last_modified(self) -> None:

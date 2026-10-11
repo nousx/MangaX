@@ -40,7 +40,7 @@ async def read_root():
 @router.get("/admin", response_class=HTMLResponse)
 async def read_admin():
     """Serve the Admin UI (new modular version)"""
-    # 使用新的模块化管理界面
+    # Use the new modular admin interface
     admin_path = os.path.join(static_dir, "admin-new.html")
     if os.path.exists(admin_path):
         with open(admin_path, 'r', encoding='utf-8') as f:

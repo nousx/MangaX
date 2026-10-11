@@ -10,16 +10,16 @@ from argparse import Namespace
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 
-# 隐藏第三方库的警告；必须在导入 torch 前设置，才能拦截 torch.cuda 的 pynvml 提示。
+# Hide warnings of third-party libraries; it has to be set before torch is imported, to catch the pynvml notice of torch.cuda.
 warnings.filterwarnings('ignore', message='.*Triton.*')
 warnings.filterwarnings('ignore', message='.*triton.*')
 warnings.filterwarnings('ignore', message='.*pkg_resources.*')
 warnings.filterwarnings('ignore', message='.*pynvml package is deprecated.*', category=FutureWarning)
 warnings.filterwarnings('ignore', category=DeprecationWarning, module='ctranslate2')
 
-# 在 PyQt6 之前加载 PyTorch，避免 PyQt6 的 Qt DLL 路径干扰 c10.dll 的加载
-# 渲染模块 (text_render.py) 依赖 PyQt6，会触发 DLL 冲突
-# 参考: https://github.com/pytorch/pytorch/issues/166628
+# Load PyTorch before PyQt6, so the Qt DLL path of PyQt6 does not interfere with loading c10.dll
+# The rendering module (text_render.py) depends on PyQt6, which triggers the DLL conflict
+# See: https://github.com/pytorch/pytorch/issues/166628
 try:
     import torch  # noqa: F401
 except ImportError:
@@ -48,7 +48,7 @@ from manga_translator.server.core.setup_guard import (
 )
 from manga_translator.server.instance import ExecutorInstance, executor_instances
 
-# 初始化服务器配置文件（如果不存在则从模板复制）
+# Initialise the server configuration file (copied from the template when it does not exist)
 config_manager.init_server_config_file()
 ensure_server_data_layout()
 
@@ -85,10 +85,10 @@ from manga_translator.server.routes import (
 
 logger = logging.getLogger('manga_translator.server')
 
-# 设置Web服务器标志，防止翻译器重新加载.env覆盖用户环境变量
+# Set the web server flag, so the translator does not reload .env and overwrite the user's environment variables
 os.environ['MANGA_TRANSLATOR_WEB_SERVER'] = 'true'
 
-# 启动时加载 .env 文件
+# Load the .env file at start-up
 from manga_translator.utils.dotenv_utils import APP_DOTENV_PATH_ENV, load_app_dotenv
 from manga_translator.runtime_paths import get_application_dir
 
@@ -97,7 +97,7 @@ os.environ[APP_DOTENV_PATH_ENV] = env_path
 if os.path.exists(env_path):
     load_app_dotenv(env_path, override=False)
     print(f"[INFO] Loaded environment variables from: {env_path}")
-    # 打印已加载的 API Keys（不显示值）
+    # Print the API keys that were loaded (without their values)
     loaded_keys = [k for k in os.environ.keys() if 'API' in k or 'KEY' in k or 'TOKEN' in k]
     if loaded_keys:
         print(f"[INFO] Loaded API keys: {', '.join(loaded_keys)}")
@@ -155,7 +155,7 @@ async def startup_event():
     from manga_translator.server.core.logging_manager import add_log
     from manga_translator.server.routes.translation_auth import init_translation_auth
     
-    # 添加启动日志
+    # Add the start-up log
     add_log("Server is starting...", "INFO")
     logger.info("Server starting up...")
     _ensure_web_startup_files()
@@ -173,7 +173,7 @@ async def startup_event():
         ResourceRepository,
     )
     
-    # Initialize services - 所有数据文件统一放在 manga_translator/server/data 目录
+    # Initialize services - all data files live in the manga_translator/server/data folder
     DATA_DIR = SERVER_DATA_RELATIVE_DIR
     _account_service = AccountService(accounts_file=f"{DATA_DIR}/accounts.json")
     _session_service = SessionService(
@@ -318,7 +318,7 @@ async def favicon():
     raise HTTPException(status_code=404)
 
 
-# Mount Qt UI locales for i18n (共享翻译文件)
+# Mount Qt UI locales for i18n (shared translation files)
 locales_dir = os.path.join(get_application_dir(), "desktop_qt_ui", "locales")
 if os.path.exists(locales_dir):
     app.mount("/locales", StaticFiles(directory=locales_dir), name="locales")
@@ -391,14 +391,14 @@ def start_translator_client_proc(host: str, port: int, nonce: str, params: Names
 def prepare(args):
     global nonce
     
-    # web 模式没有 nonce 参数，使用 getattr 避免 AttributeError
+    # web mode has no nonce argument; getattr avoids an AttributeError
     args_nonce = getattr(args, 'nonce', None)
     if args_nonce is None:
         nonce = os.getenv('MT_WEB_NONCE', generate_nonce())
     else:
         nonce = args_nonce
     
-    # start_instance 也可能不存在于某些模式
+    # start_instance may not exist in some modes either
     if getattr(args, 'start_instance', False):
         return start_translator_client_proc(args.host, args.port + 1, nonce, args)
     
@@ -409,8 +409,8 @@ def prepare(args):
 
 def init_translator(use_gpu=False, verbose=False):
     """初始化翻译器（预留函数）"""
-    # 这个函数用于预加载模型等初始化操作
-    # 目前翻译器在首次请求时才会初始化
+    # This function is for initialisation such as preloading models
+    # For now the translator is only initialised on the first request
     pass
 
 def run_server(args):
@@ -429,34 +429,34 @@ def run_server(args):
     if getattr(args, 'disable_onnx_gpu', False):
         os.environ['MT_DISABLE_ONNX_GPU'] = '1'
     
-    # 设置服务器配置（在 prepare 之前）
+    # Set the server configuration (before prepare)
     task_manager.server_config['use_gpu'] = getattr(args, 'use_gpu', False)
     task_manager.server_config['verbose'] = getattr(args, 'verbose', False)
     task_manager.server_config['models_ttl'] = getattr(args, 'models_ttl', 0)
     task_manager.server_config['retry_attempts'] = getattr(args, 'retry_attempts', None)
     
-    # 从 admin_settings 加载管理员密码和并发设置
+    # Load the administrator password and the concurrency setting from admin_settings
     task_manager.server_config['admin_password'] = config_manager.admin_settings.get('admin_password')
     if config_manager.admin_settings.get('max_concurrent_tasks'):
         task_manager.server_config['max_concurrent_tasks'] = config_manager.admin_settings['max_concurrent_tasks']
     
     print(f"[SERVER CONFIG] use_gpu={task_manager.server_config['use_gpu']}, verbose={task_manager.server_config['verbose']}, models_ttl={task_manager.server_config['models_ttl']}, retry_attempts={task_manager.server_config['retry_attempts']}, max_concurrent_tasks={task_manager.server_config['max_concurrent_tasks']}")
     
-    # 初始化并发控制
+    # Initialise concurrency control
     task_manager.init_semaphore()
     
-    # web 模式不启动独立的翻译实例（与旧版本保持一致）
+    # web mode does not start a separate translation instance (the same as old versions)
     args.start_instance = False
     proc = prepare(args)
     print("Nonce: "+nonce)
     try:
-        # 增加超时配置以支持批量翻译（30分钟）
+        # A longer timeout, to support batch translation (30 minutes)
         uvicorn.run(
             app, 
             host=args.host, 
             port=args.port,
-            timeout_keep_alive=1800,  # 保持连接30分钟
-            timeout_graceful_shutdown=30  # 优雅关闭超时30秒
+            timeout_keep_alive=1800,  # Keep the connection for 30 minutes
+            timeout_graceful_shutdown=30  # Graceful shutdown timeout: 30 seconds
         )
     except Exception:
         if proc:
@@ -464,7 +464,7 @@ def run_server(args):
 
 def main(args):
     """启动 Web UI 服务器（带界面模式）"""
-    # ui 模式和 web 模式使用相同的实现
+    # ui mode and web mode use the same implementation
     run_server(args)
 
 if __name__ == '__main__':

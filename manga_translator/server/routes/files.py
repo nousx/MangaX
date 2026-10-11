@@ -133,7 +133,7 @@ async def list_prompts(session: Session = Depends(require_admin)):
             for f in files:
                 if not f.lower().endswith(PROMPT_EXTENSIONS):
                     continue
-                # 排除系统提示词文件
+                # Leave out the system prompt files
                 name_without_ext = os.path.splitext(f)[0]
                 if name_without_ext in SYSTEM_PROMPT_BASES:
                     continue

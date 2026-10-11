@@ -33,7 +33,7 @@ async def get_current_user(
     if not x_session_token:
         raise HTTPException(status_code=401, detail="Authentication required")
     
-    # 验证token并获取用户信息
+    # Validate the token and get the user information
     from manga_translator.server.core.middleware import get_services
     _, session_service, _ = get_services()
     

@@ -41,7 +41,7 @@ class ConfigManagementService:
         user_configs_file: str = None,
         encryption_key: Optional[str] = None
     ):
-        # 使用默认绝对路径
+        # Use the default absolute path
         if presets_file is None:
             presets_file = self._DEFAULT_PRESETS_FILE
         if user_configs_file is None:

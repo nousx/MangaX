@@ -12,18 +12,18 @@ from collections import defaultdict, deque
 from datetime import datetime, timezone
 from typing import Optional
 
-# 基于任务ID的日志队列（每个任务有独立的日志队列）
-task_logs = defaultdict(lambda: deque(maxlen=1000))  # 每个任务最多保存1000条日志
+# Log queues by task ID (each task has a queue of its own)
+task_logs = defaultdict(lambda: deque(maxlen=1000))  # At most 1000 log entries are kept per task
 task_logs_lock = threading.Lock()
 
-# 全局日志队列（用于管理员查看所有日志）
-# 限制为1000条，避免日志过多导致内存占用和卡顿
+# Global log queue (for the administrator to view all logs)
+# Limited to 1000 entries, so too many logs do not cost memory or cause stutter
 global_log_queue = deque(maxlen=1000)
 
-# 当前任务ID的线程本地存储
+# Thread-local storage for the current task ID
 current_task_id = contextvars.ContextVar('current_task_id', default=None)
 
-# 当前会话ID的上下文变量（用于按会话过滤日志）
+# Context variable for the current session ID (for filtering logs by session)
 current_session_id = contextvars.ContextVar('current_session_id', default=None)
 
 
@@ -69,29 +69,29 @@ def add_log(message: str, level: str = "INFO", task_id: Optional[str] = None, se
         "message": message
     }
     
-    # 如果没有指定task_id，尝试从上下文获取
+    # When no task_id is given, try to get it from the context
     if task_id is None:
         task_id = get_task_id()
     
-    # 如果没有指定session_id，尝试从上下文获取
+    # When no session_id is given, try to get it from the context
     if session_id is None:
         session_id = get_session_id()
     
-    # 添加会话ID到日志条目
+    # Add the session ID to the log entry
     if session_id:
         log_entry['session_id'] = session_id
     
     with task_logs_lock:
-        # 添加到全局日志队列
+        # Add to the global log queue
         global_log_queue.append(log_entry)
         
-        # 如果有task_id，也添加到任务专属日志队列
+        # With a task_id, add to the queue of that task as well
         if task_id:
             log_entry_with_id = log_entry.copy()
             log_entry_with_id['task_id'] = task_id
             task_logs[task_id].append(log_entry_with_id)
     
-    # 同时输出到控制台（除非 skip_print=True，避免与 logging handler 重复）
+    # Print to the console too (unless skip_print=True, to avoid duplicating the logging handler)
     if not skip_print:
         task_prefix = task_id[:8] if task_id else 'GLOBAL'
         session_prefix = f" S:{session_id[:8]}" if session_id else ""
@@ -113,21 +113,21 @@ def get_logs(level: Optional[str] = None, limit: int = 100, task_id: Optional[st
     """
     with task_logs_lock:
         if task_id:
-            # 返回指定任务的日志
+            # Return the logs of the given task
             logs = list(task_logs.get(task_id, []))
         else:
-            # 返回全局日志
+            # Return the global logs
             logs = list(global_log_queue)
     
-    # 按会话ID过滤
+    # Filter by session ID
     if session_id:
         logs = [log for log in logs if log.get('session_id') == session_id]
     
-    # 按级别过滤
+    # Filter by level
     if level and level.lower() != 'all':
         logs = [log for log in logs if log['level'].lower() == level.lower()]
     
-    # 限制数量（返回最新的）
+    # Limit the number (the newest are returned)
     if len(logs) > limit:
         logs = logs[-limit:]
     
@@ -167,7 +167,7 @@ def export_logs(task_id: Optional[str] = None) -> tuple[str, str]:
             from datetime import timezone
             filename = f"logs_all_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}.txt"
     
-    # 生成日志文本
+    # Build the log text
     log_text = "\n".join([
         f"[{log['timestamp']}] [{log['level']}] {log['message']}"
         for log in logs
@@ -181,28 +181,28 @@ class WebLogHandler(logging.Handler):
     
     def __init__(self):
         super().__init__()
-        # 过滤掉不需要的日志源
+        # Filter out unwanted log sources
         self.ignored_loggers = {'uvicorn.access', 'uvicorn.error', 'httpcore', 'httpx'}
     
     def emit(self, record):
         try:
-            # 跳过 uvicorn 访问日志等噪音日志
+            # Skip noise such as the uvicorn access log
             if record.name in self.ignored_loggers:
                 return
             
             msg = self.format(record)
-            # 提取日志级别和消息
+            # Extract the log level and the message
             level = record.levelname
-            # 从上下文获取task_id和session_id
+            # Get task_id and session_id from the context
             task_id = get_task_id()
             session_id = get_session_id()
-            # skip_print=True 避免与 logging 的 root handler 重复输出
+            # skip_print=True avoids duplicating the output of logging's root handler
             add_log(msg, level, task_id, session_id, skip_print=True)
         except Exception:
             self.handleError(record)
 
 
-# 标记是否已经设置过日志处理器
+# Whether the log handlers have been set up already
 _log_handler_initialized = False
 
 
@@ -210,11 +210,11 @@ def setup_log_handler():
     """设置日志处理器"""
     global _log_handler_initialized
     
-    # 防止重复初始化
+    # Guard against initialising twice
     if _log_handler_initialized:
         return
     
-    # 初始化翻译器的日志系统（确保 manga-translator logger 被正确设置）
+    # Initialise the translator's logging (to make sure the manga-translator logger is set up correctly)
     try:
         from manga_translator.utils.log import init_logging
         init_logging()
@@ -224,27 +224,27 @@ def setup_log_handler():
     web_log_handler = WebLogHandler()
     formatter = logging.Formatter('%(name)s - %(levelname)s - %(message)s')
     web_log_handler.setFormatter(formatter)
-    web_log_handler.setLevel(logging.INFO)  # 捕获INFO及以上级别的日志
+    web_log_handler.setLevel(logging.INFO)  # Capture records at INFO level and above
     
-    # 添加到 manga_translator logger（下划线命名空间，用于服务器模块）
+    # Add to the manga_translator logger (the namespace with an underscore, for the server modules)
     mt_logger = logging.getLogger('manga_translator')
     mt_logger.addHandler(web_log_handler)
     mt_logger.propagate = False
     if mt_logger.level == logging.NOTSET or mt_logger.level > logging.INFO:
         mt_logger.setLevel(logging.INFO)
     
-    # 添加到 manga-translator logger（连字符命名空间，用于翻译器等核心模块）
-    # 这是翻译器、OCR、检测等模块使用的命名空间
+    # Add to the manga-translator logger (the namespace with a hyphen, for core modules such as the translators)
+    # This is the namespace the translator, OCR, detection and similar modules use
     mt_hyphen_logger = logging.getLogger('manga-translator')
     mt_hyphen_logger.addHandler(web_log_handler)
-    # 不设置 propagate = False，让子 logger 的日志能传播到这里
+    # propagate is not set to False, so records of child loggers can propagate here
     if mt_hyphen_logger.level == logging.NOTSET or mt_hyphen_logger.level > logging.INFO:
         mt_hyphen_logger.setLevel(logging.INFO)
     
-    # 确保子模块的日志也能被捕获
+    # Make sure the records of submodules are captured as well
     submodules = ['translators', 'detection', 'ocr', 'inpainting', 'rendering', 'upscaling', 'colorization']
     
-    # 翻译器类名列表（这些是实际使用的 logger 名称）
+    # List of translator class names (these are the logger names actually used)
     translator_names = [
         'OpenAITranslator', 'OpenAIHighQualityTranslator', 
         'GeminiTranslator', 'GeminiHighQualityTranslator',
@@ -255,16 +255,16 @@ def setup_log_handler():
     ]
     
     for submodule in submodules:
-        # 下划线命名空间
+        # Namespace with an underscore
         sub_logger = logging.getLogger(f'manga_translator.{submodule}')
         if sub_logger.level == logging.NOTSET or sub_logger.level > logging.INFO:
             sub_logger.setLevel(logging.INFO)
-        # 连字符命名空间
+        # Namespace with a hyphen
         sub_logger_hyphen = logging.getLogger(f'manga-translator.{submodule}')
         if sub_logger_hyphen.level == logging.NOTSET or sub_logger_hyphen.level > logging.INFO:
             sub_logger_hyphen.setLevel(logging.INFO)
     
-    # 为每个翻译器类名设置 logger 级别
+    # Set the logger level for each translator class name
     for name in translator_names:
         translator_logger = logging.getLogger(f'manga-translator.{name}')
         if translator_logger.level == logging.NOTSET or translator_logger.level > logging.INFO:
@@ -272,5 +272,5 @@ def setup_log_handler():
     
     _log_handler_initialized = True
     
-    # 添加一条测试日志确认系统工作
+    # Add a test log entry to confirm the system works
     add_log("Logging system initialized", "INFO")

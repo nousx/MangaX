@@ -13,40 +13,40 @@ from typing import Any, Dict, List, Optional
 @dataclass
 class UserPermissions:
     """用户权限数据模型"""
-    # 翻译器权限（白名单 + 黑名单）
+    # Translator permissions (whitelist + blacklist)
     allowed_translators: List[str] = field(default_factory=lambda: ["*"])
     denied_translators: List[str] = field(default_factory=list)
 
-    # OCR 权限（白名单 + 黑名单）
+    # OCR permissions (whitelist + blacklist)
     allowed_ocr: List[str] = field(default_factory=list)
     denied_ocr: List[str] = field(default_factory=list)
 
-    # 上色器权限（白名单 + 黑名单）
+    # Colorizer permissions (whitelist + blacklist)
     allowed_colorizers: List[str] = field(default_factory=list)
     denied_colorizers: List[str] = field(default_factory=list)
 
-    # 渲染器权限（白名单 + 黑名单）
+    # Renderer permissions (whitelist + blacklist)
     allowed_renderers: List[str] = field(default_factory=list)
     denied_renderers: List[str] = field(default_factory=list)
 
-    # 工作流权限（白名单 + 黑名单）
+    # Workflow permissions (whitelist + blacklist)
     allowed_workflows: List[str] = field(default_factory=list)
     denied_workflows: List[str] = field(default_factory=list)
     
-    # 参数权限（白名单 + 黑名单）
+    # Parameter permissions (whitelist + blacklist)
     allowed_parameters: List[str] = field(default_factory=lambda: ["*"])
     denied_parameters: List[str] = field(default_factory=list)
     
-    # 配额限制
+    # Quota limits
     max_concurrent_tasks: int = 10
-    daily_quota: int = -1  # -1 表示无限制
+    daily_quota: int = -1  # -1 means no limit
     
-    # 文件操作权限
+    # File operation permissions
     can_upload_files: bool = True
     can_delete_files: bool = True
     
-    # 离线翻译权限
-    allow_offline_translation: bool = False  # 是否允许离线翻译（用户离线后继续处理任务）
+    # Offline translation permission
+    allow_offline_translation: bool = False  # Whether offline translation is allowed (tasks keep running after the user goes offline)
     
     def to_dict(self) -> Dict[str, Any]:
         """转换为字典"""
@@ -81,10 +81,10 @@ class UserAccount:
     """用户账号数据模型"""
     username: str
     password_hash: str
-    role: str  # 'admin' 或 'user'
+    role: str  # 'admin' or 'user'
     permissions: UserPermissions
     created_at: datetime
-    group: str = "default"  # 用户组名称
+    group: str = "default"  # User group name
     last_login: Optional[datetime] = None
     is_active: bool = True
     must_change_password: bool = False
@@ -171,7 +171,7 @@ class AuditEvent:
     username: str
     ip_address: str
     details: Dict[str, Any]
-    result: str  # 'success' 或 'failure'
+    result: str  # 'success' or 'failure'
     
     def to_dict(self) -> Dict[str, Any]:
         """转换为字典（用于序列化）"""

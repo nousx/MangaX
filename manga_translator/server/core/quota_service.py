@@ -23,11 +23,11 @@ logger = logging.getLogger(__name__)
 class QuotaManagementService:
     """配额管理服务"""
     
-    # 默认配额限制
+    # Default quota limits
     DEFAULT_MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
     DEFAULT_MAX_FILES_PER_UPLOAD = 10
     DEFAULT_MAX_SESSIONS = 5
-    DEFAULT_DAILY_QUOTA = -1  # -1 表示无限
+    DEFAULT_DAILY_QUOTA = -1  # -1 means unlimited
     
     def __init__(
         self,
@@ -50,7 +50,7 @@ class QuotaManagementService:
         self.group_service = group_service
         self.data_path = Path(data_path)
         
-        # 活跃会话跟踪 (内存中)
+        # Tracking of active sessions (in memory)
         self._active_sessions: Dict[str, List[str]] = {}  # user_id -> [session_tokens]
         
         logger.info("QuotaManagementService initialized")
@@ -67,12 +67,12 @@ class QuotaManagementService:
         Returns:
             QuotaLimit: 用户配额限制
         """
-        # 1. 尝试获取用户级配额
+        # 1. Try the user-level quota
         user_quota_data = self.quota_repo.get_user_quota(user_id)
         if user_quota_data:
             return QuotaLimit.from_dict(user_quota_data)
         
-        # 2. 尝试从用户组获取配额
+        # 2. Try the quota of the user group
         user_info = self.permission_repo.get_user_permissions(user_id)
         if user_info and 'group' in user_info:
             group_name = user_info['group']
@@ -89,11 +89,11 @@ class QuotaManagementService:
                     current_usage=0,
                     last_reset=datetime.now(UTC).isoformat()
                 )
-                # 保存到用户级别以便后续快速访问
+                # Save at user level for faster access later
                 self.quota_repo.set_user_quota(user_id, quota)
                 return quota
         
-        # 3. 使用全局默认值
+        # 3. Use the global defaults
         quota = QuotaLimit(
             user_id=user_id,
             max_file_size=self.DEFAULT_MAX_FILE_SIZE,
@@ -103,7 +103,7 @@ class QuotaManagementService:
             current_usage=0,
             last_reset=datetime.now(UTC).isoformat()
         )
-        # 保存到用户级别
+        # Save at user level
         self.quota_repo.set_user_quota(user_id, quota)
         return quota
     
@@ -122,13 +122,13 @@ class QuotaManagementService:
         try:
             quota = self._get_user_quota_limit(user_id)
             
-            # 检查文件大小限制
+            # Check the file size limit
             if file_size > quota.max_file_size:
                 max_mb = quota.max_file_size / (1024 * 1024)
                 current_mb = file_size / (1024 * 1024)
                 return False, f"文件大小 {current_mb:.2f}MB 超过限制 {max_mb:.2f}MB"
             
-            # 检查文件数量限制
+            # Check the file count limit
             if file_count > quota.max_files_per_upload:
                 return False, f"文件数量 {file_count} 超过限制 {quota.max_files_per_upload}"
             
@@ -152,10 +152,10 @@ class QuotaManagementService:
         try:
             quota = self._get_user_quota_limit(user_id)
             
-            # 获取当前活跃会话数
+            # Get the current number of active sessions
             active_count = len(self._active_sessions.get(user_id, []))
             
-            # 检查是否超过限制
+            # Check whether the limit is exceeded
             if active_count >= quota.max_sessions:
                 return False, f"活跃对话框数量 {active_count} 已达到限制 {quota.max_sessions}"
             
@@ -180,18 +180,18 @@ class QuotaManagementService:
         try:
             quota = self._get_user_quota_limit(user_id)
             
-            # -1 表示无限配额
+            # -1 means an unlimited quota
             if quota.daily_quota == -1:
                 logger.info(f"Daily quota check passed for user {user_id}: unlimited quota")
                 return True, None
             
-            # 检查是否需要重置配额
+            # Check whether the quota has to be reset
             self._check_and_reset_daily_quota(user_id, quota)
             
-            # 重新获取配额（可能已重置）
+            # Get the quota again (it may have been reset)
             quota = self._get_user_quota_limit(user_id)
             
-            # 检查剩余配额
+            # Check the remaining quota
             remaining = quota.daily_quota - quota.current_usage
             if remaining < image_count:
                 logger.warning(f"Daily quota exceeded for user {user_id}: remaining {remaining}, requested {image_count}")
@@ -213,7 +213,7 @@ class QuotaManagementService:
             quota: 当前配额
         """
         if not quota.last_reset:
-            # 如果从未重置过，立即重置
+            # When it was never reset, reset it now
             self.reset_daily_quota(user_id)
             return
         
@@ -221,13 +221,13 @@ class QuotaManagementService:
             last_reset = datetime.fromisoformat(quota.last_reset)
             now = datetime.now(UTC)
             
-            # 如果上次重置是在不同的日期，则重置
+            # When the last reset was on a different date, reset
             if last_reset.date() < now.date():
                 logger.info(f"Resetting daily quota for user {user_id} (last reset: {last_reset.date()})")
                 self.reset_daily_quota(user_id)
         except Exception as e:
             logger.error(f"Error parsing last_reset date for user {user_id}: {e}")
-            # 如果解析失败，重置配额
+            # When parsing fails, reset the quota
             self.reset_daily_quota(user_id)
     
     def increment_quota_usage(self, user_id: str, image_count: int) -> bool:
@@ -264,13 +264,13 @@ class QuotaManagementService:
         """
         try:
             if user_id:
-                # 重置单个用户
+                # Reset a single user
                 success = self.quota_repo.reset_daily_usage(user_id)
                 if success:
                     logger.info(f"Reset daily quota for user {user_id}")
                 return success
             else:
-                # 重置所有用户
+                # Reset all users
                 all_quotas = self.quota_repo.get_all_quotas()
                 for uid in all_quotas.keys():
                     self.quota_repo.reset_daily_usage(uid)
@@ -293,10 +293,10 @@ class QuotaManagementService:
         try:
             quota = self._get_user_quota_limit(user_id)
             
-            # 计算剩余配额
+            # Work out the remaining quota
             remaining = -1 if quota.daily_quota == -1 else (quota.daily_quota - quota.current_usage)
             
-            # 获取活跃会话数
+            # Get the number of active sessions
             active_sessions = len(self._active_sessions.get(user_id, []))
             
             stats = QuotaStats(
@@ -305,7 +305,7 @@ class QuotaManagementService:
                 used_today=quota.current_usage,
                 remaining=remaining,
                 active_sessions=active_sessions,
-                total_uploaded=quota.current_usage  # 简化实现，实际可能需要单独跟踪
+                total_uploaded=quota.current_usage  # A simplified implementation; it may need tracking separately in practice
             )
             
             logger.debug(f"Retrieved quota stats for user {user_id}")
@@ -420,10 +420,10 @@ class QuotaManagementService:
             bool: 是否成功
         """
         try:
-            # 获取现有配额或创建新配额
+            # Get the existing quota or create a new one
             quota = self._get_user_quota_limit(user_id)
             
-            # 更新指定的限制
+            # Update the given limits
             if max_file_size is not None:
                 quota.max_file_size = max_file_size
             if max_files_per_upload is not None:
@@ -433,7 +433,7 @@ class QuotaManagementService:
             if daily_quota is not None:
                 quota.daily_quota = daily_quota
             
-            # 保存更新后的配额
+            # Save the updated quota
             self.quota_repo.set_user_quota(user_id, quota)
             logger.info(f"Updated quota limits for user {user_id}")
             return True

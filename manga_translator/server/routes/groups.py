@@ -97,7 +97,7 @@ async def create_group(
     group_mgmt_service = get_group_management_service()
     
     try:
-        # 创建用户组
+        # Create the user group
         group = group_mgmt_service.create_group(
             group_id=request.group_id,
             name=request.name,
@@ -162,7 +162,7 @@ async def rename_group(
     group_mgmt_service = get_group_management_service()
     
     try:
-        # 重命名用户组
+        # Rename the user group
         success = group_mgmt_service.rename_group(
             old_group_id=group_id,
             new_group_id=request.new_group_id,
@@ -220,7 +220,7 @@ async def delete_group(
     group_mgmt_service = get_group_management_service()
     
     try:
-        # 删除用户组
+        # Delete the user group
         success = group_mgmt_service.delete_group(
             group_id=group_id,
             admin_id=session.username
@@ -356,12 +356,12 @@ async def update_group_config(
     group_mgmt_service = get_group_management_service()
     
     try:
-        # 构建完整配置
+        # Build the full configuration
         config = {
             'parameter_config': request.parameter_config
         }
         
-        # 添加翻译器白名单/黑名单
+        # Add the translator whitelist/blacklist
         if request.allowed_translators is not None:
             config['allowed_translators'] = request.allowed_translators
         if request.denied_translators is not None:
@@ -378,7 +378,7 @@ async def update_group_config(
             config['allowed_renderers'] = request.allowed_renderers
         if request.denied_renderers is not None:
             config['denied_renderers'] = request.denied_renderers
-        # 添加工作流白名单/黑名单
+        # Add the workflow whitelist/blacklist
         if request.allowed_workflows is not None:
             config['allowed_workflows'] = request.allowed_workflows
         if request.denied_workflows is not None:
@@ -388,7 +388,7 @@ async def update_group_config(
         if request.visible_presets is not None:
             config['visible_presets'] = request.visible_presets
         
-        # 更新配置
+        # Update the configuration
         success = group_mgmt_service.update_group_config(
             group_id=group_id,
             config=config,

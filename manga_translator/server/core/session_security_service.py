@@ -103,9 +103,9 @@ class SessionSecurityService:
         import os
         
         # Try to read accounts file to get user's role
-        # 首先尝试项目根目录的 accounts.json
+        # First try accounts.json in the project root
         possible_paths = [
-            'accounts.json',  # 项目根目录
+            'accounts.json',  # Project root
         ]
         
         if hasattr(self.repository, 'data_dir'):
@@ -118,13 +118,13 @@ class SessionSecurityService:
                         data = json.load(f)
                         accounts_list = data.get('accounts', [])
                         
-                        # 查找用户
+                        # Find the user
                         for account in accounts_list:
                             if account.get('username') == user_id:
-                                # 检查 role 是否为 admin
+                                # Check whether role is admin
                                 if account.get('role') == 'admin':
                                     return True
-                                # 检查 group 是否为 admin
+                                # Check whether group is admin
                                 if account.get('group') == 'admin':
                                     return True
                                 return False

@@ -50,12 +50,12 @@ class LogManagementService:
         
         需求: 31.2, 33.2
         """
-        # 验证日志级别
+        # Validate the log level
         valid_levels = ['info', 'warning', 'error']
         if level not in valid_levels:
             raise ValueError(f"Invalid log level: {level}. Must be one of {valid_levels}")
         
-        # 创建日志条目
+        # Create the log entry
         log_entry = LogEntry.create(
             session_token=session_token,
             user_id=user_id,
@@ -65,7 +65,7 @@ class LogManagementService:
             details=details
         )
         
-        # 保存到仓库
+        # Save to the repository
         self.log_repo.add_log(log_entry)
         
         return log_entry
@@ -85,16 +85,16 @@ class LogManagementService:
         
         需求: 31.1, 32.4, 33.1, 35.3-35.8
         """
-        # 获取会话日志
+        # Get the session logs
         logs = self.log_repo.get_session_logs(session_token)
         
-        # 如果不是管理员，验证所有权
+        # For a non-administrator, verify ownership
         if not is_admin and logs:
-            # 检查第一条日志的用户ID（所有日志应该属于同一用户）
+            # Check the user ID of the first entry (all entries should belong to the same user)
             if logs[0].get('user_id') != user_id:
                 raise PermissionError(f"User {user_id} does not have permission to view logs for session {session_token}")
         
-        # 按时间戳排序
+        # Sort by timestamp
         logs.sort(key=lambda x: x.get('timestamp', ''))
         
         return logs
@@ -123,7 +123,7 @@ class LogManagementService:
             end_time=end_time
         )
         
-        # 按时间戳排序
+        # Sort by timestamp
         logs.sort(key=lambda x: x.get('timestamp', ''), reverse=True)
         
         return logs
@@ -152,10 +152,10 @@ class LogManagementService:
             end_time=end_time
         )
         
-        # 按时间戳排序（最新的在前）
+        # Sort by timestamp (newest first)
         logs.sort(key=lambda x: x.get('timestamp', ''), reverse=True)
         
-        # 应用限制
+        # Apply the limit
         if limit:
             logs = logs[:limit]
         
@@ -183,7 +183,7 @@ class LogManagementService:
             end_time=end_time
         )
         
-        # 按会话令牌分组
+        # Group by session token
         sessions_logs = {}
         for log in logs:
             session_token = log.get('session_token')
@@ -191,7 +191,7 @@ class LogManagementService:
                 sessions_logs[session_token] = []
             sessions_logs[session_token].append(log)
         
-        # 对每个会话的日志按时间排序
+        # Sort the logs of each session by time
         for session_token in sessions_logs:
             sessions_logs[session_token].sort(key=lambda x: x.get('timestamp', ''))
         
@@ -221,7 +221,7 @@ class LogManagementService:
         
         需求: 31.3, 32.3
         """
-        # 基础搜索
+        # Basic search
         logs = self.log_repo.search_logs(
             user_id=user_id,
             session_token=session_token,
@@ -230,7 +230,7 @@ class LogManagementService:
             end_time=end_time
         )
         
-        # 额外过滤
+        # Extra filtering
         if event_type:
             logs = [log for log in logs if log.get('event_type') == event_type]
         
@@ -239,7 +239,7 @@ class LogManagementService:
             logs = [log for log in logs 
                    if keyword_lower in log.get('message', '').lower()]
         
-        # 按时间戳排序
+        # Sort by timestamp
         logs.sort(key=lambda x: x.get('timestamp', ''), reverse=True)
         
         return logs
@@ -260,15 +260,15 @@ class LogManagementService:
         
         需求: 31.5, 33.8
         """
-        # 获取日志（包含权限检查）
+        # Get the logs (with the permission check)
         logs = self.get_session_logs(session_token, user_id, is_admin)
         
         if format == 'json':
-            # JSON格式
+            # JSON format
             content = json.dumps(logs, indent=2, ensure_ascii=False)
             return content.encode('utf-8')
         elif format == 'txt':
-            # 文本格式
+            # Text format
             lines = []
             lines.append(f"Session Logs: {session_token}")
             lines.append(f"Exported at: {datetime.now(timezone.utc).isoformat()}")
@@ -311,7 +311,7 @@ class LogManagementService:
                 logs = self.get_session_logs(session_token, user_id, is_admin)
                 all_logs[session_token] = logs
             except PermissionError:
-                # 跳过无权限的会话
+                # Skip sessions without permission
                 continue
         
         if format == 'json':
@@ -364,7 +364,7 @@ class LogManagementService:
             end_time=end_time
         )
         
-        # 统计各级别日志数量
+        # Count the entries of each level
         level_counts = {'info': 0, 'warning': 0, 'error': 0}
         event_type_counts = {}
         session_count = set()
@@ -407,10 +407,10 @@ class LogManagementService:
         
         需求: 33.6
         """
-        # 先验证权限
+        # Verify the permission first
         self.get_session_logs(session_token, user_id, is_admin)
         
-        # 删除日志
+        # Delete the logs
         deleted_count = self.log_repo.delete_session_logs(session_token)
         
         return deleted_count

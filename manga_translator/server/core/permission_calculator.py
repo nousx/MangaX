@@ -33,31 +33,31 @@ class PermissionCalculator:
         Returns:
             允许使用的翻译器列表
         """
-        # 如果用户是管理员，允许所有
+        # An administrator is allowed everything
         if user.role == 'admin':
             return ['*']
         
-        # 获取用户组配置
+        # Get the group configuration
         self.group_service.get_group(user.group)
         
-        # 基础集合：从用户组获取（目前用户组不限制翻译器，所以默认全部）
+        # Base set: from the user group (groups do not limit translators for now, so all by default)
         base_translators: Set[str] = {'*'}
         
-        # 用户个人允许列表
+        # The user's own allowed list
         user_allowed = set(user.permissions.allowed_translators)
         
-        # 如果用户allowed包含'*'，表示允许所有
+        # When the user's allowed list contains '*', everything is allowed
         if '*' in user_allowed:
             allowed = base_translators
         else:
-            # 否则，基础集合 + 用户allowed
+            # Otherwise, base set + the user's allowed list
             allowed = base_translators.union(user_allowed)
         
-        # 减去用户denied列表
+        # Subtract the user's denied list
         denied = set(user.permissions.denied_translators)
         final = allowed - denied
         
-        # 如果结果包含'*'且还有其他项，只保留'*'
+        # When the result contains '*' together with other items, keep only '*'
         if '*' in final and len(final) > 1:
             return ['*']
         
@@ -73,14 +73,14 @@ class PermissionCalculator:
         Returns:
             允许调整的参数列表
         """
-        # 如果用户是管理员，允许所有
+        # An administrator is allowed everything
         if user.role == 'admin':
             return ['*']
         
-        # 获取用户组配置
+        # Get the group configuration
         group_config = self.group_service.get_group(user.group)
         
-        # 基础集合：从用户组获取可见的参数
+        # Base set: the visible parameters from the user group
         base_parameters: Set[str] = set()
         if group_config:
             param_config = group_config.get('parameter_config', {})
@@ -88,25 +88,25 @@ class PermissionCalculator:
                 if param_settings.get('visible', False):
                     base_parameters.add(param_name)
         
-        # 如果用户组没有配置，默认允许所有
+        # When the group has no configuration, everything is allowed by default
         if not base_parameters:
             base_parameters = {'*'}
         
-        # 用户个人允许列表
+        # The user's own allowed list
         user_allowed = set(user.permissions.allowed_parameters)
         
-        # 如果用户allowed包含'*'，表示允许所有
+        # When the user's allowed list contains '*', everything is allowed
         if '*' in user_allowed:
             allowed = base_parameters if '*' not in base_parameters else {'*'}
         else:
-            # 否则，基础集合 + 用户allowed
+            # Otherwise, base set + the user's allowed list
             allowed = base_parameters.union(user_allowed)
         
-        # 减去用户denied列表
+        # Subtract the user's denied list
         denied = set(user.permissions.denied_parameters)
         final = allowed - denied
         
-        # 如果结果包含'*'且还有其他项，只保留'*'
+        # When the result contains '*' together with other items, keep only '*'
         if '*' in final and len(final) > 1:
             return ['*']
         
@@ -123,17 +123,17 @@ class PermissionCalculator:
         Returns:
             参数配置字典，如果不可访问返回 None
         """
-        # 检查用户是否有权限访问此参数
+        # Check whether the user may access this parameter
         allowed_params = self.calculate_allowed_parameters(user)
         
         if '*' not in allowed_params and parameter not in allowed_params:
             return None
         
-        # 从用户组获取参数配置
+        # Get the parameter configuration from the user group
         param_config = self.group_service.get_parameter_config(user.group, parameter)
         
         if not param_config:
-            # 如果用户组没有配置，返回默认配置
+            # When the group has no configuration, return the default configuration
             return {
                 'visible': True,
                 'readonly': False,
@@ -171,7 +171,7 @@ class PermissionCalculator:
         return '*' in allowed or parameter in allowed
 
 
-# 全局权限计算器实例
+# Global permission calculator instance
 _permission_calculator: Optional[PermissionCalculator] = None
 
 

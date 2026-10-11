@@ -95,12 +95,12 @@ async def create_user(
     account_service, _, _ = get_services()
     
     try:
-        # 解析权限
+        # Parse the permissions
         permissions = None
         if request.permissions:
             permissions = UserPermissions.from_dict(request.permissions)
         
-        # 创建用户
+        # Create the user
         account = account_service.create_user(
             username=request.username,
             password=request.password,
@@ -109,13 +109,13 @@ async def create_user(
             permissions=permissions
         )
         
-        # 记录审计日志
+        # Write the audit log
         try:
             audit_service = AuditService()
             audit_service.log_event(
                 event_type='create_user',
                 username=session.username,
-                ip_address='',  # TODO: 从请求中获取
+                ip_address='',  # TODO: get it from the request
                 details={
                     'target_user': request.username,
                     'role': request.role
@@ -178,7 +178,7 @@ async def list_users(
         
         result = []
         for account in accounts:
-            # 获取用户的配额使用情况
+            # Get the quota use of the user
             daily_used = permission_service.get_daily_usage(account.username)
             daily_limit = permission_service.get_effective_daily_quota(account.username)
             
@@ -194,7 +194,7 @@ async def list_users(
                 "quota": {
                     "daily_used": daily_used,
                     "daily_limit": daily_limit if daily_limit > 0 else 999999,
-                    "monthly_used": 0,  # TODO: 实现月度统计
+                    "monthly_used": 0,  # TODO: implement monthly statistics
                     "monthly_limit": 999999
                 }
             }
@@ -288,7 +288,7 @@ async def update_user(
     account_service, session_service, _ = get_services()
     
     try:
-        # 构建更新字典
+        # Build the update dictionary
         updates = {}
         if request.role is not None:
             updates['role'] = request.role
@@ -310,21 +310,21 @@ async def update_user(
                 }
             )
         
-        # 更新用户
+        # Update the user
         account_service.update_user(username, updates)
         
-        # 如果停用用户，终止其所有会话
+        # When a user is deactivated, end all their sessions
         if request.is_active is False:
             terminated_count = session_service.terminate_user_sessions(username)
             logger.info(f"Terminated {terminated_count} session(s) for deactivated user: {username}")
         
-        # 记录审计日志
+        # Write the audit log
         try:
             audit_service = AuditService()
             audit_service.log_event(
                 event_type='update_user',
                 username=session.username,
-                ip_address='',  # TODO: 从请求中获取
+                ip_address='',  # TODO: get it from the request
                 details={
                     'target_user': username,
                     'updates': updates
@@ -334,7 +334,7 @@ async def update_user(
         except Exception as e:
             logger.warning(f"Failed to log audit event: {e}")
         
-        # 获取更新后的用户信息
+        # Get the user information after the update
         account = account_service.get_user(username)
         
         logger.info(f"User updated by admin '{session.username}': {username}")
@@ -391,7 +391,7 @@ async def delete_user(
     account_service, session_service, _ = get_services()
     
     try:
-        # 防止删除自己
+        # Prevent deleting oneself
         if username == session.username:
             raise HTTPException(
                 status_code=400,
@@ -403,20 +403,20 @@ async def delete_user(
                 }
             )
         
-        # 终止用户的所有会话
+        # End all sessions of the user
         terminated_count = session_service.terminate_user_sessions(username)
         logger.info(f"Terminated {terminated_count} session(s) for deleted user: {username}")
         
-        # 删除用户
+        # Delete the user
         account_service.delete_user(username)
         
-        # 记录审计日志
+        # Write the audit log
         try:
             audit_service = AuditService()
             audit_service.log_event(
                 event_type='delete_user',
                 username=session.username,
-                ip_address='',  # TODO: 从请求中获取
+                ip_address='',  # TODO: get it from the request
                 details={
                     'target_user': username
                 },
@@ -477,7 +477,7 @@ async def update_user_permissions(
     account_service, _, permission_service = get_services()
     
     try:
-        # 获取当前用户
+        # Get the current user
         account = account_service.get_user(username)
         if not account:
             raise HTTPException(
@@ -490,7 +490,7 @@ async def update_user_permissions(
                 }
             )
         
-        # 构建权限更新字典
+        # Build the permission update dictionary
         permissions_dict = account.permissions.to_dict()
         updated_fields = []
         
@@ -554,16 +554,16 @@ async def update_user_permissions(
                 }
             )
         
-        # 更新权限
+        # Update the permissions
         account_service.update_user(username, {'permissions': permissions_dict})
         
-        # 记录审计日志
+        # Write the audit log
         try:
             audit_service = AuditService()
             audit_service.log_event(
                 event_type='update_permissions',
                 username=session.username,
-                ip_address='',  # TODO: 从请求中获取
+                ip_address='',  # TODO: get it from the request
                 details={
                     'target_user': username,
                     'updated_fields': updated_fields,
@@ -574,7 +574,7 @@ async def update_user_permissions(
         except Exception as e:
             logger.warning(f"Failed to log audit event: {e}")
         
-        # 获取更新后的用户信息
+        # Get the user information after the update
         account = account_service.get_user(username)
         
         logger.info(f"Permissions updated by admin '{session.username}' for user: {username}")

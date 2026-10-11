@@ -41,7 +41,7 @@ class SystemInitializer:
         self.session_service = session_service
         self.audit_service = audit_service
         
-        # 后台任务
+        # Background tasks
         self._session_cleanup_task: Optional[asyncio.Task] = None
         self._log_rotation_task: Optional[asyncio.Task] = None
     
@@ -61,11 +61,11 @@ class SystemInitializer:
         logger.info("Starting system initialization...")
         logger.info("=" * 60)
         
-        # 1. 加载所有用户账号到内存（已在 AccountService.__init__ 中完成）
+        # 1. Load all user accounts into memory (already done in AccountService.__init__)
         user_count = len(self.account_service.accounts)
         logger.info(f"Loaded {user_count} user account(s) from storage")
         
-        # 2. 检查是否存在用户账号
+        # 2. Check whether any user account exists
         if user_count == 0:
             logger.warning("=" * 60)
             logger.warning("NO USER ACCOUNTS FOUND")
@@ -74,17 +74,17 @@ class SystemInitializer:
             logger.warning("=" * 60)
         else:
             logger.info("User accounts already exist")
-            # 列出现有用户
+            # List the existing users
             for username, account in self.account_service.accounts.items():
                 logger.info(
                     f"  - User: {username} (role: {account.role}, "
                     f"active: {account.is_active})"
                 )
         
-        # 3. 启动会话清理定时任务
+        # 3. Start the scheduled session clean-up task
         await self._start_session_cleanup_task()
         
-        # 4. 启动审计日志轮转定时任务
+        # 4. Start the scheduled audit log rotation task
         await self._start_log_rotation_task()
         
         logger.info("=" * 60)
@@ -101,7 +101,7 @@ class SystemInitializer:
         """
         logger.info("Starting system shutdown...")
         
-        # 停止后台任务
+        # Stop the background tasks
         if self._session_cleanup_task:
             self._session_cleanup_task.cancel()
             try:
@@ -144,7 +144,7 @@ class SystemInitializer:
                 logger.warning("PLEASE CHANGE THIS PASSWORD IMMEDIATELY!")
                 logger.warning("=" * 60)
                 
-                # 记录审计事件
+                # Record the audit event
                 self.audit_service.log_event(
                     event_type='system_init',
                     username='system',
@@ -159,7 +159,7 @@ class SystemInitializer:
                 logger.info("Default admin account already exists or creation skipped")
         except Exception as e:
             logger.error(f"Failed to create default admin account: {e}")
-            # 记录审计事件
+            # Record the audit event
             self.audit_service.log_event(
                 event_type='system_init',
                 username='system',
@@ -183,16 +183,16 @@ class SystemInitializer:
             """会话清理循环"""
             while True:
                 try:
-                    # 等待5分钟
+                    # Wait 5 minutes
                     await asyncio.sleep(300)  # 5 minutes
                     
-                    # 清理过期会话
+                    # Remove expired sessions
                     cleaned_count = self.session_service.cleanup_expired_sessions()
                     
                     if cleaned_count > 0:
                         logger.info(f"Cleaned up {cleaned_count} expired session(s)")
                         
-                        # 记录审计事件
+                        # Record the audit event
                         self.audit_service.log_event(
                             event_type='session_cleanup',
                             username='system',
@@ -208,9 +208,9 @@ class SystemInitializer:
                     break
                 except Exception as e:
                     logger.error(f"Error in session cleanup task: {e}")
-                    # 继续运行，不要因为一次错误就停止
+                    # Keep running; one error is no reason to stop
         
-        # 启动后台任务
+        # Start the background task
         self._session_cleanup_task = asyncio.create_task(cleanup_loop())
         logger.info("Session cleanup task started (interval: 5 minutes)")
     
@@ -226,15 +226,15 @@ class SystemInitializer:
             """日志轮转循环"""
             while True:
                 try:
-                    # 等待24小时
+                    # Wait 24 hours
                     await asyncio.sleep(86400)  # 24 hours
                     
-                    # 检查并轮转日志
-                    # 注意：AuditService 已经在每次写入时自动检查大小
-                    # 这里只是定期强制检查一次
+                    # Check the log and rotate it
+                    # Note: AuditService already checks the size automatically on every write;
+                    # this is only a forced check at intervals
                     logger.info("Performing scheduled audit log rotation check")
                     
-                    # 记录审计事件
+                    # Record the audit event
                     self.audit_service.log_event(
                         event_type='log_rotation_check',
                         username='system',
@@ -249,14 +249,14 @@ class SystemInitializer:
                     break
                 except Exception as e:
                     logger.error(f"Error in log rotation task: {e}")
-                    # 继续运行，不要因为一次错误就停止
+                    # Keep running; one error is no reason to stop
         
-        # 启动后台任务
+        # Start the background task
         self._log_rotation_task = asyncio.create_task(rotation_loop())
         logger.info("Log rotation task started (interval: 24 hours)")
 
 
-# 全局系统初始化器实例
+# Global system initialiser instance
 _system_initializer: Optional[SystemInitializer] = None
 
 

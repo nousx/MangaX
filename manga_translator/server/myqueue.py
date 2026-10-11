@@ -16,7 +16,7 @@ class QueueElement:
     req: Request
     image: Image.Image | str
     config: Config
-    allow_offline: bool  # 是否允许离线继续执行
+    allow_offline: bool  # Whether running may continue offline
 
     def __init__(self, req: Request, image: Image.Image, config: Config, length, allow_offline: bool = False):
         self.req = req
@@ -39,7 +39,7 @@ class QueueElement:
             os.remove(self.image)
 
     async def is_client_disconnected(self) -> bool:
-        # 如果允许离线翻译，则永不断开
+        # When offline translation is allowed, it never disconnects
         if self.allow_offline:
             return False
         if await self.req.is_disconnected():
@@ -53,7 +53,7 @@ class BatchQueueElement:
     images: List[Image.Image]
     config: Config
     batch_size: int
-    allow_offline: bool  # 是否允许离线继续执行
+    allow_offline: bool  # Whether running may continue offline
 
     def __init__(self, req: Request, images: List[Image.Image], config: Config, batch_size: int, allow_offline: bool = False):
         self.req = req
@@ -63,7 +63,7 @@ class BatchQueueElement:
         self.allow_offline = allow_offline
 
     async def is_client_disconnected(self) -> bool:
-        # 如果允许离线翻译，则永不断开
+        # When offline translation is allowed, it never disconnects
         if self.allow_offline:
             return False
         if await self.req.is_disconnected():
@@ -145,10 +145,10 @@ async def wait_in_queue(task: QueueElement | BatchQueueElement, notify: NotifyTy
                     return result
 
             except Exception as e:
-                # 确保实例被释放
+                # Make sure the instance is released
                 await executor_instances.free_executor(instance)
 
-                # 如果是连接错误，发送友好的错误消息
+                # For a connection error, send a readable error message
                 if "Cannot connect to host" in str(e) or "Connection refused" in str(e):
                     error_msg = "Translation service is starting up, please wait a moment and try again."
                 else:

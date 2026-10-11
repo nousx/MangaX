@@ -19,16 +19,16 @@ from manga_translator.server.core.models import Session
 from manga_translator.server.core.session_security_service import SessionSecurityService
 from manga_translator.server.repositories.log_repository import LogRepository
 
-# 创建路由器
+# Create the router
 logs_router = APIRouter(prefix='/api/logs', tags=['logs'])
 
-# 初始化服务
+# Initialise the services
 log_repo = LogRepository('manga_translator/server/data/logs.json')
 log_service = LogManagementService(log_repo)
 session_security_service = SessionSecurityService()
 
 
-# Pydantic模型
+# Pydantic models
 class ExportRequest(BaseModel):
     """批量导出请求模型"""
     session_tokens: List[str]
@@ -55,14 +55,14 @@ async def get_session_logs(
         user_id = session.username
         is_admin = session.role == 'admin'
         
-        # 检查会话所有权 (需求 35.3, 35.4, 35.5)
+        # Check session ownership (requirements 35.3, 35.4, 35.5)
         allowed, reason = session_security_service.check_session_ownership(
             session_token,
             user_id,
             "view"
         )
         
-        # 记录访问尝试 (需求 35.8)
+        # Record the access attempt (requirement 35.8)
         session_security_service.log_access_attempt(
             session_token,
             user_id,
@@ -77,7 +77,7 @@ async def get_session_logs(
                 detail=reason or "您没有访问此会话日志的权限"
             )
         
-        # 获取日志
+        # Get the logs
         logs = log_service.get_session_logs(session_token, user_id, is_admin)
         
         if format == 'json':
@@ -116,14 +116,14 @@ async def export_session_logs(
         user_id = session.username
         is_admin = session.role == 'admin'
         
-        # 检查会话所有权 (需求 35.3, 35.4, 35.5, 35.7)
+        # Check session ownership (requirements 35.3, 35.4, 35.5, 35.7)
         allowed, reason = session_security_service.check_session_ownership(
             session_token,
             user_id,
             "export"
         )
         
-        # 记录访问尝试 (需求 35.8)
+        # Record the access attempt (requirement 35.8)
         session_security_service.log_access_attempt(
             session_token,
             user_id,
@@ -138,12 +138,12 @@ async def export_session_logs(
                 detail=reason or "您没有导出此会话日志的权限"
             )
         
-        # 导出日志
+        # Export the logs
         log_data = log_service.export_session_logs(
             session_token, user_id, is_admin, format
         )
         
-        # 确定文件名和MIME类型
+        # Decide the file name and the MIME type
         if format == 'json':
             filename = f'session_{session_token}_logs.json'
             media_type = 'application/json'
@@ -151,7 +151,7 @@ async def export_session_logs(
             filename = f'session_{session_token}_logs.txt'
             media_type = 'text/plain'
         
-        # 返回文件
+        # Return the file
         return StreamingResponse(
             io.BytesIO(log_data),
             media_type=media_type,
@@ -180,14 +180,14 @@ async def clear_session_logs(
         user_id = session.username
         is_admin = session.role == 'admin'
         
-        # 检查会话所有权 (需求 35.3, 35.4, 35.5, 35.7)
+        # Check session ownership (requirements 35.3, 35.4, 35.5, 35.7)
         allowed, reason = session_security_service.check_session_ownership(
             session_token,
             user_id,
             "edit"
         )
         
-        # 记录访问尝试 (需求 35.8)
+        # Record the access attempt (requirement 35.8)
         session_security_service.log_access_attempt(
             session_token,
             user_id,
@@ -202,7 +202,7 @@ async def clear_session_logs(
                 detail=reason or "您没有清空此会话日志的权限"
             )
         
-        # 清空日志
+        # Clear the logs
         deleted_count = log_service.clear_session_logs(session_token, user_id, is_admin)
         
         return {
@@ -238,11 +238,11 @@ async def get_logs(
         from manga_translator.server.core.logging_manager import get_task_logs
         
         if task_id:
-            # 按任务ID获取日志
+            # Get the logs by task ID
             logs = get_task_logs(task_id, limit)
             return logs
         else:
-            # 返回空列表
+            # Return an empty list
             return []
     
     except Exception as e:
@@ -264,7 +264,7 @@ async def get_user_logs(
     try:
         user_id = session.username
         
-        # 获取日志
+        # Get the logs
         logs = log_service.get_user_logs(user_id, level, start_time, end_time)
         
         return {
@@ -300,10 +300,10 @@ async def search_logs(
         user_id = session.username
         is_admin = session.role == 'admin'
         
-        # 非管理员只能搜索自己的日志
+        # Non-administrators can only search their own logs
         search_user_id = user_id if not is_admin else None
         
-        # 搜索日志
+        # Search the logs
         logs = log_service.search_logs(
             user_id=search_user_id,
             session_token=session_token,
@@ -349,7 +349,7 @@ async def get_system_logs(
     需求: 31.1-31.6, 32.1
     """
     try:
-        # 获取系统日志
+        # Get the system logs
         logs = log_service.get_system_logs(level, start_time, end_time, limit)
         
         return {
@@ -378,7 +378,7 @@ async def get_all_sessions_logs(
     需求: 32.1-32.8
     """
     try:
-        # 获取所有会话日志
+        # Get the logs of all sessions
         sessions_logs = log_service.get_all_sessions_logs(user_id, start_time, end_time)
         
         return {
@@ -410,12 +410,12 @@ async def export_multiple_sessions(
         
         user_id = session.username
         
-        # 导出日志
+        # Export the logs
         log_data = log_service.export_multiple_sessions_logs(
             request.session_tokens, user_id, is_admin=True, format=request.format
         )
         
-        # 确定文件名和MIME类型
+        # Decide the file name and the MIME type
         if request.format == 'json':
             filename = 'multiple_sessions_logs.json'
             media_type = 'application/json'
@@ -423,7 +423,7 @@ async def export_multiple_sessions(
             filename = 'multiple_sessions_logs.txt'
             media_type = 'text/plain'
         
-        # 返回文件
+        # Return the file
         return StreamingResponse(
             io.BytesIO(log_data),
             media_type=media_type,
@@ -447,7 +447,7 @@ async def get_log_statistics(
     需求: 31.6, 32.2
     """
     try:
-        # 获取统计信息
+        # Get the statistics
         stats = log_service.get_log_statistics(user_id, start_time, end_time)
         
         return {
@@ -472,7 +472,7 @@ async def cleanup_old_logs(
         if request.days < 1:
             raise HTTPException(status_code=400, detail='Days must be at least 1')
         
-        # 清理旧日志
+        # Remove old logs
         deleted_count = log_service.cleanup_old_logs(request.days)
         
         return {

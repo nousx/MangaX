@@ -57,11 +57,11 @@ def _create_task_log_handler(task_id: str, session_id: str = None) -> TaskLogHan
     handler.setFormatter(formatter)
     handler.setLevel(logging.INFO)
     
-    # 添加到 manga_translator logger（下划线命名空间）
+    # Add to the manga_translator logger (the namespace with an underscore)
     mt_logger = logging.getLogger('manga_translator')
     mt_logger.addHandler(handler)
     
-    # 添加到 manga-translator logger（连字符命名空间，翻译器使用）
+    # Add to the manga-translator logger (the namespace with a hyphen, used by the translators)
     mt_hyphen_logger = logging.getLogger('manga-translator')
     mt_hyphen_logger.addHandler(handler)
     
@@ -108,7 +108,7 @@ class BatchTranslateRequest(BaseModel):
     images: list[bytes|str]
     config: dict | Config = {}
     batch_size: int = 4
-    filenames: list[str] = []  # 原始文件名列表（可选）
+    filenames: list[str] = []  # List of original file names (optional)
     
     class Config:
         arbitrary_types_allowed = True
@@ -156,18 +156,18 @@ def _run_translate_sync(pil_image, config: Config, task_id: str = None, cancel_c
         update_task_thread_id,
     )
     
-    # 更新任务的线程ID
+    # Update the thread ID of the task
     if task_id:
         update_task_thread_id(task_id, threading.current_thread().ident)
     
-    # 获取全局翻译器实例（复用模型）
+    # Get the global translator instance (the models are reused)
     translator = get_global_translator()
     
-    # 设置取消检查回调
+    # Set the cancel-check callback
     if cancel_check_callback:
         translator.set_cancel_check_callback(cancel_check_callback)
     
-    # 在新线程中创建事件循环来运行异步翻译
+    # Create an event loop in the new thread to run the asynchronous translation
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
     try:
@@ -175,26 +175,26 @@ def _run_translate_sync(pil_image, config: Config, task_id: str = None, cancel_c
         return result
     finally:
         try:
-            # 清除取消回调，避免影响下一个任务
+            # Clear the cancel callback, so it does not affect the next task
             if cancel_check_callback:
                 translator.set_cancel_check_callback(None)
             
-            # 关闭事件循环前，取消所有待处理的任务
+            # Before closing the event loop, cancel every pending task
             pending = asyncio.all_tasks(loop)
             for task in pending:
                 task.cancel()
             
-            # 等待所有任务取消完成
+            # Wait until all tasks are cancelled
             if pending:
                 loop.run_until_complete(asyncio.gather(*pending, return_exceptions=True))
             
-            # 关闭事件循环
+            # Close the event loop
             loop.close()
             
-            # 清除线程局部的事件循环引用（Docker环境关键）
+            # Clear the thread-local reference to the event loop (essential in a Docker environment)
             asyncio.set_event_loop(None)
             
-            # 请求级内存清理：清理翻译器内部状态，保留模型
+            # Per-request memory clean-up: clear the internal state of the translator, keep the models
             from manga_translator.server.core.task_manager import cleanup_after_request
             cleanup_after_request()
             
@@ -222,18 +222,18 @@ def _run_translate_batch_sync(images_with_configs: list, batch_size: int, task_i
         update_task_thread_id,
     )
     
-    # 更新任务的线程ID
+    # Update the thread ID of the task
     if task_id:
         update_task_thread_id(task_id, threading.current_thread().ident)
     
-    # 获取全局翻译器实例（复用模型）
+    # Get the global translator instance (the models are reused)
     translator = get_global_translator()
     
-    # 设置取消检查回调
+    # Set the cancel-check callback
     if cancel_check_callback:
         translator.set_cancel_check_callback(cancel_check_callback)
     
-    # 在新线程中创建事件循环来运行异步翻译
+    # Create an event loop in the new thread to run the asynchronous translation
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
     try:
@@ -241,26 +241,26 @@ def _run_translate_batch_sync(images_with_configs: list, batch_size: int, task_i
         return result
     finally:
         try:
-            # 清除取消回调
+            # Clear the cancel callback
             if cancel_check_callback:
                 translator.set_cancel_check_callback(None)
             
-            # 关闭事件循环前，取消所有待处理的任务
+            # Before closing the event loop, cancel every pending task
             pending = asyncio.all_tasks(loop)
             for task in pending:
                 task.cancel()
             
-            # 等待所有任务取消完成
+            # Wait until all tasks are cancelled
             if pending:
                 loop.run_until_complete(asyncio.gather(*pending, return_exceptions=True))
             
-            # 关闭事件循环
+            # Close the event loop
             loop.close()
             
-            # 清除线程局部的事件循环引用（Docker环境关键）
+            # Clear the thread-local reference to the event loop (essential in a Docker environment)
             asyncio.set_event_loop(None)
             
-            # 请求级内存清理：清理翻译器内部状态，保留模型
+            # Per-request memory clean-up: clear the internal state of the translator, keep the models
             from manga_translator.server.core.task_manager import cleanup_after_request
             cleanup_after_request()
             
@@ -287,14 +287,14 @@ def prepare_translator_params(config: Config, workflow: str = "normal") -> dict:
             config.cli.colorize_only = False
         if hasattr(config.cli, 'inpaint_only'):
             config.cli.inpaint_only = False
-        # 替换翻译功能只能在 Qt UI 中使用，Web UI 禁止使用
+        # Replace-translation can only be used in the Qt UI; the web UI may not use it
         if hasattr(config.cli, 'replace_translation'):
             config.cli.replace_translation = False
         if hasattr(config.cli, 'use_gpu'):
             config.cli.use_gpu = False
         if hasattr(config.cli, 'attempts'):
             attempts = config.cli.attempts
-            # -1 表示无限重试；0 表示不重试（仅首次请求）
+            # -1 means retry without limit; 0 means no retry (only the first request)
             if attempts is not None and (attempts >= 0 or attempts == -1):
                 translator_params['attempts'] = attempts
     
@@ -302,12 +302,12 @@ def prepare_translator_params(config: Config, workflow: str = "normal") -> dict:
         translator_params['font_family'] = config.render.font_family
         logger.debug(f"Using font family: {config.render.font_family}")
 
-    # 直接粘贴模式只能在 Qt UI 的替换翻译模式中使用，Web UI 禁止使用
+    # Direct paste mode can only be used in the replace-translation mode of the Qt UI; the web UI may not use it
     if hasattr(config, 'render') and hasattr(config.render, 'enable_template_alignment'):
         config.render.enable_template_alignment = False
     
-    # 提示词路径 - 直接传递相对路径，翻译程序会自动用 BASE_PATH 拼接
-    # (high_quality_prompt_path 在 config.translator 中，翻译程序会直接读取)
+    # Prompt path - the relative path is passed on as it is; the translation program joins it with BASE_PATH itself
+    # (high_quality_prompt_path is in config.translator and is read by the translation program directly)
     
     if workflow == "export_original":
         translator_params['template'] = True
@@ -330,17 +330,17 @@ async def get_ctx(req: Request, config: Config, image: str|bytes, workflow: str 
     from manga_translator.server.core.logging_manager import add_log
     from manga_translator.server.core.task_manager import get_semaphore
     
-    # 动态获取 semaphore（支持热加载）
+    # Get the semaphore dynamically (supports hot reloading)
     translation_semaphore = get_semaphore()
     
     pil_image = await to_pil_image(image)
     
     try:
-        # 准备工作流参数（这些会影响翻译行为，但不需要重建翻译器）
+        # Prepare the workflow parameters (they affect how translation behaves, but the translator does not need rebuilding)
         prepare_translator_params(config, workflow)
         
         async with with_user_env_vars(config):
-            # 等待获取翻译槽位
+            # Wait for a translation slot
             if translation_semaphore:
                 try:
                     waiters_count = len(translation_semaphore._waiters) if hasattr(translation_semaphore, '_waiters') and translation_semaphore._waiters else 0
@@ -352,13 +352,13 @@ async def get_ctx(req: Request, config: Config, image: str|bytes, workflow: str 
                 
                 async with translation_semaphore:
                     add_log("Translation slot acquired; starting translation", "INFO")
-                    # 使用翻译线程池执行，复用全局翻译器
+                    # Run in the translation thread pool, reusing the global translator
                     from manga_translator.server.core.task_manager import (
                         run_in_translator_thread,
                     )
                     ctx = await run_in_translator_thread(_run_translate_sync, pil_image, config)
             else:
-                # 没有 semaphore 时直接执行
+                # Without a semaphore, run directly
                 from manga_translator.server.core.task_manager import (
                     run_in_translator_thread,
                 )
@@ -385,14 +385,14 @@ async def get_ctx(req: Request, config: Config, image: str|bytes, workflow: str 
         return ctx
     
     finally:
-        # 关闭输入图片
+        # Close the input image
         try:
             pil_image.close()
         except Exception:
             pass
         
-        # 注意：ctx的清理和内存回收已在_run_translate_sync的cleanup_after_request中处理
-        # 这里只需要处理本函数创建的局部资源
+        # Note: cleaning up ctx and reclaiming memory is done by cleanup_after_request in _run_translate_sync;
+        # only the local resources created by this function are handled here
 
 
 async def while_streaming(req: Request, transform, config: Config, image: bytes | str, workflow: str = "normal", original_filename: str = None):
@@ -414,16 +414,16 @@ async def while_streaming(req: Request, transform, config: Config, image: bytes 
         update_task_status,
     )
     
-    # 检查配置是否变化（热加载）
+    # Check whether the configuration changed (hot reloading)
     reload_admin_settings_if_changed()
     
-    # 动态获取 semaphore（支持热加载）
+    # Get the semaphore dynamically (supports hot reloading)
     translation_semaphore = get_semaphore()
     
     task_id = generate_task_id()
     set_task_id(task_id)
     
-    # 保存原始文件名到 config 中
+    # Keep the original file name in config
     if original_filename:
         config._original_filename = original_filename
     
@@ -443,7 +443,7 @@ async def while_streaming(req: Request, transform, config: Config, image: bytes 
         pass
     register_active_task(task_id, current_task, username, translator_name)
     
-    # 创建任务专属的日志处理器（类似Qt UI的做法）
+    # Create a log handler dedicated to the task (as the Qt UI does)
     task_log_handler = None
     try:
         task_log_handler = _create_task_log_handler(task_id, session_id)
@@ -451,23 +451,23 @@ async def while_streaming(req: Request, transform, config: Config, image: bytes 
         add_log(f"Failed to create task log handler: {e}", "WARNING")
     
     async def generate():
-        # 在生成器内部重新获取 semaphore（确保使用最新的）
+        # Get the semaphore again inside the generator (to be sure the latest one is used)
         nonlocal translation_semaphore
         translation_semaphore = get_semaphore()
         print(f"[DEBUG] generate() 开始, semaphore={translation_semaphore}, task_id={task_id}")
         
-        # 先检查用户级并发限制（在获取 semaphore 之前）
+        # Check the per-user concurrency limit first (before acquiring the semaphore)
         from manga_translator.server.core.middleware import (
             check_concurrent_limit,
             decrement_task_count,
             increment_task_count,
         )
         
-        # 增加用户任务计数
+        # Increase the task count of the user
         increment_task_count(username)
         
         try:
-            # 检查是否超过用户并发限制
+            # Check whether the per-user concurrency limit is exceeded
             check_concurrent_limit(username)
             
             if translation_semaphore is None:
@@ -478,7 +478,7 @@ async def while_streaming(req: Request, transform, config: Config, image: bytes 
                 print(f"[DEBUG] 初始化后 semaphore={translation_semaphore}")
             
             if translation_semaphore:
-                # 检查当前等待队列
+                # Check the current waiting queue
                 try:
                     waiters_count = len(translation_semaphore._waiters) if hasattr(translation_semaphore, '_waiters') and translation_semaphore._waiters else 0
                 except Exception:
@@ -486,21 +486,21 @@ async def while_streaming(req: Request, transform, config: Config, image: bytes 
                 
                 if waiters_count > 0:
                     add_log(f"Waiting for a translation slot... ({waiters_count} tasks queued)", "INFO")
-                    # 发送排队状态给前端
+                    # Send the queued status to the frontend
                     yield pack_message(1, json.dumps({
                         "stage": "queued", 
                         "message": f"排队中... (前面还有 {waiters_count} 个任务)",
                         "queue_position": waiters_count + 1
                     }, ensure_ascii=False).encode('utf-8'))
                 
-                # 等待获取 semaphore（这里会真正排队）
+                # Wait for the semaphore (the real queueing happens here)
                 print(f"[DEBUG] 准备获取 semaphore, task_id={task_id}, waiters={waiters_count}")
                 async with translation_semaphore:
-                    # 获得槽位后，更新状态为 running
+                    # With a slot acquired, update the status to running
                     print(f"[DEBUG] 获得 semaphore! task_id={task_id}, 更新状态为 running")
                     update_task_status(task_id, "running")
                     add_log("✓ Translation slot acquired; starting translation", "INFO")
-                    # 发送获得槽位的通知
+                    # Send the notification that a slot was acquired
                     yield pack_message(1, json.dumps({
                         "stage": "slot_acquired", 
                         "message": "获得翻译槽位，开始处理..."
@@ -512,7 +512,7 @@ async def while_streaming(req: Request, transform, config: Config, image: bytes 
                 async for chunk in _do_translation():
                     yield chunk
         finally:
-            # 减少用户任务计数
+            # Decrease the task count of the user
             decrement_task_count(username)
     
     async def _do_translation():
@@ -548,7 +548,7 @@ async def while_streaming(req: Request, transform, config: Config, image: bytes 
                 
                 try:
                     add_log("Calling translator", "INFO")
-                    # 使用翻译线程池执行，复用全局翻译器
+                    # Run in the translation thread pool, reusing the global translator
                     from manga_translator.server.core.task_manager import (
                         run_in_translator_thread,
                     )
@@ -603,7 +603,7 @@ async def while_streaming(req: Request, transform, config: Config, image: bytes 
                 yield pack_message(1, json.dumps({"stage": "transforming", "message": "Converting..."}, ensure_ascii=False).encode('utf-8'))
                 result_data = transform(ctx)
                 
-                # 保存翻译结果到历史
+                # Save the translation result to the history
                 try:
                     original_filename = getattr(config, '_original_filename', None)
                     await save_translation_to_history(ctx, username, task_id, workflow, original_filename, config)
@@ -635,29 +635,29 @@ async def while_streaming(req: Request, transform, config: Config, image: bytes 
         finally:
             add_log("Cleaning up", "DEBUG")
             try:
-                # 使用统一的Context清理函数
+                # Use the shared Context clean-up function
                 if 'ctx' in locals() and ctx:
                     from manga_translator.server.core.task_manager import (
                         cleanup_context,
                     )
                     cleanup_context(ctx)
                 
-                # 关闭输入图片
+                # Close the input image
                 if 'pil_image' in locals() and pil_image:
                     try:
                         pil_image.close()
                     except Exception:
                         pass
                 
-                # 注意：不要调用translator.unload_models()
-                # 因为我们使用全局翻译器，模型应该被保留复用
-                # 内存清理由cleanup_after_request在_run_translate_sync中处理
+                # Note: do not call translator.unload_models(),
+                # because the global translator is used and the models should be kept for reuse;
+                # memory clean-up is done by cleanup_after_request in _run_translate_sync
                 
                 add_log("Cleanup done", "DEBUG")
             except Exception as cleanup_error:
                 add_log(f"Cleanup failed: {cleanup_error}", "WARNING")
             
-            # 移除任务专属的日志处理器
+            # Remove the log handler dedicated to the task
             _remove_task_log_handler(task_log_handler)
             
             unregister_active_task(task_id)
@@ -684,38 +684,38 @@ async def get_batch_ctx(req: Request, config: Config, images: list[str|bytes], b
         is_task_cancelled,
     )
     
-    # 动态获取 semaphore（支持热加载）
+    # Get the semaphore dynamically (supports hot reloading)
     translation_semaphore = get_semaphore()
     
     pil_images = []
     contexts = []
     
     try:
-        # 检查是否已取消
+        # Check whether it was cancelled
         if task_id and is_task_cancelled(task_id):
             raise Exception("Task cancelled")
         
         # Convert images to PIL Image objects
         for img in images:
-            # 每张图片转换前检查取消状态
+            # Check the cancel state before converting each image
             if task_id and is_task_cancelled(task_id):
                 raise Exception("Task cancelled")
             pil_img = await to_pil_image(img)
             pil_images.append(pil_img)
         
-        # 准备翻译器参数（影响工作流行为）
+        # Prepare the translator parameters (they affect the workflow behaviour)
         prepare_translator_params(config, workflow)
         
-        # 准备批量数据
+        # Prepare the batch data
         images_with_configs = [(img, config) for img in pil_images]
         
-        # 使用统一的环境变量管理包装器
+        # Use the shared wrapper for managing environment variables
         async with with_user_env_vars(config):
-            # 翻译前再次检查取消状态
+            # Check the cancel state once more before translating
             if task_id and is_task_cancelled(task_id):
                 raise Exception("Task cancelled")
             
-            # 等待获取翻译槽位（与流式端点保持一致）
+            # Wait for a translation slot (the same as the streaming endpoint)
             if translation_semaphore:
                 from manga_translator.server.core.task_manager import update_task_status
                 try:
@@ -733,7 +733,7 @@ async def get_batch_ctx(req: Request, config: Config, images: list[str|bytes], b
                         update_task_status(task_id, "running")
                     add_log("Batch translation slot acquired; starting execution", "INFO")
                     
-                    # 使用翻译线程池执行，复用全局翻译器
+                    # Run in the translation thread pool, reusing the global translator
                     from manga_translator.server.core.task_manager import (
                         run_in_translator_thread,
                     )
@@ -742,7 +742,7 @@ async def get_batch_ctx(req: Request, config: Config, images: list[str|bytes], b
                         _run_translate_batch_sync, images_with_configs, batch_size, task_id, cancel_callback
                     )
             else:
-                # 没有 semaphore 时直接执行
+                # Without a semaphore, run directly
                 from manga_translator.server.core.task_manager import (
                     run_in_translator_thread,
                 )
@@ -751,11 +751,11 @@ async def get_batch_ctx(req: Request, config: Config, images: list[str|bytes], b
                     _run_translate_batch_sync, images_with_configs, batch_size, task_id, cancel_callback
                 )
             
-            # 翻译后检查取消状态
+            # Check the cancel state after translating
             if task_id and is_task_cancelled(task_id):
                 raise Exception("Task cancelled")
             
-            # 为每个 context 添加工作流程结果
+            # Add the workflow result to each context
             for ctx in contexts:
                 if ctx:
                     result = {
@@ -774,28 +774,28 @@ async def get_batch_ctx(req: Request, config: Config, images: list[str|bytes], b
                             result['text_regions'].append(region_data)
                     ctx._workflow_result = result
         
-        # 在返回前复制 result 图片，避免被 finally 清理影响
+        # Copy the result image before returning, so the clean-up in finally does not affect it
         for ctx in contexts:
             if ctx and hasattr(ctx, 'result') and ctx.result is not None:
                 try:
                     ctx.result = ctx.result.copy()
                 except Exception:
-                    pass  # 如果复制失败，保留原引用
+                    pass  # When the copy fails, keep the original reference
         
         return contexts
     
     finally:
-        # 清理资源
+        # Clean up the resources
         try:
-            # 清理 PIL 图片（原始输入图片）
+            # Clean up the PIL images (the original input images)
             for pil_img in pil_images:
                 try:
                     pil_img.close()
                 except Exception:
                     pass
             
-            # 注意：contexts的清理和内存回收已在_run_translate_batch_sync的cleanup_after_request中处理
-            # 不要调用translator.unload_models()，因为我们使用全局翻译器，模型应该被保留复用
+            # Note: cleaning up the contexts and reclaiming memory is done by cleanup_after_request in _run_translate_batch_sync
+            # Do not call translator.unload_models(): the global translator is used and the models should be kept for reuse
             
         except Exception as cleanup_error:
             logger.warning(f"Failed to clean up batch translation resources: {cleanup_error}")
@@ -821,7 +821,7 @@ async def save_translation_to_history(ctx, username: str, task_id: str, workflow
     
     add_log(f"Saving translation to history for user: {username}, task: {task_id[:8]}", "DEBUG")
     
-    # 检查ctx是否有效
+    # Check whether ctx is valid
     if not ctx:
         add_log("Cannot save history: ctx is None", "WARNING")
         return
@@ -831,7 +831,7 @@ async def save_translation_to_history(ctx, username: str, task_id: str, workflow
         return
     
     try:
-        # 获取历史服务
+        # Get the history service
         from manga_translator.server.routes.history import get_history_service
         history_service = get_history_service()
         add_log("History service obtained successfully", "DEBUG")
@@ -839,37 +839,37 @@ async def save_translation_to_history(ctx, username: str, task_id: str, workflow
         add_log(f"History service not available: {e}", "WARNING")
         return
     
-    # 保存结果图片到临时文件
+    # Save the result image to a temporary file
     temp_dir = None
     temp_files = []
     try:
-        # 创建临时目录
+        # Create a temporary folder
         temp_dir = tempfile.mkdtemp()
         
-        # 获取配置中的输出格式
+        # Get the output format from the configuration
         output_format = None
         if config and hasattr(config, 'cli') and hasattr(config.cli, 'format'):
             fmt = config.cli.format
             if fmt and fmt != '不指定':
                 output_format = fmt.lower()
         
-        # 安全过滤文件名，防止路径遍历攻击
+        # Sanitise the file name, to prevent path traversal attacks
         def sanitize_filename(filename: str) -> str:
             if not filename:
                 return None
-            # 只保留文件名部分，去掉路径
+            # Keep only the file name part, dropping the path
             filename = os.path.basename(filename)
-            # 移除危险字符
+            # Remove dangerous characters
             dangerous_chars = ['..', '/', '\\', '\x00', '<', '>', ':', '"', '|', '?', '*']
             for char in dangerous_chars:
                 filename = filename.replace(char, '_')
-            # 限制长度
+            # Limit the length
             if len(filename) > 200:
                 base, ext = os.path.splitext(filename)
                 filename = base[:200-len(ext)] + ext
             return filename if filename else None
         
-        # 确定文件名和保存格式
+        # Decide the file name and the save format
         safe_filename = sanitize_filename(original_filename) if original_filename else None
         
         if safe_filename:
@@ -886,13 +886,13 @@ async def save_translation_to_history(ctx, username: str, task_id: str, workflow
         
         result_path = os.path.join(temp_dir, result_filename)
         
-        # 保存 PIL Image
+        # Save the PIL Image
         if hasattr(ctx.result, 'save'):
-            # 复制图片以避免 "Operation on closed image" 错误
+            # Copy the image, to avoid the "Operation on closed image" error
             try:
                 img_to_save = ctx.result.copy()
             except Exception:
-                # 如果复制失败，尝试直接使用原图
+                # When the copy fails, try the original image directly
                 img_to_save = ctx.result
             
             if save_format in RGB_PIL_FORMATS and img_to_save.mode not in ('RGB', 'L'):
@@ -910,14 +910,14 @@ async def save_translation_to_history(ctx, username: str, task_id: str, workflow
             add_log("No temp files to save", "WARNING")
             return
         
-        # 构建元数据
+        # Build the metadata
         metadata = {
             'workflow': workflow,
             'task_id': task_id,
             'timestamp': datetime.now(timezone.utc).isoformat()
         }
         
-        # 添加文本区域信息
+        # Add the text region information
         if hasattr(ctx, 'text_regions') and ctx.text_regions:
             text_data = []
             for region in ctx.text_regions:
@@ -928,7 +928,7 @@ async def save_translation_to_history(ctx, username: str, task_id: str, workflow
             metadata['text_regions'] = text_data
             add_log(f"Added {len(text_data)} text regions to metadata", "DEBUG")
         
-        # 保存到历史
+        # Save to the history
         _result = history_service.save_translation_result(
             user_id=username,
             session_token=task_id,
@@ -940,7 +940,7 @@ async def save_translation_to_history(ctx, username: str, task_id: str, workflow
     except Exception as e:
         add_log(f"Failed to save translation to history ({type(e).__name__})", "ERROR")
     finally:
-        # 清理临时目录
+        # Remove the temporary folder
         try:
             if temp_dir and os.path.exists(temp_dir):
                 shutil.rmtree(temp_dir, ignore_errors=True)

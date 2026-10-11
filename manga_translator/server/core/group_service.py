@@ -154,7 +154,7 @@ class GroupService:
             return False
 
 
-# 全局用户组服务实例
+# Global user group service instance
 _group_service: Optional[GroupService] = None
 
 

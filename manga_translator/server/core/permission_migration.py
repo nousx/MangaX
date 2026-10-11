@@ -70,7 +70,7 @@ class PermissionMigrationAnalyzer:
                 username = account.get("username", "unknown")
                 permissions = account.get("permissions", {})
                 
-                # 检查旧的权限字段
+                # Check the old permission fields
                 old_fields = []
                 
                 if "can_upload_files" in permissions:
@@ -94,7 +94,7 @@ class PermissionMigrationAnalyzer:
                         "old_permissions": {field: permissions.get(field) for field in old_fields}
                     })
             
-            # 转换 set 为 list 以便 JSON 序列化
+            # Convert sets to lists for JSON serialisation
             analysis["permission_fields_found"] = list(analysis["permission_fields_found"])
             
             logger.info(f"Found {len(analysis['accounts_with_old_permissions'])} accounts with old permission fields")
@@ -136,7 +136,7 @@ class PermissionMigrationAnalyzer:
             }
             
             for group_id, group_config in groups.items():
-                # 检查是否有权限配置字段
+                # Check whether there are permission configuration fields
                 has_permissions = any(
                     key in group_config 
                     for key in ["can_upload_files", "can_delete_files", "permissions"]
@@ -268,7 +268,7 @@ class PermissionMigrationAnalyzer:
             "summary": self.migration_report
         }
         
-        # 生成建议
+        # Build the suggestions
         recommendations = []
         
         if report["accounts_analysis"].get("accounts_with_old_permissions"):
@@ -382,17 +382,17 @@ class PermissionMigrator:
         old_perms = account.get("permissions", {})
         new_perms = {}
         
-        # 迁移 can_upload_files -> can_upload_prompt + can_upload_font
+        # Migrate can_upload_files -> can_upload_prompt + can_upload_font
         if "can_upload_files" in old_perms:
             can_upload = old_perms["can_upload_files"]
             new_perms["can_upload_prompt"] = can_upload
             new_perms["can_upload_font"] = can_upload
             logger.info(f"Migrated can_upload_files={can_upload} to can_upload_prompt and can_upload_font")
         
-        # 迁移 can_delete_files -> can_delete_own_files + can_delete_all_files
+        # Migrate can_delete_files -> can_delete_own_files + can_delete_all_files
         if "can_delete_files" in old_perms:
             can_delete = old_perms["can_delete_files"]
-            # 如果用户是管理员，给予删除所有文件的权限
+            # When the user is an administrator, grant the permission to delete all files
             is_admin = account.get("role") == "admin"
             new_perms["can_delete_own_files"] = can_delete
             new_perms["can_delete_all_files"] = can_delete if is_admin else False
@@ -412,38 +412,38 @@ class PermissionMigrator:
         """
         logger.info("Migrating accounts.json...")
         
-        # 创建备份
+        # Create a backup
         backup_path = self.create_backup(self.accounts_file)
         if not backup_path:
             return False
         
         try:
-            # 读取账户数据
+            # Read the account data
             with open(self.accounts_file, 'r', encoding='utf-8') as f:
                 accounts_data = json.load(f)
             
             accounts = accounts_data.get("accounts", [])
             migrated_count = 0
             
-            # 迁移每个账户
+            # Migrate each account
             for account in accounts:
                 username = account.get("username", "unknown")
                 old_perms = account.get("permissions", {})
                 
-                # 检查是否需要迁移
+                # Check whether migration is needed
                 needs_migration = (
                     "can_upload_files" in old_perms or
                     "can_delete_files" in old_perms
                 )
                 
                 if needs_migration:
-                    # 执行迁移
+                    # Run the migration
                     new_perms = self.migrate_account_permissions(account)
                     
-                    # 更新权限（保留其他字段）
+                    # Update the permissions (the other fields are kept)
                     account["permissions"].update(new_perms)
                     
-                    # 移除旧字段
+                    # Remove the old fields
                     account["permissions"].pop("can_upload_files", None)
                     account["permissions"].pop("can_delete_files", None)
                     
@@ -455,7 +455,7 @@ class PermissionMigrator:
                         "new_permissions": new_perms
                     })
             
-            # 保存更新后的数据
+            # Save the updated data
             with open(self.accounts_file, 'w', encoding='utf-8') as f:
                 json.dump(accounts_data, f, indent=2, ensure_ascii=False)
             
@@ -478,22 +478,22 @@ class PermissionMigrator:
         logger.info("Initializing group permissions...")
         
         try:
-            # 读取 permissions.json
+            # Read permissions.json
             with open(self.permissions_file, 'r', encoding='utf-8') as f:
                 permissions_data = json.load(f)
             
-            # 读取 group_config.json
+            # Read group_config.json
             with open(self.group_config_file, 'r', encoding='utf-8') as f:
                 group_data = json.load(f)
             
             groups = group_data.get("groups", {})
             
-            # 为每个用户组设置默认权限
+            # Set the default permissions for each user group
             for group_id in groups.keys():
                 if group_id not in permissions_data.get("group_permissions", {}):
-                    # 根据用户组类型设置不同的默认权限
+                    # Different default permissions by type of user group
                     if group_id == "admin":
-                        # 管理员组：所有权限
+                        # Administrator group: all permissions
                         group_perms = {
                             "can_upload_prompt": True,
                             "can_upload_font": True,
@@ -508,7 +508,7 @@ class PermissionMigrator:
                             "can_view_system_logs": True
                         }
                     elif group_id == "guest":
-                        # 访客组：受限权限
+                        # Guest group: restricted permissions
                         group_perms = {
                             "can_upload_prompt": False,
                             "can_upload_font": False,
@@ -523,7 +523,7 @@ class PermissionMigrator:
                             "can_view_system_logs": False
                         }
                     else:
-                        # 默认组：标准权限
+                        # Default group: standard permissions
                         group_perms = {
                             "can_upload_prompt": True,
                             "can_upload_font": True,
@@ -548,10 +548,10 @@ class PermissionMigrator:
                     
                     logger.info(f"Initialized permissions for group '{group_id}'")
             
-            # 更新 last_updated
+            # Update last_updated
             permissions_data["last_updated"] = datetime.now(timezone.utc).isoformat()
             
-            # 保存更新后的数据
+            # Save the updated data
             with open(self.permissions_file, 'w', encoding='utf-8') as f:
                 json.dump(permissions_data, f, indent=2, ensure_ascii=False)
             
@@ -573,13 +573,13 @@ class PermissionMigrator:
         """
         logger.info("Starting permission migration...")
         
-        # 1. 迁移账户权限
+        # 1. Migrate the account permissions
         accounts_success = self.migrate_accounts_file()
         
-        # 2. 初始化用户组权限
+        # 2. Initialise the group permissions
         groups_success = self.initialize_group_permissions()
         
-        # 生成迁移报告
+        # Build the migration report
         self.migration_log["success"] = accounts_success and groups_success
         self.migration_log["completed_at"] = datetime.now(timezone.utc).isoformat()
         
@@ -630,7 +630,7 @@ def analyze_permissions(data_dir: str = "manga_translator/server/data") -> Dict[
     analyzer = PermissionMigrationAnalyzer(data_dir)
     report = analyzer.run_full_analysis()
     
-    # 保存报告
+    # Save the report
     report_file = analyzer.save_analysis_report(report)
     report["report_file"] = report_file
     
@@ -650,7 +650,7 @@ def migrate_permissions(data_dir: str = "manga_translator/server/data") -> Dict[
     migrator = PermissionMigrator(data_dir)
     log = migrator.run_migration()
     
-    # 保存日志
+    # Save the log
     log_file = migrator.save_migration_log(log)
     log["log_file"] = log_file
     
@@ -660,17 +660,17 @@ def migrate_permissions(data_dir: str = "manga_translator/server/data") -> Dict[
 if __name__ == "__main__":
     import sys
     
-    # 配置日志
+    # Set up logging
     logging.basicConfig(
         level=logging.INFO,
         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
     )
     
-    # 检查命令行参数
+    # Check the command-line arguments
     mode = sys.argv[1] if len(sys.argv) > 1 else "analyze"
     
     if mode == "migrate":
-        # 运行迁移
+        # Run the migration
         print("\n" + "="*80)
         print("Starting Permission Migration")
         print("="*80)
@@ -698,10 +698,10 @@ if __name__ == "__main__":
                 print(f"  - {backup}")
     
     else:
-        # 运行分析
+        # Run the analysis
         report = analyze_permissions()
         
-        # 打印摘要
+        # Print the summary
         print("\n" + "="*80)
         print("Permission Migration Analysis Summary")
         print("="*80)
@@ -713,7 +713,7 @@ if __name__ == "__main__":
         print(f"\nReport saved to: {report.get('report_file', 'N/A')}")
         print("="*80)
         
-        # 打印建议
+        # Print the suggestions
         if report.get("recommendations"):
             print("\nRecommendations:")
             for i, rec in enumerate(report["recommendations"], 1):

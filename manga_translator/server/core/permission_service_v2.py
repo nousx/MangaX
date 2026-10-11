@@ -70,7 +70,7 @@ class EnhancedPermissionService:
             bool: 是否有权限
         """
         perms = self.permission_repo.get_effective_permissions(user_id, group_id)
-        return perms.get("can_delete_own_files", True)  # 默认允许
+        return perms.get("can_delete_own_files", True)  # Allowed by default
     
     def check_delete_all_files_permission(self, user_id: str, group_id: Optional[str] = None) -> bool:
         """
@@ -195,7 +195,7 @@ class EnhancedPermissionService:
         Returns:
             str: 权限级别 ("own", "none", "all")
         """
-        # 使用 view_permission 字段
+        # Use the view_permission field
         return self.check_view_permission(user_id, group_id)
     
     def is_admin(self, user_id: str) -> bool:
@@ -209,7 +209,7 @@ class EnhancedPermissionService:
             bool: 是否是管理员
         """
         perms = self.permission_repo.get_effective_permissions(user_id, None)
-        # 管理员通常有 can_delete_all_files 和 can_view_all_logs 权限
+        # An administrator usually has the can_delete_all_files and can_view_all_logs permissions
         return (perms.get("can_delete_all_files", False) and 
                 perms.get("can_view_all_logs", False))
     
@@ -244,14 +244,14 @@ class EnhancedPermissionService:
             bool: 是否成功
         """
         try:
-            # 创建 UserPermission 对象
+            # Create the UserPermission object
             user_perm = UserPermission.create(
                 user_id=user_id,
                 updated_by=updated_by,
                 **permissions
             )
             
-            # 保存到仓库
+            # Save to the repository
             self.permission_repo.set_user_permissions(user_id, user_perm)
             self.permission_repo.update_last_modified()
             
@@ -389,7 +389,7 @@ class EnhancedPermissionService:
         }
 
 
-# 全局服务实例
+# Global service instance
 _enhanced_permission_service: Optional[EnhancedPermissionService] = None
 
 
@@ -409,7 +409,7 @@ def get_enhanced_permission_service(
     
     if _enhanced_permission_service is None:
         if permission_repo is None:
-            # 创建默认仓库
+            # Create the default repository
             permission_repo = PermissionRepository("manga_translator/server/data/permissions.json")
         
         _enhanced_permission_service = EnhancedPermissionService(permission_repo)

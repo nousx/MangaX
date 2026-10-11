@@ -3,7 +3,7 @@ Manga Translator Web API Server
 提供 HTTP REST API 端点，支持多种翻译工作流程
 """
 
-# 导出主要的类和函数，方便外部导入
+# Export the main classes and functions, for easy import from outside
 from manga_translator.server.instance import ExecutorInstance, executor_instances
 from manga_translator.server.main import app, run_server
 from manga_translator.server.myqueue import BatchQueueElement, QueueElement, task_queue

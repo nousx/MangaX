@@ -18,18 +18,18 @@ from manga_translator.server.core.logging_manager import add_log
 logger = logging.getLogger('manga_translator.server')
 
 
-# 翻译线程池（根据 max_concurrent_tasks 动态创建）
+# Translation thread pool (created dynamically from max_concurrent_tasks)
 translation_executor: Optional[ThreadPoolExecutor] = None
 
-# 并发控制信号量（用于限制同时进行的翻译任务数）
+# Semaphore for concurrency control (limits the number of translation tasks running at once)
 translation_semaphore: Optional[asyncio.Semaphore] = None
 
-# 全局翻译器实例（复用模型，避免重复加载）
+# Global translator instance (reuses the models, to avoid loading them again)
 _global_translator = None
 _translator_lock = threading.Lock()
-_translator_params_hash = None  # 记录当前翻译器的参数哈希，用于判断是否需要重建
+_translator_params_hash = None  # Hash of the current translator's parameters, to decide whether it has to be rebuilt
 
-# 全局服务器配置（从启动参数设置）
+# Global server configuration (set from the start-up arguments)
 server_config = {
     'use_gpu': False,
     'verbose': False,
@@ -39,7 +39,7 @@ server_config = {
     'max_concurrent_tasks': 3,
 }
 
-# 活动任务跟踪
+# Tracking of active tasks
 active_tasks = {}
 active_tasks_lock = threading.Lock()
 
@@ -51,17 +51,17 @@ def init_semaphore():
     max_concurrent = server_config.get('max_concurrent_tasks', 3)
     logger.info(f"[init_semaphore] Read max_concurrent_tasks = {max_concurrent} from server_config")
     
-    # 关闭旧的线程池（如果存在）
+    # Shut down the old thread pool (when there is one)
     if translation_executor is not None:
         translation_executor.shutdown(wait=False)
     
-    # 创建新的线程池，最大线程数 = 最大并发任务数
+    # Create a new thread pool: maximum threads = maximum concurrent tasks
     translation_executor = ThreadPoolExecutor(
         max_workers=max_concurrent,
         thread_name_prefix="translator_"
     )
     
-    # 创建信号量用于异步等待
+    # Create the semaphore for asynchronous waiting
     translation_semaphore = asyncio.Semaphore(max_concurrent)
     
     logger.info(f"Translation thread pool initialized: maximum threads = {max_concurrent}")
@@ -206,7 +206,7 @@ def update_server_config(config: dict):
     """更新服务器配置"""
     global _global_translator, _translator_params_hash
     
-    # 检查是否需要重建翻译器
+    # Check whether the translator has to be rebuilt
     rebuild_translator = False
     key_params = ['use_gpu', 'verbose', 'models_ttl']
     for key in key_params:
@@ -227,7 +227,7 @@ def update_server_config(config: dict):
         if key in config:
             server_config[key] = config[key]
     
-    # 如果关键参数变化，重置全局翻译器
+    # When key parameters changed, reset the global translator
     if rebuild_translator and _global_translator is not None:
         with _translator_lock:
             logger.info("Server configuration changed; resetting the global translator...")
@@ -275,7 +275,7 @@ def shutdown_executor():
 
 
 # ============================================================================
-# 全局翻译器实例管理（复用模型，避免重复加载）
+# Management of the global translator instance (reuses the models, to avoid loading them again)
 # ============================================================================
 
 def _get_params_hash(params: dict) -> str:
@@ -305,7 +305,7 @@ def get_global_translator(params: dict = None):
     
     from manga_translator import MangaTranslator
     
-    # 如果没有传入参数，使用服务器配置
+    # Without arguments, use the server configuration
     if params is None:
         params = {
             'use_gpu': server_config.get('use_gpu', False),
@@ -319,7 +319,7 @@ def get_global_translator(params: dict = None):
     params_hash = _get_params_hash(params)
     
     with _translator_lock:
-        # 检查是否需要重建翻译器
+        # Check whether the translator has to be rebuilt
         if _global_translator is None or _translator_params_hash != params_hash:
             if _global_translator is not None:
                 logger.info("Translator parameters changed; rebuilding the instance...")
@@ -351,10 +351,10 @@ def reset_global_translator():
             _global_translator = None
             _translator_params_hash = None
             
-            # 强制垃圾回收
+            # Force garbage collection
             import gc
             gc.collect()
-            # 清理 GPU 显存
+            # Free GPU memory
             try:
                 import torch
                 if torch.cuda.is_available():
@@ -380,7 +380,7 @@ def get_translator_status() -> dict:
                 "models_loaded": []
             }
         
-        # 获取已加载的模型信息
+        # Get the information of the loaded models
         models_loaded = []
         if hasattr(_global_translator, '_model_usage_timestamps'):
             for (tool, model), timestamp in _global_translator._model_usage_timestamps.items():
@@ -418,19 +418,19 @@ def cleanup_after_request():
             logger.debug("[MEMORY] Starting request-level memory cleanup...")
             
             try:
-                # 1. 清理批处理上下文
+                # 1. Clear the batch contexts
                 if hasattr(_global_translator, '_batch_contexts'):
                     _global_translator._batch_contexts.clear()
                 if hasattr(_global_translator, '_batch_configs'):
                     _global_translator._batch_configs.clear()
                 
-                # 2. 清理图片上下文缓存
+                # 2. Clear the image context cache
                 if hasattr(_global_translator, '_current_image_context'):
                     _global_translator._current_image_context = None
                 if hasattr(_global_translator, '_saved_image_contexts'):
                     _global_translator._saved_image_contexts.clear()
                 
-                # 3. 清理页面翻译历史
+                # 3. Clear the page translation history
                 if hasattr(_global_translator, 'all_page_translations'):
                     _global_translator.all_page_translations.clear()
                 if hasattr(_global_translator, '_original_page_texts'):
@@ -438,7 +438,7 @@ def cleanup_after_request():
                 if hasattr(_global_translator, '_clear_colorizer_history'):
                     _global_translator._clear_colorizer_history()
                 
-                # 4. 清理取消回调
+                # 4. Clear the cancel callback
                 if hasattr(_global_translator, '_cancel_check_callback'):
                     _global_translator._cancel_check_callback = None
                 
@@ -447,9 +447,9 @@ def cleanup_after_request():
             except Exception as e:
                 logger.warning(f"[MEMORY] Error clearing translator state: {e}")
     
-    # 5. 强制垃圾回收
+    # 5. Force garbage collection
     gc.collect()
-    # 6. 清理 GPU 显存
+    # 6. Free GPU memory
     try:
         import torch
         if torch.cuda.is_available():
@@ -457,7 +457,7 @@ def cleanup_after_request():
     except Exception:
         pass
     
-    # 7. Windows 特定：强制释放物理内存
+    # 7. Windows only: force the physical memory to be released
     try:
         import ctypes
         ctypes.windll.kernel32.SetProcessWorkingSetSize(-1, -1, -1)
@@ -480,16 +480,16 @@ def cleanup_context(ctx):
     
     import gc
     
-    # 需要清理的所有属性列表
+    # List of all attributes to clear
     attrs_to_clear = [
-        # 图片数据（最大的内存占用）
+        # Image data (the largest memory use)
         'input', 'img_rgb', 'img_alpha', 'img_colorized', 'upscaled',
         'img_inpainted', 'img_rendered', 'mask', 'mask_raw', 'bubble_mask',
-        # 高质量翻译相关数据
+        # Data of high-quality translation
         'high_quality_batch_data', 'annotated_image',
-        # 其他可能的大对象
+        # Other objects that may be large
         'textlines', 'text_regions',
-        # 工作流结果（前端已取走后可清理）
+        # Workflow results (can be cleared once the frontend has taken them)
         '_workflow_result',
     ]
     
@@ -497,25 +497,25 @@ def cleanup_context(ctx):
         if hasattr(ctx, attr):
             obj = getattr(ctx, attr)
             if obj is not None:
-                # 如果是PIL Image，先关闭
+                # A PIL Image is closed first
                 if hasattr(obj, 'close'):
                     try:
                         obj.close()
                     except Exception:
                         pass
-                # 如果是列表，清空
+                # A list is emptied
                 elif isinstance(obj, list):
                     obj.clear()
-                # 如果是字典，清空
+                # A dictionary is emptied
                 elif isinstance(obj, dict):
                     obj.clear()
-                # 删除引用
+                # Delete the reference
                 try:
                     delattr(ctx, attr)
                 except Exception:
                     setattr(ctx, attr, None)
     
-    # result 单独处理（通常需要保留给前端）
-    # 调用方负责在使用完result后调用此函数清理
+    # result is handled separately (it usually has to be kept for the frontend)
+    # The caller is responsible for calling this function to clean up after it has used result
     
     gc.collect()

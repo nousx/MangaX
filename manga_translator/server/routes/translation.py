@@ -362,7 +362,7 @@ async def translate_batch_json(req: Request, data: BatchTranslateRequest):
     
     task_id = generate_task_id()
     
-    # 获取当前 asyncio Task 用于强制取消
+    # Get the current asyncio Task, for forced cancellation
     try:
         current_task = asyncio.current_task()
     except RuntimeError:
@@ -395,7 +395,7 @@ async def translate_batch_json(req: Request, data: BatchTranslateRequest):
         # Log task creation
         log_translation_task_created(username, ip_address, translator, config, f"batch_{len(data.images)}")
         
-        # 获取用户预设的 API Keys
+        # Get the API keys preset by the user
         env_vars = await apply_user_env_vars("{}", config, admin_settings, username)
         config._user_env_vars = env_vars
         
@@ -443,14 +443,14 @@ async def batch_images(req: Request, data: BatchTranslateRequest):
         unregister_active_task,
     )
     
-    # 验证请求数据
+    # Validate the request data
     if not data.images or len(data.images) == 0:
         add_log("Batch translation request failed: no images provided", "ERROR")
         raise HTTPException(400, detail="没有提供图片")
     
     task_id = generate_task_id()
     
-    # 获取当前 asyncio Task 用于强制取消
+    # Get the current asyncio Task, for forced cancellation
     try:
         current_task = asyncio.current_task()
     except RuntimeError:
@@ -471,21 +471,21 @@ async def batch_images(req: Request, data: BatchTranslateRequest):
         # Verify authentication and permissions
         username, ip_address = await verify_translation_auth(req, config)
         
-        # 检查用户是否有离线翻译权限
+        # Check whether the user has the offline translation permission
         from manga_translator.server.core.middleware import get_services
         _, _, permission_service = get_services()
         allow_offline = permission_service.check_offline_translation_permission(username)
         
-        # 如果允许离线翻译，创建一个永不断开的 Request 包装器
+        # When offline translation is allowed, create a Request wrapper that never disconnects
         if allow_offline:
             class OfflineRequest:
                 """支持离线翻译的 Request 包装器"""
                 async def is_disconnected(self):
-                    return False  # 永不断开
+                    return False  # Never disconnects
             req = OfflineRequest()
             add_log(f"User {username} enabled offline translation mode", "INFO")
         
-        # 获取用户预设的 API Keys
+        # Get the API keys preset by the user
         env_vars = await apply_user_env_vars("{}", config, admin_settings, username)
         config._user_env_vars = env_vars
         
@@ -526,15 +526,15 @@ async def batch_images(req: Request, data: BatchTranslateRequest):
         traceback.print_exc()
         raise HTTPException(500, detail=f"Batch translation failed: {error_msg}")
     
-    # 获取原始文件名列表
+    # Get the list of original file names
     filenames = data.filenames if data.filenames else []
     
-    # 立即将结果图片转换为字节数据，避免图片被关闭后无法访问
+    # Convert the result images to bytes at once, so they stay available after the images are closed
     result_images = []
     for i, ctx in enumerate(results):
         if ctx and ctx.result:
             try:
-                # 复制图片数据到内存
+                # Copy the image data into memory
                 result_images.append({
                     'index': i,
                     'image': ctx.result.copy(),
@@ -544,7 +544,7 @@ async def batch_images(req: Request, data: BatchTranslateRequest):
             except Exception as e:
                 add_log(f"Failed to copy image {i+1}: {e}", "WARNING")
     
-    # 获取配置中的输出格式
+    # Get the output format from the configuration
     output_format = None
     if config and hasattr(config, 'cli') and hasattr(config.cli, 'format'):
         fmt = config.cli.format
@@ -562,7 +562,7 @@ async def batch_images(req: Request, data: BatchTranslateRequest):
             i = img_data['index']
             img_to_save = img_data['image']
             
-            # 获取原始文件名
+            # Get the original file name
             original_name = filenames[i] if i < len(filenames) else None
             
             save_format, ext = resolve_output_image_format(
@@ -570,7 +570,7 @@ async def batch_images(req: Request, data: BatchTranslateRequest):
                 original_path=original_name,
             )
             
-            # 生成输出文件名
+            # Build the output file name
             if original_name:
                 base_name = os.path.splitext(os.path.basename(original_name))[0]
                 output_name = f"{base_name}{ext}"
@@ -586,13 +586,13 @@ async def batch_images(req: Request, data: BatchTranslateRequest):
     
     add_log(f"ZIP file created: contains {image_count} images", "INFO")
     
-    # 保存历史记录（使用已复制的图片数据）
+    # Save the history record (with the copied image data)
     from manga_translator.server.request_extraction import save_translation_to_history
     for img_data in result_images:
         i = img_data['index']
         original_name = filenames[i] if i < len(filenames) else f"batch_{i+1}.png"
         try:
-            # 创建一个临时 ctx 对象用于保存历史
+            # Create a temporary ctx object for saving the history
             class TempCtx:
                 pass
             temp_ctx = TempCtx()
@@ -606,18 +606,18 @@ async def batch_images(req: Request, data: BatchTranslateRequest):
         except Exception as e:
             add_log(f"Failed to save history (image {i+1}): {e}", "WARNING")
     
-    # 读取 ZIP 文件内容
+    # Read the content of the ZIP file
     with open(tmp_file_name, 'rb') as f:
         zip_data = f.read()
     
-    # 清理临时文件
+    # Remove the temporary file
     try:
         os.unlink(tmp_file_name)
     except PermissionError:
         import atexit
         atexit.register(lambda: os.unlink(tmp_file_name) if os.path.exists(tmp_file_name) else None)
     
-    # 显式清理复制的图片内存
+    # Free the memory of the copied images explicitly
     for img_data in result_images:
         try:
             if img_data.get('image'):
@@ -626,14 +626,14 @@ async def batch_images(req: Request, data: BatchTranslateRequest):
             pass
     result_images.clear()
     
-    # 返回 ZIP 数据，不使用 Content-Disposition: attachment（避免 IDM 拦截）
-    # 使用 inline 或不设置，让浏览器直接处理而不触发下载
+    # Return the ZIP data without Content-Disposition: attachment (so download managers do not intercept it)
+    # Use inline, or nothing, so the browser handles it directly without starting a download
     return StreamingResponse(
         io.BytesIO(zip_data),
-        media_type="application/octet-stream",  # 使用通用二进制类型，避免 IDM 识别为 ZIP
+        media_type="application/octet-stream",  # Use the generic binary type, so download managers do not recognise it as ZIP
         headers={
             "Content-Length": str(len(zip_data)),
-            "X-Content-Type": "application/zip"  # 自定义 header 告诉前端这是 ZIP
+            "X-Content-Type": "application/zip"  # A custom header tells the frontend that this is a ZIP
         }
     )
 
@@ -845,7 +845,7 @@ async def export_original_stream(req: Request, image: UploadFile = File(...), co
     conf._user_env_vars = env_vars
     conf._username = username
     
-    # Process translation (并发控制在 while_streaming 内部处理)
+    # Process translation (concurrency control is handled inside while_streaming)
     return await while_streaming(req, transform_to_json, conf, img, "export_original")
 
 
@@ -862,7 +862,7 @@ async def export_translated_stream(req: Request, image: UploadFile = File(...), 
     conf._user_env_vars = env_vars
     conf._username = username
     
-    # Process translation (并发控制在 while_streaming 内部处理)
+    # Process translation (concurrency control is handled inside while_streaming)
     return await while_streaming(req, transform_to_json, conf, img, "save_json")
 
 
@@ -1212,7 +1212,7 @@ async def import_json_and_render_stream(req: Request, image: UploadFile = File(.
         # Use streaming translation, pass PIL Image object
         # Note: Cannot delete files in finally block during streaming response
         # Temporary files will accumulate in result directory, need periodic cleanup
-        # 并发控制在 while_streaming 内部处理
+        # Concurrency control is handled inside while_streaming
         return await while_streaming(req, transform_to_image, conf, temp_image, "load_text", image.filename)
     
     except Exception as _e:

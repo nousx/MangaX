@@ -111,7 +111,7 @@ class TranslationIntegrationService:
             return True, None
         
         try:
-            # 检查每日配额
+            # Check the daily quota
             allowed, error_msg = self.quota_service.check_daily_quota(username, image_count)
             
             if not allowed:
@@ -146,7 +146,7 @@ class TranslationIntegrationService:
         需求: 31.2
         """
         try:
-            # 记录翻译开始日志
+            # Log the start of the translation
             if self.log_service:
                 self.log_service.log_translation_event(
                     session_token=session_token,
@@ -190,7 +190,7 @@ class TranslationIntegrationService:
         需求: 31.2
         """
         try:
-            # 记录翻译进度日志
+            # Log the progress of the translation
             if self.log_service:
                 self.log_service.log_translation_event(
                     session_token=session_token,
@@ -235,12 +235,12 @@ class TranslationIntegrationService:
         需求: 3.1, 27.2, 31.2
         """
         try:
-            # 1. 更新配额（仅在成功时）
+            # 1. Update the quota (on success only)
             if self.quota_service and image_count > 0:
                 self.quota_service.increment_quota_usage(username, image_count)
                 logger.info(f"Quota updated for user {username}: +{image_count}")
             
-            # 2. 保存翻译结果到历史记录
+            # 2. Save the translation result to the history
             if self.history_service and result_files:
                 try:
                     self.history_service.save_translation_result(
@@ -253,7 +253,7 @@ class TranslationIntegrationService:
                 except Exception as e:
                     logger.error(f"Failed to save translation result: {e}")
             
-            # 3. 记录翻译完成日志
+            # 3. Log the completion of the translation
             if self.log_service:
                 self.log_service.log_translation_event(
                     session_token=session_token,
@@ -297,7 +297,7 @@ class TranslationIntegrationService:
         需求: 31.2
         """
         try:
-            # 记录翻译错误日志
+            # Log the translation error
             if self.log_service:
                 self.log_service.log_translation_event(
                     session_token=session_token,
@@ -332,10 +332,10 @@ class TranslationIntegrationService:
         if not config:
             return {}
         
-        # 复制配置
+        # Copy the configuration
         sanitized = dict(config)
         
-        # 移除敏感字段
+        # Remove the sensitive fields
         sensitive_keys = ['api_key', 'api_secret', 'password', 'token', 'key']
         
         def remove_sensitive(d):
@@ -351,7 +351,7 @@ class TranslationIntegrationService:
         return remove_sensitive(sanitized)
 
 
-# 全局实例
+# Global instance
 _integration_service: Optional[TranslationIntegrationService] = None
 
 

@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/resources", tags=["resources"])
 
-# 全局服务实例（将在服务器启动时初始化）
+# Global service instance (initialised when the server starts)
 _resource_service: ResourceManagementService = None
 _permission_service: IntegratedPermissionService = None
 
@@ -56,7 +56,7 @@ def get_permission_service() -> IntegratedPermissionService:
 
 
 # ============================================================================
-# 提示词管理端点
+# Prompt management endpoints
 # ============================================================================
 
 @router.post("/prompts", response_model=dict)
@@ -83,7 +83,7 @@ async def upload_prompt(
     Raises:
         HTTPException: 如果权限不足或上传失败
     """
-    # 检查上传权限
+    # Check the upload permission
     if not permission_service.check_upload_prompt_permission(session.username):
         raise HTTPException(
             status_code=403,
@@ -91,7 +91,7 @@ async def upload_prompt(
         )
     
     try:
-        # 上传文件
+        # Upload the file
         resource = await resource_service.upload_prompt(session.username, file)
         
         logger.info(f"User {session.username} uploaded prompt: {resource.filename}")
@@ -166,7 +166,7 @@ async def delete_prompt(
     Raises:
         HTTPException: 如果权限不足或删除失败
     """
-    # 检查删除权限
+    # Check the delete permission
     if not permission_service.check_delete_own_files_permission(session.username):
         raise HTTPException(
             status_code=403,
@@ -174,7 +174,7 @@ async def delete_prompt(
         )
     
     try:
-        # 删除资源
+        # Delete the resource
         success = resource_service.delete_prompt(resource_id, session.username)
         
         if success:
@@ -196,7 +196,7 @@ async def delete_prompt(
 
 
 # ============================================================================
-# 字体管理端点
+# Font management endpoints
 # ============================================================================
 
 def _font_public_dict(resource) -> dict:
@@ -230,7 +230,7 @@ async def upload_font(
     Raises:
         HTTPException: 如果权限不足或上传失败
     """
-    # 检查上传权限
+    # Check the upload permission
     has_permission = permission_service.check_upload_font_permission(session.username)
     logger.info(f"[DEBUG] User {session.username} upload font permission: {has_permission}")
     if not has_permission:
@@ -240,7 +240,7 @@ async def upload_font(
         )
     
     try:
-        # 上传文件
+        # Upload the file
         resource = await resource_service.upload_font(session.username, file)
         try:
             from manga_translator.rendering.text_render import load_font_file
@@ -323,7 +323,7 @@ async def delete_font(
     Raises:
         HTTPException: 如果权限不足或删除失败
     """
-    # 检查删除权限
+    # Check the delete permission
     if not permission_service.check_delete_own_files_permission(session.username):
         raise HTTPException(
             status_code=403,
@@ -331,7 +331,7 @@ async def delete_font(
         )
     
     try:
-        # 删除资源
+        # Delete the resource
         success = resource_service.delete_font(resource_id, session.username)
         
         if success:
@@ -373,7 +373,7 @@ async def delete_font_by_name(
         raise HTTPException(status_code=403, detail="您没有删除文件的权限")
     
     try:
-        # 获取用户的字体列表，找到匹配的资源
+        # Get the user's font list and find the matching resource
         fonts = resource_service.get_user_fonts(session.username)
         target_font = None
         for font in fonts:
@@ -418,7 +418,7 @@ async def delete_prompt_by_name(
         raise HTTPException(status_code=403, detail="您没有删除文件的权限")
     
     try:
-        # 获取用户的提示词列表，找到匹配的资源
+        # Get the user's prompt list and find the matching resource
         prompts = resource_service.get_user_prompts(session.username)
         target_prompt = None
         for prompt in prompts:
@@ -443,7 +443,7 @@ async def delete_prompt_by_name(
 
 
 # ============================================================================
-# 资源统计端点
+# Resource statistics endpoints
 # ============================================================================
 
 @router.get("/stats", response_model=dict)

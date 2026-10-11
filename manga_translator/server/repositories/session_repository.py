@@ -98,7 +98,7 @@ class SessionRepository:
         data = self._read_json(self.sessions_file)
         sessions_data = data.get('sessions', {})
         sessions = []
-        # 兼容 list 和 dict 两种格式
+        # Both the list and the dict format are accepted
         if isinstance(sessions_data, list):
             for session_data in sessions_data:
                 if session_data.get('user_id') == user_id:
@@ -118,7 +118,7 @@ class SessionRepository:
         """
         data = self._read_json(self.sessions_file)
         sessions_data = data.get('sessions', {})
-        # 兼容 list 和 dict 两种格式
+        # Both the list and the dict format are accepted
         if isinstance(sessions_data, list):
             return [SessionOwnership.from_dict(s) for s in sessions_data]
         else:

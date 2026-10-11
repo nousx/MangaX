@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api", tags=["quota"])
 
-# 全局服务实例（将在服务器启动时初始化）
+# Global service instance (initialised when the server starts)
 _quota_service: QuotaManagementService = None
 
 
@@ -42,7 +42,7 @@ def get_quota_service() -> QuotaManagementService:
 
 
 # ============================================================================
-# 请求/响应模型
+# Request and response models
 # ============================================================================
 
 class QuotaStatsResponse(BaseModel):
@@ -63,7 +63,7 @@ class AllQuotaStatsResponse(BaseModel):
 
 class QuotaResetRequest(BaseModel):
     """配额重置请求"""
-    user_id: Optional[str] = None  # None表示重置所有用户
+    user_id: Optional[str] = None  # None means reset all users
 
 
 class QuotaResetResponse(BaseModel):
@@ -83,7 +83,7 @@ class SetQuotaLimitsRequest(BaseModel):
 
 
 # ============================================================================
-# 用户配额端点
+# User quota endpoints
 # ============================================================================
 
 @router.get("/quota/stats", response_model=QuotaStatsResponse)
@@ -120,7 +120,7 @@ async def get_user_quota_stats(
 
 
 # ============================================================================
-# 管理员配额端点
+# Administrator quota endpoints
 # ============================================================================
 
 @router.get("/admin/quota/stats", response_model=AllQuotaStatsResponse)
@@ -137,7 +137,7 @@ async def get_all_quota_stats(
     try:
         all_stats = quota_service.get_all_quota_stats()
         
-        # 转换为响应格式
+        # Convert to the response format
         quotas_dict = {}
         for user_id, stats in all_stats.items():
             quotas_dict[user_id] = QuotaStatsResponse(
@@ -176,7 +176,7 @@ async def reset_quota(
     """
     try:
         if request.user_id:
-            # 重置单个用户
+            # Reset a single user
             success = quota_service.reset_daily_quota(request.user_id)
             
             if success:
@@ -192,7 +192,7 @@ async def reset_quota(
                     message=f"重置用户 {request.user_id} 的配额失败"
                 )
         else:
-            # 重置所有用户
+            # Reset all users
             success = quota_service.reset_daily_quota(user_id=None)
             
             if success:

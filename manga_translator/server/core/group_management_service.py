@@ -57,26 +57,26 @@ class GroupManagementService:
             UserGroup: 创建的用户组对象，如果失败则返回None
         """
         try:
-            # 检查用户组是否已存在
+            # Check whether the user group already exists
             if self.group_repo.group_exists(group_id):
                 logger.error(f"Group '{group_id}' already exists")
                 return None
             
-            # 创建用户组数据
+            # Create the group data
             group_data = {
                 "name": name,
                 "description": description,
                 "parameter_config": parameter_config or {}
             }
             
-            # 创建用户组
+            # Create the user group
             success = self.group_repo.create_group(group_id, group_data)
             
             if not success:
                 logger.error(f"Failed to create group '{group_id}'")
                 return None
             
-            # 记录审计日志
+            # Write the audit log
             self._log_audit(admin_id, "create_group", {
                 "group_id": group_id,
                 "name": name
@@ -84,7 +84,7 @@ class GroupManagementService:
             
             logger.info(f"Created group '{group_id}' by admin '{admin_id}'")
             
-            # 返回用户组对象
+            # Return the group object
             return UserGroup(
                 id=group_id,
                 name=name,
@@ -121,32 +121,32 @@ class GroupManagementService:
             bool: 是否成功
         """
         try:
-            # 检查是否是系统组
+            # Check whether it is a system group
             if self.group_repo.is_system_group(old_group_id):
                 logger.error(f"Cannot rename system group '{old_group_id}'")
                 return False
             
-            # 检查旧组是否存在
+            # Check whether the old group exists
             if not self.group_repo.group_exists(old_group_id):
                 logger.error(f"Group '{old_group_id}' does not exist")
                 return False
             
-            # 检查新组ID是否已存在
+            # Check whether the new group ID already exists
             if self.group_repo.group_exists(new_group_id):
                 logger.error(f"Group '{new_group_id}' already exists")
                 return False
             
-            # 重命名用户组
+            # Rename the user group
             success = self.group_repo.rename_group(old_group_id, new_group_id, new_name)
             
             if not success:
                 logger.error(f"Failed to rename group '{old_group_id}' to '{new_group_id}'")
                 return False
             
-            # 更新所有属于该组的用户的组关联
+            # Update the group link of every user that belongs to the group
             self._update_user_group_associations(old_group_id, new_group_id)
             
-            # 记录审计日志
+            # Write the audit log
             self._log_audit(admin_id, "rename_group", {
                 "old_group_id": old_group_id,
                 "new_group_id": new_group_id,
@@ -172,27 +172,27 @@ class GroupManagementService:
             bool: 是否成功
         """
         try:
-            # 检查是否是系统组
+            # Check whether it is a system group
             if self.group_repo.is_system_group(group_id):
                 logger.error(f"Cannot delete system group '{group_id}'")
                 return False
             
-            # 检查组是否存在
+            # Check whether the group exists
             if not self.group_repo.group_exists(group_id):
                 logger.error(f"Group '{group_id}' does not exist")
                 return False
             
-            # 将该组的所有用户移动到default组
+            # Move all users of the group to the default group
             moved_count = self._move_users_to_default_group(group_id)
             
-            # 删除用户组
+            # Delete the user group
             success = self.group_repo.delete_group(group_id)
             
             if not success:
                 logger.error(f"Failed to delete group '{group_id}'")
                 return False
             
-            # 记录审计日志
+            # Write the audit log
             self._log_audit(admin_id, "delete_group", {
                 "group_id": group_id,
                 "moved_users": moved_count
@@ -215,7 +215,7 @@ class GroupManagementService:
         try:
             groups = self.group_repo.get_all_groups()
             
-            # 转换为列表格式
+            # Convert to list format
             result = []
             for group_id, group_data in groups.items():
                 result.append({
@@ -305,19 +305,19 @@ class GroupManagementService:
             bool: 是否成功
         """
         try:
-            # 检查组是否存在
+            # Check whether the group exists
             if not self.group_repo.group_exists(group_id):
                 logger.error(f"Group '{group_id}' does not exist")
                 return False
             
-            # 更新配置
+            # Update the configuration
             success = self.group_repo.update_group_config(group_id, config)
             
             if not success:
                 logger.error(f"Failed to update config for group '{group_id}'")
                 return False
             
-            # 记录审计日志
+            # Write the audit log
             self._log_audit(admin_id, "update_group_config", {
                 "group_id": group_id
             })
@@ -341,19 +341,19 @@ class GroupManagementService:
             int: 更新的用户数量
         """
         try:
-            # 读取账户文件
+            # Read the accounts file
             with open(self.accounts_file, 'r', encoding='utf-8') as f:
                 accounts_data = json.load(f)
             
             updated_count = 0
             
-            # 更新所有属于旧组的用户
+            # Update every user that belongs to the old group
             for account in accounts_data.get("accounts", []):
                 if account.get("group") == old_group_id:
                     account["group"] = new_group_id
                     updated_count += 1
             
-            # 写回文件
+            # Write the file back
             if updated_count > 0:
                 with open(self.accounts_file, 'w', encoding='utf-8') as f:
                     json.dump(accounts_data, f, indent=2, ensure_ascii=False)
@@ -402,7 +402,7 @@ class GroupManagementService:
             logger.error(f"Error writing audit log: {e}")
 
 
-# 全局服务实例
+# Global service instance
 _group_management_service: Optional[GroupManagementService] = None
 
 

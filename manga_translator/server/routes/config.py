@@ -31,19 +31,19 @@ SERVER_HIDDEN_RENDERER_OPTIONS = set()
 SERVER_HIDDEN_COLORIZER_OPTIONS = set()
 SERVER_HIDDEN_TRANSLATOR_OPTIONS = set()
 SERVER_HIDDEN_CONFIG_KEYS = {
-    # 服务器端内部参数
+    # Internal server-side parameters
     "use_custom_api_params",
-    # Qt UI 专属参数，Web 端全体禁用
+    # Parameters only for the Qt UI, disabled for everyone on the web
     "cli.replace_translation",
     "render.enable_template_alignment",
     "render.paste_mask_dilation_pixels",
-    # 服务器端控制，用户端不应暴露
+    # Controlled by the server; should not be exposed to users
     "cli.batch_size",
     "cli.batch_concurrent",
     "cli.use_gpu",
     # upscale
     "upscale.realcugan_model",
-    # CLI 配置隐藏
+    # Hidden CLI configuration
     "cli.format",
     "cli.save_quality",
     "cli.overwrite",
@@ -60,7 +60,7 @@ SERVER_HIDDEN_CONFIG_KEYS = {
     "cli.colorize_only",
     "cli.upscale_only",
     "cli.inpaint_only",
-    # 翻译器高级配置
+    # Advanced translator configuration
     "translator.enable_post_translation_check",
     "translator.post_check_max_retry_attempts",
     "translator.post_check_repetition_threshold",
@@ -68,13 +68,13 @@ SERVER_HIDDEN_CONFIG_KEYS = {
     "translator.translator_chain",
     "translator.selective_translation",
     "translator.skip_lang",
-    # 渲染
+    # Rendering
     "render.gimp_font",
-    # PSD 相关（Qt UI / Photoshop 专属）
+    # PSD (only for the Qt UI / Photoshop)
     "cli.export_editable_psd",
-    # Qt UI 专属 - 输出到原图目录
+    # Qt UI only - save next to the source image
     "cli.save_to_source_dir",
-    # Qt UI 专属 - 导入固定YOLO框
+    # Qt UI only - import fixed YOLO boxes
     "detector.import_yolo_labels",
 }
 
@@ -205,10 +205,10 @@ async def get_config_defaults():
     config = load_default_config_dict()
     config = _filter_server_hidden_config(config)
     
-    # 过滤掉Qt UI专属配置（app部分）
+    # Leave out the configuration that only the Qt UI uses (the app section)
     config = {k: v for k, v in config.items() if k not in WEB_EXCLUDED_SECTIONS}
     
-    # 添加配额默认值
+    # Add the quota defaults
     config['quota'] = {
         'daily_image_limit': 100,
         'daily_char_limit': 100000,
@@ -218,7 +218,7 @@ async def get_config_defaults():
         'max_images_per_batch': 50
     }
     
-    # 添加功能权限默认值
+    # Add the feature permission defaults
     config['permissions'] = {
         'can_upload_fonts': True,
         'can_delete_fonts': True,
@@ -238,7 +238,7 @@ async def get_config_defaults():
     return config
 
 
-# Web端不需要的配置部分（Qt UI专属）
+# Configuration sections the web does not need (Qt UI only)
 WEB_EXCLUDED_SECTIONS = {'app'}
 
 
@@ -260,7 +260,7 @@ async def get_config(
     config_dict = load_default_config_dict()
     config_dict = _filter_server_hidden_config(config_dict)
     
-    # 过滤掉Qt UI专属配置（app部分）
+    # Leave out the configuration that only the Qt UI uses (the app section)
     config_dict = {k: v for k, v in config_dict.items() if k not in WEB_EXCLUDED_SECTIONS}
     
     # If authenticated mode, filter based on user permissions and group config
@@ -296,10 +296,10 @@ async def get_config(
             if group and group.get('parameter_config'):
                 param_config = group['parameter_config']
                 
-                # 检查是否有嵌套的 parameter_config（禁用配置）
+                # Check for a nested parameter_config (disable configuration)
                 nested_param_config = param_config.get('parameter_config', {})
                 if nested_param_config:
-                        # 处理嵌套的禁用配置 {"translator.translator": {"disabled": true}}
+                        # Handle the nested disable configuration {"translator.translator": {"disabled": true}}
                         for full_key, key_config in nested_param_config.items():
                             if isinstance(key_config, dict):
                                 if key_config.get('visible') is False or key_config.get('disabled') is True:
@@ -307,32 +307,32 @@ async def get_config(
                                 if 'default_value' in key_config:
                                     group_default_values[full_key] = key_config['default_value']
                 
-                # 遍历用户组的参数配置，找出默认值
+                # Go through the group's parameter configuration and find the defaults
                 for section, section_config in param_config.items():
                     if section == 'parameter_config':
-                        continue  # 跳过嵌套的禁用配置
+                        continue  # Skip the nested disable configuration
                     if isinstance(section_config, dict):
                         for key, key_config in section_config.items():
                             full_key = f"{section}.{key}"
-                            # 旧格式: {visible: false, disabled: true} 或新格式: 直接是值
+                            # Old format: {visible: false, disabled: true}; new format: the value directly
                             if isinstance(key_config, dict):
                                 if key_config.get('visible') is False or key_config.get('disabled') is True:
                                     group_hidden_params.add(full_key)
                                 if 'default_value' in key_config:
                                     group_default_values[full_key] = key_config['default_value']
                             else:
-                                # 新格式：直接是默认值
+                                # New format: the default value directly
                                 group_default_values[full_key] = key_config
         except Exception as e:
             import logging
             logging.getLogger('manga_translator.server').warning(f"Failed to get group config: {e}")
         
-        # 用户级别的白名单可以解锁用户组禁用的参数
-        # 空数组表示继承用户组，不是禁止所有
+        # A user-level whitelist can unlock parameters the group disabled
+        # An empty array means "inherit from the group", not "forbid everything"
         user_allowed_params = set(permissions.allowed_parameters) if permissions.allowed_parameters else set()
         user_denied_params = set(permissions.denied_parameters) if hasattr(permissions, 'denied_parameters') and permissions.denied_parameters else set()
         
-        # 如果用户没有设置任何参数权限（空数组），则默认允许所有（继承用户组）
+        # When the user has no parameter permissions set (empty array), everything is allowed by default (inherited from the group)
         user_has_param_restrictions = len(user_allowed_params) > 0 and "*" not in user_allowed_params
         
         filtered_config = {}
@@ -344,23 +344,23 @@ async def get_config(
                 for key, value in content.items():
                     full_key = f"{section}.{key}"
                     
-                    # 1. 检查是否被用户黑名单禁用（最高优先级）
+                    # 1. Check whether the user blacklist disables it (highest priority)
                     if full_key in user_denied_params:
                         continue
                     
-                    # 2. 检查是否被用户组禁用
+                    # 2. Check whether the group disables it
                     if full_key in group_hidden_params:
-                        # 检查用户白名单是否解锁（用户白名单可以覆盖用户组禁用）
+                        # Check whether the user whitelist unlocks it (the user whitelist can override the group's disabling)
                         if full_key not in user_allowed_params and "*" not in user_allowed_params:
                             continue
                     
-                    # 3. 如果用户有明确的参数限制（非空且非*），检查是否在允许列表中
-                    # 注意：空数组表示继承用户组，不是禁止所有
+                    # 3. When the user has an explicit parameter limit (not empty and not *), check whether it is in the allowed list
+                    # Note: an empty array means "inherit from the group", not "forbid everything"
                     if user_has_param_restrictions:
                         if full_key not in user_allowed_params:
                             continue
                     
-                    # 使用用户组默认值（如果有）
+                    # Use the group default (when there is one)
                     if full_key in group_default_values:
                         value = group_default_values[full_key]
                     
@@ -374,20 +374,20 @@ async def get_config(
                     filtered_config[section] = content
         
         # Add user permissions info to response
-        # 获取有效的每日配额（优先从用户组获取）
+        # Get the effective daily quota (from the user group first)
         effective_daily_quota = permission_service.get_effective_daily_quota(session.username)
         
-        # 获取允许的工作流列表
-        allowed_workflows = list(AVAILABLE_WORKFLOWS)  # 默认所有
+        # Get the list of allowed workflows
+        allowed_workflows = list(AVAILABLE_WORKFLOWS)  # All by default
         try:
             group_allowed_wf = set(group.get('allowed_workflows', [])) if group else set()
             group_denied_wf = set(group.get('denied_workflows', [])) if group else set()
             
-            # 如果用户组有白名单限制
+            # When the group has a whitelist limit
             if group_allowed_wf and "*" not in group_allowed_wf:
                 allowed_workflows = [wf for wf in AVAILABLE_WORKFLOWS if wf in group_allowed_wf]
             
-            # 移除用户组黑名单
+            # Remove the group blacklist
             allowed_workflows = [wf for wf in allowed_workflows if wf not in group_denied_wf]
         except Exception:
             pass
@@ -494,7 +494,7 @@ async def get_config_options(
                     except Exception:
                         if font_resource.font_family:
                             user_font_families.append(font_resource.font_family)
-                # 用户提示词使用相对路径: manga_translator/server/data/user_resources/prompts/{username}/{filename}
+                # User prompts use a relative path: manga_translator/server/data/user_resources/prompts/{username}/{filename}
                 user_prompt_resources = resource_service.get_user_prompts(session.username)
                 user_prompt_paths = [
                     f'{USER_RESOURCES_RELATIVE_DIR}/prompts/{session.username}/{p.filename}'
@@ -513,7 +513,7 @@ async def get_config_options(
         prompts = sorted([f for f in os.listdir(dict_dir) 
                          if f.lower().endswith(('.json', '.yaml', '.yml')) and os.path.splitext(f)[0] not in ('system_prompt_hq', 'system_prompt_hq_format', 'system_prompt_line_break', 'glossary_extraction_prompt')])
     
-    # 服务器提示词使用相对路径: dict/{filename}
+    # Server prompts use a relative path: dict/{filename}
     server_prompt_paths = [f'dict/{p}' for p in prompts]
     all_prompt_paths = server_prompt_paths + user_prompt_paths
     
@@ -749,26 +749,26 @@ async def get_workflows(
         if hasattr(permissions, 'denied_workflows') and permissions.denied_workflows:
             user_denied = set(permissions.denied_workflows)
         
-        # 权限逻辑: 用户黑名单 + 用户组黑名单 - 用户白名单
-        # 1. 如果用户组允许所有（*）或未设置，则从所有工作流开始
+        # Permission logic: user blacklist + group blacklist - user whitelist
+        # 1. When the group allows everything (*) or nothing is set, start from all workflows
         if "*" in group_allowed or not group_allowed:
             result = set(AVAILABLE_WORKFLOWS)
         else:
             result = group_allowed.intersection(set(AVAILABLE_WORKFLOWS))
         
-        # 2. 移除用户组黑名单
+        # 2. Remove the group blacklist
         result -= group_denied
         
-        # 3. 移除用户黑名单
+        # 3. Remove the user blacklist
         result -= user_denied
         
-        # 4. 用户白名单可以解锁
+        # 4. The user whitelist can unlock
         if user_allowed and "*" not in user_allowed:
             for wf in user_allowed:
                 if wf in AVAILABLE_WORKFLOWS:
                     result.add(wf)
         
-        # 保持原始顺序
+        # Keep the original order
         return [wf for wf in AVAILABLE_WORKFLOWS if wf in result]
     
     # If user mode and admin set allowed workflow list (legacy behavior)
@@ -812,12 +812,12 @@ async def get_user_settings(
     """Get user-side visibility settings (includes group quota settings)"""
     username = _resolve_username_from_token(x_session_token)
 
-    # 默认值从 admin_settings 获取
+    # The defaults come from admin_settings
     permissions = admin_settings.get('permissions', {})
     api_key_policy = get_effective_api_key_policy(username, admin_settings)
     upload_limits = admin_settings.get('upload_limits', {})
     
-    # 默认设置
+    # Default settings
     result = {
         'show_env_editor': api_key_policy.get('show_env_editor', False),
         'can_upload_fonts': permissions.get('can_upload_fonts', True),
@@ -827,7 +827,7 @@ async def get_user_settings(
         'max_images_per_batch': upload_limits.get('max_images_per_batch', 0)
     }
     
-    # 如果有用户登录，从用户组配置获取配额
+    # When a user is signed in, take the quota from the group configuration
     if username:
         try:
             account_service, session_service, _ = get_services()
@@ -835,7 +835,7 @@ async def get_user_settings(
             if session:
                 account = account_service.get_user(session.username)
                 if account:
-                    # 获取用户组配置
+                    # Get the group configuration
                     from manga_translator.server.core.group_management_service import (
                         get_group_management_service,
                     )
@@ -847,7 +847,7 @@ async def get_user_settings(
                         quota = param_config.get('quota', {})
                         group_permissions = param_config.get('permissions', {})
                         
-                        # 使用用户组的配额设置（如果有）
+                        # Use the quota settings of the group (when there are any)
                         if 'max_image_size_mb' in quota:
                             result['max_image_size_mb'] = quota['max_image_size_mb']
                         if 'max_images_per_batch' in quota:
@@ -975,7 +975,7 @@ async def save_user_env_vars(env_vars: dict, session: Session = Depends(require_
         for key, value in filtered_env_vars.items():
             env_service.update_env_var(key, value)
         
-        # 重新加载 .env 文件确保所有变量都是最新的
+        # Reload the .env file, so every variable is up to date
         load_app_dotenv(env_path, override=True)
         
         return {"success": True, "saved_to_server": True}

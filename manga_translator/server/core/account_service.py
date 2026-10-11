@@ -59,19 +59,19 @@ class AccountService:
         # as-is by _load_accounts() so legacy usernames can still log in.
         validate_username(username)
 
-        # 验证用户名唯一性
+        # Check that the user name is unique
         if username in self.accounts:
             raise ValueError(f"用户名 '{username}' 已存在")
         
-        # 验证密码强度（至少6个字符）
+        # Check the password strength (at least 6 characters)
         if len(password) < 6:
             raise ValueError("密码长度必须至少为6个字符")
         
-        # 验证角色
+        # Validate the role
         if role not in ['admin', 'user']:
             raise ValueError(f"无效的角色: {role}")
         
-        # 使用默认权限（如果未提供）
+        # Use the default permissions (when none are given)
         if permissions is None:
             if role == 'admin':
                 permissions = UserPermissions(
@@ -87,21 +87,21 @@ class AccountService:
                     can_delete_files=True
                 )
             else:
-                # 普通用户默认继承用户组配置
-                # allowed_translators/allowed_parameters 为空表示继承用户组
-                # 用户级别的设置可以覆盖用户组（白名单解锁或黑名单禁用）
+                # Ordinary users inherit the group configuration by default
+                # Empty allowed_translators/allowed_parameters means "inherit from the group"
+                # User-level settings can override the group (unlock with a whitelist or disable with a blacklist)
                 permissions = UserPermissions(
-                    allowed_translators=[],  # 空=继承用户组
+                    allowed_translators=[],  # empty = inherit from the group
                     denied_translators=[],
-                    allowed_ocr=[],          # 空=继承用户组
+                    allowed_ocr=[],          # empty = inherit from the group
                     denied_ocr=[],
-                    allowed_colorizers=[],   # 空=继承用户组
+                    allowed_colorizers=[],   # empty = inherit from the group
                     denied_colorizers=[],
-                    allowed_renderers=[],    # 空=继承用户组
+                    allowed_renderers=[],    # empty = inherit from the group
                     denied_renderers=[],
-                    allowed_workflows=[],    # 空=继承用户组
+                    allowed_workflows=[],    # empty = inherit from the group
                     denied_workflows=[],
-                    allowed_parameters=[],   # 空=继承用户组
+                    allowed_parameters=[],   # empty = inherit from the group
                     denied_parameters=[],
                     max_concurrent_tasks=2,
                     daily_quota=100,
@@ -109,10 +109,10 @@ class AccountService:
                     can_delete_files=False
                 )
         
-        # 哈希密码
+        # Hash the password
         password_hash = self._hash_password(password)
         
-        # 创建用户账号
+        # Create the user account
         account = UserAccount(
             username=username,
             password_hash=password_hash,
@@ -125,10 +125,10 @@ class AccountService:
             must_change_password=False
         )
         
-        # 保存到内存
+        # Keep in memory
         self.accounts[username] = account
         
-        # 持久化
+        # Persist
         self._save_accounts()
         
         logger.info(f"Created user: {username} (role: {role})")
@@ -173,18 +173,18 @@ class AccountService:
         if not account:
             raise ValueError(f"用户 '{username}' 不存在")
         
-        # 允许更新的字段
+        # Fields that may be updated
         allowed_fields = {
             'role', 'group', 'permissions', 'is_active', 'must_change_password',
             'parameter_config', 'default_preset_id'
         }
         
-        # 验证更新字段
+        # Validate the fields to update
         for field in updates.keys():
             if field not in allowed_fields:
                 raise ValueError(f"不允许更新字段: {field}")
         
-        # 应用更新
+        # Apply the update
         if 'role' in updates:
             if updates['role'] not in ['admin', 'user']:
                 raise ValueError(f"无效的角色: {updates['role']}")
@@ -213,7 +213,7 @@ class AccountService:
         if 'default_preset_id' in updates:
             account.default_preset_id = updates['default_preset_id']
         
-        # 持久化
+        # Persist
         self._save_accounts()
         
         logger.info(f"Updated user: {username}")
@@ -235,10 +235,10 @@ class AccountService:
         if username not in self.accounts:
             raise ValueError(f"用户 '{username}' 不存在")
         
-        # 从内存中删除
+        # Remove from memory
         del self.accounts[username]
         
-        # 持久化
+        # Persist
         self._save_accounts()
         
         logger.info(f"Deleted user: {username}")
@@ -279,15 +279,15 @@ class AccountService:
         if not account:
             raise ValueError(f"用户 '{username}' 不存在")
         
-        # 验证密码强度
+        # Check the password strength
         if len(new_password) < 6:
             raise ValueError("密码长度必须至少为6个字符")
         
-        # 哈希新密码
+        # Hash the new password
         account.password_hash = self._hash_password(new_password)
         account.must_change_password = False
         
-        # 持久化
+        # Persist
         self._save_accounts()
         
         logger.info(f"Changed password for user: {username}")
@@ -308,12 +308,12 @@ class AccountService:
         Returns:
             Optional[UserAccount]: 创建的管理员账号，如果已存在返回 None
         """
-        # 如果已存在用户，不创建
+        # When a user already exists, nothing is created
         if self.accounts:
             logger.info("Users already exist, skipping default admin creation")
             return None
         
-        # 创建默认管理员
+        # Create the default administrator
         try:
             admin = self.create_user(
                 username=username,

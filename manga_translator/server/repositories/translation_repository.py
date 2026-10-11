@@ -28,7 +28,7 @@ class TranslationRepository:
         Args:
             base_path: 原始的单文件路径，会转换为目录路径
         """
-        # 将原来的文件路径转换为目录
+        # Turn the former file path into a folder
         self.base_dir = Path(base_path).parent / 'history'
         self.index_file = self.base_dir / '_index.json'
         self._lock = threading.RLock()
@@ -53,12 +53,12 @@ class TranslationRepository:
             if not sessions:
                 return
             
-            # 按用户分组迁移
+            # Migrate grouped by user
             for session in sessions:
                 user_id = session.get('user_id', 'unknown')
                 self._add_to_user_file(user_id, session)
             
-            # 备份并删除旧文件
+            # Back up and delete the old file
             backup_path = old_path.with_suffix('.json.migrated')
             old_path.rename(backup_path)
             
@@ -67,7 +67,7 @@ class TranslationRepository:
     
     def _get_user_file(self, user_id: str) -> Path:
         """获取用户的历史文件路径"""
-        # 使用安全的文件名
+        # Use a safe file name
         safe_name = "".join(c if c.isalnum() or c in '-_' else '_' for c in user_id)
         return resolve_path_within(self.base_dir, self.base_dir / f'{safe_name}.json')
     
@@ -154,7 +154,7 @@ class TranslationRepository:
     
     def get_session_by_token(self, session_token: str) -> Optional[dict]:
         """通过 token 获取会话"""
-        # 先查索引
+        # Look in the index first
         index = self._read_index()
         user_id = index.get(session_token)
         
@@ -164,7 +164,7 @@ class TranslationRepository:
                 if session.get('session_token') == session_token:
                     return session
         
-        # 索引未命中，遍历所有用户文件（兼容旧数据）
+        # Not in the index: go through all user files (for old data)
         for user_file in self.base_dir.glob('*.json'):
             if user_file.name.startswith('_'):
                 continue
@@ -173,7 +173,7 @@ class TranslationRepository:
                     data = json.load(f)
                 for session in data.get('sessions', []):
                     if session.get('session_token') == session_token:
-                        # 更新索引
+                        # Update the index
                         self._update_index(session_token, session.get('user_id', 'unknown'))
                         return session
             except Exception:
@@ -197,7 +197,7 @@ class TranslationRepository:
     
     def delete_session(self, session_id: str) -> bool:
         """删除会话"""
-        # 遍历所有用户文件查找并删除
+        # Go through all user files to find and delete it
         for user_file in self.base_dir.glob('*.json'):
             if user_file.name.startswith('_'):
                 continue
@@ -209,7 +209,7 @@ class TranslationRepository:
                 sessions = [s for s in data.get('sessions', []) if s.get('id') != session_id]
                 
                 if len(sessions) < original_len:
-                    # 找到并删除了
+                    # Found and deleted
                     deleted_session = next(
                         (s for s in data.get('sessions', []) if s.get('id') == session_id), 
                         None
@@ -256,10 +256,10 @@ class TranslationRepository:
             return True
         
         if user_id:
-            # 只查询指定用户
+            # Query the given user only
             sessions = self.get_user_sessions(user_id)
             return [s for s in sessions if filter_func(s)]
         else:
-            # 查询所有用户
+            # Query all users
             all_sessions = self.get_all_sessions()
             return [s for s in all_sessions if filter_func(s)]

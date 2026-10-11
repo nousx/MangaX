@@ -30,13 +30,13 @@ class SessionOwnership:
     
     def to_dict(self) -> dict:
         """Convert to dictionary for JSON serialization."""
-        # 返回前端期望的字段格式
+        # Return the field format the frontend expects
         data = {
             'session_token': self.session_token,
             'user_id': self.user_id,
             'created_at': self.created_at.isoformat(),
             'status': self.status,
-            # 前端兼容字段
+            # Fields for frontend compatibility
             'username': self.user_id,
             'token': self.metadata.get('token', self.session_token),
             'ip': self.metadata.get('ip_address', ''),
@@ -52,24 +52,24 @@ class SessionOwnership:
         """Create instance from dictionary."""
         data = data.copy()
         
-        # 兼容旧格式数据 (session_id -> session_token, username -> user_id)
+        # Accept data in the old format (session_id -> session_token, username -> user_id)
         if 'session_id' in data and 'session_token' not in data:
             data['session_token'] = data.pop('session_id')
         if 'username' in data and 'user_id' not in data:
             data['user_id'] = data.pop('username')
         
-        # 处理 created_at 字段
+        # Handle the created_at field
         if isinstance(data.get('created_at'), str):
             data['created_at'] = datetime.fromisoformat(data['created_at'])
         
-        # 处理 status 字段 (从 is_active 转换)
+        # Handle the status field (converted from is_active)
         if 'status' not in data:
             if data.get('is_active', True):
                 data['status'] = 'active'
             else:
                 data['status'] = 'inactive'
         
-        # 将额外字段放入 metadata
+        # Put the extra fields into metadata
         known_fields = {'session_token', 'user_id', 'created_at', 'status', 'metadata'}
         extra_fields = {k: v for k, v in data.items() if k not in known_fields}
         if extra_fields:
@@ -77,7 +77,7 @@ class SessionOwnership:
             metadata.update(extra_fields)
             data['metadata'] = metadata
         
-        # 只保留模型需要的字段
+        # Keep only the fields the model needs
         filtered_data = {k: v for k, v in data.items() if k in known_fields}
         
         return cls(**filtered_data)

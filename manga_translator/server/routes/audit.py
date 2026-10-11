@@ -65,7 +65,7 @@ async def query_audit_events(
     - **offset**: 跳过的事件数，用于分页（默认0）
     """
     try:
-        # 构建筛选条件
+        # Build the filter conditions
         filters = {}
         
         if username:
@@ -101,7 +101,7 @@ async def query_audit_events(
                     }
                 )
         
-        # 查询审计事件
+        # Query the audit events
         audit_service = AuditService()
         events = audit_service.query_events(
             filters=filters,
@@ -165,7 +165,7 @@ async def export_audit_events(
     - **format**: 导出格式（json 或 csv，默认 json）
     """
     try:
-        # 构建筛选条件
+        # Build the filter conditions
         filters = {}
         
         if username:
@@ -201,19 +201,19 @@ async def export_audit_events(
                     }
                 )
         
-        # 导出审计事件
+        # Export the audit events
         audit_service = AuditService()
         export_data = audit_service.export_events(
             filters=filters,
             format=format
         )
         
-        # 记录审计日志
+        # Write the audit log
         try:
             audit_service.log_event(
                 event_type='export_audit_log',
                 username=session.username,
-                ip_address='',  # TODO: 从请求中获取
+                ip_address='',  # TODO: get it from the request
                 details={
                     'format': format,
                     'filters': {k: str(v) for k, v in filters.items()}
@@ -228,7 +228,7 @@ async def export_audit_events(
             f"format={format}, filters={filters}"
         )
         
-        # 设置响应头
+        # Set the response headers
         media_type = "application/json" if format == "json" else "text/csv"
         from datetime import timezone
         filename = f"audit_log_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}.{format}"

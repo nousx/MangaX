@@ -35,10 +35,10 @@ class PermissionService:
         """
         self.account_service = account_service
         
-        # 跟踪用户的活动任务数: username -> count
+        # Tracks the number of active tasks of each user: username -> count
         self.active_tasks: Dict[str, int] = defaultdict(int)
         
-        # 跟踪用户的每日使用配额: (username, date) -> count
+        # Tracks the daily quota use of each user: (username, date) -> count
         self.daily_usage: Dict[tuple, int] = defaultdict(int)
     
     def _resolve_feature_permission_fields(self, feature_type: str) -> tuple[str, str]:
@@ -152,11 +152,11 @@ class PermissionService:
         
         permissions = account.permissions
         
-        # 检查是否有通配符权限
+        # Check for a wildcard permission
         if "*" in permissions.allowed_parameters:
             return True
         
-        # 检查是否在允许列表中
+        # Check whether it is in the allowed list
         return parameter in permissions.allowed_parameters
     
     def filter_parameters(self, username: str, parameters: Dict[str, Any]) -> Dict[str, Any]:
@@ -177,11 +177,11 @@ class PermissionService:
         
         permissions = account.permissions
         
-        # 如果有通配符权限，返回所有参数
+        # With a wildcard permission, return all parameters
         if "*" in permissions.allowed_parameters:
             return parameters
         
-        # 过滤参数
+        # Filter the parameters
         filtered = {}
         for key, value in parameters.items():
             if self.check_parameter_permission(username, key):
@@ -206,11 +206,11 @@ class PermissionService:
             logger.warning(f"User not found: {username}")
             return False
         
-        # 检查用户权限
+        # Check the user's permissions
         if account.permissions.allow_offline_translation:
             return True
         
-        # 检查用户组权限
+        # Check the group's permissions
         try:
             from manga_translator.server.core.group_management_service import (
                 get_group_management_service,
@@ -245,11 +245,11 @@ class PermissionService:
             logger.warning(f"User not found: {username}")
             return False
         
-        # 获取有效的并发限制（优先从用户组获取）
+        # Get the effective concurrency limit (from the user group first)
         max_concurrent = self.get_effective_max_concurrent(username)
         current_tasks = self.active_tasks.get(username, 0)
         
-        # 检查是否超过限制（因为已经先增加了计数，所以用 <=）
+        # Check whether the limit is exceeded (the count was increased first, hence <=)
         can_create = current_tasks <= max_concurrent
         
         if not can_create:
@@ -272,9 +272,9 @@ class PermissionService:
         """
         account = self.account_service.get_user(username)
         if not account:
-            return 1  # 默认限制为 1
+            return 1  # The default limit is 1
         
-        # 优先从用户组获取并发限制
+        # Take the concurrency limit from the user group first
         try:
             from manga_translator.server.core.group_management_service import (
                 get_group_management_service,
@@ -290,7 +290,7 @@ class PermissionService:
         except Exception as e:
             logger.warning(f"Failed to get group concurrent limit: {e}")
         
-        # 如果用户组没有设置，使用用户级别的配置
+        # When the group has none set, use the user-level configuration
         return account.permissions.max_concurrent_tasks
     
     def check_daily_quota(self, username: str) -> bool:
@@ -308,8 +308,8 @@ class PermissionService:
             logger.warning(f"User not found: {username}")
             return False
         
-        # 获取用户组的配额设置
-        daily_quota = -1  # 默认无限制
+        # Get the quota settings of the user group
+        daily_quota = -1  # No limit by default
         try:
             from manga_translator.server.core.group_management_service import (
                 get_group_management_service,
@@ -319,27 +319,27 @@ class PermissionService:
             if group:
                 param_config = group.get('parameter_config', {})
                 quota_config = param_config.get('quota', {})
-                # 使用用户组的 daily_image_limit
+                # Use the daily_image_limit of the user group
                 group_quota = quota_config.get('daily_image_limit', -1)
                 if group_quota is not None and group_quota > 0:
                     daily_quota = group_quota
         except Exception as e:
             logger.warning(f"Failed to get group quota: {e}")
         
-        # 如果用户组没有设置，使用用户级别的配额
+        # When the group has none set, use the user-level quota
         if daily_quota == -1:
             daily_quota = account.permissions.daily_quota
         
-        # -1 表示无限制
+        # -1 means no limit
         if daily_quota == -1:
             return True
         
-        # 获取今天的使用量
+        # Get today's usage
         today = date.today()
         usage_key = (username, today)
         current_usage = self.daily_usage.get(usage_key, 0)
         
-        # 检查是否超过配额
+        # Check whether the quota is exceeded
         can_create = current_usage < daily_quota
         
         if not can_create:
@@ -451,7 +451,7 @@ class PermissionService:
         permissions = account.permissions
         filtered_config = config.copy()
         
-        # 过滤翻译器列表
+        # Filter the translator list
         if 'translators' in filtered_config:
             filtered_config['translators'] = self.filter_allowed_options(
                 username,
@@ -459,14 +459,14 @@ class PermissionService:
                 filtered_config['translators'],
             )
         
-        # 过滤参数
+        # Filter the parameters
         if 'parameters' in filtered_config:
             filtered_config['parameters'] = self.filter_parameters(
                 username,
                 filtered_config['parameters']
             )
         
-        # 添加用户权限信息
+        # Add the user's permission information
         filtered_config['user_permissions'] = {
             'allowed_translators': permissions.allowed_translators,
             'allowed_ocr': permissions.allowed_ocr,
@@ -522,7 +522,7 @@ class PermissionService:
         if not account:
             return -1
         
-        # 优先从用户组获取配额
+        # Take the quota from the user group first
         try:
             from manga_translator.server.core.group_management_service import (
                 get_group_management_service,
@@ -538,7 +538,7 @@ class PermissionService:
         except Exception as e:
             logger.warning(f"Failed to get group quota: {e}")
         
-        # 如果用户组没有设置，使用用户级别的配额
+        # When the group has none set, use the user-level quota
         return account.permissions.daily_quota
     
     def cleanup_old_usage_data(self) -> None:
@@ -578,7 +578,7 @@ class PermissionService:
                 'can_delete_prompts': False,
             }
         
-        # 默认使用用户级别的权限
+        # User-level permissions are used by default
         result = {
             'can_upload_fonts': account.permissions.can_upload_files,
             'can_delete_fonts': account.permissions.can_delete_files,
@@ -586,7 +586,7 @@ class PermissionService:
             'can_delete_prompts': account.permissions.can_delete_files,
         }
         
-        # 优先从用户组获取权限
+        # Take the permissions from the user group first
         try:
             from manga_translator.server.core.group_management_service import (
                 get_group_management_service,
@@ -597,7 +597,7 @@ class PermissionService:
                 param_config = group.get('parameter_config', {})
                 perm_config = param_config.get('permissions', {})
                 
-                # 如果用户组有配置，使用用户组的配置
+                # When the group has a configuration, use it
                 if 'can_upload_fonts' in perm_config:
                     result['can_upload_fonts'] = perm_config['can_upload_fonts']
                 if 'can_delete_fonts' in perm_config:

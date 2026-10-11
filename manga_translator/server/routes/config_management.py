@@ -445,7 +445,7 @@ async def apply_preset(
     try:
         user_id = session.username
         
-        # 先获取预设配置
+        # Get the preset configuration first
         preset = config_service.get_preset(preset_id, decrypt=False)
         if not preset:
             raise HTTPException(status_code=404, detail="Preset not found")
@@ -465,7 +465,7 @@ async def apply_preset(
             if not str(key).isupper()
         } if isinstance(preset_config, dict) else {}
 
-        # 返回预设配置供前端应用到UI
+        # Return the preset configuration for the frontend to apply to the UI
         return {
             "success": True,
             "message": "Preset applied successfully",

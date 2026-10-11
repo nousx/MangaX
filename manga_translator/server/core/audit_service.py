@@ -38,12 +38,12 @@ class AuditService:
         self.max_log_size_bytes = max_log_size_mb * 1024 * 1024
         self.max_backup_files = max_backup_files
         
-        # 确保日志文件目录存在
+        # Make sure the folder of the log file exists
         log_dir = Path(audit_log_file).parent
         if log_dir and not log_dir.exists():
             log_dir.mkdir(parents=True, exist_ok=True)
         
-        # 确保日志文件存在
+        # Make sure the log file exists
         if not Path(audit_log_file).exists():
             Path(audit_log_file).touch()
     
@@ -68,7 +68,7 @@ class AuditService:
         Returns:
             AuditEvent: 创建的审计事件对象
         """
-        # 创建审计事件
+        # Create the audit event
         event = AuditEvent(
             event_id=str(uuid4()),
             timestamp=datetime.now(timezone.utc),
@@ -79,12 +79,12 @@ class AuditService:
             result=result
         )
         
-        # 写入日志文件
+        # Write to the log file
         try:
             with open(self.audit_log_file, 'a', encoding='utf-8') as f:
                 f.write(event.to_json_line() + '\n')
             
-            # 检查是否需要轮转
+            # Check whether rotation is needed
             self._check_and_rotate()
             
             logger.debug(
@@ -126,7 +126,7 @@ class AuditService:
             with open(self.audit_log_file, 'r', encoding='utf-8') as f:
                 lines = f.readlines()
             
-            # 解析每一行
+            # Parse each line
             for line in lines:
                 line = line.strip()
                 if not line:
@@ -136,17 +136,17 @@ class AuditService:
                     event_data = json.loads(line)
                     event = AuditEvent.from_dict(event_data)
                     
-                    # 应用筛选条件
+                    # Apply the filter conditions
                     if self._matches_filters(event, filters):
                         events.append(event)
                 except Exception as e:
                     logger.warning(f"Failed to parse audit log line: {e}")
                     continue
             
-            # 按时间倒序排序（最新的在前）
+            # Sort by time, descending (newest first)
             events.sort(key=lambda e: e.timestamp, reverse=True)
             
-            # 应用分页
+            # Apply paging
             return events[offset:offset + limit]
         
         except FileNotFoundError:
@@ -192,19 +192,19 @@ class AuditService:
                 logger.warning("Audit log file does not exist, nothing to rotate")
                 return False
             
-            # 生成备份文件名（带时间戳）
+            # Build the backup file name (with a timestamp)
             timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
             backup_file = f"{self.audit_log_file}.{timestamp}"
             
-            # 移动当前日志文件到备份
+            # Move the current log file to the backup
             shutil.move(self.audit_log_file, backup_file)
             
-            # 创建新的日志文件
+            # Create a new log file
             Path(self.audit_log_file).touch()
             
             logger.info(f"Rotated audit log: {backup_file}")
             
-            # 清理旧的备份文件
+            # Remove old backup files
             self._cleanup_old_backups()
             
             return True
@@ -227,22 +227,22 @@ class AuditService:
         Returns:
             bool: 是否匹配
         """
-        # 用户名筛选
+        # Filter by user name
         if 'username' in filters:
             if event.username != filters['username']:
                 return False
         
-        # 事件类型筛选
+        # Filter by event type
         if 'event_type' in filters:
             if event.event_type != filters['event_type']:
                 return False
         
-        # 结果筛选
+        # Filter by result
         if 'result' in filters:
             if event.result != filters['result']:
                 return False
         
-        # 时间范围筛选
+        # Filter by time range
         if 'start_time' in filters:
             if event.timestamp < filters['start_time']:
                 return False
@@ -273,14 +273,14 @@ class AuditService:
             log_dir = Path(self.audit_log_file).parent
             log_name = Path(self.audit_log_file).name
             
-            # 查找所有备份文件
+            # Find all backup files
             backup_files = sorted(
                 log_dir.glob(f"{log_name}.*"),
                 key=lambda p: p.stat().st_mtime,
                 reverse=True
             )
             
-            # 删除超过限制的备份文件
+            # Delete the backup files beyond the limit
             for backup_file in backup_files[self.max_backup_files:]:
                 try:
                     backup_file.unlink()
@@ -300,12 +300,12 @@ class AuditService:
         if not events:
             return ""
         
-        # CSV 头部
+        # CSV header
         lines = [
             "event_id,timestamp,event_type,username,ip_address,result,details"
         ]
         
-        # CSV 数据行
+        # CSV data rows
         for event in events:
             details_str = json.dumps(event.details, ensure_ascii=False).replace('"', '""')
             line = (

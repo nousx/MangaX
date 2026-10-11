@@ -461,7 +461,7 @@ class HistoryManagementService:
         import time
         _logger = logging.getLogger(__name__)
         
-        # 延迟删除，等待文件传输完成
+        # Delete with a delay, waiting for the file transfer to finish
         time.sleep(1)
         
         try:

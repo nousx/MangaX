@@ -58,7 +58,7 @@ class Translation(BaseModel):
         for key, value in self.text.items():
             text_bytes += struct.pack('I', len(key.encode('utf-8'))) + key.encode('utf-8')
             text_bytes += struct.pack('I', len(value.encode('utf-8'))) + value.encode('utf-8')
-        # background_bytes 已移除
+        # background_bytes was removed
         return coords_bytes + is_bulleted_list_byte + angle_bytes + prob_bytes + fg + bg + text_bytes
 
 class TranslationResponse(BaseModel):
@@ -79,11 +79,11 @@ def to_translation(ctx: Context) -> TranslationResponse:
     text_regions:list[TextBlock] = ctx.text_regions
     results = []
     for i, blk in enumerate(text_regions):
-        # 直接使用 region.to_dict()，与主翻译程序保持一致
+        # Use region.to_dict() directly, the same as the main translation program
         region_dict = text_regions[i].to_dict()
         results.append(Translation(**region_dict))
 
-    # 获取图片尺寸
+    # Get the image size
     if ctx.input is not None:
         original_width, original_height = ctx.input.size
     elif ctx.result is not None:
@@ -91,17 +91,17 @@ def to_translation(ctx: Context) -> TranslationResponse:
     elif hasattr(ctx, 'img_rgb') and ctx.img_rgb is not None:
         original_height, original_width = ctx.img_rgb.shape[:2]
     else:
-        # 默认值
+        # Default value
         original_width, original_height = 0, 0
     
-    # 构建响应数据
+    # Build the response data
     response_data = {
         'regions': results,
         'original_width': original_width,
         'original_height': original_height
     }
     
-    # 添加超分和上色配置信息（如果有）
+    # Record the upscaling and colorization settings (when there are any)
     if hasattr(ctx, '_config') and ctx._config:
         config = ctx._config
         if hasattr(config, 'upscale') and config.upscale and hasattr(config.upscale, 'upscale_ratio'):
@@ -114,8 +114,8 @@ def to_translation(ctx: Context) -> TranslationResponse:
             if hasattr(config.colorizer, 'colorizer') and config.colorizer.colorizer and config.colorizer.colorizer != 'none':
                 response_data['colorizer'] = config.colorizer.colorizer
     
-    # 保存优化后的蒙版（ctx.mask），而不是原始蒙版（ctx.mask_raw）
-    # 这样加载后可以直接使用，无需再次进行蒙版优化
+    # Save the refined mask (ctx.mask), not the raw mask (ctx.mask_raw),
+    # so that it can be used directly after loading, without refining it again
     if hasattr(ctx, 'mask') and ctx.mask is not None:
         try:
             import base64
@@ -127,7 +127,7 @@ def to_translation(ctx: Context) -> TranslationResponse:
         except Exception as _e:
             pass
     
-    # 保存的是优化后的蒙版，标记为已优化
+    # What is saved is the refined mask, so it is marked as refined
     response_data['mask_is_refined'] = True
 
     return TranslationResponse(**response_data)

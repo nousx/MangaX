@@ -276,12 +276,12 @@ async def get_storage_info(session: Session = Depends(require_admin)):
     user_fonts_dir = str(USER_RESOURCES_DIR / "fonts")
     user_prompts_dir = str(USER_RESOURCES_DIR / "prompts")
     
-    # 获取统计信息
+    # Get the statistics
     results_stats = get_directory_stats(results_dir)
     user_fonts_stats = get_directory_stats(user_fonts_dir)
     user_prompts_stats = get_directory_stats(user_prompts_dir)
     
-    # 用户上传资源合计
+    # Total of resources uploaded by users
     uploads_size = user_fonts_stats["size"] + user_prompts_stats["size"]
     uploads_count = user_fonts_stats["count"] + user_prompts_stats["count"]
     
@@ -292,10 +292,10 @@ async def get_storage_info(session: Session = Depends(require_admin)):
         "uploads_count": uploads_count,
         "results_size": results_stats["size"],
         "results_count": results_stats["count"],
-        "cache_size": 0,  # 暂无独立缓存目录
+        "cache_size": 0,  # There is no separate cache folder yet
         "cache_count": 0,
         "total_size": total_size,
-        # 详细信息
+        # Details
         "user_fonts_size": user_fonts_stats["size"],
         "user_fonts_count": user_fonts_stats["count"],
         "user_prompts_size": user_prompts_stats["size"],
@@ -317,7 +317,7 @@ async def cleanup_storage(
             str(USER_RESOURCES_DIR / "prompts")
         ],
         "results": [str(SERVER_DATA_DIR / "results")],
-        "cache": []  # 暂无独立缓存目录
+        "cache": []  # There is no separate cache folder yet
     }
     
     if target not in targets and target != "all":
@@ -335,13 +335,13 @@ async def cleanup_storage(
     
     for dir_path in dirs_to_clean:
         if os.path.exists(dir_path):
-            # 计算清理前的大小
+            # Size before the clean-up
             stats = get_directory_stats(dir_path)
             freed_bytes += stats["size"]
             
-            # 清理目录内容（保留目录本身和 index.json）
+            # Clear the folder content (the folder itself and index.json are kept)
             for item in os.listdir(dir_path):
-                # 保留 index.json 文件
+                # Keep the index.json file
                 if item == "index.json":
                     continue
                 item_path = os.path.join(dir_path, item)

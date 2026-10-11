@@ -118,11 +118,11 @@ class IntegratedPermissionService:
         Returns:
             bool: 是否有权限
         """
-        # 如果是自己的文件，检查 can_delete_own_files
+        # For one's own file, check can_delete_own_files
         if username == file_owner:
             return self.check_delete_own_files_permission(username)
         
-        # 如果是其他人的文件，检查 can_delete_all_files
+        # For someone else's file, check can_delete_all_files
         return self.check_delete_all_files_permission(username)
     
     def check_view_permission(self, username: str) -> str:
@@ -240,15 +240,15 @@ class IntegratedPermissionService:
         Returns:
             bool: 是否有权限
         """
-        # 系统日志
+        # System logs
         if log_owner is None:
             return self.check_view_system_logs_permission(username)
         
-        # 自己的日志
+        # One's own logs
         if username == log_owner:
             return self.check_view_own_logs_permission(username)
         
-        # 其他人的日志
+        # Other people's logs
         return self.check_view_all_logs_permission(username)
     
     def get_effective_permissions(self, username: str) -> Dict[str, Any]:
@@ -350,7 +350,7 @@ class IntegratedPermissionService:
         return self.permission_service.delete_group_permissions(group_id)
 
 
-# 全局服务实例
+# Global service instance
 _integrated_permission_service: Optional[IntegratedPermissionService] = None
 
 
@@ -370,7 +370,7 @@ def get_integrated_permission_service(
     
     if _integrated_permission_service is None:
         if account_service is None:
-            # 导入并获取默认账户服务
+            # Import and get the default account service
             from .account_service import get_account_service
             account_service = get_account_service()
         

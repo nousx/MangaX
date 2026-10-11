@@ -18,7 +18,7 @@ from manga_translator.server.core.session_service import SessionService
 logger = logging.getLogger(__name__)
 
 
-# 全局服务实例（将在服务器启动时初始化）
+# Global service instances (initialised when the server starts)
 _account_service: Optional[AccountService] = None
 _session_service: Optional[SessionService] = None
 _permission_service: Optional[PermissionService] = None
@@ -55,7 +55,7 @@ def get_services() -> tuple[AccountService, SessionService, PermissionService]:
     return _account_service, _session_service, _permission_service
 
 
-# 错误响应格式化函数
+# Functions that format error responses
 def create_error_response(
     code: str,
     message: str,
@@ -90,7 +90,7 @@ def create_error_response(
     )
 
 
-# 认证依赖函数
+# Authentication dependency functions
 async def require_auth(
     x_session_token: Optional[str] = Header(None, alias="X-Session-Token"),
 ) -> Session:
@@ -112,7 +112,7 @@ async def require_auth(
     
     session_token = x_session_token
     
-    # 检查令牌是否存在
+    # Check whether the token exists
     if not session_token:
         logger.warning("Authentication failed: No session token provided")
         raise HTTPException(
@@ -125,7 +125,7 @@ async def require_auth(
             }
         )
     
-    # 验证令牌
+    # Validate the token
     session = session_service.verify_token(session_token)
     
     if not session:
@@ -152,7 +152,7 @@ async def require_auth(
             }
         )
     
-    # 检查用户是否活跃
+    # Check whether the user is active
     account_service, _, _ = get_services()
     account = account_service.get_user(session.username)
     
@@ -226,14 +226,14 @@ async def check_translator_permission(
     """
     _, _, permission_service = get_services()
     
-    # 检查权限
+    # Check the permission
     has_permission = permission_service.check_translator_permission(
         session.username,
         translator
     )
     
     if not has_permission:
-        # 获取用户的允许翻译器列表
+        # Get the list of translators the user is allowed
         permissions = permission_service.get_user_permissions(session.username)
         allowed_translators = permissions.allowed_translators if permissions else []
         
@@ -281,13 +281,13 @@ async def check_parameter_permission(
     """
     _, _, permission_service = get_services()
     
-    # 过滤参数
+    # Filter the parameters
     filtered_parameters = permission_service.filter_parameters(
         session.username,
         parameters
     )
     
-    # 记录被过滤的参数
+    # Record the parameters that were filtered out
     filtered_keys = set(parameters.keys()) - set(filtered_parameters.keys())
     if filtered_keys:
         logger.info(
@@ -298,7 +298,7 @@ async def check_parameter_permission(
     return filtered_parameters
 
 
-# 并发和配额检查函数（不是依赖函数，而是在业务逻辑中调用）
+# Concurrency and quota check functions (not dependency functions; called from the business logic)
 def check_concurrent_limit(username: str) -> None:
     """
     检查用户的并发任务限制
@@ -315,7 +315,7 @@ def check_concurrent_limit(username: str) -> None:
     
     if not can_create:
         current_tasks = permission_service.get_active_task_count(username)
-        # 使用有效的并发限制（优先从用户组获取）
+        # Use the effective concurrency limit (from the user group first)
         max_tasks = permission_service.get_effective_max_concurrent(username)
         
         logger.warning(
@@ -354,7 +354,7 @@ def check_daily_quota(username: str) -> None:
     
     if not can_create:
         current_usage = permission_service.get_daily_usage(username)
-        # 使用有效配额（优先从用户组获取）
+        # Use the effective quota (from the user group first)
         daily_quota = permission_service.get_effective_daily_quota(username)
         
         logger.warning(
@@ -377,7 +377,7 @@ def check_daily_quota(username: str) -> None:
         )
 
 
-# 任务计数管理函数（在任务开始和结束时调用）
+# Task count management functions (called when a task starts and ends)
 def increment_task_count(username: str) -> None:
     """
     增加用户的活动任务计数

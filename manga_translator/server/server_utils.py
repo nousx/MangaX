@@ -16,18 +16,18 @@ def generate_nonce():
 
 def transform_to_image(ctx):
     """将翻译上下文转换为图片字节"""
-    # 检查 ctx.result 是否存在
+    # Check whether ctx.result exists
     if ctx.result is None:
         raise HTTPException(500, detail="Translation failed: no result image generated")
     
-    # 检查是否使用占位符（在web模式下final.png保存后会设置此标记）
+    # Check whether a placeholder is used (in web mode this flag is set after final.png is saved)
     if hasattr(ctx, 'use_placeholder') and ctx.use_placeholder:
-        # ctx.result已经是1x1占位符图片，快速传输
+        # ctx.result is already a 1x1 placeholder image, which transfers quickly
         img_byte_arr = io.BytesIO()
         ctx.result.save(img_byte_arr, format="PNG")
         return img_byte_arr.getvalue()
 
-    # 返回完整的翻译结果
+    # Return the full translation result
     img_byte_arr = io.BytesIO()
     ctx.result.save(img_byte_arr, format="PNG")
     return img_byte_arr.getvalue()

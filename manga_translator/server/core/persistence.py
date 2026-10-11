@@ -33,10 +33,10 @@ def atomic_write_json(file_path: str, data: Dict[str, Any], create_backup: bool 
     try:
         file_path = Path(file_path)
         
-        # 确保目录存在
+        # Make sure the folder exists
         file_path.parent.mkdir(parents=True, exist_ok=True)
         
-        # 如果文件存在且需要备份，创建备份
+        # When the file exists and a backup is wanted, create the backup
         if create_backup and file_path.exists():
             backup_path = file_path.with_suffix(file_path.suffix + '.backup')
             try:
@@ -45,7 +45,7 @@ def atomic_write_json(file_path: str, data: Dict[str, Any], create_backup: bool 
             except Exception as e:
                 logger.warning(f"Failed to create backup: {e}")
         
-        # 写入临时文件
+        # Write to a temporary file
         temp_fd, temp_path = tempfile.mkstemp(
             dir=file_path.parent,
             prefix=f".{file_path.name}.",
@@ -56,10 +56,10 @@ def atomic_write_json(file_path: str, data: Dict[str, Any], create_backup: bool 
             with os.fdopen(temp_fd, 'w', encoding='utf-8') as f:
                 json.dump(data, f, ensure_ascii=False, indent=2)
                 f.flush()
-                os.fsync(f.fileno())  # 确保数据写入磁盘
+                os.fsync(f.fileno())  # Make sure the data reaches the disk
             
-            # 原子性地重命名临时文件为目标文件
-            # 在 Windows 上，如果目标文件存在，需要先删除
+            # Rename the temporary file to the target file atomically
+            # On Windows, an existing target file has to be deleted first
             if os.name == 'nt' and file_path.exists():
                 file_path.unlink()
             
@@ -68,7 +68,7 @@ def atomic_write_json(file_path: str, data: Dict[str, Any], create_backup: bool 
             return True
             
         except Exception as e:
-            # 清理临时文件
+            # Remove the temporary file
             try:
                 os.unlink(temp_path)
             except Exception:
@@ -95,7 +95,7 @@ def load_json(file_path: str, default: Optional[Dict[str, Any]] = None) -> Dict[
     """
     file_path = Path(file_path)
     
-    # 尝试加载主文件
+    # Try to load the main file
     if file_path.exists():
         try:
             with open(file_path, 'r', encoding='utf-8') as f:
@@ -105,7 +105,7 @@ def load_json(file_path: str, default: Optional[Dict[str, Any]] = None) -> Dict[
         except json.JSONDecodeError as e:
             logger.error(f"Failed to parse {file_path}: {e}")
             
-            # 尝试从备份恢复
+            # Try to restore from the backup
             backup_path = file_path.with_suffix(file_path.suffix + '.backup')
             if backup_path.exists():
                 logger.info(f"Attempting to restore from backup: {backup_path}")
@@ -113,7 +113,7 @@ def load_json(file_path: str, default: Optional[Dict[str, Any]] = None) -> Dict[
                     with open(backup_path, 'r', encoding='utf-8') as f:
                         data = json.load(f)
                         logger.info("Successfully restored from backup")
-                        # 恢复主文件
+                        # Restore the main file
                         atomic_write_json(str(file_path), data, create_backup=False)
                         return data
                 except Exception as backup_error:
@@ -121,7 +121,7 @@ def load_json(file_path: str, default: Optional[Dict[str, Any]] = None) -> Dict[
         except Exception as e:
             logger.error(f"Failed to load {file_path}: {e}")
     
-    # 返回默认值
+    # Return the default value
     if default is not None:
         logger.info(f"Using default value for {file_path}")
         return default
@@ -148,19 +148,19 @@ def create_backup(file_path: str, backup_dir: Optional[str] = None) -> Optional[
             logger.warning(f"File {file_path} does not exist, cannot create backup")
             return None
         
-        # 确定备份目录
+        # Decide the backup folder
         if backup_dir:
             backup_dir_path = Path(backup_dir)
             backup_dir_path.mkdir(parents=True, exist_ok=True)
         else:
             backup_dir_path = file_path.parent
         
-        # 创建带时间戳的备份文件名
+        # Build a backup file name with a timestamp
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
         backup_name = f"{file_path.stem}_{timestamp}{file_path.suffix}"
         backup_path = backup_dir_path / backup_name
         
-        # 复制文件
+        # Copy the file
         shutil.copy2(file_path, backup_path)
         logger.info(f"Created backup: {backup_path}")
         return str(backup_path)
@@ -188,14 +188,14 @@ def cleanup_old_backups(backup_dir: str, pattern: str, keep_count: int = 5) -> i
         if not backup_dir_path.exists():
             return 0
         
-        # 获取所有匹配的备份文件
+        # Get all matching backup files
         backup_files = sorted(
             backup_dir_path.glob(pattern),
             key=lambda p: p.stat().st_mtime,
             reverse=True
         )
         
-        # 删除多余的备份
+        # Delete the surplus backups
         deleted_count = 0
         for backup_file in backup_files[keep_count:]:
             try:
