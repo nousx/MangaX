@@ -15,7 +15,7 @@ CLEAN_FONT = os.path.join(BASE_PATH, 'fonts', 'Prompt-Regular.ttf')
 
 class TestQtFamilyAmbiguity(unittest.TestCase):
     def test_leading_bracket_is_ambiguous(self):
-        # Qt 的 parseFontName 会把 "[X]Y" 拆成空家族名 + 厂商 X
+        # Qt's parseFontName splits "[X]Y" into an empty family name + the foundry X
         self.assertTrue(qt_family_is_ambiguous('[工具箱]书卷楷-简繁'))
         self.assertTrue(qt_family_is_ambiguous('[toolbox]FangYuan-GBK W7'))
         self.assertTrue(qt_family_is_ambiguous('  [toolbox]QiangDiao-W'))
@@ -23,7 +23,7 @@ class TestQtFamilyAmbiguity(unittest.TestCase):
     def test_normal_names_are_not_ambiguous(self):
         self.assertFalse(qt_family_is_ambiguous('工具箱书卷楷-简繁'))
         self.assertFalse(qt_family_is_ambiguous('Microsoft YaHei UI'))
-        # 尾部厂商写法家族名非空，Qt 能解析出 "Helvetica"
+        # With the foundry written at the end, the family name is not empty and Qt can parse out "Helvetica"
         self.assertFalse(qt_family_is_ambiguous('Helvetica [Cronyx]'))
         self.assertFalse(qt_family_is_ambiguous(''))
         self.assertFalse(qt_family_is_ambiguous('[未闭合'))
@@ -52,9 +52,9 @@ class TestSanitizedFontBytes(unittest.TestCase):
                     value = record.toUnicode()
                     self.assertNotIn('[', value)
                     self.assertNotIn(']', value)
-            # 缺失的英文首选家族名(nameID 16)被补全，offscreen freetype 选名依赖它
+            # The missing English preferred family name (nameID 16) is filled in; offscreen freetype relies on it to choose the name
             self.assertIsNotNone(rewritten['name'].getName(16, 3, 1, 0x409))
-            # 只动名字表，字形数据不变
+            # Only the name table is touched; the glyph data is unchanged
             self.assertEqual(rewritten['maxp'].numGlyphs, source['maxp'].numGlyphs)
         finally:
             source.close()

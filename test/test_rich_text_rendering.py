@@ -65,8 +65,8 @@ def _sample_document():
 
 class RichTextRenderingTest(unittest.TestCase):
     def test_vertical_auto_rotation_character_policy(self):
-        # 引擎特殊路径只旋转四个弯引号+四个日文角引号（见 _VERTICAL_ROTATE_CHARS）；
-        # 其余字符（含（）【】）不在渲染层旋转，普通自动旋转已移到 rich_text_rules.yaml。
+        # The special path of the engine only rotates the four curly quotes + the four Japanese corner brackets (see _VERTICAL_ROTATE_CHARS);
+        # the other characters (round and lenticular brackets included) are not rotated in the rendering layer; ordinary automatic rotation moved to rich_text_rules.yaml.
         for char in "AaZz019,.:;?!-~()\"'ー⸺–—～﹏…⋯●•（）【】︱︲":
             self.assertEqual(CJK_Compatibility_Forms_translate(char, 1)[1], 0, char)
         for char in "“‘”’「『」』":
@@ -85,12 +85,12 @@ class RichTextRenderingTest(unittest.TestCase):
             glyph_left=0.0,
             frame_width=30,
         )
-        # 0° 保持竖排推进
+        # 0 degrees keeps the vertical advance
         self.assertEqual(_vertical_free_rotation_advance(base, 0), 40)
-        # ±90° 取横排 advance（对齐 BallonsTranslator，允许小于原竖排推进）
+        # +-90 degrees takes the horizontal advance (in line with BallonsTranslator; it may be smaller than the original vertical advance)
         self.assertEqual(_vertical_free_rotation_advance(base, 90), 30)
         self.assertEqual(_vertical_free_rotation_advance(base, -90), 30)
-        # 中间角度为两轴投影之和，介于两端点之间且不小于最小端点
+        # An angle in between is the sum of the projections on the two axes, between the two end values and not below the smaller one
         mid = _vertical_free_rotation_advance(base, 45)
         self.assertGreater(mid, 30)
         self.assertEqual(mid, _vertical_free_rotation_advance(base, -45))
@@ -458,9 +458,9 @@ class RichTextRenderingTest(unittest.TestCase):
 
         x = text_render._vertical_char_bitmap_x(0.0, 32.0, base)
 
-        # advance box 左边缘为 6，再加 glyph left bearing 3。
+        # The left edge of the advance box is 6, plus the glyph left bearing of 3.
         self.assertEqual(x, 9.0)
-        # 旧的墨迹居中结果为 (32-8)/2-2 = 10，确保没有退回旧逻辑。
+        # The old ink-centred result was (32-8)/2-2 = 10; this makes sure the old logic is not back.
         self.assertNotEqual(x, 10.0)
 
     def test_vertical_question_mark_centers_by_punctuation_ink(self):
@@ -667,22 +667,22 @@ class RichTextRenderingTest(unittest.TestCase):
             ],
         }
 
-        # 纯文本：正文中心 == 渲染框正中心
+        # Plain text: body centre == exact centre of the render box
         plain_w, plain_h, _, plain_body = calc_box_from_font(
             32, plain, False, line_spacing=1.0
         )
         self.assertAlmostEqual(plain_body[0], plain_w / 2.0, places=3)
         self.assertAlmostEqual(plain_body[1], plain_h / 2.0, places=3)
 
-        # 紧凑框：注音只向右侧扩张，正文中心位于渲染框中心左侧
+        # Compact box: the ruby only extends to the right, and the body centre is left of the render box centre
         ruby_w, ruby_h, _, ruby_body = calc_box_from_font(
             32, ruby, False, line_spacing=1.0
         )
         self.assertLess(ruby_body[0], ruby_w / 2.0)
         self.assertAlmostEqual(ruby_body[1], ruby_h / 2.0, places=3)
 
-        # 调用方按正文锚定平移整框后（正文中心对齐同一锚点 (0,0)）：
-        # 正文列左边缘与纯文本重合，注音空间全部扩在右侧。
+        # After the caller shifts the whole box by the body anchor (body centres aligned on the same anchor (0,0)):
+        # the left edge of the body column coincides with that of plain text, and all the ruby space extends to the right.
         plain_points, plain_body_world = calc_box_from_font(
             32, plain, False, line_spacing=1.0, center=(0, 0)
         )
@@ -727,14 +727,14 @@ class RichTextRenderingTest(unittest.TestCase):
             ],
         }
 
-        # 首行注音占据框顶部 → 正文中心低于框正中心
+        # The ruby of the first line takes the top of the box -> the body centre is below the exact centre of the box
         ruby_w, ruby_h, _, ruby_body = calc_box_from_font(
             32, ruby, True, line_spacing=1.0
         )
         self.assertAlmostEqual(ruby_body[0], ruby_w / 2.0, places=3)
         self.assertGreater(ruby_body[1], ruby_h / 2.0)
 
-        # 末行着重号占据框底部 → 正文中心高于框正中心
+        # The emphasis marks of the last line take the bottom of the box -> the body centre is above the exact centre of the box
         emp_w, emp_h, _, emp_body = calc_box_from_font(
             32, emphasis, True, line_spacing=1.0
         )
@@ -742,10 +742,10 @@ class RichTextRenderingTest(unittest.TestCase):
         self.assertLess(emp_body[1], emp_h / 2.0)
 
     def test_plain_inputs_report_box_center_as_body_center(self):
-        # 纯字符串与无装饰文档的正文中心为框正中心。
-        # 横排严格成立（描边 pad 对称包住行墨迹）；竖排自 2026-07-17 起全局
-        # 描边参与测量几何（与渲染输出面同源），首末字符墨迹+pad 相对槽位
-        # 的上下溢出可不对称，中心允许偏差 <= 描边 pad（round(0.07*32)+1）。
+        # For a plain string and for a document without decorations, the body centre is the exact centre of the box.
+        # Holds strictly for horizontal text (the stroke pad wraps the line ink symmetrically); for vertical text, since 2026-07-17 the global
+        # stroke takes part in the measured geometry (the same source as the rendered surface), and the overflow of the ink+pad of the first and last characters
+        # above and below their slots may be asymmetric, so the centre may deviate by <= the stroke pad (round(0.07*32)+1).
         stroke_pad = round(0.07 * 32) + 1
         for value, horizontal in (
             ("第一行[BR]第二行", True),
@@ -888,8 +888,8 @@ class RichTextRenderingTest(unittest.TestCase):
         self.assertGreater(int(rendered[:, :, 3].max()), 0)
 
     def test_vertical_middle_column_style_overflow_does_not_widen_frame(self):
-        # 2026-07-17 回归：中间列字符的斜体切变/描边外扩落在列间隙内，
-        # 不得把整框左右两侧撑大（两侧列的字没变，框不该变）。
+        # Regression of 2026-07-17: the italic shear and stroke growth of characters in a middle column fall in the column gap
+        # and must not enlarge the whole box on the left and right (the characters of the side columns did not change, so the box should not).
         def _doc(middle_inlines):
             return {
                 "format": RICH_TEXT_FORMAT,
@@ -938,7 +938,7 @@ class RichTextRenderingTest(unittest.TestCase):
         self.assertEqual(italic_m["width"], plain_m["width"])
         self.assertEqual(stroke_m["width"], plain_m["width"])
 
-        # 测量框 == 输出面契约在溢出重叠进邻列区域时仍成立
+        # The contract measured box == output surface still holds when the overflow overlaps the area of a neighbouring column
         for document, metrics in ((italic, italic_m), (stroke, stroke_m)):
             surface = text_render.put_text_vertical(
                 48, document, 400, "left", (0, 0, 0), None, 1.0, stroke_width=0.0
@@ -949,8 +949,8 @@ class RichTextRenderingTest(unittest.TestCase):
             )
 
     def test_tcy_block_compresses_to_base_font_cap(self):
-        # 2026-07-17 回归：纵中横墨迹宽超过 1.1 倍基准字号时整组水平压缩
-        # （对齐参考实现 mtu-json-gui），框宽不再随位数无限变宽。
+        # Regression of 2026-07-17: when the tate-chu-yoko ink is wider than 1.1 times the base font size, the whole group is compressed horizontally
+        # (in line with the reference implementation mtu-json-gui), so the box width no longer grows without limit with the number of digits.
         def _doc(digits, digit_style=None):
             return {
                 "format": RICH_TEXT_FORMAT,
@@ -984,12 +984,12 @@ class RichTextRenderingTest(unittest.TestCase):
         five_m = text_render.measure_rich_text_metrics(
             48, _doc("12345"), False, 1.0, stroke_width=0.0
         )
-        cap = int(48 * 1.1) + 3  # 压缩上限 + ceil/居中取整余量
+        cap = int(48 * 1.1) + 3  # Compression limit + the margin from ceil and centred rounding
         self.assertLessEqual(four_m["width"], cap)
-        self.assertEqual(four_m["width"], five_m["width"])  # 超限后一律压到同一上限
-        self.assertLessEqual(short_m["width"], four_m["width"])  # 未超限不压缩
+        self.assertEqual(four_m["width"], five_m["width"])  # Beyond the limit everything is compressed to the same limit
+        self.assertLessEqual(short_m["width"], four_m["width"])  # Below the limit nothing is compressed
 
-        # 压缩系数进入测量与渲染同一计划：斜体+全局描边下输出面 == 测量框
+        # The compression factor enters the one plan shared by measuring and rendering: with italics + global stroke, output surface == measured box
         styled = _doc("2024", {"italic": True})
         styled_m = text_render.measure_rich_text_metrics(
             48, styled, False, 1.0, stroke_width=0.07
@@ -1003,8 +1003,8 @@ class RichTextRenderingTest(unittest.TestCase):
         )
 
     def test_add_color_keeps_text_alpha_when_border_layer_is_blank(self):
-        # F05 回归：描边色非 None 而描边层全零时，输出 alpha 必须仍含正文
-        # （输出 alpha = max(描边alpha, 文字alpha)），不得整段透明。
+        # F05 regression: when the stroke colour is not None but the stroke layer is all zero, the output alpha must still contain the body
+        # (output alpha = max(stroke alpha, text alpha)); the whole run must not turn transparent.
         text_alpha = np.zeros((8, 8), dtype=np.uint8)
         text_alpha[2:6, 2:6] = 255
         blank_border = np.zeros_like(text_alpha)
@@ -1017,7 +1017,7 @@ class RichTextRenderingTest(unittest.TestCase):
         self.assertEqual(int(layer[:, :, 3].max()), 255)
 
     def test_horizontal_ruby_visible_when_region_stroke_enabled(self):
-        # F05 场景①回归：区域描边开启（bg 非 None）时，横排注音层不得全透明。
+        # F05 case 1 regression: with the region stroke on (bg is not None), the ruby layer of horizontal text must not be fully transparent.
         base_document = {
             "format": RICH_TEXT_FORMAT,
             "blocks": [
@@ -1068,7 +1068,7 @@ class RichTextRenderingTest(unittest.TestCase):
 
         self.assertIsNotNone(base_render)
         self.assertIsNotNone(ruby_render)
-        # 注音层有墨：整体墨量大于无注音渲染，且裁剪框因注音行而更高
+        # The ruby layer has ink: the total ink is more than in a render without ruby, and the crop box is taller because of the ruby line
         self.assertGreater(
             int(ruby_render[:, :, 3].sum()), int(base_render[:, :, 3].sum())
         )
@@ -1176,7 +1176,7 @@ class RichTextRenderingTest(unittest.TestCase):
         self.assertAlmostEqual(paint_end - paint_start, 72.0)
 
     def test_zero_width_span_stroke_keeps_span_visible(self):
-        # F05 场景③回归：span 级 stroke.width=0 不能让整段透明消失。
+        # F05 case 3 regression: stroke.width=0 at span level must not make the whole run vanish as transparent.
         document = {
             "format": RICH_TEXT_FORMAT,
             "blocks": [
@@ -1209,8 +1209,8 @@ class RichTextRenderingTest(unittest.TestCase):
         self.assertGreater(int(rendered[:, :, 3].max()), 0)
 
     def test_measure_horizontal_span_metrics_match_render_path(self):
-        # F21：横排度量改用 _line_metrics（无光栅化）后，logical_width/ascent/
-        # descent 必须与渲染路径（_rich_span_surface）产出的数值完全一致。
+        # F21: now that horizontal metrics use _line_metrics (no rasterisation), logical_width/ascent/
+        # descent must be exactly equal to the values the render path (_rich_span_surface) produces.
         document = ensure_rich_text_document(
             {
                 "format": RICH_TEXT_FORMAT,
@@ -1329,8 +1329,8 @@ class RichTextRenderingTest(unittest.TestCase):
         self.assertEqual(measured_geometry, full_geometry)
 
     def test_paragraph_spans_are_lazily_cached(self):
-        # F24：解析后的文档不可变，spans 首次计算后缓存（不再每次访问全量 deepcopy）；
-        # 缓存的 span.style 与 inline.style 脱钩。
+        # F24: a parsed document is immutable, and spans are cached after the first computation (no full deepcopy on every access any more);
+        # the cached span.style is decoupled from inline.style.
         document = ensure_rich_text_document(_sample_document())
         paragraph = document.blocks[0]
 
@@ -1510,7 +1510,7 @@ class RichTextRenderingTest(unittest.TestCase):
                     )
 
     def test_multiline_plain_and_ruby_documents_render_without_supersampling(self):
-        # BR 产生的多行纯文本与带注音文档都应由普通 Qt 路径直接渲染。
+        # Multi-line plain text produced by BR and a document with ruby should both be rendered directly by the ordinary Qt path.
         def _make_region(translation):
             region = TextBlock(
                 lines=[[[40, 40], [180, 40], [180, 180], [40, 180]]],
@@ -1583,8 +1583,8 @@ class RichTextRenderingTest(unittest.TestCase):
         self.assertGreater(int(ruby_rendered.max()), 0)
 
     def test_rich_document_font_size_shrinks_to_fit_region_box(self):
-        # F07 回归：非 skip_font_scaling 时富文本区域不再直接用估算字号，
-        # 而是收缩到区域未旋转外接框能容纳的最大字号（不做自动断行）。
+        # F07 regression: outside skip_font_scaling, a rich-text region no longer uses the estimated font size as it is,
+        # but shrinks to the largest font size the unrotated bounding box of the region can hold (without automatic wrapping).
         from manga_translator.rendering import resize_regions_to_font_size
 
         region = TextBlock(
@@ -1601,7 +1601,7 @@ class RichTextRenderingTest(unittest.TestCase):
             ),
             sync_plain=True,
         )
-        region.font_size = 80  # 估算字号远大于框
+        region.font_size = 80  # The estimated font size is far larger than the box
         image = np.zeros((400, 400, 3), dtype=np.uint8)
         config = Config()
 
@@ -1612,7 +1612,7 @@ class RichTextRenderingTest(unittest.TestCase):
         self.assertEqual(len(dst_points_list), 1)
         self.assertIsNotNone(dst_points_list[0])
         self.assertLess(region.font_size, 80)
-        # 收缩后的字号按同一测量应能放进原框
+        # Measured the same way, the shrunk font size should fit in the original box
         req_w, req_h, _, _ = calc_box_from_font(
             region.font_size,
             region.get_translation_for_rendering(),
@@ -1677,7 +1677,7 @@ class RichTextRenderingTest(unittest.TestCase):
         self.assertEqual(region.translation_raw, "hello[BR]world")
 
     # ------------------------------------------------------------------
-    # 斜体角度化 + 偏移包络（对齐 mtu-json-gui 参考实现）
+    # Italics as an angle + offset envelope (in line with the reference implementation mtu-json-gui)
     # ------------------------------------------------------------------
 
     @staticmethod
@@ -1700,7 +1700,7 @@ class RichTextRenderingTest(unittest.TestCase):
         return cv2.boundingRect(nz)
 
     def test_italic_angle_parses_and_legacy_bool_maps_to_default(self):
-        # 数字 = 切变角度；true = 默认角度（DEFAULT_ITALIC_ANGLE，PS 实测 10°）；0 归一为 False
+        # A number = the shear angle; true = the default angle (DEFAULT_ITALIC_ANGLE, measured as 10 degrees in Photoshop); 0 is normalised to False
         document = ensure_rich_text_document(
             self._single_span_document("字", {"italic": 24})
         )
@@ -1815,8 +1815,8 @@ class RichTextRenderingTest(unittest.TestCase):
         self.assertGreater(vertical_surface.shape[0], 0)
 
     def test_horizontal_offset_expands_envelope_and_moves_ink(self):
-        # 统一偏移不再被墨迹紧裁抵消：包络向偏移方向扩，墨迹真实移动，
-        # 输出面尺寸与测量框逐像素一致（无描边时严格相等）。
+        # A uniform offset is no longer cancelled by tight cropping of the ink: the envelope grows in the direction of the offset, the ink really moves,
+        # and the size of the output surface matches the measured box pixel for pixel (strictly equal without a stroke).
         plain_doc = self._single_span_document("測試文字", {})
         offset_doc = self._single_span_document(
             "測試文字", {"transform": {"offsetX": 50}}
@@ -1911,8 +1911,8 @@ class RichTextRenderingTest(unittest.TestCase):
         self.assertLessEqual(shift, 28)
 
     def test_offset_reports_body_center_for_anchoring(self):
-        # 横排正文中心按实际主墨迹计算；transform 偏移属于正文几何，
-        # 不再作为框外装饰额外保留旧逻辑中心。
+        # The body centre of horizontal text is computed from the actual main ink; a transform offset is part of the body geometry
+        # and the centre of the old logic is no longer kept on top of it as decoration outside the box.
         doc = {
             "format": RICH_TEXT_FORMAT,
             "blocks": [

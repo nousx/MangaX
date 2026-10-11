@@ -57,11 +57,11 @@ def _runs_of(document):
     ]
 
 
-# ─── 引擎：previous_text 新旧匹配对比 ───
+# ─── Engine: comparing matches on previous_text and on the new text ───
 
 
 def test_typed_char_completes_match_applies_whole_range():
-    # 先打「你」无命中；补「好」后整个「你好」是新命中，两个字全部上色
+    # Typing the first character alone gives no match; once the second is added, the whole two-character word is a new match and both characters are coloured
     rules = _rules(RED_RULE)
     document = apply_rich_text_rules(
         "你好", 0, rules, previous_text="你", styled_match_policy="skip"
@@ -71,17 +71,17 @@ def test_typed_char_completes_match_applies_whole_range():
 
 
 def test_old_match_is_never_reapplied():
-    # 「你好」在编辑前就命中过（样式已被用户清掉），在别处打字不顶回
+    # The word already matched before the edit (the user had cleared its style); typing elsewhere does not bring the style back
     rules = _rules(RED_RULE)
     plain = _doc(_text_run("你好xy", {}))
     document = apply_rich_text_rules(
         plain, 0, rules, previous_text="你好x", styled_match_policy="skip"
     )
-    assert document is None  # 无新命中 → 无变化
+    assert document is None  # No new match -> no change
 
 
 def test_deletion_merge_creates_new_match():
-    # 「第1x话」删掉 x 拼成「第1话」：旧文本无此命中 → 新命中
+    # Deleting the x in the middle joins the pieces into the pattern: the old text had no such match -> a new match
     rules = _rules({"pattern": "第1话", "style": {"bold": True}})
     document = apply_rich_text_rules(
         "第1话", 0, rules, previous_text="第1x话", styled_match_policy="skip"
@@ -91,7 +91,7 @@ def test_deletion_merge_creates_new_match():
 
 
 def test_lookahead_match_outside_window_counts_as_new():
-    # 环视：命中区间 [0,1) 完全落在公共前缀里，但旧文本同位置不命中 → 新命中
+    # Lookaround: the matched range [0,1) lies entirely inside the common prefix, but the old text does not match at that position -> a new match
     rules = _rules({"pattern": "你(?=好)", "regex": True, "style": {"bold": True}})
     document = apply_rich_text_rules(
         "你好", 0, rules, previous_text="你", styled_match_policy="skip"
@@ -101,7 +101,7 @@ def test_lookahead_match_outside_window_counts_as_new():
 
 
 def test_residue_style_backfills_whole_match():
-    # 「你」带的是本规则自己的残留样式（删掉好再补回好）→ 整体补齐，好也上色
+    # The first character carries leftover style of this very rule (the second was deleted and typed back) -> the whole match is completed and the second is coloured too
     rules = _rules(RED_RULE)
     residue = _doc(_text_run("你", {"color": "#ff0000"}), _text_run("好", {}))
     document = apply_rich_text_rules(
@@ -112,7 +112,7 @@ def test_residue_style_backfills_whole_match():
 
 
 def test_manual_trace_skips_whole_match():
-    # 「你」带规则给不出的颜色（手工痕迹）→ 整段跳过，一个字段都不加
+    # The first character carries a colour the rule cannot produce (a manual trace) -> the whole span is skipped and not a single field is added
     rules = _rules(RED_RULE)
     manual = _doc(_text_run("你", {"color": "#0000ff"}), _text_run("好", {}))
     document = apply_rich_text_rules(
@@ -138,7 +138,7 @@ def test_manual_node_counts_as_trace():
 
 
 def test_full_semantics_when_previous_text_is_none():
-    # 整段替换：previous_text=None → 所有命中都算新（等同管线）
+    # Whole-text replacement: previous_text=None -> every match counts as new (the same as the pipeline)
     rules = _rules(RED_RULE)
     document = apply_rich_text_rules(
         "你好在这你好", 0, rules, styled_match_policy="skip"
@@ -149,7 +149,7 @@ def test_full_semantics_when_previous_text_is_none():
     assert runs[-1] == ("你好", {"color": "#ff0000"})
 
 
-# ─── 同步管道：sync_region_rich_translation 尾接规则级 ───
+# ─── Sync pipeline: sync_region_rich_translation followed by the rule stage ───
 
 
 def _edit_info(ops, pre, post):
@@ -157,7 +157,7 @@ def _edit_info(ops, pre, post):
 
 
 def test_sync_plain_typing_grows_rule_style():
-    # 纯文本区域（无旧富文本）打一个「好」拼出「你好」→ 长出富文本
+    # In a plain-text region (no earlier rich text), typing the one character that completes the word -> rich text appears
     result = sync_region_rich_translation(
         None,
         _edit_info([[1, 0, "好"]], "你", "你好"),
@@ -176,7 +176,7 @@ def test_sync_plain_typing_grows_rule_style():
 
 
 def test_sync_cleared_match_stays_clear_on_unrelated_edit():
-    # 清光样式后（富文本字段已删）在别处打字：老命中不顶回 → 仍是纯文本
+    # After all styles are cleared (the rich-text field is deleted), typing elsewhere: the old match does not come back -> still plain text
     result = sync_region_rich_translation(
         None,
         _edit_info([[3, 0, "y"]], "你好x", "你好xy"),
@@ -190,7 +190,7 @@ def test_sync_cleared_match_stays_clear_on_unrelated_edit():
 
 
 def test_sync_full_replacement_applies_all_matches():
-    # 整段替换（无编辑操作记录）→ 全量语义
+    # Whole-text replacement (no record of edit operations) -> full semantics
     result = sync_region_rich_translation(
         None,
         None,
@@ -204,7 +204,7 @@ def test_sync_full_replacement_applies_all_matches():
 
 
 def test_sync_keeps_manual_styles_and_adds_new_match():
-    # 有旧富文本：ops 回放保样式，同时新命中上样式，互不干扰
+    # With earlier rich text: replaying ops keeps the styles while the new match gets its style, and the two do not interfere
     old_rich = _doc(_text_run("蓝", {"color": "#0000ff"}), _text_run("你", {}))
     result = sync_region_rich_translation(
         old_rich,
@@ -224,7 +224,7 @@ def test_sync_keeps_manual_styles_and_adds_new_match():
 
 
 def test_sync_raw_edit_rule_hits_replacement_product():
-    # 替换前译文框打「...」→ 替换出「…」→ 规则命中替换产物
+    # Typing three periods in the "translation before replacement" box -> they are replaced by an ellipsis -> the rule matches the product of the replacement
     replacements = {
         "common": [(re.compile(re.escape("...")), "…")],
         "horizontal": [],
@@ -251,7 +251,7 @@ def test_sync_raw_edit_rule_hits_replacement_product():
 
 
 def test_sync_apply_rules_false_keeps_legacy_behavior():
-    # 开关关闭：无旧富文本一律返回 None，与旧版完全一致
+    # Switch off: without earlier rich text None is always returned, exactly as in the old version
     result = sync_region_rich_translation(
         None,
         _edit_info([[1, 0, "好"]], "你", "你好"),
@@ -263,14 +263,14 @@ def test_sync_apply_rules_false_keeps_legacy_behavior():
     assert result is None
 
 
-# ─── 浮动编辑器：IME 全量替换收窄 + 状态机规则级 ───
+# ─── Floating editor: narrowing an IME full replacement + the rule stage of the state machine ───
 
 
 def test_ime_full_replace_report_preserves_styles():
     from editor.rich_text_editing import apply_qt_text_change
 
     doc = _doc(_text_run("你好", {"color": "#ff0000"}))
-    # IME 提交把「你好」→「你好呀」报成整篇替换（removed=2, added=3）
+    # An IME commit that appends one character to a two-character word is reported as a whole-document replacement (removed=2, added=3)
     updated = apply_qt_text_change(doc, "你好", "你好呀", 0, 2, 3)
     assert _runs_of(updated) == [("你好", {"color": "#ff0000"}), ("呀", {})]
 

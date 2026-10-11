@@ -31,7 +31,7 @@ for path in (ROOT, ROOT / "desktop_qt_ui"):
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
-# 必须在任何 PyQt6 导入之前；理由见模块 docstring。
+# Must come before any PyQt6 import; the module docstring explains why.
 try:
     import torch  # noqa: F401
 except ImportError:

@@ -36,7 +36,7 @@ def test_common_then_direction_rule_overrides_only_explicit_fields():
     first, separator, second = document.blocks[0].inlines
     assert first.text == "A1"
     assert first.style.bold is True
-    # 自动规则之间仍按顺序覆盖；只有已有手工富文本字段受保护。
+    # Automatic rules still override each other in order; only fields with existing manual rich text are protected.
     assert first.style.color == "#222222"
     assert first.style.scale == 1.5
     assert separator.text == " "

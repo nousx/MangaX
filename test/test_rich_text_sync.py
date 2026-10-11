@@ -38,7 +38,7 @@ def test_middle_insert_inherits_style():
     result = document_after_edit_ops(doc, [[1, 0, "呀"]], "你好", "你呀好")
     assert result is not None
     assert result.plain_text() == "你呀好"
-    # 同样式段中间插入 → 继承,合并为单个 run
+    # Inserting in the middle of a run with one style -> inherited, merged into a single run
     assert _runs_of(result) == [("你呀好", {"color": "#ff0000"})]
 
 
@@ -92,19 +92,19 @@ def test_op_out_of_range_returns_none():
 
 
 def test_select_all_replace_with_qt_offbyone_removed():
-    # Qt contentsChange 在改动涉及末尾时把段落分隔符计入 charsRemoved:
-    # 6 字符全选替换报 removed=7,应钳制而不是判为越界
+    # When a change reaches the end, Qt's contentsChange counts the paragraph separator in charsRemoved:
+    # replacing all 6 characters reports removed=7, which should be clamped, not judged out of range
     doc = _doc(_text_run("ABCDEF", {"color": "#f00"}))
     result = document_after_edit_ops(doc, [[0, 7, "XYZ"]], "ABCDEF", "XYZ")
     assert result is not None
     assert result.plain_text() == "XYZ"
-    # 全量替换没有可继承的邻居 → 无样式
+    # A full replacement has no neighbour to inherit from -> no style
     assert _runs_of(result) == [("XYZ", {})]
 
 
 def test_trailing_delete_with_qt_offbyone_removed():
     doc = _doc(_text_run("你好", {}), _text_run("呀", {"color": "#00f"}))
-    # 删除末尾 1 字符,Qt 报 removed=2(含段落分隔符)
+    # Deleting the last character: Qt reports removed=2 (with the paragraph separator)
     result = document_after_edit_ops(doc, [[2, 2, ""]], "你好呀", "你好")
     assert result is not None
     assert _runs_of(result) == [("你好", {})]
@@ -118,7 +118,7 @@ _REPLACEMENTS = {
 
 
 def test_raw_edit_maps_styles_through_replacements():
-    # 文档正文是替换后的 "什么…真的吗","真的" 红色;raw 是替换前形式
+    # The document body is the text after replacement, with an ellipsis and two red characters; raw is the form before replacement
     doc = _doc(
         _text_run("什么…", {}),
         _text_run("真的", {"color": "#ff0000"}),
@@ -137,7 +137,7 @@ def test_raw_edit_maps_styles_through_replacements():
 
 
 def test_raw_edit_keeps_style_on_replaced_span():
-    # "…" 本身带样式(蓝色):搬回 raw 时整段 "..." 继承,再替换回 "…" 仍是蓝色
+    # The "…" itself carries a style (blue): moved back to raw, the whole "..." inherits it, and replaced back to "…" it is still blue
     doc = _doc(
         _text_run("什么", {}),
         _text_run("…", {"color": "#00f"}),
@@ -210,7 +210,7 @@ def test_document_has_styling():
 
 
 def test_linebreak_insert_and_collapse_alignment():
-    # 插入换行:新段落边界;文档中已有的连续换行在同步前被压成一个
+    # Inserting a line break: a new paragraph boundary; consecutive line breaks already in the document are collapsed into one before syncing
     doc = _doc(_text_run("你好", {"color": "#ff0000"}))
     result = document_after_edit_ops(doc, [[1, 0, "\n"]], "你好", "你\n好")
     assert result is not None

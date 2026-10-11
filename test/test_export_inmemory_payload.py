@@ -70,7 +70,7 @@ def test_payload_parsing_matches_file_parsing():
     translator = MangaTranslator(params={"load_text": True, "translator": "none"})
 
     with tempfile.TemporaryDirectory() as temp_dir:
-        # 旧路径：写文件再解析
+        # Old path: write a file, then parse it
         image_path = os.path.join(temp_dir, "page.png")
         json_path = os.path.join(temp_dir, "page_translations.json")
         Image.new("RGB", (320, 240), "white").save(image_path)
@@ -79,7 +79,7 @@ def test_payload_parsing_matches_file_parsing():
         )
         file_parsed = translator._load_text_and_regions_from_file(image_path, cfg)
 
-        # 新路径：内存载荷
+        # New path: in-memory payload
         base = Image.open(image_path)
         payload = service._build_load_text_payload(
             [dict(r) for r in regions],
@@ -154,9 +154,9 @@ def test_export_end_to_end_inmemory():
         with Image.open(output_path) as out_img:
             assert out_img.size == (320, 240)
             out_rgb = np.asarray(out_img.convert("RGB"))
-        # 底图来自编辑器修复图（200 灰）而非原图（白）：取蒙版外一角验证
+        # The base image comes from the editor's inpainted image (grey 200), not the original (white): a corner outside the mask is checked
         assert abs(int(out_rgb[5, 5, 0]) - 200) <= 2, f"corner={out_rgb[5, 5]}"
-        # 不回写工作目录（修复图未重新生成、JSON 回写被禁止）
+        # Nothing is written back to the work folder (the inpainted image is not regenerated, and the JSON write-back is forbidden)
         work_dir = os.path.join(tmp, "manga_translator_work")
         assert not os.path.exists(work_dir), "unexpected work dir writes"
     print("PASS: end-to-end in-memory export")

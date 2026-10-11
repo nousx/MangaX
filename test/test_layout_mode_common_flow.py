@@ -37,7 +37,7 @@ VERTICAL_GEOMETRY_TEXT = '順便一提︐那之後小盜逃回了鄉下︐小獸
 
 
 def make_region(translation, box=(100, 100, 220, 160), font_size=48, n_lines=2):
-    # n_lines>=2 才会进入自动断句；单条 OCR 线命中求解器的单行不换行规则
+    # Automatic line breaking only starts with n_lines>=2; a single OCR line hits the solver's rule of one line without wrapping
     x, y, w, h = box
     line_h = h / n_lines
     lines = [
@@ -207,7 +207,7 @@ def test_balloon_fill_no_original_img_degrades_to_strict():
 
 
 def test_balloon_fill_without_bubble_mask_degrades_to_strict():
-    # mangalens 缓存必然未命中 → 全局蒙版为空 → 区域未被包裹 → 降级 strict
+    # The mangalens cache is certain to miss -> the global mask is empty -> the region is not enclosed -> fallback to strict
     strict_region, strict_dst, _ = run_layout('strict', LONG_NO_BR_TEXT)
     balloon_region, balloon_dst, _ = run_layout(
         'balloon_fill', LONG_NO_BR_TEXT, original_img=np.full((400, 400, 3), 255, dtype=np.uint8),
@@ -220,7 +220,7 @@ def test_balloon_fill_without_bubble_mask_degrades_to_strict():
 def test_replace_mode_single_line_keeps_candidate_font():
     config = make_config('strict')
     config.cli.replace_translation = True
-    # 宽单行 OCR 框 + 强制横排：命中强制单行豁免
+    # A wide single-line OCR box + forced horizontal text: hits the exemption that forces a single line
     region = make_region('替换模式[BR]强制单行文本', box=(100, 100, 300, 48), font_size=48, n_lines=1)
     fit_before = calc_font_from_box(
         width=300.0, height=48.0, text=region.translation, is_horizontal=True,

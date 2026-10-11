@@ -51,7 +51,7 @@ def fit_shear(normal, italic):
     dx = np.array([italic[y] - normal[y] for y in ys], dtype=np.float64)
     a, b = np.polyfit(ys_arr, dx, 1)
     resid = dx - (a * ys_arr + b)
-    # 二次拟合：MAD 剔除 AA 边缘行的离群残差后重拟合
+    # Second fit: refit after MAD removes the outlier residuals of anti-aliased edge rows
     med = np.median(resid)
     mad = np.median(np.abs(resid - med))
     keep = np.abs(resid - med) <= max(3.0 * 1.4826 * mad, 0.3)

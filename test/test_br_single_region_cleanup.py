@@ -71,7 +71,7 @@ def test_multi_line_region_br_preserved():
 def test_mixed_single_and_multi_region():
     validator = _make_validator()
     translations = ["单<br>行", "两行没有br", "第二行也没有br", "第<br/>二<br>个"]
-    # 2 个多区域都缺 BR，超过容忍度 -> 触发重试
+    # Both multi-region items lack BR, which is above the tolerance -> a retry is triggered
     result = validator._validate_br_markers(
         translations,
         ctx=_make_ctx(

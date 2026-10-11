@@ -47,9 +47,9 @@ def _text(t, style=None):
 
 # (name, kind, text, kwargs)
 # kind: 'h' = put_text_horizontal, 'v' = put_text_vertical
-# kwargs 覆盖默认渲染参数；measure=False 跳过 calc_box_from_font（如 reversed 无测量语义）
+# kwargs override the default render parameters; measure=False skips calc_box_from_font (for cases such as reversed, where measuring has no meaning)
 CASES = [
-    # --- 纯文本横排 ---
+    # --- Plain text, horizontal ---
     ('h_cjk_single', 'h', '漫画翻译测试', {}),
     ('h_cjk_multi', 'h', '第一行文字[BR]第二行更长的文字[BR]三', {}),
     ('h_ascii', 'h', 'Hello, World! 123', {}),
@@ -60,7 +60,7 @@ CASES = [
     ('h_reversed', 'h', 'שלום abc 123', {'reversed_direction': True, 'measure': False}),
     ('h_spacing', 'h', '行距字距测试[BR]第二行', {'line_spacing': 1.5, 'letter_spacing': 1.2}),
     ('h_single_char', 'h', '字', {}),
-    # --- 纯文本竖排 ---
+    # --- Plain text, vertical ---
     ('v_cjk_single', 'v', '竖排单列文字', {}),
     ('v_cjk_multi', 'v', '第一列文字[BR]第二列更长文字[BR]短', {}),
     ('v_punct', 'v', '「引号」、句号。间隔…点ー长音', {}),
@@ -68,7 +68,7 @@ CASES = [
     ('v_nostroke', 'v', '竖排无描边', {'bg': None}),
     ('v_spacing', 'v', '列距测试[BR]第二列', {'line_spacing': 1.5, 'letter_spacing': 1.15}),
     ('v_ascii_rotate', 'v', 'abc!?123', {}),
-    # --- 富文本 ---
+    # --- Rich text ---
     ('rich_h_styles', 'h', _rich([
         _para(
             _text('普通'),
@@ -105,7 +105,7 @@ CASES = [
             _text('正文'),
         ),
     ]), {}),
-    # --- 三遍绘制（effects→stroke→fill 全局顺序）敏感用例 ---
+    # --- Cases sensitive to the three paint passes (global order effects -> stroke -> fill) ---
     ('rich_h_glow_outer', 'h', _rich([
         _para(
             _text('发光', {'glow': {'color': '#00ff00', 'blur': 0.08}}),

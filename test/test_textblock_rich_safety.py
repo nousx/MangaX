@@ -36,7 +36,7 @@ def _valid_document():
     }
 
 
-# 旧实验格式形状：'spans'/'source' 等未知键会被严格解析拒绝（ValueError）
+# The shape of the old experimental format: unknown keys such as 'spans'/'source' are rejected by strict parsing (ValueError)
 _MALFORMED_DOCUMENTS = [
     {"format": RICH_TEXT_FORMAT, "source": "红字", "blocks": []},
     {
@@ -45,15 +45,15 @@ _MALFORMED_DOCUMENTS = [
             {"type": "paragraph", "spans": [{"type": "text", "text": "红", "style": {}}]}
         ],
     },
-    {"format": RICH_TEXT_FORMAT},  # 缺 blocks
-    {"format": RICH_TEXT_FORMAT, "blocks": "oops"},  # blocks 非 list（TypeError）
+    {"format": RICH_TEXT_FORMAT},  # blocks is missing
+    {"format": RICH_TEXT_FORMAT, "blocks": "oops"},  # blocks is not a list (TypeError)
     {
         "format": RICH_TEXT_FORMAT,
         "blocks": [
             {
                 "type": "paragraph",
                 "inlines": [
-                    # fontPath 是已移除的旧字段（协议现在只认 fontFamily）
+                    # fontPath is an old field that was removed (the protocol only accepts fontFamily now)
                     {"type": "text", "text": "红", "style": {"fontPath": "C:/x.ttf"}}
                 ],
             }
@@ -162,7 +162,7 @@ class TranslationSetterRichInvalidationTest(unittest.TestCase):
         region = _make_block(translation_rich=_valid_document())
         plain = region.translation
 
-        region.translation = plain  # OpenCC 未命中 / 后字典无替换等原样回写
+        region.translation = plain  # Written back unchanged, as when OpenCC has no hit or the post-dictionary has no replacement
 
         self.assertIsNotNone(region.translation_rich)
         self.assertEqual(region.translation, plain)
@@ -203,7 +203,7 @@ class RtlLegacyBreakConversionTest(unittest.TestCase):
         self.assertTrue(region.ensure_translation_rich_from_legacy_breaks())
         rich_lines = self._paragraph_texts(region.translation_rich)
 
-        # 与单行字符串路径逐行对照：get_translation_for_rendering 是行为基准
+        # Compared line by line with the single-line string path: get_translation_for_rendering is the behaviour baseline
         expected = []
         for line in source_lines:
             single = _make_block(translation=line, direction="hr", target_lang="ARA")
@@ -211,7 +211,7 @@ class RtlLegacyBreakConversionTest(unittest.TestCase):
             expected.append(single.get_translation_for_rendering())
         self.assertEqual(rich_lines, expected)
 
-        # 双向排版交给渲染器，旧方向别名只规范化为横排，不预先反转字符。
+        # Bidirectional layout is left to the renderer; old direction aliases are only normalised to horizontal, and characters are not reversed in advance.
         self.assertEqual(rich_lines, source_lines)
         self.assertEqual(region.direction, "h")
 

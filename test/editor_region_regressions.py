@@ -63,7 +63,7 @@ def test_async_region_update_uses_region_id_on_main_thread() -> None:
     assert model.calls[0][1] == ("text",)
     assert model.calls[0][2] == "async"
 
-    # 写回必须走撤销栈里的命令，且 undo 能还原
+    # The write-back has to go through a command on the undo stack, and undo has to restore it
     assert len(executed_commands) == 1
     executed_commands[0].undo()
     assert model.regions[1]["text"] == "old"

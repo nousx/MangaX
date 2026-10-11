@@ -14,7 +14,7 @@ from typing import Optional
 
 
 ROOT = _bootstrap.ROOT
-# 该脚本是交互式调试窗口，不沿用自动化测试的 offscreen 平台。
+# This script is an interactive debug window and does not use the offscreen platform of the automated tests.
 os.environ.pop("QT_QPA_PLATFORM", None)
 
 

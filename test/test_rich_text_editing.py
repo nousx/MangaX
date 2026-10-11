@@ -56,7 +56,7 @@ def _ruby_inline(base_text, ruby_text, style=None):
 
 
 def _node_doc():
-    # 可见文本 "普通漢字2026後"：text + ruby + tcy + text 混排
+    # The visible text mixes plain text, a ruby node, a tcy node and plain text again
     return {
         "format": "richtext.v1",
         "blocks": [
@@ -289,7 +289,7 @@ class RichTextEditingTests(unittest.TestCase):
     def test_styled_text_for_key_prefers_selected_text(self):
         document = _doc("这次是要_戏和唱~卡拉OK对吧!", {})
 
-        # 无局部样式时不再把选区伪装成“默认样式”。
+        # Without local styling, the selection is no longer passed off as a "default style".
         self.assertEqual(styled_text_for_key(document, 5, 7, "S"), "")
 
     def test_non_adjacent_equal_styles_remain_separate_segments(self):
@@ -399,7 +399,7 @@ class RichTextEditingTests(unittest.TestCase):
         self.assertEqual(render_text_value_from_text_block(region), document)
 
     # ------------------------------------------------------------------
-    # F01：编辑操作必须保留 ruby/tcy 节点
+    # F01: edit operations must keep the ruby/tcy nodes
     # ------------------------------------------------------------------
 
     def test_typing_elsewhere_preserves_ruby_and_tcy_nodes(self):
@@ -421,7 +421,7 @@ class RichTextEditingTests(unittest.TestCase):
 
     def test_wrap_other_range_preserves_existing_nodes(self):
         document = _node_doc()
-        updated = apply_tcy_to_range(document, 0, 2)  # 只包 "普通"
+        updated = apply_tcy_to_range(document, 0, 2)  # Wrap only the leading plain-text part
 
         self.assertEqual(
             updated["blocks"][0]["inlines"],
@@ -443,7 +443,7 @@ class RichTextEditingTests(unittest.TestCase):
         document = _node_doc()
         updated = apply_style_to_range(
             document, 8, 9, {"color": "#ff0000"}
-        )  # 只染 "後"
+        )  # Colour only the last character
 
         self.assertEqual(
             updated["blocks"][0]["inlines"],
@@ -544,7 +544,7 @@ class RichTextEditingTests(unittest.TestCase):
         )
 
     # ------------------------------------------------------------------
-    # F11：协议判定/文本提取兼容 RichTextDocument 实例
+    # F11: the protocol test and the text extraction accept RichTextDocument instances
     # ------------------------------------------------------------------
 
     def test_rich_text_document_instances_are_recognized(self):
@@ -554,7 +554,7 @@ class RichTextEditingTests(unittest.TestCase):
         self.assertEqual(storage_text_to_editor_text(instance), "漢字")
 
     # ------------------------------------------------------------------
-    # F29：未翻译区域回退显示 OCR 原文
+    # F29: a region that is not translated yet falls back to showing the OCR original text
     # ------------------------------------------------------------------
 
     def test_render_text_value_falls_back_to_source_text_when_untranslated(self):

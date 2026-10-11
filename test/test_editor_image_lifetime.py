@@ -46,7 +46,7 @@ def test_evicted_images_stay_usable_for_other_holders(tmp_path):
     held = []
     for path in paths:
         resource = manager.load_image(path)
-        held.append(resource.image)  # 模拟 session/model 直接持有同一个 PIL 对象
+        held.append(resource.image)  # Simulate the session and the model holding the same PIL object directly
 
     assert len(manager._image_cache) <= manager._cache_limit
     for index, image in enumerate(held):
@@ -61,11 +61,11 @@ def test_current_image_survives_revisit_then_prefetch(tmp_path):
     for path in paths[: manager._cache_limit]:
         manager.load_image(path)
 
-    # 回头翻到第一页：命中缓存，它是最早加载的那张
+    # Going back to the first page: a cache hit, and it is the image that was loaded first
     revisited = manager.load_image(paths[0])
     assert manager.get_current_image() is revisited
 
-    # 切图后会预读相邻页，这里引入两张新图逼出淘汰
+    # Switching images reads the neighbouring pages ahead; two new images are brought in here to force an eviction
     manager.prefetch_image(paths[-2])
     manager.prefetch_image(paths[-1])
 
@@ -107,7 +107,7 @@ def test_loaded_image_holds_no_file_handle(tmp_path):
 
     replacement = tmp_path / "replacement.png"
     Image.new("RGB", (32, 24), (0, 200, 0)).save(replacement)
-    os.replace(replacement, path)  # 仍持有句柄的话这里会抛 PermissionError
+    os.replace(replacement, path)  # If a handle were still held, a PermissionError would be raised here
 
     _assert_usable(resource.image, "image after source file replaced")
 

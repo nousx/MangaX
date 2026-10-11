@@ -205,7 +205,7 @@ def test_raw_mask_is_reserved_for_solid_fill(monkeypatch):
         cv2.BORDER_REFLECT,
     )
 
-    # 上下文保留完整气泡蒙版；纯色填充单独使用内缩一像素后的范围。
+    # The context keeps the full bubble mask; the solid fill uses its own range, shrunk by one pixel.
     expected_bubble_mask = np.zeros_like(model_bubble_mask)
     expected_bubble_mask[2:5, 2:8] = 255
 
@@ -264,7 +264,7 @@ def test_solid_fill_limits_fill_to_refined_mask_and_excludes_raw_text():
     np.testing.assert_array_equal(result[10, 30], (200, 200, 200))
     np.testing.assert_array_equal(result[10, 2], (0, 0, 255))
     np.testing.assert_array_equal(result[10, 50], (80, 80, 80))
-    # 气泡蒙版覆盖范围大于修复蒙版时，修复蒙版之外的气泡像素不能被纯色填充覆盖。
+    # When the bubble mask covers more than the inpainting mask, bubble pixels outside the inpainting mask must not be covered by the solid fill.
     np.testing.assert_array_equal(result[4, 10], (123, 123, 123))
     assert not remaining_mask.any()
 

@@ -115,7 +115,7 @@ def main():
     os.makedirs(OUT, exist_ok=True)
     ok = True
 
-    # 1. 横排
+    # 1. Horizontal
     hn = render_h('国国国', {})
     hi = render_h('国国国', {'italic': True})
     cv2.imwrite(os.path.join(OUT, 'proj_it_h_normal.png'), cv2.cvtColor(hn, cv2.COLOR_RGBA2BGRA))
@@ -134,7 +134,7 @@ def main():
         print('  dx(y): fit failed'); ok = False
     ok &= steps_n == steps_i
 
-    # 2. 竖排直立
+    # 2. Vertical, upright
     vn = render_v('国国国', {})
     vi = render_v('国国国', {'italic': True})
     cv2.imwrite(os.path.join(OUT, 'proj_it_v_normal.png'), cv2.cvtColor(vn, cv2.COLOR_RGBA2BGRA))
@@ -160,7 +160,7 @@ def main():
     else:
         print(f'  run count {len(runs_n)} vs {len(runs_i)} (italic 可能墨迹相连，允许)')
 
-    # 3. 竖排横躺（项目里走 90° 旋转的是引号类字符）
+    # 3. Vertical, lying on its side (in the project it is the quote characters that take the 90 degree rotation)
     hn3 = render_v('「「「', {})
     hi3 = render_v('「「「', {'italic': True})
     cv2.imwrite(os.path.join(OUT, 'proj_it_vh_normal.png'), cv2.cvtColor(hn3, cv2.COLOR_RGBA2BGRA))

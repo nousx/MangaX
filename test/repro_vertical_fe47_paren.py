@@ -87,7 +87,7 @@ def ink_rows(img, label):
 def main():
     text_render.set_font(FONT)
 
-    # 问题1：末尾 ﹇
+    # Problem 1: a trailing ﹇
     base = text_render._vertical_base(FONT_SIZE, "﹇")
     print(
         f"_vertical_base('﹇'): bitmap={'None' if base.bitmap is None else base.bitmap.shape},"
@@ -100,7 +100,7 @@ def main():
     if img2 is not None:
         ink_rows(img2, "A﹇B")
 
-    # 问题2：括号居中
+    # Problem 2: centring of brackets
     img3 = render_vertical("ascii_paren", "(あ)")
     if img3 is not None:
         ink_rows(img3, "(あ)")

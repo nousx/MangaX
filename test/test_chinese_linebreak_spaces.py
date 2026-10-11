@@ -26,7 +26,7 @@ from manga_translator.rendering.chinese_linebreak import (
 
 
 # ---------------------------------------------------------------------------
-# 纯函数:空白回填
+# Pure function: putting whitespace back
 # ---------------------------------------------------------------------------
 
 
@@ -42,7 +42,7 @@ def test_inject_space_units_nested_lca_placement():
     phrase = SemanticUnit("HELLOWORLD", (SemanticUnit("HELLO"), SemanticUnit("WORLD")))
     result = _inject_space_units((phrase, SemanticUnit("你好")), "HELLO WORLD 你好")
     assert result is not None
-    # 短语内部的空格留在短语内,短语与后文之间的空格是顶层兄弟节点
+    # A space inside a phrase stays in the phrase; a space between a phrase and what follows is a top-level sibling node
     assert [unit.text for unit in result] == ["HELLO WORLD", " ", "你好"]
     assert [child.text for child in result[0].children] == ["HELLO", " ", "WORLD"]
 
@@ -61,7 +61,7 @@ def test_inject_space_units_no_space_passthrough():
 
 
 def test_inject_space_units_merged_entity_token():
-    # 粗分词可能把 "HELLO WORLD" 合并成一个 token(去空白后为 "HELLOWORLD")
+    # Coarse segmentation may merge "HELLO WORLD" into one token ("HELLOWORLD" once whitespace is removed)
     result = _inject_space_units((SemanticUnit("HELLOWORLD"),), "HELLO WORLD")
     assert result is not None
     assert [unit.text for unit in result] == ["HELLO WORLD"]
@@ -99,7 +99,7 @@ def test_merge_lines_to_target_segments_returns_all_partitions():
 
 
 # ---------------------------------------------------------------------------
-# 纯函数:penalty 对齐(允许断点处丢空白,拒绝内容篡改)
+# Pure function: penalty alignment (dropping whitespace at a break point is allowed, changing content is rejected)
 # ---------------------------------------------------------------------------
 
 
@@ -131,7 +131,7 @@ def test_penalty_plain_chinese_regression():
 
 
 # ---------------------------------------------------------------------------
-# 端到端(需要本机 HanLP 模型)
+# End to end (needs the HanLP model on this machine)
 # ---------------------------------------------------------------------------
 
 
@@ -179,7 +179,7 @@ def test_layout_space_rules():
     assert len(narrow_lines) > 1
     for line in narrow_lines:
         assert line == line.strip(), f"断点处空格应删除,行首尾不应有空白: {narrow_lines!r}"
-    # 删掉断点空格后其余字符应与原文一致
+    # With the spaces at break points removed, the remaining characters should equal the original text
     rejoined = "".join(narrow_lines)
     assert rejoined.replace(" ", "") == text.replace(" ", "")
 

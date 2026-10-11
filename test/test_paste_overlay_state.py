@@ -91,8 +91,8 @@ def test_compose_skips_decompression_bomb_png_before_decode():
     import struct as _struct
     import zlib as _zlib
 
-    # 生成小 PNG，再把 IHDR 宽高改写成超大值（并重算 CRC 保持合法），
-    # 验证合成在 imdecode 之前就跳过
+    # Build a small PNG, then rewrite the IHDR width and height to huge values (recomputing the CRC so it stays valid),
+    # to check that compositing skips it before imdecode
     tiny = rgba_overlay_to_png_base64(_solid_rgba(2, 2, (255, 0, 0)))
     raw = bytearray(_base64.b64decode(tiny))
     raw[16:24] = _struct.pack(">II", 200_000, 200_000)
@@ -123,7 +123,7 @@ def test_parse_skips_invalid_entries():
     page = {
         "paste_overlays": [
             _valid_overlay(id="keep-1"),
-            {"width": -1, "height": 5},  # 非法几何 → 跳过
+            {"width": -1, "height": 5},  # Invalid geometry -> skipped
             _valid_overlay(id="keep-2"),
         ]
     }
@@ -196,11 +196,11 @@ def test_compose_paste_overlays_places_image_at_center():
     composite = compose_paste_overlays([_overlay_with_image(20, 30)], (80, 60))
     assert composite is not None
     assert composite.shape == (60, 80, 4)
-    # 中心应是不透明红色
+    # The centre should be opaque red
     assert composite[30, 20, 0] > 200
     assert composite[30, 20, 1] < 50
     assert composite[30, 20, 3] > 200
-    # 远离贴片的位置保持透明
+    # Positions far from the overlay stay transparent
     assert composite[5, 5, 3] == 0
 
 
@@ -241,12 +241,12 @@ def _solid_overlay(color, center, size=10, z=0, **overrides):
 
 
 def test_compose_respects_persisted_z_order():
-    # 列表顺序故意与 z 相反：z=1 的红色应压住 z=0 的绿色
+    # The list order is the reverse of z on purpose: the red with z=1 should cover the green with z=0
     green_low = _solid_overlay((0, 255, 0), (30, 30), z=0)
     red_high = _solid_overlay((255, 0, 0), (30, 30), z=1)
     composite = compose_paste_overlays([red_high, green_low], (80, 60))
     assert composite is not None
-    assert composite[30, 30, 0] > 200  # 顶层为红色
+    assert composite[30, 30, 0] > 200  # The top layer is red
     assert composite[30, 30, 1] < 60
 
 
@@ -255,7 +255,7 @@ def test_compose_source_over_blends_semi_transparent_overlay():
     blue_half = _solid_overlay((0, 0, 255), (30, 30), z=1, opacity=0.5)
     composite = compose_paste_overlays([red_bottom, blue_half], (80, 60))
     assert composite is not None
-    # source-over：50% 蓝叠不透明红 → 品红，且整体不透明
+    # source-over: 50% blue over opaque red -> magenta, opaque as a whole
     assert composite[30, 30, 3] > 250
     assert 100 < composite[30, 30, 0] < 160
     assert composite[30, 30, 1] < 40
@@ -263,8 +263,8 @@ def test_compose_source_over_blends_semi_transparent_overlay():
 
 
 def test_compose_premultiplies_before_affine_interpolation():
-    # 源为 2x1：左红不透明、右全透明；横向放大 16 倍会形成半透明过渡像素。
-    # 预乘后再插值可避免透明边缘渗黑（straight-alpha 插值会把 RGB 一起拉暗）。
+    # The source is 2x1: opaque red on the left, fully transparent on the right; enlarging 16 times horizontally produces semi-transparent transition pixels.
+    # Premultiplying before interpolation keeps black from bleeding into the transparent edge (straight-alpha interpolation would darken the RGB with it).
     source = np.zeros((1, 2, 4), dtype=np.uint8)
     source[0, 0] = (255, 0, 0, 255)
     overlay = _valid_overlay(
@@ -287,7 +287,7 @@ def test_compose_premultiplies_before_affine_interpolation():
 
 
 def test_compose_large_canvas_small_overlay_uses_bounded_box():
-    # 大画布 + 小贴片：验证包围盒路径结果正确且不越界崩溃（内存按包围盒裁剪）
+    # Large canvas + small overlay: check that the bounding-box path gives the right result and does not crash out of bounds (memory is cut to the bounding box)
     overlay = _overlay_with_image(1024, 1024, width=16, height=16)
     composite = compose_paste_overlays([overlay], (2048, 2048))
     assert composite is not None
@@ -297,7 +297,7 @@ def test_compose_large_canvas_small_overlay_uses_bounded_box():
 
 
 def test_compose_clamps_overlay_partially_outside_canvas():
-    # 贴片中心在画布外但部分可见：包围盒被裁剪到画布内，不崩溃且可见像素保留
+    # The overlay centre is outside the canvas but part of it is visible: the bounding box is clipped to the canvas, with no crash and the visible pixels kept
     overlay = _overlay_with_image(-4, -4, width=16, height=16)
     composite = compose_paste_overlays([overlay], (40, 30))
     assert composite is not None

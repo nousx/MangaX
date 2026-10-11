@@ -20,7 +20,7 @@ from services import batch_edit_engine as engine  # noqa: E402
 from services import batch_edit_schemes as schemes  # noqa: E402
 
 
-# ─── 夹具 ───
+# ─── Fixtures ───
 
 
 def make_region(**overrides) -> dict:
@@ -74,24 +74,24 @@ def read_page(json_path: str) -> dict:
         return json.load(handle)
 
 
-# ─── 条件求值 ───
+# ─── Evaluating conditions ───
 
 
 def test_text_conditions():
     region = make_region(translation="abc[BR]def")
     assert engine.evaluate_condition(region, {"field": "translation", "op": "contains", "value": "abc"})
-    # 匹配跑在富文本正文上：[BR] 已折成 \n，不该按字面命中
+    # Matching runs on the rich-text body: [BR] is already folded into \n and should not match literally
     assert not engine.evaluate_condition(region, {"field": "translation", "op": "contains", "value": "[BR]"})
     assert engine.evaluate_condition(region, {"field": "translation", "op": "regex", "value": r"abc\ndef"})
     assert engine.evaluate_condition(region, {"field": "translation", "op": "not_contains", "value": "zzz"})
     assert engine.evaluate_condition(region, {"field": "translation", "op": "not_empty", "value": None})
     assert engine.evaluate_condition(make_region(translation=""), {"field": "translation", "op": "empty", "value": None})
-    # 非法正则不该抛，直接判不匹配
+    # An invalid regular expression should not raise; it simply does not match
     assert not engine.evaluate_condition(region, {"field": "translation", "op": "regex", "value": "([unclosed"})
 
 
 def test_enum_condition_normalizes_direction_aliases():
-    # 后端写 'v'，编辑器写 'vertical'，两边都要认
+    # The backend writes 'v' and the editor writes 'vertical'; both have to be recognised
     assert engine.evaluate_condition(make_region(direction="v"),
                                      {"field": "direction", "op": "eq", "value": "vertical"})
     assert engine.evaluate_condition(make_region(direction="vertical"),
@@ -113,7 +113,7 @@ def test_number_conditions():
 def test_color_conditions_accept_both_storage_forms():
     assert engine.evaluate_condition(make_region(fg_colors=[255, 0, 0]),
                                      {"field": "fg_colors", "op": "color_eq", "value": "#FF0000"})
-    # 编辑器保存的是 font_color 十六进制串，没有 fg_colors
+    # The editor saves a font_color hex string, with no fg_colors
     hex_region = make_region(fg_colors=None, font_color="#FF0000")
     assert engine.evaluate_condition(hex_region, {"field": "fg_colors", "op": "color_eq", "value": [255, 0, 0]})
     assert engine.evaluate_condition(make_region(fg_colors=[250, 5, 5]),
@@ -159,7 +159,7 @@ def test_logic_all_vs_any_and_empty_conditions():
     miss = {"field": "font_size", "op": "gt", "value": 999}
     assert engine.evaluate_conditions(region, {"logic": "all", "conditions": [hit, miss]}) is False
     assert engine.evaluate_conditions(region, {"logic": "any", "conditions": [hit, miss]}) is True
-    # 条件留空 = 全部命中
+    # Empty conditions = everything matches
     assert engine.evaluate_conditions(region, {"logic": "all", "conditions": []}) is True
 
 
@@ -169,7 +169,7 @@ def test_unknown_field_or_op_never_matches():
     assert not engine.evaluate_condition(region, {"field": "font_size", "op": "contains", "value": "2"})
 
 
-# ─── 动作 ───
+# ─── Actions ───
 
 
 def test_set_fields_coerces_types_and_skips_readonly():
@@ -179,7 +179,7 @@ def test_set_fields_coerces_types_and_skips_readonly():
     assert updated["font_size"] == 30 and isinstance(updated["font_size"], int)
     assert updated["line_spacing"] == 1.5
     assert updated["fg_colors"] == [255, 0, 0]
-    # prob 是只读派生字段，不该被写
+    # prob is a read-only derived field and should not be written
     assert updated["prob"] == 0.99
 
 
@@ -218,7 +218,7 @@ def test_replace_text_preserves_untouched_styles():
     scheme = make_scheme(actions=[{"type": "replace_text", "pattern": "b", "replace": "Z"}])
     updated = engine.apply_scheme_to_region(region, scheme)
     assert updated["translation"] == "aZ"
-    # 未被改动的 'a' 保住自己的 bold
+    # The untouched 'a' keeps its own bold
     inlines = updated["translation_rich"]["blocks"][0]["inlines"]
     assert inlines[0]["text"] == "a" and inlines[0]["style"].get("bold") is True
 
@@ -240,7 +240,7 @@ def test_rich_text_action_styles_only_the_hit():
     styled = [run for run in inlines if run.get("style")]
     assert len(styled) == 1
     assert styled[0]["text"] == "世界" and styled[0]["style"]["color"] == "#FF0000"
-    # 正文不变
+    # The body is unchanged
     assert updated["translation"] == "你好世界"
 
 
@@ -261,7 +261,7 @@ def test_rich_text_overwrite_wins_on_same_key():
     scheme = make_scheme(actions=[{"type": "rich_text", "mode": "overwrite", "pattern": "ab",
                                    "style": {"color": "#ff0000", "bold": True}}])
     style = _first_style(engine.apply_scheme_to_region(region, scheme))
-    # 覆盖 = 你编的那几项赢；区间上的其他项（这里没有）原样保留
+    # overwrite = the items you edited win; other items on the range (none here) are kept as they are
     assert style["color"] == "#ff0000" and style["bold"] is True
 
 
@@ -270,7 +270,7 @@ def test_rich_text_fill_yields_to_existing_key():
     scheme = make_scheme(actions=[{"type": "rich_text", "mode": "fill", "pattern": "ab",
                                    "style": {"color": "#ff0000", "bold": True}}])
     style = _first_style(engine.apply_scheme_to_region(region, scheme))
-    # 添加 = 同名绕过，只补它没有的
+    # fill = an existing item of the same name is passed over; only what is missing is added
     assert style["color"] == "#0000ff" and style["bold"] is True
 
 
@@ -285,7 +285,7 @@ def test_rich_text_fill_covers_unstyled_gaps():
                                    "style": {"bold": False, "color": "#ff0000"}}])
     inlines = engine.apply_scheme_to_region(region, scheme)["translation_rich"]["blocks"][0]["inlines"]
     styles = {run["text"]: run.get("style") or {} for run in inlines}
-    # "a" 已经有 bold，让位；"bc" 没有，补上。两段都拿到缺的 color
+    # "a" already has bold and is left alone; "bc" has none and gets it. Both parts receive the missing color
     assert styles["a"]["bold"] is True and styles["a"]["color"] == "#ff0000"
     assert styles["bc"].get("bold") in (None, False) and styles["bc"]["color"] == "#ff0000"
 
@@ -367,7 +367,7 @@ def test_multiple_rich_text_actions_run_in_authoring_order():
     region = _styled_region("你好", "你好", {"color": "#0000ff"})
     inlines = engine.apply_scheme_to_region(region, scheme)["translation_rich"]["blocks"][0]["inlines"]
     styles = {run["text"]: run.get("style") or {} for run in inlines}
-    # 先整套替换再覆盖局部：原来的蓝色没了，下划线保留。
+    # Replace the whole set first, then overwrite part of it: the original blue is gone, the underline stays.
     assert styles["你"] == {"underline": True}
     assert styles["好"] == {"underline": True, "bold": True}
 
@@ -422,7 +422,7 @@ def test_rich_text_tcy_and_ruby():
 
 
 def test_rich_text_empty_action_is_dropped_at_normalize():
-    # style/ruby/tcy 三者全空的富文本动作什么也做不了
+    # A rich-text action with style, ruby and tcy all empty can do nothing
     scheme = make_scheme(actions=[{"type": "rich_text", "pattern": "a"}])
     assert scheme["actions"] == []
 
@@ -434,7 +434,7 @@ def test_action_order_is_forced_regardless_of_authoring_order():
         {"type": "set_fields", "fields": {"font_size": 30}},
     ])
     assert [action["type"] for action in scheme["actions"]] == list(schemes.ACTION_ORDER)
-    # 先替换后加样式：新文字才拿得到样式
+    # Replace first, then add the style: only then does the new text get the style
     updated = engine.apply_scheme_to_region(make_region(translation="你好"), scheme)
     assert updated["font_size"] == 30
     assert updated["translation"] == "再见"
@@ -454,7 +454,7 @@ def test_set_fields_translation_drops_stale_rich_text():
     assert updated["translation"] == "1"
     assert updated["translation_raw"] == "1"
     assert "translation_rich" not in updated
-    # 预览取的就是渲染口径，必须跟着变
+    # The preview uses the rendering convention, so it has to change with it
     assert engine.region_visible_text(updated) == "1"
 
 
@@ -503,7 +503,7 @@ def test_region_is_sane_guards():
     assert not engine.region_is_sane("not a dict")
 
 
-# ─── 扫描与写回 ───
+# ─── Scanning and writing back ───
 
 
 def test_scan_reports_matches_and_skips_insane_regions():
@@ -540,7 +540,7 @@ def test_apply_preserves_every_other_key():
                 "skip_font_scaling", "custom_third_party_key"):
         assert page_after[key] == page_before[key], key
     assert page_after["regions"][0]["font_size"] == 30
-    # 未涉及的 region 字段逐个不变
+    # Every region field that is not involved stays unchanged
     for key, value in page_before["regions"][0].items():
         if key != "font_size":
             assert page_after["regions"][0][key] == value, key
@@ -583,7 +583,7 @@ def test_restore_rolls_back_and_consumes_the_backup():
         assert report.missing_files == [] and report.errors == []
         page = read_page(json_path)
         assert page[next(iter(page))]["regions"][0]["font_size"] == 24
-        # .bak 用掉就没了，不留第二层
+        # A .bak is gone once it is used; there is no second level
         assert not engine.has_backup(json_path)
 
 
@@ -593,7 +593,7 @@ def test_restore_reports_files_without_a_backup():
         report = engine.restore_files([json_path])
         assert report.restored_files == []
         assert report.missing_files == [os.path.abspath(json_path)]
-        # 没备份就是不动它，不是报错
+        # Without a backup it is left alone; that is not an error
         assert report.errors == []
 
 
@@ -640,7 +640,7 @@ def test_cancel_event_stops_scan():
     raise AssertionError("expected BatchEditCancelled")
 
 
-# ─── 方案文件 ───
+# ─── Scheme files ───
 
 
 def test_scheme_roundtrip_and_normalize():
@@ -683,7 +683,7 @@ def main() -> int:
             continue
         try:
             func()
-        except Exception as exc:  # noqa: BLE001 - 汇总所有失败再退出
+        except Exception as exc:  # noqa: BLE001 - collect every failure before exiting
             failures.append(f"{name}: {type(exc).__name__}: {exc}")
     for line in failures:
         print("FAIL", line)

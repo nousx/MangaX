@@ -78,7 +78,7 @@ def test_replace_command_is_isolated_from_caller_mutation():
     stack.push(PasteOverlaysReplaceCommand(model, before=[], after=target))
     stack.undo()
 
-    # 命令内部快照不受外部修改影响
+    # The snapshot inside the command is not affected by changes made outside
     target[0]["name"] = "mutated"
     stack.redo()
     assert model.get_paste_overlays()[0]["name"] == "a"
@@ -138,7 +138,7 @@ def test_clipboard_tracks_last_copied_kind(monkeypatch):
     assert controller.last_clipboard_kind() == "paste_overlay"
     assert controller.paste_overlay_clipboard_available() is True
 
-    # 复制文本区域后，最近类型切换为 region
+    # After copying a text region, the most recent type switches to region
     controller.copy_region(0)
     assert controller.last_clipboard_kind() == "region"
     assert controller.history_service.has_clipboard_data() is True
@@ -214,20 +214,20 @@ def test_select_all_clears_paste_overlay_selection():
     assert gv._selected_paste_overlay_id == "ovl-1"
     assert model.get_selection() == []
 
-    # Ctrl+A 全选
+    # Ctrl+A selects everything
     dummy_focused = MagicMock()
     mgr._handle_select_all(dummy_focused)
 
-    # 贴片选中态已被清空，所有文本区域被选中
+    # The selected state of the paste overlay is cleared and every text region is selected
     assert gv._selected_paste_overlay_id is None
     assert model.get_selection() == [0, 1]
 
-    # 后续复制优先处理区域，而非贴片
+    # A later copy handles regions first, not the paste overlay
     mgr._handle_copy(dummy_focused)
     ev.controller.copy_regions.assert_called_once_with([0, 1])
     ev.controller.copy_paste_overlay.assert_not_called()
 
-    # 验证直接修改 model 选区也能互斥清空贴片选中态
+    # Check that changing the model selection directly also clears the overlay's selected state, as the two are exclusive
     gv._selected_paste_overlay_id = "ovl-1"
     gv._on_model_selection_changed_for_paste_overlays([0])
     assert gv._selected_paste_overlay_id is None
