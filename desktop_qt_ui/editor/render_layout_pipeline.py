@@ -1,4 +1,4 @@
-"""渲染布局管线 — 用统一的 RenderParameters 计算文字几何。"""
+"""Render layout pipeline - computes the text geometry with the unified RenderParameters."""
 import logging
 from typing import Optional
 
@@ -35,10 +35,10 @@ def calculate_region_dst_points(
     params: RenderParameters,
     override_dst_points=None,
 ) -> Optional[object]:
-    """计算文字渲染的目标四角点（世界坐标轴对齐矩形）。
+    """Compute the four target corners of the text render (an axis-aligned rectangle in world coordinates).
 
-    dst_points 以 text_block.center 为中心。在快照流程中，center 已经被设为
-    render_center（白框中心的世界坐标），因此 dst_points 自然与白框对齐。
+    dst_points is centred on text_block.center. In the snapshot flow, center has already been set to
+    render_center (the world coordinates of the white box centre), so dst_points lines up with the white box naturally.
     """
     if override_dst_points is not None:
         return override_dst_points

@@ -4,7 +4,7 @@ from typing import Any, Optional
 
 
 class RenderCoordinator:
-    """集中管理视图派生出来的渲染状态。"""
+    """One place for the render state derived from the view."""
 
     def __init__(self):
         self._document_revision: Optional[int] = None

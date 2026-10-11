@@ -23,7 +23,7 @@ if TYPE_CHECKING:
 
 
 class EditorControllerDocumentService:
-    """文档加载/清理流程。"""
+    """Document loading and clean-up flow."""
 
     def __init__(self, controller: "EditorController"):
         self.controller = controller
@@ -121,9 +121,10 @@ class EditorControllerDocumentService:
         self.logger.debug("Editor state cleared and memory released")
 
     def _cancel_pending_load(self) -> int:
-        """作废所有在途加载请求，返回新的当前代号。
+        """Invalidate every load request in flight and return the new current generation.
 
-        已在执行的任务无法中断，靠代号校验在完成时丢弃其结果。"""
+        A task that is already running cannot be interrupted; its result is dropped on completion by the generation check.
+        """
         self._load_generation += 1
         future = self._active_load_future
         if future is not None:
@@ -157,10 +158,11 @@ class EditorControllerDocumentService:
             self._desired_prefetch_keys.clear()
 
     def shutdown(self) -> None:
-        """退出清理：取消挂起任务并关闭常驻线程池。
+        """Clean-up on exit: cancel the pending tasks and shut down the long-lived thread pool.
 
-        wait=False + cancel_futures=True，避免 concurrent.futures 的 atexit
-        钩子 join 未关闭的线程池卡住进程退出。"""
+        wait=False + cancel_futures=True, so the atexit hook of concurrent.futures does not
+        join an open thread pool and block the process from exiting.
+        """
         if self._is_shutdown:
             return
         self._is_shutdown = True
@@ -211,8 +213,9 @@ class EditorControllerDocumentService:
         return os.path.normpath(source_path), os.path.normpath(display_image_path)
 
     def _is_editor_base_stale(self, source_path: str) -> bool:
-        """editor_base 只在最近一次运行真的做了超分或上色时才有意义；
-        否则视为过期残留，避免编辑器加载到与当前 JSON 不匹配的旧底图。"""
+        """editor_base only means something when the latest run really upscaled or colorized;
+        otherwise it is treated as a stale leftover, so the editor does not load an old base image that does not match the current JSON.
+        """
         import json as _json
 
         json_path = find_json_path(source_path)
@@ -321,7 +324,7 @@ class EditorControllerDocumentService:
             return False
 
     def _ask_unsaved_action(self) -> str:
-        """弹未保存编辑对话框，返回 save/discard/cancel。"""
+        """Show the unsaved-edits dialog; returns save/discard/cancel."""
         dialog_parent = (
             self.view if self.view is not None else QApplication.activeWindow()
         )
@@ -449,7 +452,7 @@ class EditorControllerDocumentService:
         self.controller._log_memory_snapshot("after-apply-loaded-document")
 
     def prefetch_images(self, image_paths: list[str]) -> None:
-        """后台加载邻页完整文档快照，切图时直接安装。"""
+        """Load the full document snapshot of the neighbouring pages in the background, to be installed directly when the image is switched."""
         if self._is_shutdown:
             return
 

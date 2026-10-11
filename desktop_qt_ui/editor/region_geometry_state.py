@@ -1,14 +1,14 @@
 """
-统一区域几何数据模型 — 纯数据类（无 Qt 依赖）
+Unified geometry data model of a region - a pure data class (no Qt dependency)
 
-管理三类几何状态：
-- 源区域（检测区域）：lines, center, angle  →  派生 polygons_local / source_box_local
-- 自定义白框：用户手动拖动后需要持久化的框
-- 渲染框：样式计算后得到、需要持久化的框
+It manages three kinds of geometry state:
+- source region (detected region): lines, center, angle  →  polygons_local / source_box_local are derived
+- custom white box: the box that has to be stored after the user dragged it by hand
+- render box: the box obtained from the style calculation, which has to be stored
 
-坐标系约定：
-- 世界坐标（world / model）：图片像素坐标
-- 局部坐标（local）：以 center 为原点、未旋转的坐标系
+Coordinate conventions:
+- world coordinates (world / model): image pixel coordinates
+- local coordinates (local): an unrotated coordinate system with center as origin
   world_to_local:  dx, dy = world - center;  lx = dx*cos + dy*sin;  ly = -dx*sin + dy*cos
   local_to_world:  wx = cx + lx*cos - ly*sin;  wy = cy + lx*sin + ly*cos
 """
@@ -20,10 +20,10 @@ import numpy as np
 
 
 def normalize_region_geometry_data(region_data: dict) -> dict:
-    """把历史几何字段规范为当前语义。
+    """Bring old geometry fields to their current meaning.
 
-    旧版本会把自动渲染框保存在 white_frame_rect_local；当前版本中该字段只表示
-    用户自定义白框，自动框使用 render_box_rect_local。
+    Old versions stored the automatic render box in white_frame_rect_local; in the current version that field only means
+    the user's custom white box, and the automatic box uses render_box_rect_local.
     """
     if not isinstance(region_data, dict):
         return region_data
@@ -43,7 +43,7 @@ def normalize_region_geometry_data(region_data: dict) -> dict:
 
 
 class RegionGeometryState:
-    """统一管理源区域 / 自定义白框 / 渲染框几何状态的纯数据类。"""
+    """Pure data class that manages the geometry state of the source region, the custom white box and the render box in one place."""
 
     # ------------------------------------------------------------------
     # Construction
@@ -190,10 +190,10 @@ class RegionGeometryState:
     # ------------------------------------------------------------------
 
     def set_render_box(self, dst_points: Optional[np.ndarray]):
-        """接收渲染框（世界坐标），同步到渲染框状态。
+        """Receive the render box (world coordinates) and sync it to the render box state.
 
-        dst_points 是世界坐标系中的轴对齐矩形 4 角点 (shape: [1,4,2] 或 [4,2])。
-        我们将其转为局部坐标，用中心 + 邻边长度重建局部 AABB（避免旋转后的 min/max 误差）。
+        dst_points are the 4 corners of an axis-aligned rectangle in world coordinates (shape: [1,4,2] or [4,2]).
+        They are converted to local coordinates, and the local AABB is rebuilt from the centre and the lengths of adjacent edges (avoiding the min/max error after rotation).
         """
         if dst_points is None:
             self._render_box_local = None
@@ -234,14 +234,14 @@ class RegionGeometryState:
         self._render_box_local = [cpx - hw, cpy - hh, cpx + hw, cpy + hh]
 
     def set_custom_white_frame_local(self, rect_local: List[float]):
-        """用户拖白框时调用 — 同步当前可见框与持久化白框。"""
+        """Called while the user drags the white box - syncs the currently visible box and the stored white box."""
         rect = list(rect_local)
         self._custom_white_frame_local = rect
         self._render_box_local = list(rect)
         self.has_custom_white_frame = True
 
     def to_region_data_patch(self) -> dict:
-        """序列化自定义白框状态为可合并到 region_data 的补丁字典。"""
+        """Serialise the custom white box state as a patch dictionary that can be merged into region_data."""
         patch = {
             "has_custom_white_frame": bool(
                 self.has_custom_white_frame

@@ -1,5 +1,5 @@
 """
-文件列表模型 - 统一处理编辑器中的原图入口
+File list model - one place for the original-image entries of the editor
 """
 
 import os
@@ -12,7 +12,7 @@ from services.file_list_data_service import canonical_path_key
 
 
 class FileType(Enum):
-    """文件类型枚举"""
+    """File type enumeration"""
 
     SOURCE = "source"  # Original image (with JSON)
     UNTRANSLATED = "untranslated"  # Untranslated original image (no JSON yet)
@@ -20,7 +20,7 @@ class FileType(Enum):
 
 @dataclass
 class FileItem:
-    """文件项数据类"""
+    """Data class of a file item"""
 
     path: str  # File path
     file_type: FileType  # File type
@@ -36,24 +36,24 @@ class FileListModel:
 
     @staticmethod
     def is_supported_image_file(file_path: str) -> bool:
-        """检查是否是编辑器支持的图片文件。"""
+        """Check whether it is an image file the editor supports."""
         ext = os.path.splitext(file_path)[1].lower()
         return ext in SUPPORTED_IMAGE_EXTENSIONS
 
     def clear(self):
-        """清空文件列表"""
+        """Clear the file list"""
         self.files.clear()
         self._path_index.clear()
 
     def remove_file(self, file_path: str) -> bool:
         """
-        移除文件
+        Remove a file
 
         Args:
-            file_path: 文件路径
+            file_path: the file path
 
         Returns:
-            是否成功移除
+            Whether it was removed
         """
         path_key = canonical_path_key(file_path)
         item = self._path_index.pop(path_key, None)
@@ -67,7 +67,7 @@ class FileListModel:
         return self._path_index.get(canonical_path_key(file_path))
 
     def replace_from_snapshot(self, snapshot) -> None:
-        """用后台快照一次性替换编辑器列表，不在 GUI 线程读取元数据。"""
+        """Replace the editor list in one go with a background snapshot, without reading metadata on the GUI thread."""
         self.clear()
         for file_path in snapshot.editor_files:
             normalized = os.path.abspath(os.path.normpath(file_path))

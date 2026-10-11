@@ -1,7 +1,7 @@
-"""单区域渲染快照。
+"""Render snapshot of a single region.
 
-目标：一次渲染中 text_block / dst_points / render_params 使用同一份几何数据，
-避免 model 与 item 之间的旧数据混用导致位置跳变。
+Goal: within one render, text_block / dst_points / render_params use the same geometry data,
+so old data mixed between model and item cannot make the position jump.
 """
 
 from __future__ import annotations

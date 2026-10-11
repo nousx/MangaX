@@ -1,4 +1,4 @@
-"""文字渲染管线 — 构建 TextBlock、render_params、执行渲染。"""
+"""Text render pipeline - builds the TextBlock and render_params and runs the render."""
 import logging
 from typing import Optional
 

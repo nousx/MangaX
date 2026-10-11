@@ -1,12 +1,12 @@
 """
-贴片（图块叠加）数据层 —— 规范化、序列化与页面 JSON 解析。
+Data layer of paste overlays (image patches laid on top) - normalisation, serialisation and parsing of the page JSON.
 
-贴片数据模型：每页一个 ``paste_overlays`` 列表（与 ``regions`` 平级），每一项表示一张可
-自由放置/缩放/旋转的 PNG 素材（修补块、特效字、背景贴片等）。图片内容以 base64 PNG
-（RGBA）内嵌在 JSON 里，与 ``mask_raw`` / ``paint_overlay`` / ``stamp_overlay`` 的存放
-方式保持一致，便于整页随工程文件迁移。
+Data model: each page has one ``paste_overlays`` list (at the same level as ``regions``), and each item is a PNG asset that can be
+placed, scaled and rotated freely (a repair patch, effect lettering, a background patch and so on). The image content is embedded in the JSON
+as base64 PNG (RGBA), the same way ``mask_raw`` / ``paint_overlay`` / ``stamp_overlay`` are stored,
+so a whole page moves with the project file.
 
-页面 JSON 中的存储键::
+Storage key in the page JSON::
 
     "paste_overlays": [{
         "id": "…", "name": "…",
@@ -17,7 +17,7 @@
         "image": "<base64 PNG, RGBA>"
     }, …]
 
-几何字段均为源图分辨率下的数值（浮点）。本模块只依赖 ``numpy`` / ``cv2``，不依赖 Qt。
+The geometry fields are all values (floats) at the resolution of the source image. This module only depends on ``numpy`` / ``cv2``, not on Qt.
 """
 
 from __future__ import annotations
@@ -93,15 +93,15 @@ def _validate_image_field(image: Any) -> str:
 
 
 def new_overlay_id() -> str:
-    """生成一个贴片 id（去连字符的 uuid4 hex）。"""
+    """Generate a paste overlay id (a uuid4 hex without hyphens)."""
     return uuid.uuid4().hex
 
 
 def normalize_paste_overlay(raw: Mapping[str, Any]) -> dict[str, Any]:
-    """把任意输入规范化为一个贴片字典（纯 JSON 安全的 Python 值）。
+    """Normalise any input into a paste overlay dictionary (Python values that are safe as plain JSON).
 
-    字段缺失时补默认值；数值强制转换；``opacity`` 收敛到 [0, 1]。
-    非法输入抛出 :class:`ValueError`，由调用方决定是跳过还是报错。
+    Missing fields get defaults; numbers are coerced; ``opacity`` is clamped to [0, 1].
+    Invalid input raises :class:`ValueError`, and the caller decides whether to skip it or report an error.
     """
     if not isinstance(raw, Mapping):
         raise ValueError(f"贴片必须是字典，收到: {type(raw).__name__}")
@@ -141,7 +141,7 @@ def _assign_unique_ids(overlays: list[dict[str, Any]]) -> None:
 def serialize_paste_overlays(
     overlays: Iterable[Mapping[str, Any]],
 ) -> list[dict[str, Any]]:
-    """把贴片列表规范化为可直接 ``json.dump`` 的纯 Python 结构（写入端使用）。"""
+    """Normalise a paste overlay list into a plain Python structure that ``json.dump`` can take directly (used on the writing side)."""
     normalized = [normalize_paste_overlay(item) for item in overlays]
     _assign_unique_ids(normalized)
     return copy.deepcopy(normalized)
@@ -150,11 +150,11 @@ def serialize_paste_overlays(
 def parse_page_paste_overlays(
     image_data: Mapping[str, Any],
 ) -> list[dict[str, Any]]:
-    """从页面 JSON 字典里读取 ``paste_overlays`` 键（读取端使用）。
+    """Read the ``paste_overlays`` key from a page JSON dictionary (used on the reading side).
 
-    - 键缺失/为空 → 返回空列表；
-    - 根类型错误 → 抛 :class:`ValueError`；
-    - 单个贴片非法 → 记录 warning 并跳过，尽量不因一条脏数据拖垮整页加载。
+    - key missing or empty → an empty list is returned;
+    - wrong root type → :class:`ValueError` is raised;
+    - a single invalid overlay → a warning is logged and it is skipped, so one bad record does not bring down the loading of the whole page.
     """
     raw = image_data.get(PAGE_KEY)
     if raw is None:
@@ -172,7 +172,7 @@ def parse_page_paste_overlays(
 
 
 def rgba_overlay_to_png_base64(image_rgba: Any) -> str:
-    """RGBA uint8 数组 → base64 PNG 字符串（与 paint/stamp 层同款编码）。"""
+    """RGBA uint8 array → base64 PNG string (the same encoding as the paint and stamp layers)."""
     array = np.asarray(image_rgba)
     if array.ndim != 3 or array.shape[2] != 4:
         raise ValueError(f"贴片必须为 RGBA，收到 shape {array.shape}")
@@ -184,7 +184,7 @@ def rgba_overlay_to_png_base64(image_rgba: Any) -> str:
 
 
 def png_base64_to_rgba_overlay(image_b64: str) -> np.ndarray | None:
-    """base64 PNG 字符串 → RGBA uint8 数组；解码失败/非 RGBA 返回 None。"""
+    """base64 PNG string → RGBA uint8 array; None when decoding fails or the result is not RGBA."""
     if not isinstance(image_b64, str) or not image_b64:
         return None
     try:
@@ -203,9 +203,9 @@ _PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
 
 
 def _png_base64_dimensions(image_b64: str) -> tuple[int, int] | None:
-    """解析 PNG base64 的 IHDR 宽高（不解码像素），非 PNG/解析失败返回 None。
+    """Parse the IHDR width and height of a base64 PNG (without decoding the pixels); None for a non-PNG or when parsing fails.
 
-    用于在 ``cv2.imdecode`` 之前拦截超大像素的“解压炸弹”，避免先分配巨图。
+    Used before ``cv2.imdecode`` to stop a "decompression bomb" with a huge pixel count, so no giant image is allocated first.
     """
     try:
         data = base64.b64decode(image_b64)
@@ -224,14 +224,14 @@ def compose_paste_overlays(
     overlays: Iterable[Mapping[str, Any]],
     canvas_size: tuple[int, int],
 ) -> np.ndarray | None:
-    """把贴片列表按各自几何 alpha 预合成到一张整页 RGBA 画布上（导出烘焙用）。
+    """Pre-composite the paste overlays, each with its own geometry and alpha, onto one whole-page RGBA canvas (baked for export).
 
-    ``canvas_size`` 为 (宽, 高) 源图像素尺寸；返回的数组与 paint/stamp 叠加层同构，
-    由后端在渲染文字前与底图做 alpha 合成。无可见贴片时返回 None。
-    合成顺序按各贴片 ``z`` 升序（z 大的在上）；采用 source-over alpha 合成，
-    半透明贴片不会覆盖下层；缩放由仿射矩阵完成，不产生中间大图。
-    注意：旋转/翻转的屏幕方向一致性以画布预览为准，后续若发现方向相反，
-    只需调整本函数旋转角度的符号。
+    ``canvas_size`` is the (width, height) pixel size of the source image; the returned array has the same structure as the paint and stamp overlay layers,
+    and the backend alpha-composites it with the base image before rendering the text. None is returned when no overlay is visible.
+    Overlays are composited in ascending ``z`` (larger z on top) with source-over alpha compositing,
+    so a semi-transparent overlay does not hide the layer below; scaling is done by the affine matrix, without a large intermediate image.
+    Note: for the on-screen direction of rotation and flipping, the canvas preview is the reference; if a direction turns out reversed later,
+    only the sign of the rotation angle in this function needs changing.
     """
     width, height = (int(canvas_size[0]), int(canvas_size[1]))
     if width <= 0 or height <= 0:
@@ -243,7 +243,7 @@ def compose_paste_overlays(
     canvas = np.zeros((height, width, 4), dtype=np.uint8)
 
     def _blend_premultiplied(base: np.ndarray, patch: np.ndarray) -> np.ndarray:
-        """pre-mul source-over：RGB 已预乘，alpha 通道为 0..255 原始值。"""
+        """pre-mul source-over: RGB is already premultiplied, and the alpha channel holds the original 0..255 values."""
         patch_coverage = patch[..., 3:4] / 255.0
         merged = np.empty_like(base)
         merged[..., :3] = patch[..., :3] + base[..., :3] * (1.0 - patch_coverage)

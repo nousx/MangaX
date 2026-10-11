@@ -1,4 +1,4 @@
-"""异步事件循环管理器。"""
+"""Manager of the asynchronous event loop."""
 
 import asyncio
 import logging
@@ -8,10 +8,10 @@ from typing import Coroutine, Optional, Set
 
 
 class AsyncJobManager:
-    """管理编辑器后台协程使用的专用事件循环线程。"""
+    """Manages the dedicated event loop thread used by the editor's background coroutines."""
     
     def __init__(self):
-        """初始化异步任务管理器"""
+        """Initialise the asynchronous job manager"""
         self.logger = logging.getLogger(__name__)
         
         # Set of the Futures returned by run_coroutine_threadsafe
@@ -28,12 +28,12 @@ class AsyncJobManager:
         self._start_event_loop()
     
     def _start_event_loop(self) -> None:
-        """启动事件循环线程"""
+        """Start the event loop thread"""
         if self._running:
             return
         
         def run_loop():
-            """在线程中运行事件循环"""
+            """Run the event loop in the thread"""
             import sys
             # In a worker thread on Windows, Windows Sockets has to be initialised by hand
             if sys.platform == 'win32':
@@ -92,7 +92,7 @@ class AsyncJobManager:
             raise RuntimeError("Failed to start event loop")
     
     def submit_coroutine(self, coro: Coroutine) -> Optional[Future]:
-        """提交协程到专用事件循环。"""
+        """Submit a coroutine to the dedicated event loop."""
         if not self._running or self._loop is None:
             return None
 
@@ -117,7 +117,7 @@ class AsyncJobManager:
         return cancelled
 
     async def _drain_loop(self) -> None:
-        """取消并回收事件循环中的待处理任务。"""
+        """Cancel and collect the pending tasks of the event loop."""
         current_task = asyncio.current_task()
         pending = [
             task for task in asyncio.all_tasks()
@@ -143,10 +143,10 @@ class AsyncJobManager:
                 self.logger.debug(f"Error shutting down default executor: {e}")
     
     def shutdown(self, wait: bool = True) -> None:
-        """关闭任务管理器
-        
+        """Shut down the job manager
+
         Args:
-            wait: 是否等待所有任务完成
+            wait: whether to wait for all tasks to finish
         """
         if not self._running:
             return
@@ -184,10 +184,11 @@ class AsyncJobManager:
 
     
     def __del__(self):
-        """析构函数。
+        """Destructor.
 
-        解释器退出期对象可能处于半初始化状态（__init__ 中途失败）或依赖的
-        模块已被清理，全部防御式访问，绝不让异常从 __del__ 泄漏。"""
+        While the interpreter exits, the object may be half-initialised (__init__ failed midway) or the modules it
+        depends on may already be gone, so every access is defensive and no exception ever leaks from __del__.
+        """
         try:
             if getattr(self, "_running", False):
                 self.shutdown(wait=False)

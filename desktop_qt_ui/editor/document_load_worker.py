@@ -19,7 +19,7 @@ if TYPE_CHECKING:
 
 
 class DocumentLoadWorker:
-    """后台加载一张编辑器文档，并把可并行的辅助 IO 收拢到这里。"""
+    """Load one editor document in the background; the auxiliary IO that can run in parallel is gathered here."""
 
     AUX_WORKERS = 4
 
@@ -229,7 +229,7 @@ class DocumentLoadWorker:
         return paint_overlay_path, overlay_image
 
     def _align_overlay_array(self, overlay, target_size):
-        """把 JSON 解码出的 RGBA 图层数组对齐到底图尺寸（W, H）。"""
+        """Align an RGBA layer array decoded from JSON to the size of the base image (W, H)."""
         if overlay is None:
             return None
         try:
@@ -250,7 +250,7 @@ class DocumentLoadWorker:
             return None
 
     def _load_paint_overlay_array(self, overlay_path: str, target_size):
-        """加载 paint overlay 图层并对齐到底图尺寸，返回 RGBA uint8 numpy 数组。"""
+        """Load the paint overlay layer and align it to the size of the base image; returns an RGBA uint8 numpy array."""
         try:
             with Image.open(overlay_path) as overlay_image:
                 overlay_image.load()

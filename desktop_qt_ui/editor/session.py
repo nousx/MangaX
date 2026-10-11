@@ -337,14 +337,14 @@ class EditorSession:
         return None if document is None else document.overlays.stamp
 
     def get_paste_overlays(self) -> list[dict]:
-        """返回贴片列表的深拷贝（避免外部直接改动文档内状态）。"""
+        """Return a deep copy of the paste overlay list (so nothing outside changes the document state directly)."""
         document = self._document
         if document is None:
             return []
         return copy.deepcopy(document.paste_overlays)
 
     def set_paste_overlays(self, overlays: list[dict]) -> bool:
-        """规范化并整表替换贴片列表；内容无变化时返回 False。"""
+        """Normalise and replace the whole paste overlay list; returns False when the content did not change."""
         from .paste_overlay_state import serialize_paste_overlays
 
         document = self._document

@@ -1,4 +1,4 @@
-"""几何编辑提交管线 — 构建旋转 / 白框编辑的 region_data。"""
+"""Commit pipeline for geometry edits - builds the region_data of rotation and white box edits."""
 
 import copy
 from typing import Optional
@@ -15,7 +15,7 @@ def build_rotate_region_data(
     new_center: Optional[list] = None,
     new_lines: Optional[list] = None,
 ) -> dict:
-    """构建旋转提交数据（可选包含 center / lines 同步）。"""
+    """Build the commit data of a rotation (optionally with center / lines synced)."""
     data = copy.deepcopy(region_data)
     data["angle"] = float(new_angle)
     if new_center is not None and len(new_center) >= 2:
@@ -33,7 +33,7 @@ def build_white_frame_region_data(
     old_white_frame_local: Optional[list] = None,
     edit_mode: Optional[str] = None,
 ) -> dict:
-    """构建白框编辑提交数据（含可选字体尺寸回写）。"""
+    """Build the commit data of a white box edit (optionally writing the font size back)."""
     data = copy.deepcopy(region_data)
     data.update(white_patch)
 
@@ -57,7 +57,7 @@ def _white_frame_size_changed(
     old_wf_local: Optional[list],
     new_wf_local: Optional[list],
 ) -> bool:
-    """仅当白框宽高发生变化时，才触发字号重算。"""
+    """The font size is recomputed only when the width or height of the white box changed."""
     old_size = _extract_white_frame_size(old_wf_local)
     new_size = _extract_white_frame_size(new_wf_local)
     if old_size is None or new_size is None:

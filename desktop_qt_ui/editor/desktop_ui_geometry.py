@@ -1,6 +1,6 @@
 """
-完全基于 desktop-ui 的几何系统
-替换 Qt 的坐标系统，使用 desktop-ui 的数据结构和算法
+Geometry system based entirely on desktop-ui.
+Replaces Qt's coordinate system with the data structures and algorithms of desktop-ui
 """
 import math
 from typing import List, Optional, Tuple
@@ -8,7 +8,7 @@ from typing import List, Optional, Tuple
 # === Core geometry functions of desktop-ui ===
 
 def rotate_point(x, y, angle_deg, cx, cy):
-    """围绕中心点旋转一个点"""
+    """Rotate a point about a centre point"""
     angle_rad = math.radians(angle_deg)
     cos_a, sin_a = math.cos(angle_rad), math.sin(angle_rad)
     x_new = cx + (x - cx) * cos_a - (y - cy) * sin_a
@@ -17,10 +17,10 @@ def rotate_point(x, y, angle_deg, cx, cy):
 
 def get_polygon_center(vertices: List[Tuple[float, float]]) -> Tuple[float, float]:
     """
-    计算多边形的中心点（边界框中心）
+    Compute the centre of a polygon (the centre of its bounding box)
 
-    注意：lines存储的是未旋转的世界坐标，所以这里计算的是
-    这些未旋转坐标的简单边界框中心，不使用cv2.minAreaRect
+    Note: lines stores unrotated world coordinates, so what is computed here is
+    the centre of the simple bounding box of those unrotated coordinates; cv2.minAreaRect is not used
     """
     if not vertices:
         return 0, 0
@@ -38,7 +38,7 @@ def get_polygon_center(vertices: List[Tuple[float, float]]) -> Tuple[float, floa
     return center_x, center_y
 
 def _project_vector(v_to_project: Tuple[float, float], v_target: Tuple[float, float]) -> Tuple[float, float]:
-    """将一个向量投影到另一个向量上"""
+    """Project one vector onto another"""
     dot_product = v_to_project[0] * v_target[0] + v_to_project[1] * v_target[1]
     target_len_sq = v_target[0]**2 + v_target[1]**2
     if target_len_sq < 1e-9:
@@ -54,7 +54,7 @@ def calculate_center_scaled_rect(
     new_point: Tuple[float, float],
     min_size: float = 8.0,
 ) -> List[float]:
-    """围绕矩形中心实时对称缩放边或角。"""
+    """Scale an edge or corner symmetrically about the centre of the rectangle, live."""
     left, top, right, bottom = map(float, original_rect)
     center_x = (left + right) / 2.0
     center_y = (top + bottom) / 2.0
@@ -85,7 +85,7 @@ def calculate_new_vertices_on_drag(
     angle: float = 0,
     center: Optional[Tuple[float, float]] = None
 ) -> List[Tuple[float, float]]:
-    """当单个顶点被拖拽时，计算所有顶点的新位置。"""
+    """Compute the new positions of all vertices while a single vertex is dragged."""
     
     rotation_center = center if center else get_polygon_center(original_vertices)
 
@@ -173,7 +173,7 @@ def calculate_new_edge_on_drag(
     angle: float = 0,
     center: Optional[Tuple[float, float]] = None
 ) -> List[Tuple[float, float]]:
-    """当边缘被拖拽时，计算新的顶点位置 (沿法线移动)"""
+    """Compute the new vertex positions while an edge is dragged (moving along the normal)"""
     
     rotation_center = center if center else get_polygon_center(original_vertices)
 

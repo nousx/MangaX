@@ -312,6 +312,6 @@ class EditorModel(QObject):
         return self.session.get_paste_overlays()
 
     def set_paste_overlays(self, overlays: List[Dict[str, Any]]) -> None:
-        """规范化并整表替换贴片列表；变化时广播 paste_overlays_changed。"""
+        """Normalise and replace the whole paste overlay list; paste_overlays_changed is broadcast when it changes."""
         if self.session.set_paste_overlays(overlays):
             self.paste_overlays_changed.emit(self.get_paste_overlays())

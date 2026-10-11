@@ -1,15 +1,15 @@
 """Helpers for editing structured rich text from the Qt floating editor.
 
-richtext.v1 协议的解析/序列化唯一实现位于 manga_translator.rendering.rich_text
-（F11 收口）；本模块只负责编辑器侧的结构化编辑操作：光标级增删
-（apply_text_change）、样式补丁（apply_style_to_range）、ruby/tcy 包装与解除。
+The one implementation of parsing and serialising the richtext.v1 protocol is in manga_translator.rendering.rich_text
+(gathered there by F11); this module is only responsible for the structured edit operations on the editor side: inserting and deleting at the cursor
+(apply_text_change), style patches (apply_style_to_range), and wrapping and unwrapping ruby/tcy.
 
-所有编辑操作共享同一套「节点归属拍平」表示（F01/F17）：
-文档 → 逐可见字符条目 _CharEntry(char, style, run, node)，其中
-style/run/node 均为对原文档 dict 的共享引用（只读，不做逐字符深拷贝，F25）；
-编辑 = 对条目序列做拼接/改写，再由 _document_from_entries 重建 —
-连续同 node 的字符重组回原类型节点（ruby 保留原注音、tcy 重建 content），
-node 为 None 的段按样式分组为 text run。
+All edit operations share one "flattened node membership" representation (F01/F17):
+document → one _CharEntry(char, style, run, node) per visible character, where
+style/run/node are shared references into the dicts of the original document (read-only, no deep copy per character, F25);
+an edit = splicing or rewriting the entry sequence, which _document_from_entries then rebuilds -
+consecutive characters with the same node are regrouped into a node of the original type (ruby keeps its original ruby text, tcy rebuilds content),
+and stretches with node None are grouped by style into text runs.
 """
 
 from __future__ import annotations
@@ -35,12 +35,12 @@ def editor_text_to_plain_text(text: str) -> str:
 
 
 def utf16_length(text: str) -> int:
-    """返回 Qt 文本 API 使用的 UTF-16 code unit 数。"""
+    """Return the number of UTF-16 code units, as used by the Qt text API."""
     return len(str(text or "").encode("utf-16-le")) // 2
 
 
 def python_index_to_utf16_offset(text: str, index: int) -> int:
-    """把 Python 字符索引转换为 QTextCursor/contentsChange offset。"""
+    """Convert a Python character index to a QTextCursor/contentsChange offset."""
     text = str(text or "")
     index = max(0, min(int(index), len(text)))
     return utf16_length(text[:index])
@@ -49,10 +49,10 @@ def python_index_to_utf16_offset(text: str, index: int) -> int:
 def utf16_offset_to_python_index(
     text: str, offset: int, *, round_up: bool = False
 ) -> int:
-    """把 UTF-16 offset 转换为 Python 字符索引。
+    """Convert a UTF-16 offset to a Python character index.
 
-    Qt 正常只会给出字符边界。若调用方传入代理对中间的位置，范围起点向下
-    取整、范围终点可通过 ``round_up=True`` 向上取整，避免拆开非 BMP 字符。
+    Qt normally only gives character boundaries. When a caller passes a position in the middle of a surrogate pair, the start of a range is rounded
+    down and the end of a range can be rounded up with ``round_up=True``, so a non-BMP character is not split.
     """
     text = str(text or "")
     offset = max(0, min(int(offset), utf16_length(text)))
@@ -68,7 +68,7 @@ def utf16_offset_to_python_index(
 
 
 def utf16_range_to_python_range(text: str, start: int, end: int) -> tuple[int, int]:
-    """把 Qt UTF-16 选区安全转换为 Python 半开区间。"""
+    """Convert a Qt UTF-16 selection safely to a Python half-open interval."""
     start, end = sorted((int(start), int(end)))
     py_start = utf16_offset_to_python_index(text, start)
     py_end = utf16_offset_to_python_index(text, end, round_up=True)
@@ -111,14 +111,14 @@ def visible_text_from_document(document: Any) -> str:
 
 
 def normalize_text_style(style: Any) -> dict:
-    """富文本编辑器与规则编辑器共享的样式校验/归一化入口。"""
+    """Entry point for style validation and normalisation, shared by the rich-text editor and the rules editor."""
     if not isinstance(style, dict):
         style = {}
     return TextStyle.from_dict(copy.deepcopy(style)).to_dict()
 
 
 def text_style_to_control_values(style: Any) -> dict:
-    """把 richtext.v1 嵌套样式展开成控件可直接读写的扁平值。"""
+    """Expand a nested richtext.v1 style into flat values the controls can read and write directly."""
     style = normalize_text_style(style)
     transform = style.get("transform") or {}
     stroke = style.get("stroke") or {}
@@ -157,7 +157,7 @@ def text_style_to_control_values(style: Any) -> dict:
 
 
 def text_style_from_control_values(values: dict, enabled: set[str]) -> dict:
-    """由共享控件值构建严格的 richtext.v1 style。未启用字段不写入。"""
+    """Build a strict richtext.v1 style from the shared control values. Fields that are not enabled are not written."""
     style: dict[str, Any] = {}
     for key in (
         "bold",
@@ -197,7 +197,7 @@ def text_style_from_control_values(values: dict, enabled: set[str]) -> dict:
 
 @dataclass(slots=True)
 class _CharEntry:
-    """一个可见字符及其原 text run、ruby/tcy 节点归属。"""
+    """One visible character with the original text run and the ruby/tcy node it belongs to."""
 
     char: str
     style: dict
@@ -206,10 +206,10 @@ class _CharEntry:
 
 
 def _visible_entries(document: Any) -> list[_CharEntry]:
-    """把文档拍平成逐可见字符的归属条目（唯一的 blocks→inlines 游标行走）。
+    """Flatten a document into membership entries, one per visible character (the only walk of the blocks→inlines cursor).
 
-    ruby 的注音 runs 不占可见位置，不产出条目；base/content 依协议只含
-    text run，非法嵌套节点在此被忽略（严格解析在渲染侧本就会拒绝它们）。
+    The ruby text runs take no visible position and produce no entries; by the protocol, base/content only hold
+    text runs, and illegally nested nodes are ignored here (strict parsing on the render side rejects them anyway).
     """
     entries: list[_CharEntry] = []
     if not is_rich_text_document(document):
@@ -352,7 +352,7 @@ def apply_text_change(
     chars_removed: int,
     chars_added: int,
 ) -> dict:
-    """按 QTextDocument.contentsChange 语义更新文档，保留 ruby/tcy 节点（F01）。"""
+    """Update the document with the semantics of QTextDocument.contentsChange, keeping the ruby/tcy nodes (F01)."""
     return _apply_plain_text_change(
         document,
         editor_text_to_plain_text(editor_text),
@@ -396,11 +396,11 @@ def apply_qt_text_change(
     chars_removed: int,
     chars_added: int,
 ) -> dict:
-    """按 ``QTextDocument.contentsChange`` 的 UTF-16 语义更新文档。
+    """Update the document with the UTF-16 semantics of ``QTextDocument.contentsChange``.
 
-    ``apply_text_change`` 的编辑逻辑使用 Python 字符索引；这里同时查看修改前
-    后文本，把 Qt 给出的 position/removed/added code units 转换成不会拆开
-    emoji 等非 BMP 字符的 Python 区间。
+    The edit logic of ``apply_text_change`` uses Python character indexes; here the text before and after the change
+    are both examined, and the position/removed/added code units Qt gives are converted to a Python interval that does not split
+    non-BMP characters such as emoji.
     """
     old_text = editor_text_to_plain_text(old_editor_text)
     new_text = editor_text_to_plain_text(new_editor_text)
@@ -451,13 +451,13 @@ def apply_qt_text_change(
 def _insertion_inheritance(
     entries: list[_CharEntry], position: int
 ) -> tuple[dict, dict | None]:
-    """插入字符的样式与节点归属。
+    """Style and node membership of inserted characters.
 
-    样式：插入点严格位于同一 text run 内部（前后字符同 run）才继承该 run
-    的样式，run 边缘不继承 —— 与旧实现语义一致。
-    节点：插入点严格位于同一 ruby/tcy 节点内部（前后字符同节点）才并入该
-    节点；节点前/后边缘或纯文本处插入 → 普通文本（F01 决策）。
-    邻居按插入点在旧文档中的前后字符（position-1 / position）判定。
+    Style: the style of a text run is inherited only when the insertion point is strictly inside that run (the characters before and after are in the same run);
+    at the edge of a run nothing is inherited - the same meaning as in the old implementation.
+    Node: the characters join a ruby/tcy node only when the insertion point is strictly inside that node (the characters before and after are in the same
+    node); inserted at the front or back edge of a node, or in plain text → ordinary text (decision F01).
+    The neighbours are the characters before and after the insertion point in the old document (position-1 / position).
     """
     if position <= 0 or position >= len(entries):
         return {}, None
@@ -469,10 +469,10 @@ def _insertion_inheritance(
 
 
 def _mutate_range(document: dict, start: int, end: int, mutate) -> dict:
-    """对区间内每个非换行条目应用 ``mutate`` 后重建文档。
+    """Apply ``mutate`` to every non-line-break entry in the range, then rebuild the document.
 
-    区间为空时返回原文档深拷贝；空区间不再展开为全文 —— 所有调用方都已
-    持有真实选区，隐式改写整篇文本只会掩盖上层守卫的缺失。
+    For an empty range a deep copy of the original document is returned; an empty range is no longer expanded to the whole text - every caller already
+    holds a real selection, and rewriting the whole text implicitly would only hide a missing guard higher up.
     """
     entries = _visible_entries(document)
     start, end = _normalize_range(entries, start, end, expand_empty=False)
@@ -580,7 +580,7 @@ def _wrap_range_as_node(
 
 @dataclass(frozen=True)
 class StyledTextSegment:
-    """文档中一个真实、连续且带局部样式的可见文字区间。"""
+    """A real, contiguous range of visible text in the document that carries local styling."""
 
     start: int
     end: int
@@ -599,10 +599,10 @@ def styled_segments_for_range(
     *,
     expand_empty: bool = True,
 ) -> list[StyledTextSegment]:
-    """按文本顺序返回真实样式片段，不包含默认/空样式文字。
+    """Return the real style fragments in text order, without text in the default or an empty style.
 
-    只合并相邻且样式、节点类型与 Ruby 文本完全相同的字符。中间只要隔着
-    无样式文字或其他样式，即使两端样式值相同也会保留为两个片段。
+    Only adjacent characters whose style, node type and ruby text are exactly the same are merged. As soon as unstyled text
+    or another style lies between them, two fragments are kept even when the style values at both ends are equal.
     """
     entries = _visible_entries(document)
     if end is None:
@@ -774,9 +774,9 @@ def style_for_range(document: dict, start: int, end: int) -> dict:
 def style_row_coverage(
     document: dict, start: int, end: int, row_key: str
 ) -> tuple[bool, bool]:
-    """返回样式在范围内的 (任意文字使用, 全部文字使用)。
+    """Return (used by any text, used by all text) for a style within the range.
 
-    空选区沿用工具栏的全文查看语义；换行符不参与覆盖率计算。
+    An empty selection keeps the toolbar's whole-text meaning; line breaks take no part in the coverage calculation.
     """
     entries = _visible_entries(document)
     start, end = _normalize_range(entries, start, end, expand_empty=True)
@@ -791,7 +791,7 @@ def style_row_coverage(
 
 
 def _styles_in_range(entries: list[_CharEntry], start: int, end: int) -> list[dict]:
-    """范围内各 text run 的样式（共享引用，仅供只读），按出现顺序去重相邻。"""
+    """The styles of the text runs in the range (shared references, read-only), with adjacent duplicates removed, in order of appearance."""
     styles: list[dict] = []
     last_run: Any = _UNSET
     for entry in entries[start:end]:

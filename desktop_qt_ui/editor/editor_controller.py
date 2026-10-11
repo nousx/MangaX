@@ -43,15 +43,15 @@ _ACTIVE_CONTROLLERS: "weakref.WeakSet" = weakref.WeakSet()
 
 
 def get_active_editor_controllers() -> list:
-    """返回当前仍存活的 EditorController 实例列表（供退出清理使用）。"""
+    """Return the list of EditorController instances that are still alive (for clean-up on exit)."""
     return list(_ACTIVE_CONTROLLERS)
 
 
 @dataclass(slots=True)
 class _AsyncRegionUpdateRequest:
-    """后台 OCR/翻译结果回主线程落库的请求。
+    """Request for writing a background OCR or translation result to the model on the main thread.
 
-    updates 保存稳定 region_id，而不是 index。index 只能在主线程真正写入前解析。
+    updates holds stable region_id values, not indexes. An index can only be resolved on the main thread, right before the write.
     """
 
     field_name: str
@@ -99,20 +99,20 @@ def _sync_white_frame_size_for_font_change(
     render_params,
     old_render_params,
 ) -> None:
-    """字体/译文/描边/字间距等属性改变后，把白框尺寸同步成字号反算尺寸。
+    """After properties such as font, translation, stroke or letter spacing change, sync the white box size to the size derived from the font size.
 
-    白框仍是渲染框（含注音等框外装饰）；锚定的是正文中心：
-    新框正中心 = (旧框正中心 + 旧正文差值) − 新正文差值，
-    差值 = calc_box_from_font 返回的正文中心 − 渲染框正中心（框内坐标）。
-    纯文本前后差值均为零，行为与"保持框中心"完全一致；富文本增删注音
-    时正文本体钉住不动，渲染框向装饰一侧扩缩。
-    标记 has_custom_white_frame=True 让其优先于 render_box 主导渲染中心。
+    The white box is still the render box (with decorations outside the body, such as ruby); what is anchored is the body centre:
+    new box centre = (old box centre + old body offset) − new body offset,
+    where offset = the body centre returned by calc_box_from_font − the exact centre of the render box (coordinates inside the box).
+    For plain text both offsets are zero and the behaviour is exactly "keep the box centre"; when ruby is added to or removed from rich text,
+    the body stays pinned and the render box grows or shrinks on the side of the decoration.
+    has_custom_white_frame=True is set so that it takes precedence over render_box in deciding the render centre.
     """
     try:
         from manga_translator.rendering import calc_box_from_font
 
         def _box_metrics(data: dict, params):
-            """返回 (框宽, 框高, 正文差值)；文本/字号无效时返回 None。"""
+            """Returns (box width, box height, body offset); None when the text or the font size is invalid."""
             font_size = int(
                 data.get("font_size") or getattr(params, "font_size", 0) or 0
             )
@@ -180,10 +180,10 @@ def _sync_white_frame_size_for_font_change(
 
 class EditorController(QObject):
     """
-    编辑器控制器 (Controller)
+    Editor controller (Controller)
 
-    负责处理编辑器的所有业务逻辑和用户交互。
-    它响应来自视图(View)的信号，调用服务(Service)执行任务，并更新模型(Model)。
+    Handles all business logic and user interaction of the editor.
+    It responds to signals from the view (View), calls services (Service) to do the work and updates the model (Model).
     """
 
     # Signal for thread-safe model updates
@@ -278,7 +278,7 @@ class EditorController(QObject):
         *,
         resize: bool = True,
     ) -> np.ndarray:
-        """加载辅助图并直接归一化为 numpy，避免 PIL/ndarray 双持有。"""
+        """Load an auxiliary image and normalise it to numpy directly, so it is not held as both PIL and ndarray."""
         detached_image = self.resource_manager.load_detached_image(image_path)
         resized_image = detached_image
         try:
@@ -305,7 +305,7 @@ class EditorController(QObject):
             self.logger.debug(f"Failed to log memory snapshot at {stage}: {e}")
 
     def _merge_live_geometry_state(self, region_index: int, region_data: dict) -> dict:
-        """为样式类更新保留当前 item 的合法持久化几何状态。"""
+        """Keep the valid persistent geometry state of the current item for a style-only update."""
         if not isinstance(region_data, dict):
             return region_data
 
@@ -332,11 +332,11 @@ class EditorController(QObject):
         task_kind: str,
         error_count: int = 0,
     ) -> None:
-        """把异步任务结果交给主线程按稳定 region_id 写回模型。
+        """Hand the result of an asynchronous task to the main thread, to be written back to the model by stable region_id.
 
-        updates: [(region_id, value), ...]。这里不读取 model、不把 id 提前解析成
-        index；主线程 slot 会在真正落库前重新定位，避免队列等待期间插入/删除
-        region 后写错目标。
+        updates: [(region_id, value), ...]. The model is not read here and ids are not resolved to an
+        index in advance; the main thread slot locates them again right before the write, so inserting or deleting
+        a region while the result waits in the queue cannot make it hit the wrong target.
         """
         if not updates:
             return
@@ -424,10 +424,11 @@ class EditorController(QObject):
         return getattr(self, "toast_manager", None)
 
     def commit_pending_edits(self) -> None:
-        """读模型做持久化决策（脏检测/导出）前，同步提交视图层攒着的本地草稿。
+        """Before the model is read for a persistence decision (dirty detection, export), commit the local drafts the view layer is holding.
 
-        目前唯一来源是浮动富文本编辑器的 debounce 草稿；将来任何"本地攒批、
-        延迟写模型"的控件都应挂到这里，而不是靠各读取路径自己记得 flush。"""
+        The only source at present is the debounce draft of the floating rich-text editor; any future control that "batches locally and
+        writes the model later" should hook in here, instead of relying on each reading path to remember to flush.
+        """
         editor = getattr(self.view, "rich_text_editor", None) if self.view else None
         if editor is None:
             return
@@ -444,7 +445,7 @@ class EditorController(QObject):
             set_compare_mode(enabled)
 
     def set_view(self, view):
-        """设置view引用，用于更新UI状态"""
+        """Set the view reference, for updating the UI state"""
         self.view = view
         graphics_view = self.get_graphics_view()
         if graphics_view is not None:
@@ -535,7 +536,7 @@ class EditorController(QObject):
 
     @pyqtSlot(dict)
     def update_multiple_translations(self, translations: dict):
-        """批量更新多个区域的译文。`translations` 是 {index: text} 字典。"""
+        """Update the translations of several regions as a batch. `translations` is an {index: text} dictionary."""
         if not translations:
             return
 
@@ -590,11 +591,11 @@ class EditorController(QObject):
         translation_raw: str,
         translation_rich: Optional[dict] = None,
     ) -> dict:
-        """写入纯文本译文。
+        """Write a plain-text translation.
 
-        ``translation_rich`` 传入同步好的文档就写入;传 ``None`` 表示没有
-        可靠的样式迁移结果(整段替换/同步失败),删除旧富文本退回纯文本,
-        避免画布继续渲染过期的富文本正文。
+        When ``translation_rich`` is given a synced document, it is written; ``None`` means there is no
+        reliable result of moving the styles (a whole-text replacement or a failed sync), and the old rich text is deleted in favour of plain text,
+        so the canvas does not go on rendering a stale rich-text body.
         """
         new_region_data = region_data.copy()
         new_region_data["translation"] = translation
@@ -606,7 +607,7 @@ class EditorController(QObject):
         return new_region_data
 
     def _auto_rich_text_rules_enabled(self) -> bool:
-        """编辑时自动应用富文本规则的开关（编辑器菜单，持久化在 app 配置）。"""
+        """Switch for applying the rich-text rules automatically while editing (editor menu, stored in the app configuration)."""
         try:
             config = self.config_service.get_config()
         except Exception:
@@ -623,7 +624,7 @@ class EditorController(QObject):
         raw_mode: bool,
         new_translation: str,
     ) -> Optional[dict]:
-        """对齐逻辑在后端 rich_text_sync;这里只取字段转发。"""
+        """The alignment logic is in the backend, rich_text_sync; only the fields are picked and forwarded here."""
         from manga_translator.rendering.rich_text_sync import (
             sync_region_rich_translation,
         )
@@ -641,7 +642,7 @@ class EditorController(QObject):
     def _rules_rich_for_full_replacement(
         self, region_data: dict, translation: str
     ) -> Optional[dict]:
-        """整段替换路径:旧富文本被丢弃,新译文按全量语义跑自动富文本规则。"""
+        """Whole-text replacement path: the old rich text is dropped, and the automatic rich-text rules run on the new translation with full semantics."""
         if not self._auto_rich_text_rules_enabled():
             return None
         from manga_translator.rendering.rich_text_sync import (
@@ -822,7 +823,7 @@ class EditorController(QObject):
         )
 
     def _apply_translation_replacements(self, region_data: dict, raw_text: str) -> str:
-        """对译文跑 text_replacements 规则；规则失败时回退原文。"""
+        """Run the text_replacements rules on a translation; when the rules fail, fall back to the original text."""
         from manga_translator.rendering.text_replacements import apply_replacements
 
         # Derive direction (see L57: ('h','horizontal','hr') is horizontal, anything else counts as vertical)
@@ -836,7 +837,7 @@ class EditorController(QObject):
 
     @pyqtSlot(int, str, object)
     def update_translation_raw(self, region_index: int, raw_text: str, edit_info=None):
-        """编辑替换前译文:实时跑 apply_replacements 同步到 translation 字段。"""
+        """Editing the translation before replacement: apply_replacements runs live and syncs to the translation field."""
         old_region_data = self.model.get_region_by_index(region_index)
         if not old_region_data:
             return
@@ -906,7 +907,7 @@ class EditorController(QObject):
         merge_key: str,
         translation_rich: Optional[dict] = None,
     ) -> bool:
-        """同时更新 translation 和 translation_raw,共用一个 Undo Command(撤销时一起回滚)。"""
+        """Update translation and translation_raw together in one undo command (an undo rolls both back)."""
         old_region_data = self.model.get_region_by_index(region_index)
         if not old_region_data:
             return False
@@ -1112,7 +1113,7 @@ class EditorController(QObject):
 
     @pyqtSlot(int, dict)
     def update_region_geometry(self, region_index: int, new_region_data: dict):
-        """处理来自视图的区域几何变化。"""
+        """Handle a geometry change of a region coming from the view."""
         # RegionTextItem no longer modifies self.region_data before calling the callback,
         # so the correct old data can be read from the model
         old_region_data = self.model.get_region_by_index(region_index)
@@ -1136,7 +1137,7 @@ class EditorController(QObject):
     # ------------------------------------------------------------------
 
     def align_regions(self, mode: str, reference: str) -> None:
-        """批量对齐选中的区域。
+        """Align the selected regions as a batch.
 
         mode: top / vertical_center / bottom / left / horizontal_center / right
         reference: "selection" | "canvas"
@@ -1189,10 +1190,10 @@ class EditorController(QObject):
         self._sync_items_positions(results, items)
 
     def _sync_items_positions(self, results, items):
-        """对齐后即时同步 item.center 到新位置（只动 center，不动 wf_local）。
+        """After aligning, sync item.center to the new position at once (only center moves, not wf_local).
 
-        白框在本地坐标相对 center 不变，只改 center 让整个 item 移到目标位置。
-        模型 center 已由 MultiRegionUpdateCommand 更新，这里仅刷新 Qt item 视觉。
+        The white box does not move relative to center in local coordinates; only center changes, which moves the whole item to the target position.
+        The model center was already updated by MultiRegionUpdateCommand; only the look of the Qt item is refreshed here.
         """
         from PyQt6.QtCore import QPointF
 
@@ -1221,7 +1222,7 @@ class EditorController(QObject):
             item._invalidate_scene_rect(old_rect)
 
     def distribute_regions(self, mode: str) -> None:
-        """批量均分选中区域的间距。
+        """Distribute the selected regions evenly as a batch.
 
         mode: top / vertical_center / bottom / left / horizontal_center / right
         """
@@ -1422,7 +1423,7 @@ class EditorController(QObject):
         self._update_undo_redo_buttons()
 
     def execute_command(self, command, update_ui: bool = True):
-        """执行命令并更新UI - 使用 Qt 的 QUndoStack"""
+        """Run a command and update the UI - with Qt's QUndoStack"""
         if command is None:
             return
         self.history_service.execute(command)
@@ -1430,24 +1431,24 @@ class EditorController(QObject):
             self._update_undo_redo_buttons()
 
     def undo(self):
-        """撤销操作 - 使用 Qt 的 QUndoStack"""
+        """Undo - with Qt's QUndoStack"""
         self.history_service.undo()
         self._update_undo_redo_buttons()
 
     def redo(self):
-        """重做操作 - 使用 Qt 的 QUndoStack"""
+        """Redo - with Qt's QUndoStack"""
         self.history_service.redo()
         self._update_undo_redo_buttons()
 
     # --- Paste overlay operations ---
     def _normalize_paste_overlays(self, overlays) -> list:
-        """贴片列表规范化（统一补默认值/id），保证 undo/redo 快照 id 稳定。"""
+        """Normalise the paste overlay list (defaults and ids filled in), so the ids of undo/redo snapshots are stable."""
         from editor.paste_overlay_state import serialize_paste_overlays
 
         return serialize_paste_overlays(overlays or [])
 
     def add_paste_overlay(self, overlay: dict) -> bool:
-        """新增一个贴片（支持撤销）。overlay 可为未规范化字典。"""
+        """Add a paste overlay (with undo). overlay may be a dictionary that is not normalised yet."""
         from editor.commands import PasteOverlaysReplaceCommand
 
         if self.model.get_source_image_path() is None:
@@ -1464,7 +1465,7 @@ class EditorController(QObject):
         return True
 
     def update_paste_overlay(self, overlay_id: str, patch: dict) -> bool:
-        """按 id 更新一个贴片（patch 按字段合并，支持撤销）。"""
+        """Update a paste overlay by id (patch is merged field by field; with undo)."""
         from editor.commands import PasteOverlaysReplaceCommand
 
         if self.model.get_source_image_path() is None:
@@ -1488,7 +1489,7 @@ class EditorController(QObject):
         return True
 
     def remove_paste_overlay(self, overlay_id: str) -> bool:
-        """按 id 删除一个贴片（支持撤销）。"""
+        """Delete a paste overlay by id (with undo)."""
         from editor.commands import PasteOverlaysReplaceCommand
 
         if self.model.get_source_image_path() is None:
@@ -1505,7 +1506,7 @@ class EditorController(QObject):
         return True
 
     def replace_paste_overlays(self, overlays: list) -> bool:
-        """整表替换贴片列表（用于拖放导入、z 序调整等，支持撤销）。"""
+        """Replace the whole paste overlay list (for drag-and-drop import, z-order changes and so on; with undo)."""
         from editor.commands import PasteOverlaysReplaceCommand
 
         if self.model.get_source_image_path() is None:
@@ -1522,7 +1523,7 @@ class EditorController(QObject):
         return True
 
     def copy_paste_overlay(self, overlay_id: str) -> bool:
-        """复制贴片到贴片剪贴板。"""
+        """Copy a paste overlay to the overlay clipboard."""
         if self.model.get_source_image_path() is None:
             return False
         for overlay in self.model.get_paste_overlays():
@@ -1533,14 +1534,14 @@ class EditorController(QObject):
         return False
 
     def last_clipboard_kind(self) -> str | None:
-        """返回最近一次复制的对象类型 ('paste_overlay' | 'region' | None)。"""
+        """Return the type of the object copied most recently ('paste_overlay' | 'region' | None)."""
         return getattr(self, "_last_clipboard_kind", None)
 
     def paste_overlay_clipboard_available(self) -> bool:
         return bool(getattr(self, "_paste_overlay_clipboard", None))
 
     def paste_paste_overlay(self, center: tuple[float, float] | None = None) -> bool:
-        """粘贴贴片：无 center 时相对原位置偏移 (+20,+20)，有则落在 center。"""
+        """Paste a paste overlay: without center it is offset by (+20,+20) from the original position; with center it lands there."""
         clipboard = getattr(self, "_paste_overlay_clipboard", None)
         if clipboard is None or self.model.get_source_image_path() is None:
             return False
@@ -1556,14 +1557,14 @@ class EditorController(QObject):
         return self.add_paste_overlay(clone)
 
     def duplicate_paste_overlay(self, overlay_id: str) -> bool:
-        """原地复制一份贴片（偏移 +20, +20），便于快捷键/右键复制副本。"""
+        """Duplicate a paste overlay in place (offset +20, +20), for the shortcut and the context menu."""
         if not self.copy_paste_overlay(overlay_id):
             return False
         return self.paste_paste_overlay()
 
     # --- Context menu methods ---
     def ocr_regions(self, region_indices: list):
-        """对指定区域进行OCR识别，使用与UI按钮相同的逻辑"""
+        """Run OCR on the given regions, with the same logic as the UI button"""
         if not region_indices:
             return
 
@@ -1580,7 +1581,7 @@ class EditorController(QObject):
         self.model.set_selection(original_selection)
 
     def translate_regions(self, region_indices: list):
-        """翻译指定区域的文本，使用与UI按钮相同的逻辑"""
+        """Translate the text of the given regions, with the same logic as the UI button"""
         if not region_indices:
             return
 
@@ -1597,11 +1598,11 @@ class EditorController(QObject):
         self.model.set_selection(original_selection)
 
     def copy_region(self, region_index: int):
-        """复制指定区域的数据"""
+        """Copy the data of the given region"""
         self.copy_regions([region_index])
 
     def copy_regions(self, region_indices: list):
-        """复制多个区域的数据"""
+        """Copy the data of several regions"""
         regions = self.model.get_regions()
         region_data = [
             copy.deepcopy(regions[index])
@@ -1616,7 +1617,7 @@ class EditorController(QObject):
         self._last_clipboard_kind = "region"
 
     def paste_region_style(self, region_index: int):
-        """将复制的样式粘贴到指定区域"""
+        """Paste the copied style onto the given region"""
         clipboard_data = self.history_service.paste_from_clipboard()
         if isinstance(clipboard_data, list):
             clipboard_data = clipboard_data[0] if clipboard_data else None
@@ -1657,7 +1658,7 @@ class EditorController(QObject):
         self.execute_command(command)
 
     def delete_regions(self, region_indices: list):
-        """删除指定的区域。"""
+        """Delete the given regions."""
         if not region_indices:
             return
 
@@ -1759,7 +1760,7 @@ class EditorController(QObject):
         return max(0, int(round(offset * 0.3)))
 
     def enter_drawing_mode(self):
-        """进入绘制模式以添加新文本框"""
+        """Enter drawing mode to add a new text box"""
         # Clear the current selection
         self.model.set_selection([])
 
@@ -1779,14 +1780,14 @@ class EditorController(QObject):
         )
 
     def paste_region(self, mouse_pos=None):
-        """粘贴复制的区域到新位置"""
+        """Paste the copied region at a new position"""
         self.paste_regions(mouse_pos)
 
     def paste_regions(self, mouse_pos=None):
-        """粘贴剪贴板中的所有区域，并保持它们之间的相对位置
+        """Paste all regions in the clipboard, keeping their positions relative to each other
 
-        参数:
-            mouse_pos: 鼠标位置 (scene coordinates),如果提供则整组粘贴到该位置
+        Args:
+            mouse_pos: the mouse position (scene coordinates); when given, the whole group is pasted there
         """
         clipboard_data = self.history_service.paste_from_clipboard()
         if not clipboard_data:
@@ -1840,13 +1841,13 @@ class EditorController(QObject):
 
     @pyqtSlot(bool, bool)
     def _on_history_undo_redo_state_changed(self, can_undo: bool, can_redo: bool):
-        """历史栈状态变化回调。"""
+        """Callback for a change of the history stack state."""
         toolbar = self.get_toolbar()
         if toolbar is not None:
             toolbar.update_undo_redo_state(can_undo, can_redo)
 
     def _update_undo_redo_buttons(self):
-        """主动刷新撤销/重做按钮状态。"""
+        """Refresh the state of the undo/redo buttons on request."""
         # Check whether history_service is initialised
         if not hasattr(self, "history_service") or self.history_service is None:
             return
@@ -1857,7 +1858,7 @@ class EditorController(QObject):
 
     @pyqtSlot()
     def save_editor_state(self) -> bool:
-        """保存编辑器工程数据，不生成导出图片。"""
+        """Save the editor project data, without producing an exported image."""
         return self.export_service.save_editor_state()
 
     @pyqtSlot()
@@ -1870,7 +1871,7 @@ class EditorController(QObject):
 
     @pyqtSlot(str)
     def set_display_mode(self, mode: str):
-        """设置编辑器显示模式。"""
+        """Set the display mode of the editor."""
         compare_enabled = mode == "compare_original_split"
         region_mode = "full" if compare_enabled else mode
         if region_mode not in {"full", "text_only", "box_only", "none"}:
@@ -1884,7 +1885,7 @@ class EditorController(QObject):
 
     @pyqtSlot(int)
     def set_original_image_alpha(self, alpha: int):
-        """将工具栏百分比记录为会话级用户透明度。"""
+        """Record the toolbar percentage as the user's opacity for this session."""
         self.model.set_original_image_alpha_override(alpha / 100.0)
 
     def handle_global_render_setting_change(self):
@@ -1956,7 +1957,7 @@ class EditorController(QObject):
 
     @pyqtSlot(object)
     def on_regions_update_finished(self, request):
-        """OCR/翻译异步写回：主线程按 region_id 重新定位并合并通知视图。"""
+        """Asynchronous write-back of OCR and translation: the main thread locates the regions again by region_id and notifies the view once."""
         applied_count = 0
         skipped_count = 0
         try:
@@ -2046,12 +2047,12 @@ class EditorController(QObject):
 
     @pyqtSlot(str, str)
     def _on_ocr_finished(self, status: str, message: str):
-        """OCR完成后在主线程处理Toast。"""
+        """Handle the toast on the main thread after OCR is done."""
         self._finalize_progress_toast("_ocr_toast", status, message)
 
     @pyqtSlot(str, str)
     def _on_translation_finished(self, status: str, message: str):
-        """翻译完成后在主线程处理Toast。"""
+        """Handle the toast on the main thread after translation is done."""
         self._finalize_progress_toast("_translation_toast", status, message)
 
     async def _async_ocr_task(self, image, regions_to_process, region_ids, ocr_config):
@@ -2193,7 +2194,7 @@ class EditorController(QObject):
 
     @pyqtSlot(int, int)
     def move_region_from_list(self, source_index: int, target_index: int):
-        """将译文列表的拖放操作写入模型和撤销历史。"""
+        """Write a drag-and-drop in the translation list to the model and the undo history."""
         if source_index == target_index:
             return
         region_count = len(self.model.get_regions())

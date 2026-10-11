@@ -52,7 +52,7 @@ def _map_dst_points_to_screen(dst_points: np.ndarray, transform) -> np.ndarray:
 
 
 def _native_rect_points(center, width: int, height: int, angle: float) -> np.ndarray:
-    """按原生像素宽高生成实际渲染四角；只旋转，不缩放。"""
+    """Build the actual rendered corners from the native pixel width and height; rotation only, no scaling."""
     cx, cy = float(center[0]), float(center[1])
     hw, hh = float(width) / 2.0, float(height) / 2.0
     local = np.array(
@@ -78,8 +78,8 @@ def render_text_image_for_region(
     total_regions: int = 1,
 ):
     """
-    为单个区域渲染文本的核心函数
-    返回一个包含 (QImage, QPointF) 的元组，适合离屏/线程内处理。
+    Core function that renders the text of a single region.
+    Returns a tuple of (QImage, QPointF), suitable for off-screen use or use inside a thread.
     """
     text_to_render = render_text_value_from_text_block(text_block)
     if not has_renderable_text(text_to_render):

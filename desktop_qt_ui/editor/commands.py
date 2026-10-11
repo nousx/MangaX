@@ -40,13 +40,13 @@ def _build_region_patch(old_data: Dict[str, Any], new_data: Dict[str, Any]) -> D
 
 
 def _stable_command_id(key: str) -> int:
-    """将 merge_key 稳定映射为 QUndoCommand.id 所需的整数。"""
+    """Map merge_key stably to the integer QUndoCommand.id needs."""
     digest = hashlib.sha1(key.encode("utf-8")).digest()
     return int.from_bytes(digest[:4], byteorder="little", signed=False) & 0x7FFFFFFF
 
 
 class UpdateRegionCommand(QUndoCommand):
-    """更新单个区域数据：只做 undo/redo 状态转换，通知由 EditorModel 发出。"""
+    """Update the data of a single region: only the undo/redo state change; the notification is sent by EditorModel."""
 
     def __init__(
         self,
@@ -108,7 +108,7 @@ class UpdateRegionCommand(QUndoCommand):
 
 
 class AddRegionCommand(QUndoCommand):
-    """用于添加新区域的命令。"""
+    """Command for adding a new region."""
 
     def __init__(self, model: "EditorModel", region_data: Dict[str, Any], description: str = "Add Region"):
         super().__init__(description)
@@ -117,18 +117,18 @@ class AddRegionCommand(QUndoCommand):
         self._index: Optional[int] = None
 
     def redo(self):
-        """执行添加操作。"""
+        """Run the add."""
         target_index = self._index if self._index is not None else len(self._model.get_regions())
         self._index = self._model.insert_region(target_index, copy.deepcopy(self._region_data))
 
     def undo(self):
-        """撤销添加操作。"""
+        """Undo the add."""
         if self._index is not None:
             self._model.remove_region(self._index)
 
 
 class DeleteRegionCommand(QUndoCommand):
-    """用于删除区域的命令。"""
+    """Command for deleting a region."""
 
     def __init__(
         self,
@@ -166,19 +166,19 @@ class DeleteRegionCommand(QUndoCommand):
             self._model.set_masks(**masks)
 
     def redo(self):
-        """执行删除操作。"""
+        """Run the delete."""
         self._model.remove_region(self._index)
         self._apply_masks(self._new_raw_mask, self._new_refined_mask)
 
     def undo(self):
-        """撤销删除操作。"""
+        """Undo the delete."""
         self._index = self._model.insert_region(self._index, copy.deepcopy(self._deleted_data))
         self._apply_masks(self._old_raw_mask, self._old_refined_mask)
         self._model.set_selection([self._index])
 
 
 class MoveRegionCommand(QUndoCommand):
-    """调整区域顺序，同时支持撤销和重做。"""
+    """Reorder regions, with undo and redo."""
 
     def __init__(
         self,
@@ -200,7 +200,7 @@ class MoveRegionCommand(QUndoCommand):
 
 
 class MaskEditCommand(QUndoCommand):
-    """用于处理蒙版编辑的命令。"""
+    """Command for mask edits."""
 
     def __init__(self, model: "EditorModel", old_mask: np.ndarray, new_mask: np.ndarray, repair_mask: Optional[np.ndarray] = None):
         super().__init__("Edit Mask")
@@ -289,10 +289,10 @@ class MaskEditCommand(QUndoCommand):
 
 
 class PaintOverlayEditCommand(QUndoCommand):
-    """用于彩色画笔/印章图层编辑的撤销/重做命令。
+    """Undo/redo command for edits of the colour brush and stamp layers.
 
-    图层为 RGBA uint8 数组（H, W, 4）。为了减少内存，只记录变化包围盒内的像素。
-    layer='paint' 作用于画笔层，layer='stamp' 作用于印章层。
+    A layer is an RGBA uint8 array (H, W, 4). To save memory, only the pixels inside the bounding box of the change are recorded.
+    layer='paint' applies to the brush layer, layer='stamp' to the stamp layer.
     """
 
     def __init__(
@@ -407,7 +407,7 @@ class PaintOverlayEditCommand(QUndoCommand):
 
 
 class MultiRegionUpdateCommand(QUndoCommand):
-    """批量更新多条 region：构造时按索引提取 patch，redo/undo 经 update_regions 一次通知。"""
+    """Update several regions as a batch: the patches are extracted by index at construction, and redo/undo notify once through update_regions."""
 
     def __init__(
         self,
@@ -453,10 +453,10 @@ class MultiRegionUpdateCommand(QUndoCommand):
 
 
 class PasteOverlaysReplaceCommand(QUndoCommand):
-    """整表替换贴片列表的 undo/redo（保存 before/after 快照）。
+    """Undo/redo of replacing the whole paste overlay list (keeps before/after snapshots).
 
-    通知统一由 :meth:`EditorModel.set_paste_overlays` 广播（经
-    ``paste_overlays_changed`` 信号），本命令只做文档状态转换，不直接触碰视图。
+    The notification is always broadcast by :meth:`EditorModel.set_paste_overlays` (through the
+    ``paste_overlays_changed`` signal); this command only changes the document state and does not touch the view directly.
     """
 
     def __init__(

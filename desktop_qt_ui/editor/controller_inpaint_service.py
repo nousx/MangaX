@@ -30,7 +30,7 @@ class _InpaintFailure:
 
 
 class EditorControllerInpaintService:
-    """蒙版与 inpaint 流程；可变请求状态只存放在 EditorSession。"""
+    """Mask and inpaint flow; mutable request state lives only in EditorSession."""
 
     def __init__(self, controller: "EditorController"):
         self.controller = controller
@@ -289,7 +289,7 @@ class EditorControllerInpaintService:
 
     @staticmethod
     async def async_inpaint(request: InpaintRequest) -> Optional[InpaintArtifact]:
-        """执行完整或增量修复；除不可变 request 外不读取实时状态。"""
+        """Run full or incremental inpainting; apart from the immutable request, no live state is read."""
         current_mask = request.mask
         previous = request.previous_artifact
         if (

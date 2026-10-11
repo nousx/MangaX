@@ -261,28 +261,28 @@ class EditorLogic(QObject):
             self.add_folders(folders)
 
     def add_files(self, files: List[str]):
-        """后台添加文件，不在 GUI 线程识别 JSON 或缩略图。"""
+        """Add files in the background; JSON and thumbnails are not identified on the GUI thread."""
         if not files:
             return
         self._add_sources(files, load_first=not self.file_model.files)
 
     def add_folders(self, folder_paths: List[str]):
-        """添加目录源；完整目录树由常驻后台线程池构建。"""
+        """Add a folder source; the full folder tree is built by the long-lived background thread pool."""
         self._add_sources(folder_paths, load_first=not self.file_model.files)
 
     @pyqtSlot(list)
     def add_files_from_paths(self, paths: List[str]):
         """
-        从拖放的路径列表中添加文件和文件夹
+        Add files and folders from a list of dropped paths
 
         Args:
-            paths: 拖放的文件或文件夹路径列表
+            paths: list of the dropped file or folder paths
         """
         self._add_sources(paths, load_first=not self.file_model.files)
 
     @pyqtSlot(str)
     def remove_file(self, file_path: str):
-        """从内存模型移除；后续后台重建通过 exclusion 保持删除结果。"""
+        """Remove from the in-memory model; later background rebuilds keep the removal through exclusion."""
         target_key = canonical_path_key(file_path)
         target_node = None
         stack = list(self._snapshot.roots)
@@ -366,7 +366,7 @@ class EditorLogic(QObject):
 
     @pyqtSlot()
     def clear_list(self):
-        """清空文件列表"""
+        """Clear the file list"""
         self.file_data_service.cancel(self._file_channel)
         self._source_paths.clear()
         self._source_keys.clear()
@@ -402,7 +402,7 @@ class EditorLogic(QObject):
     @pyqtSlot(str)
     def load_image_into_editor(self, file_path: str):
         """
-        加载图片到编辑器（统一接口）
+        Load an image into the editor (single interface)
         """
         resolved_path = self._source_by_key.get(canonical_path_key(file_path))
         if resolved_path is None and self.file_model.get_file_item(file_path):

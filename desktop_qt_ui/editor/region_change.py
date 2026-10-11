@@ -8,12 +8,12 @@ RegionChangeKind = Literal["reset", "updated", "inserted", "removed"]
 
 @dataclass(frozen=True)
 class RegionChange:
-    """region 数据的一次变更通知：kind 决定视图的最小刷新方式。
+    """One change notification for region data: kind decides the smallest refresh the view has to do.
 
-    - updated:  indices 中各 region 的内容变化，item 就地刷新
-    - inserted: indices 位置插入了新 region
-    - removed:  indices 位置的 region 已删除
-    - reset:    文档级变化（换图/清空/导入/全局渲染参数），全量重建
+    - updated:  the content of the regions in indices changed; the items are refreshed in place
+    - inserted: new regions were inserted at the positions in indices
+    - removed:  the regions at the positions in indices were deleted
+    - reset:    a document-level change (image switch, clear, import, global render parameters); everything is rebuilt
     """
 
     kind: RegionChangeKind

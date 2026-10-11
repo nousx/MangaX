@@ -12,7 +12,7 @@ from .resources import ImageResource
 
 
 def _release_gpu_memory():
-    """释放GPU显存"""
+    """Free GPU memory"""
     try:
         import torch
 
@@ -26,7 +26,7 @@ def _release_gpu_memory():
 
 
 def _trim_working_set() -> bool:
-    """提示 Windows 回收当前进程工作集。"""
+    """Ask Windows to trim the working set of the current process."""
     try:
         import ctypes
         import os
@@ -81,7 +81,7 @@ class ResourceManager:
     """Shared editor image LRU and prefetch store."""
 
     def __init__(self):
-        """初始化资源管理器"""
+        """Initialise the resource manager"""
         self.logger = logging.getLogger(__name__)
 
         # The image cache and current are accessed by the read-ahead thread, the load thread and the main thread at the same time
@@ -101,7 +101,7 @@ class ResourceManager:
 
     @staticmethod
     def _resolve_image_path(image_path: str) -> str:
-        """规范化图片路径并校验存在性。"""
+        """Normalise an image path and check that it exists."""
         from pathlib import Path
 
         path_obj = Path(image_path)
@@ -112,7 +112,7 @@ class ResourceManager:
         return str(path_obj.resolve())
 
     def load_image(self, image_path: str) -> ImageResource:
-        """加载当前编辑底图资源，并更新 current_image。"""
+        """Load the base image resource being edited and update current_image."""
         image_path = self._resolve_image_path(image_path)
 
         with self._lock:
@@ -153,7 +153,7 @@ class ResourceManager:
             return resource
 
     def prefetch_image(self, image_path: str) -> ImageResource:
-        """预读图片资源到 LRU，不切换 current_image。"""
+        """Read an image resource ahead into the LRU, without switching current_image."""
         image_path = self._resolve_image_path(image_path)
 
         with self._lock:
@@ -204,20 +204,20 @@ class ResourceManager:
             return resource
 
     def load_detached_image(self, image_path: str) -> Image.Image:
-        """加载辅助图片，不写入 current_image，也不污染缓存。"""
+        """Load an auxiliary image, without writing current_image and without polluting the cache."""
         image_path = self._resolve_image_path(image_path)
         self.logger.debug(f"Loading detached image: {image_path}")
         return open_pil_image(image_path, eager=True)
 
     def _add_to_cache(self, path: str, resource: ImageResource) -> None:
-        """添加图片到缓存（调用方须持有 self._lock）
+        """Add an image to the cache (the caller must hold self._lock)
 
-        淘汰策略为真 LRU：按 last_access 取最久未访问者，且**永不淘汰当前页**——
-        当前页被淘汰会让 _current_image 与缓存失联，切回时还要重新解码。
+        Eviction is a true LRU: the entry with the oldest last_access goes, and **the current page is never evicted** -
+        evicting it would disconnect _current_image from the cache, and it would have to be decoded again on switching back.
 
         Args:
-            path: 图片路径
-            resource: 图片资源
+            path: the image path
+            resource: the image resource
         """
         if len(self._image_cache) >= self._cache_limit:
             current = self._current_image
@@ -242,13 +242,13 @@ class ResourceManager:
         self._image_cache[path] = resource
 
     def release_image_from_cache(self, path: str) -> bool:
-        """从缓存中释放指定图片
+        """Release the given image from the cache
 
         Args:
-            path: 图片路径
+            path: the image path
 
         Returns:
-            bool: 是否成功释放
+            bool: whether it was released
         """
         from pathlib import Path
 
@@ -263,7 +263,7 @@ class ResourceManager:
         return True
 
     def clear_image_cache(self) -> None:
-        """清空所有图片缓存"""
+        """Clear the whole image cache"""
         with self._lock:
             for resource in self._image_cache.values():
                 resource.release()
@@ -271,7 +271,7 @@ class ResourceManager:
         _release_gpu_memory()
 
     def release_image_cache_except_current(self, force: bool = False) -> int:
-        """只保留当前图，释放 image_cache 中的其他图片。"""
+        """Keep only the current image and release the other images in image_cache."""
         if (
             not force
             and _current_process_memory_bytes() < self._export_cleanup_threshold_bytes
@@ -293,10 +293,10 @@ class ResourceManager:
         return removed
 
     def unload_image(self, release_from_cache: bool = False) -> None:
-        """卸载当前图片及所有关联资源
+        """Unload the current image and all resources linked to it
 
         Args:
-            release_from_cache: 是否同时从缓存中释放该图片
+            release_from_cache: whether the image is released from the cache as well
         """
         with self._lock:
             if self._current_image:
@@ -318,16 +318,16 @@ class ResourceManager:
         self.logger.debug("Image unloaded and memory released")
 
     def get_current_image(self) -> Optional[ImageResource]:
-        """获取当前图片资源
+        """Get the current image resource
 
         Returns:
-            Optional[ImageResource]: 当前图片资源，如果没有加载返回None
+            Optional[ImageResource]: the current image resource, or None when nothing is loaded
         """
         with self._lock:
             return self._current_image
 
     def get_managed_images(self) -> List[Image.Image]:
-        """返回当前资源管理器仍在持有的图像对象。"""
+        """Return the image objects the resource manager still holds."""
         images: List[Image.Image] = []
         with self._lock:
             if (
@@ -394,5 +394,5 @@ class ResourceManager:
         _trim_working_set()
 
     def __del__(self):
-        """析构函数"""
+        """Destructor"""
         self.cleanup_all()

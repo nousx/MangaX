@@ -1,6 +1,6 @@
 """
-对齐与分布数学计算模块（无 Qt 依赖，纯数值计算）。
-对应 PS 移动工具选项栏中"对齐"和"分布"两组按钮的行为。
+Maths for aligning and distributing (no Qt dependency, pure numeric calculation).
+Matches the behaviour of the "align" and "distribute" button groups in the options bar of the Photoshop move tool.
 """
 
 from __future__ import annotations
@@ -35,7 +35,7 @@ def _white_frame_coordinate(
 def compute_selection_bounds(
     items: list["RegionTextItem"],
 ) -> tuple[float, float, float, float] | None:
-    """计算所有选中项白框在世界坐标中的包围盒 (min_x, min_y, max_x, max_y)。"""
+    """Compute the bounding box (min_x, min_y, max_x, max_y) of the white boxes of all selected items in world coordinates."""
     min_x = float("inf")
     min_y = float("inf")
     max_x = float("-inf")
@@ -67,7 +67,7 @@ def _get_target_line(
     bounds: tuple[float, float, float, float],
     canvas_rect: tuple[float, float, float, float] | None,
 ) -> float | None:
-    """返回对齐目标线的坐标值（x 或 y，取决于 mode）。"""
+    """Return the coordinate of the alignment target line (x or y, depending on mode)."""
     min_x, min_y, max_x, max_y = bounds
     cmid_x = (min_x + max_x) / 2.0
     cmid_y = (min_y + max_y) / 2.0
@@ -107,11 +107,11 @@ def align_items(
     canvas_rect: tuple[float, float, float, float] | None = None,
 ) -> list[tuple[int, float, float]]:
     """
-    对齐多个选中项。返回 [(region_index, new_center_x, new_center_y), ...]。
+    Align several selected items. Returns [(region_index, new_center_x, new_center_y), ...].
 
     mode: top / vertical_center / bottom / left / horizontal_center / right
     reference: "selection" | "canvas"
-    canvas_rect: 画布参照模式下图片的 sceneBoundingRect (min_x, min_y, max_x, max_y)，可为 None
+    canvas_rect: the sceneBoundingRect (min_x, min_y, max_x, max_y) of the image when the canvas is the reference; may be None
     """
     bounds = compute_selection_bounds(items)
     if bounds is None:
@@ -144,8 +144,8 @@ def distribute_items(
     mode: str,
 ) -> list[tuple[int, float, float]]:
     """
-    均分多个选中项的间距。返回 [(region_index, new_center_x, new_center_y), ...]。
-    两端不动，中间项均分。
+    Distribute several selected items evenly. Returns [(region_index, new_center_x, new_center_y), ...].
+    The two ends stay where they are and the items in between are spread evenly.
 
     mode: top / vertical_center / bottom / left / horizontal_center / right
     """
@@ -194,10 +194,10 @@ def distribute_spacing_items(
     orientation: str,
 ) -> list[tuple[int, float, float]]:
     """
-    真正的间距分布：等分 item 之间的空白间隙，而非等分边缘/中心位置。
+    True distribution by spacing: the empty gaps between the items are made equal, not the edge or centre positions.
 
     orientation: "vertical" | "horizontal"
-    返回 [(region_index, new_center_x, new_center_y), ...]
+    Returns [(region_index, new_center_x, new_center_y), ...]
     """
     if len(items) < 3:
         return []

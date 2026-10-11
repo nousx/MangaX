@@ -144,7 +144,7 @@ class ExportOutcome:
 
 
 class EditorControllerExportService:
-    """编辑器工程保存与渲染图片导出流程。"""
+    """Flow for saving the editor project and exporting the rendered image."""
 
     def __init__(self, controller: "EditorController"):
         self.controller = controller
@@ -173,11 +173,11 @@ class EditorControllerExportService:
         return self.controller.config_service
 
     def has_unsaved_changes(self) -> bool:
-        """脏检测唯一真相源：仅成功保存工程数据后标记 clean。"""
+        """Single source of truth for dirty detection: clean is only set after the project data was saved successfully."""
         return not self.controller.history_service.is_clean()
 
     def save_editor_state(self) -> bool:
-        """同步保存 JSON 与当前内存快照中的修复图，不等待后台修复。"""
+        """Save the JSON and the inpainted image of the current in-memory snapshot synchronously, without waiting for background inpainting."""
         self.controller.commit_pending_edits()
         source_path = self.model.get_source_image_path()
         if not source_path:
@@ -364,7 +364,7 @@ class EditorControllerExportService:
 
     @classmethod
     def apply_white_frame_center(cls, region: dict) -> None:
-        """将 center 重算为白框世界中心，并同步平移 local 坐标以免漂移。"""
+        """Recompute center as the world centre of the white box and shift the local coordinates with it, to avoid drift."""
         wf_local = cls.resolve_effective_box_local(region)
         if not (isinstance(wf_local, (list, tuple)) and len(wf_local) == 4):
             return

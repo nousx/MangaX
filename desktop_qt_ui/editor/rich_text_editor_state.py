@@ -157,7 +157,7 @@ class RichTextEditorState:
             return False
 
     def _with_auto_rules(self, old_editor_text: str, document: dict) -> dict:
-        """打字后按新旧文本匹配对比应用自动富文本规则（规则只加样式不改字）。"""
+        """After typing, apply the automatic rich-text rules by comparing matches on the old and the new text (rules only add styles and never change characters)."""
         from manga_translator.rendering.rich_text_rules import apply_rich_text_rules
 
         try:

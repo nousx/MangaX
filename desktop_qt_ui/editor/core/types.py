@@ -4,7 +4,7 @@ from enum import Enum
 
 
 class MaskType(str, Enum):
-    """蒙版类型"""
+    """Mask type"""
     RAW = "raw"              # Raw mask
     REFINED = "refined"      # Refined mask
 

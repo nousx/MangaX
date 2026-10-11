@@ -94,9 +94,9 @@ def _qimage_from_array(array: np.ndarray, *, premultiplied: bool = False) -> QIm
 def _resize_rgba_premultiplied(
     array: np.ndarray, target_w: int, target_h: int, interpolation
 ) -> np.ndarray:
-    """RGBA 缩放前先预乘 alpha，避免边缘 RGB 与透明像素 (RGB=0) 混色产生黑边。
+    """Premultiply alpha before scaling RGBA, so edge RGB does not mix with transparent pixels (RGB=0) into a black fringe.
 
-    返回的数组是「预乘 alpha」格式，调用方需要用 Format_RGBA8888_Premultiplied 渲染。
+    The returned array is in "premultiplied alpha" format, and the caller has to render it with Format_RGBA8888_Premultiplied.
     """
     rgba = array.astype(np.float32, copy=False)
     alpha = rgba[..., 3:4] / 255.0
