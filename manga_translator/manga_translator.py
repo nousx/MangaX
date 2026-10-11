@@ -5058,6 +5058,175 @@ class MangaTranslator:
 
         return ctx
 
+    @staticmethod
+    def _attach_high_quality_batch_data(batch: List[tuple], merged_ctx: Context) -> None:
+        """Give the high-quality translators the page images and regions of the batch."""
+        hq_batch_data = []
+        global_text_index = 1  # 全局文本编号从1开始（与提示词中的编号一致）
+        for ctx, _ in batch:
+            if ctx.text_regions:
+                num_regions = len(ctx.text_regions)
+                # 为当前图片生成全局连续的文本编号
+                text_order = list(range(global_text_index, global_text_index + num_regions))
+                global_text_index += num_regions
+
+                upscaled_size = None
+                # 使用超分后的图片尺寸（如果有超分），否则使用上色后的图片尺寸
+                # 注意：需要处理 PIL Image 和 numpy array 两种情况
+                from PIL import Image as PILImage
+                if hasattr(ctx, 'upscaled') and ctx.upscaled is not None:
+                    if isinstance(ctx.upscaled, PILImage.Image):
+                        w, h = ctx.upscaled.size
+                        upscaled_size = (h, w)  # 转换为 (height, width)
+                    else:
+                        upscaled_size = ctx.upscaled.shape[:2]  # numpy: (height, width)
+                elif hasattr(ctx, 'img_colorized') and ctx.img_colorized is not None:
+                    if isinstance(ctx.img_colorized, PILImage.Image):
+                        w, h = ctx.img_colorized.size
+                        upscaled_size = (h, w)
+                    else:
+                        upscaled_size = ctx.img_colorized.shape[:2]
+                elif hasattr(ctx, 'img_rgb') and ctx.img_rgb is not None:
+                    if isinstance(ctx.img_rgb, PILImage.Image):
+                        w, h = ctx.img_rgb.size
+                        upscaled_size = (h, w)
+                    else:
+                        upscaled_size = ctx.img_rgb.shape[:2]
+
+                img_data = {
+                    'image': ctx.input if hasattr(ctx, 'input') else None,
+                    'text_regions': ctx.text_regions,
+                    'original_texts': [region.text for region in ctx.text_regions if region.text is not None],
+                    'text_order': text_order,
+                    'upscaled_size': upscaled_size
+                }
+                hq_batch_data.append(img_data)
+
+        if hq_batch_data:
+            merged_ctx.high_quality_batch_data = hq_batch_data
+            logger.debug(f"[Batch] Prepared high_quality_batch_data for {len(hq_batch_data)} images")
+
+    async def _check_batch_target_language(self, batch: List[tuple]) -> None:
+        """Check that the batch came back in the target language and translate it again when it did not."""
+        # 收集批次内所有页面的filtered regions
+        all_batch_regions = []
+        for ctx, config in batch:
+            if ctx.text_regions:
+                all_batch_regions.extend(ctx.text_regions)
+
+        # 进行批次级别的目标语言检查
+        batch_lang_check_result = True
+        if all_batch_regions and len(all_batch_regions) > 10:
+            sample_config = batch[0][1]
+            logger.info(f"Starting batch-level target language check with {len(all_batch_regions)} regions...")
+            batch_lang_check_result = await self._check_target_language_ratio(
+                all_batch_regions,
+                sample_config.translator.target_lang,
+                min_ratio=0.5
+            )
+
+            if not batch_lang_check_result:
+                logger.warning("Batch-level target language ratio check failed")
+
+                # 批次重新翻译逻辑
+                max_batch_retry = sample_config.translator.post_check_max_retry_attempts
+                batch_retry_count = 0
+
+                while batch_retry_count < max_batch_retry and not batch_lang_check_result:
+                    batch_retry_count += 1
+                    logger.warning(f"Starting batch retry {batch_retry_count}/{max_batch_retry}")
+
+                    # 重新翻译批次内所有区域
+                    all_original_texts = []
+                    region_mapping = []  # 记录每个text属于哪个ctx
+
+                    for ctx_idx, (ctx, config) in enumerate(batch):
+                        if ctx.text_regions:
+                            for region in ctx.text_regions:
+                                if hasattr(region, 'text') and region.text:
+                                    all_original_texts.append(region.text)
+                                    region_mapping.append((ctx_idx, region))
+
+                    if all_original_texts:
+                        try:
+                            # 重新批量翻译
+                            logger.info(f"Retrying translation for {len(all_original_texts)} regions...")
+                            new_translations = await self._batch_translate_texts(all_original_texts, sample_config, batch[0][0])
+
+                            # 更新翻译结果到各个region
+                            for i, (ctx_idx, region) in enumerate(region_mapping):
+                                if i < len(new_translations) and new_translations[i]:
+                                    old_translation = region.translation
+                                    region.translation = new_translations[i]
+                                    logger.debug(f"Region {i+1} translation updated: '{old_translation}' -> '{new_translations[i]}'")
+
+                            # 重新收集所有regions并检查目标语言比例
+                            all_batch_regions = []
+                            for ctx, config in batch:
+                                if ctx.text_regions:
+                                    all_batch_regions.extend(ctx.text_regions)
+
+                            logger.info(f"Re-checking batch-level target language ratio after batch retry {batch_retry_count}...")
+                            batch_lang_check_result = await self._check_target_language_ratio(
+                                all_batch_regions,
+                                sample_config.translator.target_lang,
+                                min_ratio=0.5
+                            )
+
+                            if batch_lang_check_result:
+                                logger.info("Batch-level target language check passed")
+                                break
+                            else:
+                                logger.warning("Batch-level target language check still failed")
+
+                        except Exception as e:
+                            logger.error(f"Error during batch retry {batch_retry_count}: {e}")
+                            break
+                    else:
+                        logger.warning("No text found for batch retry")
+                        break
+
+                if not batch_lang_check_result:
+                    logger.error(f"Batch-level target language check failed after all {max_batch_retry} batch retries")
+        else:
+            logger.info(f"Skipping batch-level target language check: only {len(all_batch_regions)} regions (threshold: 10)")
+
+        # 统一的成功信息
+        if batch_lang_check_result:
+            logger.info("All translation regions passed post-translation check.")
+        else:
+            logger.warning("Some translation regions failed post-translation check.")
+
+    def _filter_translated_regions(self, batch: List[tuple]) -> None:
+        """Drop regions whose translation is empty, only a number or the same as the original."""
+        for ctx, config in batch:
+            if ctx.text_regions:
+                new_text_regions = []
+                for region in ctx.text_regions:
+                    should_filter = False
+                    filter_reason = ""
+                    translation_text = _translation_plain_text(region.translation)
+
+                    if not translation_text.strip():
+                        should_filter = True
+                        filter_reason = "Translation contain blank areas"
+                    elif config.translator.translator != Translator.none:
+                        if translation_text.isnumeric():
+                            should_filter = True
+                            filter_reason = "Numeric translation"
+                        elif not config.translator.translator == Translator.original:
+                            if self._should_filter_identical_translation(config, region):
+                                should_filter = True
+                                filter_reason = "Translation identical to original"
+
+                    if should_filter:
+                        if translation_text.strip():
+                            logger.info(f'Filtered out: {translation_text}')
+                            logger.info(f'Reason: {filter_reason}')
+                    else:
+                        new_text_regions.append(region)
+                ctx.text_regions = new_text_regions
+
     async def _batch_translate_contexts(self, contexts_with_configs: List[tuple], batch_size: int) -> List[tuple]:
         """
         批量处理翻译步骤，防止内存溢出
@@ -5138,50 +5307,7 @@ class MangaTranslator:
                     # ✅ 为HQ翻译器准备high_quality_batch_data（包含图片和text_regions）
                     # 这是HQ翻译器进入高质量批量模式的必要条件，也是AI断句检查能正常工作的前提
                     if sample_config.translator.translator in [Translator.openai_hq, Translator.gemini_hq]:
-                        hq_batch_data = []
-                        global_text_index = 1  # 全局文本编号从1开始（与提示词中的编号一致）
-                        for ctx, _ in batch:
-                            if ctx.text_regions:
-                                num_regions = len(ctx.text_regions)
-                                # 为当前图片生成全局连续的文本编号
-                                text_order = list(range(global_text_index, global_text_index + num_regions))
-                                global_text_index += num_regions
-                                
-                                upscaled_size = None
-                                # 使用超分后的图片尺寸（如果有超分），否则使用上色后的图片尺寸
-                                # 注意：需要处理 PIL Image 和 numpy array 两种情况
-                                from PIL import Image as PILImage
-                                if hasattr(ctx, 'upscaled') and ctx.upscaled is not None:
-                                    if isinstance(ctx.upscaled, PILImage.Image):
-                                        w, h = ctx.upscaled.size
-                                        upscaled_size = (h, w)  # 转换为 (height, width)
-                                    else:
-                                        upscaled_size = ctx.upscaled.shape[:2]  # numpy: (height, width)
-                                elif hasattr(ctx, 'img_colorized') and ctx.img_colorized is not None:
-                                    if isinstance(ctx.img_colorized, PILImage.Image):
-                                        w, h = ctx.img_colorized.size
-                                        upscaled_size = (h, w)
-                                    else:
-                                        upscaled_size = ctx.img_colorized.shape[:2]
-                                elif hasattr(ctx, 'img_rgb') and ctx.img_rgb is not None:
-                                    if isinstance(ctx.img_rgb, PILImage.Image):
-                                        w, h = ctx.img_rgb.size
-                                        upscaled_size = (h, w)
-                                    else:
-                                        upscaled_size = ctx.img_rgb.shape[:2]
-                                
-                                img_data = {
-                                    'image': ctx.input if hasattr(ctx, 'input') else None,
-                                    'text_regions': ctx.text_regions,
-                                    'original_texts': [region.text for region in ctx.text_regions if region.text is not None],
-                                    'text_order': text_order,
-                                    'upscaled_size': upscaled_size
-                                }
-                                hq_batch_data.append(img_data)
-                        
-                        if hq_batch_data:
-                            merged_ctx.high_quality_batch_data = hq_batch_data
-                            logger.debug(f"[Batch] Prepared high_quality_batch_data for {len(hq_batch_data)} images")
+                        self._attach_high_quality_batch_data(batch, merged_ctx)
                     
                     translated_texts = await self._batch_translate_texts(
                         all_texts, 
@@ -5225,123 +5351,10 @@ class MangaTranslator:
                         
                 # 批次级别的目标语言检查
                 if batch and batch[0][1].translator.enable_post_translation_check:
-                    # 收集批次内所有页面的filtered regions
-                    all_batch_regions = []
-                    for ctx, config in batch:
-                        if ctx.text_regions:
-                            all_batch_regions.extend(ctx.text_regions)
-                    
-                    # 进行批次级别的目标语言检查
-                    batch_lang_check_result = True
-                    if all_batch_regions and len(all_batch_regions) > 10:
-                        sample_config = batch[0][1]
-                        logger.info(f"Starting batch-level target language check with {len(all_batch_regions)} regions...")
-                        batch_lang_check_result = await self._check_target_language_ratio(
-                            all_batch_regions,
-                            sample_config.translator.target_lang,
-                            min_ratio=0.5
-                        )
-                        
-                        if not batch_lang_check_result:
-                            logger.warning("Batch-level target language ratio check failed")
-                            
-                            # 批次重新翻译逻辑
-                            max_batch_retry = sample_config.translator.post_check_max_retry_attempts
-                            batch_retry_count = 0
-                            
-                            while batch_retry_count < max_batch_retry and not batch_lang_check_result:
-                                batch_retry_count += 1
-                                logger.warning(f"Starting batch retry {batch_retry_count}/{max_batch_retry}")
-                                
-                                # 重新翻译批次内所有区域
-                                all_original_texts = []
-                                region_mapping = []  # 记录每个text属于哪个ctx
-                                
-                                for ctx_idx, (ctx, config) in enumerate(batch):
-                                    if ctx.text_regions:
-                                        for region in ctx.text_regions:
-                                            if hasattr(region, 'text') and region.text:
-                                                all_original_texts.append(region.text)
-                                                region_mapping.append((ctx_idx, region))
-                                
-                                if all_original_texts:
-                                    try:
-                                        # 重新批量翻译
-                                        logger.info(f"Retrying translation for {len(all_original_texts)} regions...")
-                                        new_translations = await self._batch_translate_texts(all_original_texts, sample_config, batch[0][0])
-                                        
-                                        # 更新翻译结果到各个region
-                                        for i, (ctx_idx, region) in enumerate(region_mapping):
-                                            if i < len(new_translations) and new_translations[i]:
-                                                old_translation = region.translation
-                                                region.translation = new_translations[i]
-                                                logger.debug(f"Region {i+1} translation updated: '{old_translation}' -> '{new_translations[i]}'")
-                                        
-                                        # 重新收集所有regions并检查目标语言比例
-                                        all_batch_regions = []
-                                        for ctx, config in batch:
-                                            if ctx.text_regions:
-                                                all_batch_regions.extend(ctx.text_regions)
-                                        
-                                        logger.info(f"Re-checking batch-level target language ratio after batch retry {batch_retry_count}...")
-                                        batch_lang_check_result = await self._check_target_language_ratio(
-                                            all_batch_regions,
-                                            sample_config.translator.target_lang,
-                                            min_ratio=0.5
-                                        )
-                                        
-                                        if batch_lang_check_result:
-                                            logger.info("Batch-level target language check passed")
-                                            break
-                                        else:
-                                            logger.warning("Batch-level target language check still failed")
-                                            
-                                    except Exception as e:
-                                        logger.error(f"Error during batch retry {batch_retry_count}: {e}")
-                                        break
-                                else:
-                                    logger.warning("No text found for batch retry")
-                                    break
-                            
-                            if not batch_lang_check_result:
-                                logger.error(f"Batch-level target language check failed after all {max_batch_retry} batch retries")
-                    else:
-                        logger.info(f"Skipping batch-level target language check: only {len(all_batch_regions)} regions (threshold: 10)")
-                    
-                    # 统一的成功信息
-                    if batch_lang_check_result:
-                        logger.info("All translation regions passed post-translation check.")
-                    else:
-                        logger.warning("Some translation regions failed post-translation check.")
+                    await self._check_batch_target_language(batch)
                         
                 # 过滤逻辑（简化版本，保留主要过滤条件）
-                for ctx, config in batch:
-                    if ctx.text_regions:
-                        new_text_regions = []
-                        for region in ctx.text_regions:
-                            should_filter = False
-                            filter_reason = ""
-                            translation_text = _translation_plain_text(region.translation)
-
-                            if not translation_text.strip():
-                                should_filter = True
-                                filter_reason = "Translation contain blank areas"
-                            elif config.translator.translator != Translator.none:
-                                if translation_text.isnumeric():
-                                    should_filter = True
-                                    filter_reason = "Numeric translation"
-                                elif not config.translator.translator == Translator.original:
-                                    if self._should_filter_identical_translation(config, region):
-                                        should_filter = True
-                                        filter_reason = "Translation identical to original"
-
-                            if should_filter:
-                                if translation_text.strip():
-                                    logger.info(f'Filtered out: {translation_text}')
-                                    logger.info(f'Reason: {filter_reason}')
-                            else:
-                                new_text_regions.append(region)
-                        ctx.text_regions = new_text_regions
+                self._filter_translated_regions(batch)
                         
                 results.extend(batch)
                 
