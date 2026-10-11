@@ -152,9 +152,9 @@ class ConfigService(QObject):
         super().__init__()
         self.logger = logging.getLogger(__name__)
         self.root_dir = root_dir
-        # .env文件应该在exe所在目录（可写位置）
-        # 打包后：E:\manga-translator-cpu-v1.9.2\.env
-        # 开发时：项目根目录\.env
+        # The .env file belongs in the folder of the exe (a writable location)
+        # Packaged: <install folder>/.env
+        # Development: <project root>/.env
         if getattr(sys, "frozen", False):
             exe_dir = os.path.dirname(sys.executable)
             self.env_path = os.path.join(exe_dir, ".env")
@@ -197,7 +197,7 @@ class ConfigService(QObject):
                 f"Packaged environment; external configuration directory = {os.path.dirname(self.user_config_path)}"
             )
 
-        # 加载配置：优先级 用户配置 > 默认配置 > 代码默认值
+        # Loading order of the configuration: user configuration > default configuration > defaults in the code
         self._load_configs_with_priority()
 
         self._translator_configs = None
@@ -392,7 +392,7 @@ class ConfigService(QObject):
         """验证API密钥格式"""
         config = self.get_translator_config(translator_name)
         if not config or var_name not in config.validation_rules:
-            return True  # 如果没有验证规则，则认为有效
+            return True  # Without a validation rule it counts as valid
 
         pattern = config.validation_rules[var_name]
         return bool(re.match(pattern, key))
@@ -410,11 +410,11 @@ class ConfigService(QObject):
                     json.loads(content)
                 )
 
-            # 获取默认配置作为基础
+            # Take the default configuration as the base
             default_config = AppSettings()
             new_config_dict = default_config.model_dump()
 
-            # 逐个键安全合并，验证每个值
+            # Merge key by key, safely, validating each value
             error_keys = []
 
             def safe_deep_update(target, source, path=""):
@@ -427,18 +427,18 @@ class ConfigService(QObject):
                             and key in target
                             and isinstance(target[key], dict)
                         ):
-                            # 递归处理嵌套字典
+                            # Handle nested dictionaries recursively
                             safe_deep_update(target[key], value, current_path)
                         else:
-                            # 尝试设置值，验证是否有效
+                            # Try to set the value, to see whether it is valid
                             old_value = target.get(key)
                             target[key] = value
 
-                            # 尝试用新值创建配置对象来验证
+                            # Try to create a configuration object with the new value, to validate it
                             try:
                                 AppSettings.model_validate(new_config_dict)
                             except Exception as validate_err:
-                                # 验证失败，恢复默认值
+                                # Validation failed: restore the default value
                                 target[key] = old_value
                                 error_keys.append(
                                     (current_path, value, str(validate_err))
@@ -454,19 +454,19 @@ class ConfigService(QObject):
 
             safe_deep_update(new_config_dict, loaded_data)
 
-            # 最终验证并创建配置对象
+            # Final validation, then create the configuration object
             try:
                 self.current_config = AppSettings.model_validate(new_config_dict)
             except Exception as final_err:
                 self.logger.error(f"Configuration validation failed; using defaults: {final_err}")
                 self.current_config = AppSettings()
 
-            # 报告错误的键
+            # Report the keys that were wrong
             if error_keys:
                 self.logger.warning(
                     f"Replaced {len(error_keys)} invalid configuration entries with default values:"
                 )
-                for key_path, bad_value, err in error_keys[:5]:  # 只显示前5个
+                for key_path, bad_value, err in error_keys[:5]:  # Only the first 5 are shown
                     self.logger.warning(f"  - {key_path}: {bad_value}")
                 if len(error_keys) > 5:
                     self.logger.warning(f"  ... and {len(error_keys) - 5} more")
@@ -731,19 +731,19 @@ class ConfigService(QObject):
         self.flush_pending_writes()
         self._remove_invalid_env_lines()
 
-        # 1. 重新加载 .env 文件到 os.environ。翻译引擎会自动从此读取。
+        # 1. Reload the .env file into os.environ. The translation engine reads from there automatically.
         load_app_dotenv(self.env_path, override=True)
         with self._write_lock:
             self._env_values = read_dotenv_file(self.env_path)
         self.logger.info(f"Reloaded .env from {self.env_path}; environment variables updated.")
 
-        # 2. 重新创建 AppSettings 对象 (用于UI设置)
+        # 2. Create the AppSettings object again (for the UI settings)
         self.current_config = AppSettings()
 
-        # 3. 按优先级重新加载配置文件
+        # 3. Reload the configuration files in order of priority
         self._load_configs_with_priority()
 
-        # 4. 通知所有监听者配置已更改
+        # 4. Tell every listener that the configuration changed
         config_dict = self.current_config.model_dump()
         self.config_changed.emit(config_dict)
         self.logger.info("Configuration reload completed.")
@@ -776,7 +776,7 @@ class ConfigService(QObject):
         try:
             self.current_config.app.current_preset = preset_name
             self.save_config_file()
-            # 不输出日志，避免刷屏
+            # Not logged, to avoid flooding the log
             return True
         except Exception as e:
             self.logger.error(f"Failed to save current preset: {e}")
@@ -987,25 +987,25 @@ class ConfigService(QObject):
         按优先级加载配置文件
         优先级：用户配置 > 默认配置 > 代码默认值
         """
-        # 1. 先加载默认配置（如果存在）
+        # 1. Load the default configuration first (when it exists)
         if os.path.exists(self.default_config_path):
             self.logger.info(f"Loading default configuration: {self.default_config_path}")
             self.load_config_file(self.default_config_path)
         else:
             self.logger.warning(f"Default configuration does not exist: {self.default_config_path}")
 
-        # 2. 再加载用户配置（如果存在），覆盖默认配置
+        # 2. Then load the user configuration (when it exists), which overrides the defaults
         if os.path.exists(self.user_config_path):
             self.logger.info(f"Loading user configuration: {self.user_config_path}")
             self.load_config_file(self.user_config_path)
             self.config_path = self.user_config_path
         else:
             self.logger.info(f"User configuration does not exist: {self.user_config_path}")
-            # 如果用户配置不存在，从默认配置创建一份
+            # When there is no user configuration, create one from the default configuration
             if os.path.exists(self.default_config_path):
                 self.logger.info("Creating user configuration from defaults")
                 try:
-                    # 复制默认配置到用户配置位置
+                    # Copy the default configuration to the user configuration location
                     os.makedirs(os.path.dirname(self.user_config_path), exist_ok=True)
                     with open(self.default_config_path, "r", encoding="utf-8") as src:
                         config_data = json.load(src)
@@ -1019,7 +1019,7 @@ class ConfigService(QObject):
             else:
                 self.config_path = self.user_config_path
 
-        # 3. 同步用户配置（添加新字段、删除旧字段）
+        # 3. Sync the user configuration (add new fields, remove old ones)
         self._sync_user_config()
 
     def _sync_user_config(self):
@@ -1038,18 +1038,18 @@ class ConfigService(QObject):
             return
 
         try:
-            # 读取默认配置（作为模板）
+            # Read the default configuration (as the template)
             with open(self.default_config_path, "r", encoding="utf-8") as f:
                 default_data = migrate_legacy_custom_api_params_config(json.load(f))
 
-            # 读取用户配置
+            # Read the user configuration
             with open(self.user_config_path, "r", encoding="utf-8") as f:
                 user_data = migrate_legacy_custom_api_params_config(json.load(f))
 
-            # 同步配置（递归处理嵌套字典）
+            # Sync the configuration (nested dictionaries are handled recursively)
             synced_data = self._sync_dict(default_data, user_data)
 
-            # 如果有变化，保存回用户配置
+            # When something changed, save back to the user configuration
             if synced_data != user_data:
                 self.logger.info("Configuration structure changed; synchronizing user configuration")
                 with open(self.user_config_path, "w", encoding="utf-8") as f:
@@ -1070,15 +1070,15 @@ class ConfigService(QObject):
 
         for key in template.keys():
             if key in user:
-                # 用户配置有这个键
+                # The user configuration has this key
                 if isinstance(template[key], dict) and isinstance(user[key], dict):
-                    # 递归处理嵌套字典
+                    # Handle nested dictionaries recursively
                     result[key] = self._sync_dict(template[key], user[key])
                 else:
-                    # 使用用户的值
+                    # Use the user's value
                     result[key] = user[key]
             else:
-                # 用户配置没有这个键，使用模板的值
+                # The user configuration does not have this key: use the value of the template
                 result[key] = template[key]
 
         return result

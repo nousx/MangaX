@@ -194,7 +194,7 @@ class ExportService:
                 os.makedirs(output_dir, exist_ok=True)
 
             source_image = job.export_base.source_image
-            # 贴片整页预合成放到导出 worker 里做（GUI 线程不再分配整页缓冲）
+            # Whole-page pre-compositing of the paste overlays is done in the export worker (the GUI thread no longer allocates a whole-page buffer)
             paste_overlay = None
             if job.paste_overlays:
                 try:
@@ -217,8 +217,8 @@ class ExportService:
                             (int(canvas_size[0]), int(canvas_size[1])),
                         )
                 except Exception as compose_error:
-                    # 贴片预合成失败应终止导出（外层会转成失败的 BackendExportResult），
-                    # 不能静默跳过贴片层却返回“成功”
+                    # A failed overlay pre-compositing should stop the export (the outer code turns it into a failed BackendExportResult);
+                    # the overlay layer must not be skipped silently while "success" is returned
                     self.logger.error(f"Overlay precomposition failed; export aborted: {compose_error}")
                     raise
             payload = self._build_load_text_payload(
@@ -298,7 +298,7 @@ class ExportService:
             image_key,
             mask,
             config,
-            # 编辑器 translation 已是替换后终稿；白框坐标仍相对源区域中心。
+            # The editor's translation is already the final text after replacement; the white box coordinates are still relative to the centre of the source region.
             skip_text_replacements=True,
             preserve_existing_preprocess_flags=True,
             paint_overlay=paint_overlay,
@@ -316,7 +316,7 @@ class ExportService:
         paste_overlays: Optional[List[Dict[str, Any]]] = None,
     ):
         """保存区域数据到JSON文件，确保格式与TextBlock兼容（用于导出）"""
-        # 使用文件名作为键（向后兼容）
+        # Use the file name as the key (backward compatible)
         image_key = os.path.splitext(
             os.path.basename(json_path.replace("_translations.json", ""))
         )[0]
@@ -411,7 +411,7 @@ class ExportService:
             render_config = config.get("render", {})
             default_region_font_family = render_config.get("font_family") or ""
 
-        # 准备保存数据，确保数据格式正确
+        # Prepare the data to save and make sure its format is correct
         save_data = []
         for idx, region in enumerate(regions_data):
             region_copy = region.copy()
@@ -424,26 +424,26 @@ class ExportService:
                     ):
                         region_copy.pop("translation_rich", None)
                 except (TypeError, ValueError):
-                    # 后端加载边界负责把非法富文本降级；这里不扩大既有保存行为。
+                    # Degrading invalid rich text is the job of the backend load boundary; the existing save behaviour is not widened here.
                     pass
 
-            # 确保必要字段存在
+            # Make sure the required fields exist
             if "translation" not in region_copy:
                 region_copy["translation"] = region_copy.get("text", "")
 
-            # 确保lines字段存在且格式正确
+            # Make sure the lines field exists and has the right format
             if "lines" not in region_copy:
                 self.logger.warning(f"Region missing 'lines' field: {region_copy}")
                 continue
 
-            # 验证和转换lines数据格式
+            # Validate and convert the format of the lines data
             lines_data = region_copy["lines"]
             if isinstance(lines_data, list):
-                # 确保每个多边形都有足够的点
+                # Make sure every polygon has enough points
                 valid_polygons = []
                 for poly in lines_data:
                     if isinstance(poly, list) and len(poly) >= 4:
-                        # 确保每个点都是[x, y]格式
+                        # Make sure every point is in [x, y] form
                         valid_points = []
                         for point in poly:
                             if isinstance(point, (list, tuple)) and len(point) >= 2:
@@ -455,11 +455,11 @@ class ExportService:
                                 break
                         else:
                             if len(valid_points) >= 4:
-                                # 确保是矩形格式（4个点）
+                                # Make sure it is a rectangle (4 points)
                                 if len(valid_points) == 4:
                                     valid_polygons.append(valid_points)
                                 else:
-                                    # 如果超过4个点，取前4个点
+                                    # With more than 4 points, take the first 4
                                     self.logger.warning(
                                         f"Polygon has {len(valid_points)} points, using first 4"
                                     )
@@ -468,7 +468,7 @@ class ExportService:
                         self.logger.warning(f"Invalid polygon format: {poly}")
 
                 if valid_polygons:
-                    # 恢复到正确的 (N, 4, 2) 形状
+                    # Restore the correct (N, 4, 2) shape
                     region_copy["lines"] = np.array(valid_polygons, dtype=np.float64)
                 else:
                     self.logger.warning(
@@ -476,10 +476,10 @@ class ExportService:
                     )
                     continue
             elif isinstance(lines_data, np.ndarray):
-                # 如果已经是numpy数组，验证并修正形状
+                # When it is already a numpy array, check and correct its shape
                 lines_arr = lines_data
                 if lines_arr.ndim == 2 and lines_arr.shape == (4, 2):
-                    # 单个多边形，需要添加一个维度变成 (1, 4, 2)
+                    # A single polygon needs one more dimension, to become (1, 4, 2)
                     lines_arr = lines_arr.reshape(1, 4, 2)
                     self.logger.debug("Reshaped lines from (4, 2) to (1, 4, 2)")
                 elif (
@@ -499,7 +499,7 @@ class ExportService:
                 continue
 
             # --- Foreground Color ---
-            # 优先使用 font_color (hex格式),如果没有才使用 fg_colors/fg_color (tuple格式)
+            # Prefer font_color (hex format); fg_colors/fg_color (tuple format) is only used when it is missing
             if "font_color" not in region_copy or region_copy["font_color"] is None:
                 fg_tuple = region_copy.pop("fg_colors", None)
                 if fg_tuple is None:
@@ -518,7 +518,7 @@ class ExportService:
                             f"Could not convert fg_color tuple to hex for saving: {e}"
                         )
             else:
-                # font_color 已存在,移除 fg_colors/fg_color 避免冲突
+                # font_color exists: remove fg_colors/fg_color to avoid a conflict
                 region_copy.pop("fg_colors", None)
                 region_copy.pop("fg_color", None)
 
@@ -531,11 +531,11 @@ class ExportService:
             if bg_tuple:
                 region_copy["bg_color"] = bg_tuple
 
-            # 确保其他必要字段存在
+            # Make sure the other required fields exist
             if "texts" not in region_copy:
                 region_copy["texts"] = [region_copy.get("text", "")]
 
-            # 确保其他必要字段存在
+            # Make sure the other required fields exist
             if "language" not in region_copy:
                 region_copy["language"] = "unknown"
             if "font_size" not in region_copy:
@@ -543,13 +543,13 @@ class ExportService:
             if "angle" not in region_copy:
                 region_copy["angle"] = 0
             if "target_lang" not in region_copy:
-                region_copy["target_lang"] = "CHS"  # 默认目标语言
+                region_copy["target_lang"] = "CHS"  # Default target language
 
             if not region_copy.get("font_family") and default_region_font_family:
                 region_copy["font_family"] = default_region_font_family
             region_copy.pop("font_path", None)
 
-            # 转换 direction 值：'v' -> 'vertical', 'h' -> 'horizontal'
+            # Convert the direction value: 'v' -> 'vertical', 'h' -> 'horizontal'
             if "direction" in region_copy:
                 direction_value = region_copy["direction"]
                 if direction_value == "v":
@@ -615,11 +615,11 @@ class ExportService:
         """保存区域数据到JSON文件的内部实现"""
         save_data = self._normalize_regions_for_backend(regions_data, config)
 
-        # load_text模式期望的格式：字典，键为图片路径，值为包含regions的字典
-        # image_key 由调用方传入（可以是完整路径或文件名）
+        # The format load_text mode expects: a dictionary whose keys are image paths and whose values are dictionaries with regions
+        # image_key is passed in by the caller (a full path or a file name)
         formatted_data = {image_key: {"regions": save_data}}
 
-        # 添加超分和上色配置信息
+        # Record the upscaling and colorization settings
         if config:
             upscale_config = config.get("upscale", {})
             upscale_ratio = upscale_config.get("upscale_ratio", 0)
@@ -649,10 +649,10 @@ class ExportService:
                 last_export_dir
             )
 
-        # 如果有蒙版数据，则添加到JSON中
+        # When there is mask data, add it to the JSON
         if mask is not None:
             self.logger.info("Including precomputed mask (edited refined mask) in exported JSON.")
-            # 使用base64编码保存蒙版，避免JSON文件过大
+            # Save the mask base64-encoded, so the JSON file does not get too large
             import base64
 
             import cv2
@@ -661,7 +661,7 @@ class ExportService:
             mask_base64 = base64.b64encode(encoded_mask).decode("utf-8")
             formatted_data[image_key]["mask_raw"] = mask_base64
             formatted_data[image_key]["mask_is_refined"] = (
-                True  # 标记为已精炼的蒙版，跳过后端的蒙版优化
+                True  # Mark the mask as refined, so the backend skips mask refinement
             )
             self.logger.info(
                 "Mask saved as base64 and marked as refined; backend will skip mask refinement"
@@ -669,7 +669,7 @@ class ExportService:
         if skip_text_replacements:
             formatted_data[image_key]["skip_text_replacements"] = True
 
-        # 画笔层/印章层以 base64 PNG 存入 JSON（RGBA），由后端渲染前合成
+        # The paint layer and the stamp layer are stored in the JSON as base64 PNG (RGBA) and composited by the backend before rendering
         for overlay_key, overlay in (
             ("paint_overlay", paint_overlay),
             ("stamp_overlay", stamp_overlay),
@@ -699,7 +699,7 @@ class ExportService:
             )
             self.logger.info(f"{overlay_key} saved as base64 PNG")
 
-        # 贴片（图块叠加）列表：纯 JSON 字典，图片内容为 base64 PNG（RGBA）
+        # List of paste overlays (image patches laid on top): plain JSON dictionaries, with the image content as base64 PNG (RGBA)
         if paste_overlays:
             try:
                 from editor.paste_overlay_state import serialize_paste_overlays
@@ -711,7 +711,7 @@ class ExportService:
             except Exception as serialize_error:
                 self.logger.error(f"Failed to serialize overlays; skipping write: {serialize_error}")
 
-        # 添加调试信息
+        # Add debug information
         self.logger.info(f"Saving region data to: {json_path}")
         self.logger.info(f"Region count: {len(save_data)}")
 
@@ -771,17 +771,17 @@ class ExportService:
                 format=image_format,
             )
 
-            # 确保文件已写入
+            # Make sure the file has been written
             if not os.path.exists(temp_output_path):
                 raise Exception(f"Temporary file was not created: {temp_output_path}")
 
-            # 原子性替换
+            # Replace atomically
             os.replace(temp_output_path, output_path)
             self.logger.info(f"Image saved: {output_path}")
 
         except Exception as e:
             self.logger.error(f"Failed to save image: {e}")
-            # 清理临时文件
+            # Remove the temporary file
             if os.path.exists(temp_output_path):
                 try:
                     os.remove(temp_output_path)
@@ -805,18 +805,18 @@ class ExportService:
             translator_params["format"] = output_format
             self.logger.info(f"Setting output format: {output_format}")
 
-        # 提取并传递GPU配置
+        # Extract the GPU setting and pass it on
         cli_config = config.get("cli", {})
         if "use_gpu" in cli_config:
             translator_params["use_gpu"] = cli_config["use_gpu"]
             self.logger.info(f"Setting GPU configuration: use_gpu={cli_config['use_gpu']}")
 
-        # 设置其他参数
+        # Set the other parameters
         translator_params.update(config)
-        translator_params["load_text"] = True  # 关键：启用加载文本模式
-        translator_params["save_text"] = False  # 不保存文本
+        translator_params["load_text"] = True  # Key point: turn on load-text mode
+        translator_params["save_text"] = False  # Do not save the text
 
-        # 添加调试日志
+        # Debug logging
         self.logger.info(f"Config keys: {list(config.keys())}")
         if "upscale" in config:
             self.logger.info(f"Upscale config: {config['upscale']}")
@@ -827,7 +827,7 @@ class ExportService:
         else:
             self.logger.warning("No colorizer config found in config")
 
-        # 关键：设置翻译器为none，跳过翻译步骤，直接渲染
+        # Key point: set the translator to none, which skips the translation step and renders directly
         translator_params["translator"] = "none"
         self.logger.info(
             "Setting translator to none and enabling load_text mode; skipping translation and rendering directly"
@@ -863,17 +863,17 @@ class ExportService:
             if progress_callback:
                 progress_callback("创建翻译器实例...")
 
-            # 创建翻译器实例并注册内存载荷
+            # Create the translator instance and register the in-memory payload
             translator = MangaTranslator(params=translator_params)
             if payload is not None:
                 translator.set_preloaded_load_text_payload(image_name, payload)
 
-            image.name = image_name  # load_text 以该名字匹配内存载荷/查找辅助文件
+            image.name = image_name  # load_text matches the in-memory payload and looks for helper files by this name
 
-            # 创建配置对象
-            render_config = config.get("render", {}).copy()  # 使用copy避免修改原配置
+            # Create the configuration object
+            render_config = config.get("render", {}).copy()  # Use a copy, so the original configuration is not modified
 
-            # 转换 direction 值：'v' -> 'vertical', 'h' -> 'horizontal'
+            # Convert the direction value: 'v' -> 'vertical', 'h' -> 'horizontal'
             if "direction" in render_config:
                 direction_value = render_config["direction"]
                 if direction_value == "v":
@@ -884,7 +884,7 @@ class ExportService:
             render_config["font_color"] = None  # Explicitly disable global font color
             render_cfg = RenderConfig(**render_config)
 
-            # 创建翻译器配置，设置为none以跳过翻译
+            # Create the translator configuration, set to none to skip translation
             from manga_translator.config import (
                 ColorizerConfig,
                 InpainterConfig,
@@ -894,7 +894,7 @@ class ExportService:
 
             translator_cfg = TranslatorConfig(translator="none")
 
-            # 从config中提取upscale、colorizer、inpainter和cli配置
+            # Take the upscale, colorizer, inpainter and cli configuration from config
             upscale_config = config.get("upscale", {})
             colorizer_config = config.get("colorizer", {})
             inpainter_config = config.get("inpainter", {})
@@ -913,7 +913,7 @@ class ExportService:
                 else InpainterConfig()
             )
 
-            # 创建CliConfig对象（包含PSD导出配置）
+            # Create the CliConfig object (with the PSD export settings)
             from manga_translator.config import CliConfig
 
             cli_cfg = CliConfig(**cli_config) if cli_config else CliConfig()
@@ -937,12 +937,12 @@ class ExportService:
             if progress_callback:
                 progress_callback("执行后端渲染...")
 
-            # 执行翻译（实际是渲染）
+            # Run the translation (which here means rendering)
             import sys
 
-            # 在Windows上的工作线程中，需要手动初始化Windows Socket
+            # In a worker thread on Windows, Windows Sockets has to be initialised by hand
             if sys.platform == "win32":
-                # 使用ctypes直接调用WSAStartup
+                # Call WSAStartup directly through ctypes
                 import ctypes
 
                 try:
@@ -991,7 +991,7 @@ class ExportService:
                         ctx.img_inpainted = payload["inpainted_rgb"]
                     else:
                         ctx.img_inpainted = image_like_to_rgb_array(image, copy=True)
-                # 导出可编辑PSD（如果启用）
+                # Export an editable PSD (when enabled)
                 if psd_export_requested(cfg):
                     try:
                         from manga_translator.utils.photoshop_export import (

@@ -13,7 +13,7 @@ import cv2
 import numpy as np
 from PIL import Image
 
-# 添加后端模块路径
+# Add the path of the backend modules
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(__file__)), '..'))
 
 try:
@@ -41,31 +41,31 @@ class OcrService:
     def __init__(self, config_service=None):
         self.logger = logging.getLogger(__name__)
         
-        # OCR配置
+        # OCR settings
         self.default_config = OcrConfig(
-            ocr=Ocr.ocr48px,  # 默认使用48px OCR模型
+            ocr=Ocr.ocr48px,  # The 48px OCR model is the default
             min_text_length=0,
             ignore_bubble=0,
-            prob=0.3,  # 最小置信度阈值
+            prob=0.3,  # Minimum confidence threshold
         )
         
-        # 配置服务依赖
+        # Dependency on the configuration service
         self.config_service = config_service
         if not self.config_service:
-            # 懒加载配置服务，避免循环依赖
+            # Load the configuration service lazily, to avoid a circular dependency
             from . import get_config_service
             self.config_service = get_config_service()
         
-        # 设备配置
+        # Device settings
         self.device = 'cpu'
         if self._check_gpu_available():
             self.device = 'cuda'
             
-        # OCR模型缓存
+        # OCR model cache
         self.model_prepared = False
         self.current_prepared_ocr = None
 
-        # YOLO OBB 检测缓存
+        # YOLO OBB detection cache
         self._yolo_detector = None
         self._yolo_cache_image_id = None
         self._yolo_cache = None
@@ -88,7 +88,7 @@ class OcrService:
     def _get_current_config(self) -> OcrConfig:
         """从配置服务获取当前OCR配置"""
         if not self.config_service:
-            # 回退到默认配置
+            # Fall back to the default configuration
             return OcrConfig(
                 ocr=Ocr.ocr48px,
                 min_text_length=0,
@@ -113,7 +113,7 @@ class OcrService:
                     prob=0.3,
                 )
             
-            # GPU设置从CLI配置获取
+            # The GPU setting comes from the CLI configuration
             if cli_config_dict.get('use_gpu', False) and self._check_gpu_available():
                 self.device = 'cuda'
             else:
@@ -150,7 +150,7 @@ class OcrService:
             except ValueError:
                 pass
 
-        # 切换模型时自动卸载销毁旧模型，释放显存与内存
+        # When the model is switched, the old one is unloaded and destroyed automatically, freeing GPU and system memory
         if self.current_prepared_ocr and self.current_prepared_ocr != ocr_to_use:
             self.logger.info(f"Editor OCR model changed: {self.current_prepared_ocr} -> {ocr_to_use}; unloading previous model...")
             try:
@@ -187,23 +187,23 @@ class OcrService:
     def _region_to_quadrilateral(self, region: Dict[str, Any], image_shape: Tuple[int, int]) -> Quadrilateral:
         """将文本框区域转换为OCR所需的Quadrilateral格式"""
         try:
-            # 获取文本框的四个角点
+            # Get the four corners of the text box
             lines = region.get('lines', [[]])
             if not lines or not lines[0]:
                 return None
                 
-            # 获取第一个多边形的所有点
+            # Get all points of the first polygon
             points = lines[0]
             if len(points) < 4:
                 return None
             
-            # 转换为numpy数组格式
+            # Convert to numpy array format
             pts = np.array(points, dtype=np.float32)
             
-            # 创建Quadrilateral对象
+            # Create the Quadrilateral object
             quadrilateral = Quadrilateral(
                 pts=pts,
-                text='',  # 待识别
+                text='',  # To be recognised
                 prob=1.0
             )
             
@@ -222,10 +222,10 @@ class OcrService:
                 
             points = np.array(lines[0], dtype=np.int32)
             
-            # 获取边界框
+            # Get the bounding box
             x, y, w, h = cv2.boundingRect(points)
             
-            # 确保边界框在图像范围内
+            # Make sure the bounding box is inside the image
             x = max(0, x)
             y = max(0, y)
             w = min(w, image.shape[1] - x)
@@ -234,7 +234,7 @@ class OcrService:
             if w <= 0 or h <= 0:
                 return None
             
-            # 提取区域
+            # Extract the area
             region_image = image[y:y+h, x:x+w]
             
             return region_image
@@ -244,7 +244,7 @@ class OcrService:
             return None
 
     # ------------------------------------------------------------------
-    # YOLO OBB 辅助拆分
+    # Splitting assisted by YOLO OBB
     # ------------------------------------------------------------------
 
     async def _get_yolo_detector(self):
@@ -265,7 +265,7 @@ class OcrService:
         if detector is None:
             return []
 
-        # 计算大框 AABB 并裁剪
+        # Compute the AABB of the large box and crop it
         im_h, im_w = image.shape[:2]
         x1 = int(np.clip(np.min(pts[:, 0]), 0, im_w - 1))
         y1 = int(np.clip(np.min(pts[:, 1]), 0, im_h - 1))
@@ -282,7 +282,7 @@ class OcrService:
             text_threshold=0.4, box_threshold=0.4, unclip_ratio=1.0,
         )
 
-        # 偏移坐标回原图
+        # Shift the coordinates back to the original image
         for quad in textlines:
             quad.pts[:, 0] += x1
             quad.pts[:, 1] += y1
@@ -381,7 +381,7 @@ class OcrService:
             }
             should_try_split = len(all_polygons) == 1 and ocr_key not in unsegmented_ocr_models
 
-            # YOLO OBB 检测（对大框裁剪区域检测）
+            # YOLO OBB detection (on the crop of the large box)
             yolo_lines = None
             if should_try_split:
                 pts_first = np.array(all_polygons[0], dtype=np.int32)
@@ -428,7 +428,7 @@ class OcrService:
             processing_time = asyncio.get_event_loop().time() - start_time
             
             if results:
-                # 方向感知排序后再拼接文本
+                # Sort with awareness of direction, then join the text
                 results = self._sort_quads_by_direction(results)
                 combined_text = ''.join([res.text for res in results if res.text])
                 # Average the confidence
@@ -472,7 +472,7 @@ class OcrService:
         try:
             start_time = asyncio.get_event_loop().time()
             
-            # 转换所有区域格式
+            # Convert the format of every region
             quadrilaterals = []
             valid_indices = []
             
@@ -492,7 +492,7 @@ class OcrService:
                 except Exception:
                     runtime_config = None
              
-            # 批量调用OCR
+            # Call OCR as a batch
             results = await dispatch_ocr(
                 ocr_key,
                 image,
@@ -505,7 +505,7 @@ class OcrService:
             
             processing_time = asyncio.get_event_loop().time() - start_time
             
-            # 构建结果列表
+            # Build the result list
             ocr_results = [None] * len(regions)
             
             for i, result in enumerate(results):
@@ -540,22 +540,22 @@ class OcrService:
             return
         
         try:
-            # 先尝试通过name查找（最常见的情况）
+            # Try to find it by name first (the most common case)
             if hasattr(Ocr, model_name):
                 self.default_config.ocr = Ocr[model_name]
-                self.model_prepared = False  # 重置模型准备状态
+                self.model_prepared = False  # Reset the model readiness state
                 self.logger.info(f"Setting OCR model by name: {model_name}")
                 return
             
-            # 如果name查找失败，尝试通过value查找
+            # When the lookup by name fails, try by value
             for ocr_model in Ocr:
                 if ocr_model.value == model_name:
                     self.default_config.ocr = ocr_model
-                    self.model_prepared = False  # 重置模型准备状态
+                    self.model_prepared = False  # Reset the model readiness state
                     self.logger.info(f"Setting OCR model by value: {model_name} -> {ocr_model.name}")
                     return
                     
-            # 如果都没找到，记录警告
+            # When neither finds it, log a warning
             self.logger.warning(f"OCR model not found: {model_name}; keeping current settings")
         except Exception as e:
             self.logger.error(f"Error setting OCR model: {e}")
@@ -591,18 +591,18 @@ class OcrService:
         if len(pts) < 4:
             return False
         
-        # 计算面积
+        # Compute the area
         area = cv2.contourArea(pts)
-        if area < 100:  # 面积太小
+        if area < 100:  # The area is too small
             return False
         
-        # 检查是否过于扭曲（长宽比过大）
+        # Check whether it is too distorted (the aspect ratio is too large)
         rect = cv2.boundingRect(pts)
         if rect[2] <= 0 or rect[3] <= 0:
             return False
         
         aspect_ratio = max(rect[2], rect[3]) / min(rect[2], rect[3])
-        if aspect_ratio > 20:  # 长宽比超过20:1，可能过于扭曲
+        if aspect_ratio > 20:  # An aspect ratio above 20:1 is probably too distorted
             return False
         
         return True

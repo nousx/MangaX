@@ -22,7 +22,7 @@ try:
 except ImportError as e:
     logging.warning(f"Failed to import translator backend module: {e}")
     TRANSLATOR_AVAILABLE = False
-    # 定义fallback类型
+    # Define the fallback types
     class Translator:
         openai_hq = "openai_hq"
     
@@ -48,7 +48,7 @@ class TranslationService:
         self.config_service = get_config_service()
         self.i18n = get_i18n_manager()
         
-        # 从配置服务正确初始化当前状态
+        # Initialise the current state correctly from the configuration service
         initial_config = self.config_service.get_config()
         initial_translator_name = initial_config.translator.translator
         if TRANSLATOR_AVAILABLE and hasattr(Translator, initial_translator_name):
@@ -173,7 +173,7 @@ class TranslationService:
                 translator_args.image = image
             if regions is not None:
                 try:
-                    # 转换 direction 字段
+                    # Convert the direction field
                     converted_regions = []
                     for r in regions:
                         region_copy = r.copy()
@@ -188,9 +188,9 @@ class TranslationService:
                     # FIX: Instantiate TextBlock using dictionary unpacking, not a non-existent class method.
                     translator_args.text_regions = [TextBlock(**r) for r in converted_regions]
                 except (TypeError, KeyError, ValueError) as e:
-                    # ValueError：translation_rich 严格校验（richtext.v1 未知键等）
-                    # 失败时走 raw-dict 回退，而不是穿到外层 except 让整批翻译
-                    # 静默返回 [None]*len(texts)（审查 F04c）
+                    # ValueError: when the strict validation of translation_rich fails (unknown keys of richtext.v1 and so on),
+                    # take the raw-dict fallback, rather than falling through to the outer except and letting the whole batch
+                    # return [None]*len(texts) silently (review F04c)
                     self.logger.warning(f"Could not convert all regions to TextBlock: {e}")
                     translator_args.text_regions = regions # Fallback to passing raw dicts
 
@@ -199,7 +199,7 @@ class TranslationService:
             if final_config.translator.high_quality_prompt_path:
                 try:
                     prompt_path = final_config.translator.high_quality_prompt_path
-                    self.logger.info(f"--- DIAGNOSTIC_PROMPT_PATH: Attempting to load HQ prompt from path: {prompt_path}") # 诊断日志
+                    self.logger.info(f"--- DIAGNOSTIC_PROMPT_PATH: Attempting to load HQ prompt from path: {prompt_path}") # Diagnostic logging
                     if not os.path.isabs(prompt_path):
                         # Assuming root_dir is accessible or using a known base path
                         prompt_path = os.path.join(self.config_service.root_dir, prompt_path)

@@ -13,17 +13,17 @@ from typing import Dict, Optional
 @dataclass
 class LocaleInfo:
     """语言区域信息"""
-    code: str  # 语言代码，如 'zh_CN'
-    name: str  # 语言名称，如 '简体中文'
-    english_name: str  # 英文名称，如 'Simplified Chinese'
-    direction: str = "ltr"  # 文本方向: ltr (左到右) 或 rtl (右到左)
+    code: str  # Language code, such as 'zh_CN'
+    name: str  # Language name in the language itself
+    english_name: str  # English name, such as 'Simplified Chinese'
+    direction: str = "ltr"  # Text direction: ltr (left to right) or rtl (right to left)
 
 class I18nManager:
     """国际化管理器"""
     
     def __init__(self, locale_dir: str = "locales", fallback_locale: str = "zh_CN", config_language: str = "auto"):
         if not os.path.isabs(locale_dir):
-            # 相对路径以当前服务目录为基准。
+            # Relative paths are based on the folder of this service.
             current_dir = os.path.dirname(os.path.abspath(__file__))
             self.locale_dir = os.path.join(current_dir, '..', locale_dir)
         else:
@@ -36,25 +36,25 @@ class I18nManager:
         
         os.makedirs(self.locale_dir, exist_ok=True)
         
-        # 初始化支持的语言
+        # Initialise the supported languages
         self._init_supported_locales()
         
-        # 根据配置决定语言
+        # Decide the language from the configuration
         if config_language == "auto":
-            # 自动检测系统语言
+            # Detect the system language automatically
             system_locale = self._detect_system_locale()
             if system_locale and system_locale in self.available_locales:
                 self.current_locale = system_locale
             else:
                 self.current_locale = fallback_locale
         else:
-            # 使用配置的语言
+            # Use the configured language
             if config_language in self.available_locales:
                 self.current_locale = config_language
             else:
                 self.current_locale = fallback_locale
         
-        # 加载翻译
+        # Load the translations
         self._load_all_translations()
         
     
@@ -73,12 +73,12 @@ class I18nManager:
     def _detect_system_locale(self) -> str:
         """检测系统语言"""
         try:
-            # 尝试获取系统语言
+            # Try to get the system language
             system_locale = locale.getdefaultlocale()[0]
             if system_locale:
-                # 标准化语言代码
+                # Normalise the language code
                 if '_' not in system_locale and len(system_locale) == 2:
-                    # 如果只有语言代码，添加默认国家代码
+                    # With a language code only, add the default country code
                     lang_country_map = {
                         'zh': 'zh_CN',
                         'en': 'en_US',
@@ -117,10 +117,10 @@ class I18nManager:
                     self.translations[locale_code] = json.load(f)
                 self.logger.debug(f"Loading translation file: {translation_file}")
             else:
-                # 如果翻译文件不存在，创建空的翻译字典
+                # When the translation file does not exist, create an empty translation dictionary
                 self.translations[locale_code] = {}
                 
-                # 为主要语言创建基础翻译文件
+                # Create basic translation files for the main languages
                 if locale_code in ['zh_CN', 'en_US']:
                     self._create_base_translation_file(locale_code)
                     
@@ -147,7 +147,7 @@ class I18nManager:
         """获取基础翻译内容"""
         if locale_code == "zh_CN":
             return {
-                # 菜单和按钮
+                # Menus and buttons
                 "File": "文件",
                 "Edit": "编辑",
                 "View": "视图",
@@ -161,14 +161,14 @@ class I18nManager:
                 "Yes": "是",
                 "No": "否",
                 
-                # 应用标题和界面
+                # Application title and interface
                 "Manga Image Translator UI": "漫画图片翻译器 UI",
                 "Main View": "主视图",
                 "Editor View": "编辑器视图",
                 "Settings": "设置",
                 "About": "关于",
                 
-                # 翻译相关
+                # Translation
                 "Start Translation": "开始翻译",
                 "Stop Translation": "停止翻译",
                 "Stopping...": "停止中...",
@@ -182,7 +182,7 @@ class I18nManager:
                 "Task Completed": "任务完成",
                 "Translation completed, {count} files saved.\n\nOpen results in editor?": "翻译完成，已保存 {count} 个文件。\n\n是否在编辑器中打开结果？",
                 
-                # 文件操作
+                # File operations
                 "Add Files": "添加文件",
                 "Add Folder": "添加文件夹",
                 "Clear List": "清空列表",
@@ -191,7 +191,7 @@ class I18nManager:
                 "File List": "文件列表",
                 "Output Folder": "输出文件夹",
                 
-                # 进度和状态
+                # Progress and status
                 "Progress": "进度",
                 "Status": "状态",
                 "Ready": "就绪",
@@ -201,7 +201,7 @@ class I18nManager:
                 "Warning": "警告",
                 "Information": "信息",
                 
-                # 编辑器
+                # Editor
                 "Editor": "编辑器",
                 "Original Text": "原文",
                 "Translated Text": "译文",
@@ -219,7 +219,7 @@ class I18nManager:
                 "Undo": "撤销",
                 "Redo": "重做",
                 
-                # 配置
+                # Configuration
                 "Configuration": "配置",
                 "Load Config": "加载配置",
                 "Save Config": "保存配置",
@@ -227,7 +227,7 @@ class I18nManager:
                 "API Settings": "API设置",
                 "Advanced Settings": "高级设置",
                 
-                # 错误信息
+                # Error messages
                 "Error occurred": "发生错误",
                 "File not found": "文件未找到",
                 "Invalid file format": "无效的文件格式",
@@ -235,13 +235,13 @@ class I18nManager:
                 "API error": "API错误",
                 "Configuration error": "配置错误",
                 
-                # 成功信息
+                # Success messages
                 "Operation successful": "操作成功",
                 "File saved successfully": "文件保存成功",
                 "Configuration loaded": "配置已加载",
                 "Translation completed successfully": "翻译完成",
                 
-                # API测试
+                # API test
                 "Test": "测试",
                 "Testing": "测试中",
                 "Get Models": "获取模型",
@@ -256,7 +256,7 @@ class I18nManager:
             }
         elif locale_code == "en_US":
             return {
-                # 菜单和按钮
+                # Menus and buttons
                 "File": "File",
                 "Edit": "Edit",
                 "View": "View",
@@ -270,14 +270,14 @@ class I18nManager:
                 "Yes": "Yes",
                 "No": "No",
                 
-                # 应用标题和界面
+                # Application title and interface
                 "Manga Image Translator UI": "Manga Image Translator UI",
                 "Main View": "Main View",
                 "Editor View": "Editor View",
                 "Settings": "Settings",
                 "About": "About",
                 
-                # 翻译相关
+                # Translation
                 "Start Translation": "Start Translation",
                 "Stop Translation": "Stop Translation",
                 "Translation Settings": "Translation Settings",
@@ -288,7 +288,7 @@ class I18nManager:
                 "Translation Complete": "Translation Complete",
                 "Translation Failed": "Translation Failed",
                 
-                # 其他保持英文原样
+                # The rest stays in English as it is
                 "Add Files": "Add Files",
                 "Add Folder": "Add Folder",
                 "Clear List": "Clear List",
@@ -301,7 +301,7 @@ class I18nManager:
                 "Paste": "Paste",
             }
         else:
-            # 其他语言返回空字典，使用回退机制
+            # Other languages return an empty dictionary and use the fallback mechanism
             return {}
     
     def set_locale(self, locale_code: str) -> bool:
@@ -313,7 +313,7 @@ class I18nManager:
         old_locale = self.current_locale
         self.current_locale = locale_code
         
-        # 每次切换语言都重载翻译，确保运行中更新的词条能立即生效
+        # The translations are reloaded on every language switch, so entries updated while running take effect at once
         self._load_locale_translation(locale_code)
         
         self.logger.info(f"Switching language: {old_locale} -> {locale_code}")
@@ -338,21 +338,21 @@ class I18nManager:
         if locale_code is None:
             locale_code = self.current_locale
         
-        # 检查键是否存在于当前语言的翻译中
+        # Check whether the key exists in the translations of the current language
         locale_translations = self.translations.get(locale_code, {})
         
         if key in locale_translations:
-            # 键存在，使用当前语言的翻译
+            # The key exists: use the translation of the current language
             translation = locale_translations[key]
         elif locale_code != self.fallback_locale:
-            # 键不存在且不是回退语言，尝试从回退语言获取
+            # The key does not exist and this is not the fallback language: try the fallback language
             fallback_translations = self.translations.get(self.fallback_locale, {})
             translation = fallback_translations.get(key, key)
         else:
-            # 键不存在且已经是回退语言，返回键本身
+            # The key does not exist and this already is the fallback language: return the key itself
             translation = key
         
-        # 格式化翻译（支持参数替换）
+        # Format the translation (supports parameter substitution)
         if kwargs and translation != key:
             try:
                 translation = translation.format(**kwargs)
@@ -390,7 +390,7 @@ class I18nManager:
         """保存翻译到文件"""
         try:
             if locale_code is None:
-                # 保存所有语言
+                # Save all languages
                 for code in self.translations.keys():
                     self._save_locale_translation(code)
                 return True
@@ -420,19 +420,19 @@ class I18nManager:
     def export_missing_keys(self, locale_code: str, output_file: str) -> bool:
         """导出缺失的翻译键"""
         try:
-            # 获取默认语言的所有键
+            # Get every key of the default language
             default_keys = set(self.translations.get(self.fallback_locale, {}).keys())
             
-            # 获取目标语言的键
+            # Get the keys of the target language
             target_keys = set(self.translations.get(locale_code, {}).keys())
             
-            # 找出缺失的键
+            # Find the missing keys
             missing_keys = default_keys - target_keys
             
             if missing_keys:
                 missing_translations = {}
                 for key in missing_keys:
-                    missing_translations[key] = ""  # 空值等待翻译
+                    missing_translations[key] = ""  # An empty value, waiting for translation
                 
                 with open(output_file, 'w', encoding='utf-8') as f:
                     json.dump(missing_translations, f, ensure_ascii=False, indent=2)
@@ -459,7 +459,7 @@ class I18nManager:
         """是否为从右到左的语言"""
         return self.get_text_direction(locale_code) == "rtl"
 
-# 全局国际化管理器
+# Global internationalisation manager
 _i18n_manager = None
 
 def get_i18n_manager() -> I18nManager:
@@ -475,7 +475,7 @@ def setup_i18n(locale_dir: str = "locales", fallback_locale: str = "zh_CN", conf
     _i18n_manager = I18nManager(locale_dir, fallback_locale, config_language)
     return _i18n_manager
 
-# 便捷函数
+# Convenience functions
 def _(key: str, **kwargs) -> str:
     """翻译函数的简短别名"""
     return get_i18n_manager().translate(key, **kwargs)

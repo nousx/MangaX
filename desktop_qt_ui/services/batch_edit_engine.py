@@ -62,7 +62,7 @@ class BatchEditCancelled(RuntimeError):
     """扫描/执行被调用方取消。"""
 
 
-# ─── 字段表 ───
+# ─── Field table ───
 
 KIND_TEXT = "text"
 KIND_ENUM = "enum"
@@ -77,7 +77,7 @@ class FieldSpec:
     kind: str
     label: str
     choices: tuple[str, ...] = ()
-    #: 派生字段只能做条件，不能被 set_fields 写
+    #: Derived fields can only be used in conditions; set_fields cannot write them
     writable: bool = True
     integer: bool = False
 
@@ -99,10 +99,10 @@ FIELDS: tuple[FieldSpec, ...] = (
     FieldSpec("prob", KIND_NUMBER, "OCR Confidence", writable=False),
     FieldSpec("fg_colors", KIND_COLOR, "Text Color"),
     FieldSpec("bg_colors", KIND_COLOR, "Stroke Color"),
-    # region 级的 bold/italic/underline/font_weight 虽然在 TextBlock.to_dict() 里，
-    # 但没有任何 UI 写它们，渲染侧 italic/underline/font_weight 更是无人读取
-    # （bold 只有 rendering/__init__.py 读，而值永远是默认 False）。真正生效的
-    # 加粗/斜体在富文本样式里，所以这四个字段不进批量表，免得点了没反应。
+    # The region-level bold/italic/underline/font_weight are in TextBlock.to_dict(),
+    # but no UI writes them, and on the rendering side nothing reads italic/underline/font_weight at all
+    # (bold is only read by rendering/__init__.py, and its value is always the default False). The bold and italic
+    # that really take effect live in the rich-text styles, so these four fields are kept out of the batch table; choosing them would do nothing.
     FieldSpec("has_rich_text", KIND_BOOL, "Has Rich Text", writable=False),
     FieldSpec("line_count", KIND_NUMBER, "Line Count", writable=False, integer=True),
     FieldSpec("region_index", KIND_NUMBER, "Region Index", writable=False, integer=True),
@@ -118,7 +118,7 @@ OPS_BY_KIND: dict[str, tuple[str, ...]] = {
     KIND_BOOL: ("is_true", "is_false"),
 }
 
-#: 这些运算符不需要值，UI 应隐藏值编辑器
+#: These operators need no value; the UI should hide the value editor
 VALUELESS_OPS = frozenset({"empty", "not_empty", "is_true", "is_false"})
 
 OP_LABELS: dict[str, str] = {
@@ -146,17 +146,17 @@ _DIRECTION_ALIASES = {
     "vertical": "v",
     "h": "h",
     "v": "v",
-    "hr": "h",  # 兼容历史数据；阅读顺序由语言决定。
+    "hr": "h",  # For old data; the reading order is decided by the language.
     "vr": "v",
     "auto": "auto",
 }
 
-#: 编辑器保存时把 fg_colors/bg_colors 写成了 font_color/bg_color 十六进制串，
-#: 两种形态都要认，否则同一批图只有一半能匹配上。
+#: On save the editor wrote fg_colors/bg_colors as font_color/bg_color hex strings;
+#: both forms have to be recognised, otherwise only half of a batch of images would match.
 _COLOR_FALLBACKS = {"fg_colors": "font_color", "bg_colors": "bg_color"}
 
 
-# ─── 取值 / 归一化 ───
+# ─── Reading values / normalisation ───
 
 
 def region_visible_text(region: dict) -> str:
@@ -222,7 +222,7 @@ def region_field_value(region: dict, key: str, region_index: int = 0) -> Any:
     return region.get(key)
 
 
-# ─── 条件求值 ───
+# ─── Evaluating conditions ───
 
 
 def _match_text(value: Any, op: str, expected: Any) -> bool:
@@ -422,7 +422,7 @@ def evaluate_conditions(region: dict, match: dict, region_index: int = 0) -> boo
     return all(results)
 
 
-# ─── 动作 ───
+# ─── Actions ───
 
 
 def _compile_pattern(action: dict) -> Optional[re.Pattern]:
@@ -513,7 +513,7 @@ def _apply_set_fields(region: dict, action: dict) -> None:
             continue
         if key == "translation":
             translation_value = str(value)
-            continue  # 延后统一走同步管线
+            continue  # Deferred, so everything goes through the sync pipeline together
         if key == "translation_raw":
             region[key] = plain_text_to_storage_text(storage_text_to_editor_text(str(value)))
             raw_written = True
@@ -521,7 +521,7 @@ def _apply_set_fields(region: dict, action: dict) -> None:
         region[key] = _coerce_field_value(spec, value)
 
     if translation_value is not None:
-        # 用户可能直接敲 [BR]/<br>，先归一到 \n 口径再走管线
+        # The user may type [BR]/<br> directly; normalise to \n first, then go through the pipeline
         post_text = storage_text_to_editor_text(translation_value)
         _sync_translation(
             region,
@@ -551,7 +551,7 @@ def _expand_replacement(match: re.Match, action: dict) -> str:
     try:
         return match.expand(replacement)
     except (re.error, IndexError):
-        # 用户把 \d 之类写进了替换串：按字面量处理，别让整批任务崩在这
+        # The user wrote something like \d into the replacement string: treat it as a literal, so the whole batch does not crash here
         return replacement
 
 
@@ -614,7 +614,7 @@ def _apply_replace_text(region: dict, action: dict) -> None:
         return
     document = document_from_region(region)
     raw_text = visible_text_from_document(document)
-    # ops 的坐标口径 = 文档正文且连续换行压成一个（同 _collapse_linebreak_entries）
+    # Coordinate convention of ops = the document body with consecutive line breaks collapsed into one (as in _collapse_linebreak_entries)
     pre_text = _COLLAPSE_BREAKS_RE.sub("\n", raw_text)
     matches = [item for item in pattern.finditer(pre_text) if item.start() != item.end()]
     if not matches:
@@ -622,7 +622,7 @@ def _apply_replace_text(region: dict, action: dict) -> None:
 
     raw_index = _collapsed_index_map(raw_text)
 
-    # 命中按升序生成，每条 op 的位置落在"前面的 op 都已回放"的坐标系里
+    # Matches are produced in ascending order; the position of each op is in the coordinate system where "all earlier ops have been replayed"
     ops: list[list] = []
     carried: list[tuple] = []
     post_text = pre_text
@@ -721,12 +721,12 @@ def _fill_rich_text(document: dict, start: int, end: int, preset: dict) -> dict:
     """添加：命中区间已有的同名项赢，只补它没有的。"""
     spans = _uniform_style_spans(document, start, end)
     for span_start, span_end, existing, _ in reversed(spans):
-        # 嵌套项（stroke/glow/transform…）按顶层键判断：已经有描边就整个不动
+        # Nested items (stroke/glow/transform...) are judged by their top-level key: when a stroke already exists, it is left alone entirely
         patch = {key: value for key, value in preset["style"].items() if key not in existing}
         if patch:
             document = apply_style_to_range(document, span_start, span_end, patch)
-    # ruby/tcy 是整段一个节点，不能按样式子区间拆着加（会碎成几个同名注音），
-    # 所以区间内只要已有任何节点就整段让位
+    # ruby/tcy is one node for the whole span and cannot be added piecewise per style sub-range (it would break into several ruby nodes of the same name),
+    # so when the range already has any node, the whole span gives way
     if not any(has_node for _, _, _, has_node in spans):
         if preset["ruby"]:
             document = apply_ruby_to_range(document, start, end, preset["ruby"])
@@ -804,7 +804,7 @@ def apply_scheme_to_region(region: dict, scheme: dict) -> Optional[dict]:
     return None if updated == region else updated
 
 
-# ─── 扫描 ───
+# ─── Scanning ───
 
 
 @dataclass(frozen=True, slots=True)
@@ -1029,7 +1029,7 @@ def apply_matches(
     return report
 
 
-# ─── 恢复 ───
+# ─── Restoring ───
 
 
 def backup_path_for(json_path: str) -> str:

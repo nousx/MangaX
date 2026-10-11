@@ -131,22 +131,22 @@ def build_friendly_error_message(error_message: str, error_traceback: str, i18n=
     if local_model_missing:
         friendly_msg = _translate("friendly_error_local_model_missing")
 
-    # 检查是否是AI断句检查失败
+    # Check whether the AI line-breaking check failed
     elif ("br markers missing" in lower_error or
         "ai line break validation failed" in lower_error or
         "BRMarkersValidationException" in error_traceback or
         "_validate_br_markers" in error_traceback):
         friendly_msg = _translate("friendly_error_br_markers")
 
-    # 检查是否是翻译数量不匹配错误
+    # Check whether it is a translation count mismatch
     elif "translation count mismatch" in lower_error:
         friendly_msg = _translate("friendly_error_translation_count")
 
-    # 检查是否是翻译质量检查失败
+    # Check whether the translation quality check failed
     elif "quality check failed" in lower_error:
         friendly_msg = _translate("friendly_error_translation_quality")
 
-    # 检查是否是 OpenAI/Gemini 空响应错误（统一处理）
+    # Check whether it is an empty response from OpenAI/Gemini (handled together)
     elif (
         (("NoneType" in real_error or "NoneType" in error_traceback) and
          ("strip" in real_error.lower() or "strip" in error_traceback.lower()))
@@ -156,7 +156,7 @@ def build_friendly_error_message(error_message: str, error_traceback: str, i18n=
     ):
         friendly_msg = _translate("friendly_error_empty_ai_response")
 
-    # 检查是否是渲染/上色模型或候选不可用
+    # Check whether the render/colorize model or candidate is unavailable
     elif (
         _is_candidate_exhausted_error(*renderer_markers)
         or _is_feature_model_unsupported_error(*renderer_markers)
@@ -177,7 +177,7 @@ def build_friendly_error_message(error_message: str, error_traceback: str, i18n=
     ):
         friendly_msg = _translate("friendly_error_ocr_unavailable")
 
-    # 检查是否是模型或 API 端点不支持图片输入
+    # Check whether the model or the API endpoint does not support image input
     elif (
         "does not support image input" in lower_error
         or "no endpoints found that support image input" in lower_error
@@ -190,18 +190,18 @@ def build_friendly_error_message(error_message: str, error_traceback: str, i18n=
     ):
         friendly_msg = _translate("friendly_error_multimodal_unsupported")
 
-    # 检查是否是模型不存在/模型名错误
+    # Check whether the model does not exist or its name is wrong
     elif _is_model_unsupported_error():
         friendly_msg = _translate("friendly_error_model_unsupported")
 
-    # 检查是否是404错误（API地址或模型配置错误）
+    # Check whether it is a 404 error (wrong API address or model setting)
     elif "api_404_error" in lower_error or (http_404 and "html error page" in lower_error):
         friendly_msg = _translate("friendly_error_api_404_html")
 
     elif http_404:
         friendly_msg = _translate("friendly_error_http_404")
 
-    # 检查是否是API密钥错误
+    # Check whether it is an API key error
     elif (
         "api key" in real_error.lower()
         or "authentication" in real_error.lower()
@@ -213,7 +213,7 @@ def build_friendly_error_message(error_message: str, error_traceback: str, i18n=
     ):
         friendly_msg = _translate("friendly_error_api_credentials")
 
-    # 检查是否是网络连接错误
+    # Check whether it is a network connection error
     elif (
         "connection" in real_error.lower()
         or "connect" in real_error.lower()
@@ -237,19 +237,19 @@ def build_friendly_error_message(error_message: str, error_traceback: str, i18n=
     ):
         friendly_msg = _translate("friendly_error_network")
 
-    # 检查是否是速率限制错误
+    # Check whether it is a rate limit error
     elif "rate limit" in real_error.lower() or _has_status_code("429") or "too many requests" in real_error.lower():
         friendly_msg = _translate("friendly_error_http_429")
 
-    # 检查是否是403禁止访问错误
+    # Check whether it is a 403 forbidden error
     elif _has_status_code("403") or "forbidden" in real_error.lower():
         friendly_msg = _translate("friendly_error_http_403")
 
-    # 检查是否是500服务器错误
+    # Check whether it is a 500 server error
     elif _has_status_code("500") or "internal server error" in real_error.lower():
         friendly_msg = _translate("friendly_error_http_500")
 
-    # 检查是否是502/503/504网关错误
+    # Check whether it is a 502/503/504 gateway error
     elif any(_has_status_code(code) for code in ["502", "503", "504"]) or "bad gateway" in real_error.lower() or "service unavailable" in real_error.lower() or "gateway timeout" in real_error.lower():
         error_code = "502/503/504"
         if _has_status_code("502"):
@@ -261,19 +261,19 @@ def build_friendly_error_message(error_message: str, error_traceback: str, i18n=
 
         friendly_msg = _translate("friendly_error_http_gateway", code=error_code)
 
-    # 检查是否是内容过滤错误
+    # Check whether it is a content filter error
     elif "content filter" in real_error.lower() or "content_filter" in real_error:
         friendly_msg = _translate("friendly_error_content_filter")
 
-    # 检查是否是语言不支持错误
+    # Check whether it is an unsupported language error
     elif "language not supported" in real_error.lower() or "LanguageUnsupportedException" in error_traceback:
         friendly_msg = _translate("friendly_error_language_unsupported")
 
-    # 检查是否是请求被拦截错误
+    # Check whether the request was blocked
     elif "blocked" in real_error.lower() or "request was blocked" in real_error.lower():
         friendly_msg = _translate("friendly_error_request_blocked")
 
-    # 通用错误
+    # General error
     else:
         friendly_msg = _translate(
             "friendly_error_generic",
@@ -286,12 +286,12 @@ def build_friendly_error_message(error_message: str, error_traceback: str, i18n=
         error=_wrap_error_text(error_message),
     )
     if error_traceback and "Traceback" in error_traceback:
-        # 只保留API详细错误信息（不保留代码路径）
+        # Keep only the detailed API error information (no code paths)
         lines = error_traceback.split('\n')
         api_error_lines = []
 
         for line in lines:
-            # 只保留API错误信息行（包含详细的错误内容）
+            # Keep only the API error lines (the ones with the detailed error content)
             if line.strip() and any(keyword in line for keyword in ['BadRequest', 'Error code:', "'error':", "'message':", "{'error':"]):
                 api_error_lines.append(line.strip())
 

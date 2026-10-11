@@ -39,16 +39,16 @@ ACTION_SET_FIELDS = "set_fields"
 ACTION_REPLACE_TEXT = "replace_text"
 ACTION_RICH_TEXT = "rich_text"
 
-# 动作固定按此顺序执行：改文字会清掉命中区间的富文本，先加样式再改文字等于白加。
+# Actions always run in this order: changing the text clears the rich text of the matched range, so adding styles before changing the text would be wasted.
 ACTION_ORDER = (ACTION_SET_FIELDS, ACTION_REPLACE_TEXT, ACTION_RICH_TEXT)
 
 LOGIC_ALL = "all"
 LOGIC_ANY = "any"
 
-# rich_text 动作的三种模式：
-#   overwrite 覆盖 —— 你编的那几项赢，命中区间上的其他项保留
-#   fill      添加 —— 命中区间已有的项赢，只补它没有的
-#   replace   替换 —— 先清掉命中区间原有的全部样式，再应用新样式
+# The three modes of a rich_text action:
+#   overwrite - the items you edited win; other items on the matched range are kept
+#   fill      - items the matched range already has win; only what it lacks is added
+#   replace   - all existing styles of the matched range are cleared first, then the new style is applied
 RICH_MODE_OVERWRITE = "overwrite"
 RICH_MODE_FILL = "fill"
 RICH_MODE_REPLACE = "replace"
@@ -110,7 +110,7 @@ def reset_schemes_to_default(file_path: Optional[str] = None) -> str:
     return file_path
 
 
-# ─── 归一化 ───
+# ─── Normalisation ───
 
 
 def _clean_conditions(raw: Any) -> list[dict]:
@@ -150,11 +150,11 @@ def _clean_action(raw: Any) -> Optional[dict]:
     if action_type == ACTION_RICH_TEXT:
         mode = str(raw.get("mode", "") or "").strip().lower()
         if mode not in RICH_MODES:
-            # 旧 clear 动作没有目标样式，不能安全迁移为替换；直接丢弃。
+            # The old clear action has no target style and cannot be migrated safely to replace; it is dropped.
             if mode == "clear":
                 return None
             mode = RICH_MODE_OVERWRITE
-        # pattern 留空 = 整条 region 的全部文字（region 由匹配条件筛，不是这里）
+        # An empty pattern = all the text of the whole region (regions are selected by the match conditions, not here)
         style = raw.get("style")
         ruby = raw.get("ruby", "")
         match_style = raw.get("match_style")
@@ -173,7 +173,7 @@ def _clean_action(raw: Any) -> Optional[dict]:
         if isinstance(match_style, dict) and match_style:
             action["match_style"] = copy.deepcopy(match_style)
             action["match_style_logic"] = match_style_logic
-        # 三者全空的富文本动作什么也做不了，直接丢弃（与规则页 _compile_rule 同口径）
+        # A rich-text action with all three empty can do nothing and is dropped (the same convention as _compile_rule of the rules page)
         if not action["style"] and not action["ruby"] and not action["tcy"]:
             return None
         return action
@@ -215,7 +215,7 @@ def new_scheme(name: str) -> dict:
     }
 
 
-# ─── 读写 ───
+# ─── Reading and writing ───
 
 
 def load_schemes(file_path: Optional[str] = None) -> list[dict]:

@@ -225,15 +225,15 @@ class LogService:
         self.log_handlers = []
         self.max_recent_logs = _RECENT_LOGS.maxlen
         
-        # 注意：不再自动创建日志目录，由调用方根据需要创建
-        # 实际日志文件写入到 result 目录，由 main.py 管理
+        # Note: the log folder is no longer created automatically; the caller creates it when needed
+        # The actual log file is written to the result folder and managed by main.py
         
-        # 初始化主日志器
+        # Initialise the main logger
         self._setup_main_logger()
         
     def _setup_main_logger(self):
         """设置主日志器"""
-        # 初始化 manga_translator 的日志系统
+        # Initialise the logging of manga_translator
         try:
             from manga_translator.utils.log import init_logging
             init_logging()
@@ -245,17 +245,17 @@ class LogService:
         logging.getLogger().setLevel(logging.DEBUG)
         
         logger = logging.getLogger(self.app_name)
-        logger.setLevel(logging.DEBUG)  # 设为 DEBUG 以允许所有日志通过
+        logger.setLevel(logging.DEBUG)  # Set to DEBUG so every record gets through
         logger.propagate = True
         
-        # 清除现有处理器
+        # Remove the existing handlers
         for handler in logger.handlers[:]:
             logger.removeHandler(handler)
 
         self.console_handler = None
 
-        # 主程序已经配置 root 控制台输出时，不再为 UI logger 额外挂一份 stdout handler，
-        # 否则同一条日志会先在这里打印，再向 root 传播后再打印一次。
+        # When the main program has already set up console output on the root logger, no extra stdout handler is attached to the UI logger;
+        # otherwise the same record would be printed here and again after it propagates to root.
         if not self._get_root_console_handlers():
             class FlushingStreamHandler(logging.StreamHandler):
                 def emit(self, record):
@@ -316,26 +316,26 @@ class LogService:
         """
         level = logging.DEBUG if verbose else logging.INFO
         
-        # 设置控制台处理器级别
+        # Set the level of the console handler
         if self.console_handler is not None:
             self.console_handler.setLevel(level)
 
         for handler in self._get_root_console_handlers():
             handler.setLevel(level)
         
-        # 根日志器和 QueueHandler 始终保持 DEBUG；由监听线程上的各目标
-        # handler 决定是否输出，避免正常模式把文件 DEBUG 一并截断。
+        # The root logger and the QueueHandler always stay at DEBUG; the target handlers on the listener thread
+        # decide whether to output, so normal mode does not cut off the DEBUG records meant for the file as well.
         root_logger = logging.getLogger()
         root_logger.setLevel(logging.DEBUG)
         for handler in root_logger.handlers:
             if isinstance(handler, logging.handlers.QueueHandler):
                 handler.setLevel(logging.DEBUG)
         
-        # 设置主应用logger级别
+        # Set the level of the main application logger
         if self.app_name in self.loggers:
             self.loggers[self.app_name].setLevel(logging.DEBUG)
         
-        # 同步设置manga_translator的日志级别
+        # Set the log level of manga_translator to match
         logging.getLogger('manga-translator').setLevel(level)
         
     
@@ -346,9 +346,9 @@ class LogService:
         
         if name not in self.loggers:
             logger = logging.getLogger(name)
-            logger.setLevel(logging.DEBUG)  # 设为 DEBUG 以允许所有日志通过
+            logger.setLevel(logging.DEBUG)  # Set to DEBUG so every record gets through
             
-            # 如果是子日志器，继承主日志器的配置
+            # A child logger inherits the configuration of the main logger
             if name != self.app_name:
                 parent_logger = self.loggers.get(self.app_name)
                 if parent_logger:
@@ -461,7 +461,7 @@ class LogService:
                     'module': log.get('module')
                 })
         
-        # 只保留最近的10个错误
+        # Only the 10 most recent errors are kept
         summary['recent_errors'] = summary['recent_errors'][-10:]
         
         return summary
@@ -481,7 +481,7 @@ class LogService:
         try:
             logs = self.get_recent_logs(level=level)
             
-            # 时间过滤
+            # Filter by time
             if start_time or end_time:
                 filtered_logs = []
                 for log in logs:
@@ -542,7 +542,7 @@ class LogService:
         self.log_handlers.clear()
         self.loggers.clear()
 
-# 全局日志服务实例
+# Global log service instance
 _log_service = None
 
 def get_log_service() -> LogService:

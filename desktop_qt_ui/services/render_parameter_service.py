@@ -39,43 +39,43 @@ def _normalize_direction(value: Any) -> str:
 @dataclass
 class RenderParameters:
     """渲染参数数据类"""
-    # 字体参数
+    # Font parameters
     font_size: int = 12
     font_family: str = ""
 
-    # 颜色参数
-    fg_color: Tuple[int, int, int] = (255, 255, 255)  # 前景色
-    bg_color: Tuple[int, int, int] = (0, 0, 0)  # 背景色/描边色
-    opacity: float = 1.0  # 透明度
+    # Colour parameters
+    fg_color: Tuple[int, int, int] = (255, 255, 255)  # Foreground colour
+    bg_color: Tuple[int, int, int] = (0, 0, 0)  # Background colour / stroke colour
+    opacity: float = 1.0  # Opacity
     
-    # 布局参数
+    # Layout parameters
     alignment: str = "center"
     direction: str = "auto"
-    line_spacing: float = 1.0  # 行间距倍数
-    letter_spacing: float = 1.0  # 字间距倍数
-    layout_mode: str = "smart_scaling"  # 布局模式
-    balloon_fill_mask_layout: bool = False  # 按气泡蒙版断句、扩大字号并避免跨气泡碰撞
-    disable_auto_wrap: bool = False  # 禁用自动换行（AI断句）
-    font_size_offset: int = 0  # 字体大小偏移
-    font_size_minimum: int = 0  # 最小字体大小
-    max_font_size: int = 0  # 最大字体大小
-    font_scale_ratio: float = 1.0  # 字体缩放比例
-    center_text_in_bubble: bool = False  # AI断句时文本居中
-    optimize_line_breaks: bool = False  # 自动优化断句
-    semantic_linebreak: bool = False  # 中文语义断句
-    remove_linebreak_punctuation: bool = False  # 去除换行符周围的逗号句号
-    strict_smart_scaling: bool = False  # AI断句自动扩大文字下不扩大文本框
+    line_spacing: float = 1.0  # Line spacing multiplier
+    letter_spacing: float = 1.0  # Letter spacing multiplier
+    layout_mode: str = "smart_scaling"  # Layout mode
+    balloon_fill_mask_layout: bool = False  # Break lines by the bubble mask, enlarge the font and avoid collisions across bubbles
+    disable_auto_wrap: bool = False  # Disable automatic wrapping (AI line breaking)
+    font_size_offset: int = 0  # Font size offset
+    font_size_minimum: int = 0  # Minimum font size
+    max_font_size: int = 0  # Maximum font size
+    font_scale_ratio: float = 1.0  # Font scale ratio
+    center_text_in_bubble: bool = False  # Centre the text when AI line breaking is on
+    optimize_line_breaks: bool = False  # Optimise line breaks automatically
+    semantic_linebreak: bool = False  # Semantic line breaking for Chinese
+    remove_linebreak_punctuation: bool = False  # Remove commas and periods around line breaks
+    strict_smart_scaling: bool = False  # Do not enlarge the text box when AI line breaking enlarges the text automatically
 
-    # 效果参数
-    stroke_width: float = 0.07  # 描边宽度（相对字体大小的比例）
-    shadow_radius: float = 0.0  # 阴影半径
-    shadow_strength: float = 1.0  # 阴影强度
-    shadow_color: Tuple[int, int, int] = (0, 0, 0)  # 阴影颜色
-    shadow_offset: List[float] = None  # 阴影偏移
+    # Effect parameters
+    stroke_width: float = 0.07  # Stroke width (as a ratio of the font size)
+    shadow_radius: float = 0.0  # Shadow radius
+    shadow_strength: float = 1.0  # Shadow strength
+    shadow_color: Tuple[int, int, int] = (0, 0, 0)  # Shadow colour
+    shadow_offset: List[float] = None  # Shadow offset
     
-    # 渲染选项
-    hyphenate: bool = True  # 是否启用连字符
-    disable_font_border: bool = False  # 是否禁用字体边框
+    # Render options
+    hyphenate: bool = True  # Whether hyphenation is on
+    disable_font_border: bool = False  # Whether the font border is disabled
     
     def __post_init__(self):
         self.direction = _normalize_direction(self.direction)
@@ -119,11 +119,11 @@ class RenderParameterService:
         from services import get_config_service
         self.config_service = get_config_service()
 
-        # 存储每个区域的自定义参数
+        # Custom parameters of each region
         self.region_parameters: Dict[int, RenderParameters] = {}
 
-        # 不再维护独立的默认参数，直接使用配置服务
-        # 预设参数
+        # No separate default parameters are kept any more; the configuration service is used directly
+        # Preset parameters
         self.presets: Dict[str, ParameterPreset] = {}
         self._init_default_presets()
 
@@ -133,12 +133,12 @@ class RenderParameterService:
         config = self.config_service.get_config()
         render_fields = RenderParameters.__dataclass_fields__.keys()
         global_render_config = config.render.model_dump()
-        # 过滤掉 None 值，让 dataclass 默认值生效
+        # Leave out None values, so the dataclass defaults apply
         valid_global_config = {k: v for k, v in global_render_config.items() if k in render_fields}
         return RenderParameters(**valid_global_config)
 
     def _init_default_presets(self):
-        # 漫画标准预设
+        # Standard manga preset
         self.presets["manga_standard"] = ParameterPreset(
             name="漫画标准",
             description="适合大部分漫画的标准设置",
@@ -154,7 +154,7 @@ class RenderParameterService:
             )
         )
         
-        # 轻小说预设
+        # Light novel preset
         self.presets["novel_standard"] = ParameterPreset(
             name="轻小说标准",
             description="适合轻小说的横排文本设置",
@@ -170,7 +170,7 @@ class RenderParameterService:
             )
         )
         
-        # 古典文学预设
+        # Classical literature preset
         self.presets["classical_vertical"] = ParameterPreset(
             name="古典竖排",
             description="适合古典文学的竖排文本设置",
@@ -204,23 +204,23 @@ class RenderParameterService:
             width = max(x_coords) - min(x_coords)
             height = max(y_coords) - min(y_coords)
             
-            # 计算字体大小（基于区域高度的80%）
+            # Font size (80% of the region height)
             if height > 0:
-                font_size = max(int(height * 0.6), 8)  # 最小8像素
-                font_size = min(font_size, 72)  # 最大72像素
+                font_size = max(int(height * 0.6), 8)  # At least 8 pixels
+                font_size = min(font_size, 72)  # At most 72 pixels
             else:
                 font_size = 12
             
-            # 判断文本方向
+            # Decide the text direction
             aspect_ratio = width / height if height > 0 else 1.0
             if aspect_ratio > 2.0:
-                direction = "h"  # 明显的横向
+                direction = "h"  # Clearly horizontal
                 alignment = "center"
             elif aspect_ratio < 0.5:
-                direction = "v"  # 明显的纵向
+                direction = "v"  # Clearly vertical
                 alignment = "right"
             else:
-                direction = "auto"  # 自动判断
+                direction = "auto"  # Decide automatically
                 alignment = "center"
             
             params.font_size = font_size
@@ -353,36 +353,36 @@ class RenderParameterService:
         """导出参数供后端识别和执行"""
         params = self.get_region_parameters(region_index, region_data)
         
-        # 转换为后端可识别的格式
+        # Convert to the format the backend understands
         font_to_use = params.font_family
         if not font_to_use:
             default_params = self.get_default_parameters()
             font_to_use = default_params.font_family
         
         backend_params = {
-            # 字体参数
+            # Font parameters
             'font_size': params.font_size,
             'font_family': font_to_use,
 
-            # 颜色参数
+            # Colour parameters
             'font_color': f"#{params.fg_color[0]:02x}{params.fg_color[1]:02x}{params.fg_color[2]:02x}" if isinstance(params.fg_color, (list, tuple)) and len(params.fg_color) == 3 else params.fg_color,
             'opacity': params.opacity,
             
-            # 布局参数
+            # Layout parameters
             'alignment': params.alignment,
             'direction': {'h': 'horizontal', 'v': 'vertical'}.get(params.direction, 'auto'),
             'vertical': params.direction == 'v',
             'line_spacing': params.line_spacing,
             'letter_spacing': params.letter_spacing,
             
-            # 效果参数
+            # Effect parameters
             'stroke_width': params.effective_stroke_width,
             'shadow_radius': params.shadow_radius,
             'shadow_strength': params.shadow_strength,
             'shadow_color': params.shadow_color,
             'shadow_offset': params.shadow_offset,
             
-            # 渲染选项
+            # Render options
             'hyphenate': params.hyphenate,
             'disable_font_border': params.disable_font_border,
             'disable_auto_wrap': params.disable_auto_wrap,
@@ -395,12 +395,12 @@ class RenderParameterService:
             'center_text_in_bubble': params.center_text_in_bubble,
             'semantic_linebreak': params.semantic_linebreak,
             'remove_linebreak_punctuation': params.remove_linebreak_punctuation,
-            # 添加元数据
+            # Add the metadata
             '_render_params_version': '1.0',
             '_generated_by': 'desktop-ui'
         }
         
-        # 处理描边颜色 - 使用 params.bg_color 作为描边颜色
+        # Stroke colour - params.bg_color is used as the stroke colour
         backend_params['text_stroke_color'] = params.bg_color
 
         return backend_params
@@ -408,12 +408,12 @@ class RenderParameterService:
     def import_parameters_from_json(self, region_index: int, json_data: Dict[str, Any]):
         """从JSON数据导入参数"""
         try:
-            # 过滤有效的参数
+            # Keep the valid parameters only
             valid_params = {}
             param_fields = RenderParameters.__dataclass_fields__.keys()
             
             for key, value in json_data.items():
-                # 特殊处理颜色键名的不一致 (JSON是复数, dataclass是单数)
+                # Special handling for the inconsistent colour key names (plural in the JSON, singular in the dataclass)
                 if key == 'fg_colors':
                     key = 'fg_color'
                     value = tuple(value) if isinstance(value, list) else value
@@ -422,7 +422,7 @@ class RenderParameterService:
                     value = tuple(value) if isinstance(value, list) else value
                 elif key == 'text_stroke_color':
                     key = 'bg_color'
-                    # 处理 hex 格式颜色
+                    # Handle a colour in hex format
                     if isinstance(value, str) and value.startswith('#'):
                         try:
                             r = int(value[1:3], 16)
@@ -434,7 +434,7 @@ class RenderParameterService:
                     else:
                          value = tuple(value) if isinstance(value, list) else value
                 elif key == 'font_color':
-                    # 处理 hex 格式颜色
+                    # Handle a colour in hex format
                     if isinstance(value, str) and value.startswith('#'):
                         try:
                             r = int(value[1:3], 16)
@@ -449,11 +449,11 @@ class RenderParameterService:
                     valid_params[key] = value
             
             if valid_params:
-                # 先获取配置服务的默认参数作为基础
+                # Take the default parameters of the configuration service as the base first
                 base_params = self.get_default_parameters()
                 base_dict = base_params.to_dict()
 
-                # 用JSON中的值覆盖（但跳过了line_spacing）
+                # Override with the values from the JSON (line_spacing is skipped)
                 base_dict.update(valid_params)
 
                 params = RenderParameters(**base_dict)

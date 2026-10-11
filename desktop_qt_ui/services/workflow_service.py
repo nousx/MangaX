@@ -6,7 +6,7 @@ import re
 import sys
 from typing import List, Tuple
 
-# 添加项目根目录到路径以便导入path_manager
+# Add the project root to the path, so path_manager can be imported
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 from manga_translator.image_formats import (
     IMAGE_FILE_GLOB_PATTERNS,
@@ -44,30 +44,30 @@ def restore_translation_to_text(json_path: str) -> bool:
             logger.warning(f"JSON file not found: {json_path}")
             return False
             
-        # 读取JSON文件
+        # Read the JSON file
         with open(json_path, 'r', encoding='utf-8') as f:
             data = json.load(f)
         
         modified = False
         processed_regions = 0
         
-        # 遍历所有图片的数据
+        # Go through the data of every image
         for image_key, image_data in data.items():
             if isinstance(image_data, dict) and 'regions' in image_data:
                 regions = image_data['regions']
                 
                 for region in regions:
                     if isinstance(region, dict):
-                        # 获取翻译和原文
+                        # Get the translation and the original text
                         translation = region.get('translation', '').strip()
                         original_text = region.get('text', '').strip()
                         
-                        # 只有翻译不为空且与原文不同时才写回
+                        # Written back only when the translation is not empty and differs from the original
                         if translation and translation != original_text:
-                            # 将翻译写回到原文字段
+                            # Write the translation back to the original text field
                             region['text'] = translation
                             
-                            # 同时更新texts数组
+                            # Update the texts array as well
                             if 'texts' in region and isinstance(region['texts'], list):
                                 if len(region['texts']) > 0:
                                     region['texts'][0] = translation
@@ -78,7 +78,7 @@ def restore_translation_to_text(json_path: str) -> bool:
                             processed_regions += 1
                             logger.debug(f"Restored translation to text: '{original_text}' -> '{translation}'")
         
-        # 如果有修改，写回文件
+        # When something changed, write the file back
         if modified:
             with open(json_path, 'w', encoding='utf-8') as f:
                 json.dump(data, f, ensure_ascii=False, indent=4)
@@ -112,7 +112,7 @@ def batch_process_json_folder(folder_path: str, pattern: str = "*_translations.j
         logger.warning(f"Folder not found: {folder_path}")
         return 0, 0
     
-    # 查找所有匹配的JSON文件
+    # Find all matching JSON files
     search_pattern = os.path.join(folder_path, "**", pattern)
     json_files = glob.glob(search_pattern, recursive=True)
     
@@ -148,7 +148,7 @@ def process_json_file_list(file_paths: List[str]) -> Tuple[int, int]:
     total = 0
     
     for file_path in file_paths:
-        # 生成对应的JSON文件路径
+        # Build the path of the matching JSON file
         json_path = os.path.splitext(file_path)[0] + "_translations.json"
         
         if os.path.exists(json_path):
@@ -202,12 +202,12 @@ def parse_template(template_string: str):
     first_item_line_index = item_line_indices[0]
     first_item_line = lines[first_item_line_index]
 
-    # 提取item_template：从<original>开始到<translated>结束（不包括前缀空格和后面的逗号等）
-    # 找到<original>的开始位置
+    # Extract item_template: from the start of <original> to the end of <translated> (without the leading spaces, the trailing comma and so on)
+    # Find where <original> starts
     original_placeholder = "<original>"
     original_start_index = first_item_line.find(original_placeholder)
 
-    # 找到<translated>的结束位置
+    # Find where <translated> ends
     translated_placeholder = "<translated>"
     translated_end_index = first_item_line.find(translated_placeholder)
     if translated_end_index != -1:
@@ -216,10 +216,10 @@ def parse_template(template_string: str):
     else:
         item_template = first_item_line[original_start_index:]
 
-    # 提取前缀空格（从行首到<original>）
+    # Extract the leading spaces (from the start of the line to <original>)
     leading_spaces = first_item_line[:original_start_index]
 
-    # Define prefix（包含第一个item的前缀空格）
+    # Define prefix (includes the leading spaces of the first item)
     prefix_lines = lines[:first_item_line_index]
     prefix = "".join(prefix_lines) + leading_spaces
 
@@ -230,21 +230,21 @@ def parse_template(template_string: str):
         second_item_line_index = item_line_indices[1]
         second_item_line = lines[second_item_line_index]
 
-        # 从第一行的<translated>结束位置到行尾
+        # From the end of <translated> on the first line to the end of that line
         separator_from_first_line = first_item_line[translated_end_index:]
 
-        # 第一行和第二行之间的内容
+        # What lies between the first and the second line
         separator_lines = lines[first_item_line_index + 1 : second_item_line_index]
         separator_between_lines = "".join(separator_lines)
 
-        # 第二行从行首到<original>开始位置（前缀空格）
+        # The second line from its start to where <original> begins (leading spaces)
         second_original_start_index = second_item_line.find("<original>")
         if second_original_start_index > 0:
             separator_to_second_line = second_item_line[:second_original_start_index]
         else:
             separator_to_second_line = ""
 
-        # 组合分隔符
+        # Put the separator together
         separator = separator_from_first_line + separator_between_lines + separator_to_second_line
 
         # Suffix is the content after the last item line's <translated>
@@ -329,7 +329,7 @@ def generate_original_text(
         return "Error: Could not find 'regions' list in source JSON."
     regions = image_data.get('regions', [])
 
-    # 收集原文和翻译（导出原文时，翻译字段填充JSON中的translation）
+    # Collect original texts and translations (when exporting the original text, the translation field is filled with the translation from the JSON)
     items = []
     for region in regions:
         original_text = region.get('text', '').replace('[BR]', '')
@@ -337,7 +337,7 @@ def generate_original_text(
         if original_text.strip():
             items.append({
                 'original': original_text,
-                'translated': translated_text if translated_text else original_text  # 如果translation为空，使用原文作为占位符
+                'translated': translated_text if translated_text else original_text  # When translation is empty, use the original text as a placeholder
             })
 
     try:
@@ -345,22 +345,22 @@ def generate_original_text(
     except Exception as e:
         return f"Error reading template file: {e}"
     
-    # 记录是否有文本
+    # Record whether there is any text
     if not items:
         logger.info(
             f"No text regions found in {detailed_json_path}, "
             f"will create empty .{output_format} file"
         )
 
-    # 生成输出路径
+    # Build the output path
     if output_path is None:
-        # 从JSON路径推断图片路径
+        # Infer the image path from the JSON path
         json_dir = os.path.dirname(detailed_json_path)
         json_basename = os.path.basename(detailed_json_path)
 
-        # 检查是否在新目录结构中
+        # Check whether it is in the new folder structure
         if json_dir.endswith(os.path.join('manga_translator_work', 'json')):
-            # 推断原图片路径
+            # Infer the path of the original image
             work_dir = os.path.dirname(json_dir)
             image_dir = os.path.dirname(work_dir)
             image_name = json_basename.replace('_translations.json', '')
@@ -373,13 +373,13 @@ def generate_original_text(
                     )
                     break
             if output_path is None:
-                # 如果找不到图片，使用JSON同目录
+                # When the image is not found, use the folder of the JSON
                 output_path = os.path.splitext(detailed_json_path)[0] + f'_original.{output_format}'
         else:
-            # 旧格式，使用JSON同目录
+            # Old format: use the folder of the JSON
             output_path = os.path.splitext(detailed_json_path)[0] + f'_original.{output_format}'
 
-    # 使用模板格式化输出
+    # Format the output with the template
     try:
         output_content = _render_template_items(
             items,
@@ -424,7 +424,7 @@ def generate_translated_text(
         return "Error: Could not find 'regions' list in source JSON."
     regions = image_data.get('regions', [])
 
-    # 收集原文和翻译
+    # Collect original texts and translations
     items = []
     for region in regions:
         original_text = region.get('text', '').replace('[BR]', '')
@@ -432,7 +432,7 @@ def generate_translated_text(
         if original_text.strip():
             items.append({
                 'original': original_text,
-                'translated': translated_text  # 导出翻译时，翻译字段是真正的翻译
+                'translated': translated_text  # When exporting the translation, the translation field is the real translation
             })
 
     try:
@@ -440,15 +440,15 @@ def generate_translated_text(
     except Exception as e:
         return f"Error reading template file: {e}"
 
-    # 生成输出路径
+    # Build the output path
     if output_path is None:
-        # 从JSON路径推断图片路径
+        # Infer the image path from the JSON path
         json_dir = os.path.dirname(detailed_json_path)
         json_basename = os.path.basename(detailed_json_path)
 
-        # 检查是否在新目录结构中
+        # Check whether it is in the new folder structure
         if json_dir.endswith(os.path.join('manga_translator_work', 'json')):
-            # 推断原图片路径
+            # Infer the path of the original image
             work_dir = os.path.dirname(json_dir)
             image_dir = os.path.dirname(work_dir)
             image_name = json_basename.replace('_translations.json', '')
@@ -461,13 +461,13 @@ def generate_translated_text(
                     )
                     break
             if output_path is None:
-                # 如果找不到图片，使用JSON同目录
+                # When the image is not found, use the folder of the JSON
                 output_path = os.path.splitext(detailed_json_path)[0] + f'_translated.{output_format}'
         else:
-            # 旧格式，使用JSON同目录
+            # Old format: use the folder of the JSON
             output_path = os.path.splitext(detailed_json_path)[0] + f'_translated.{output_format}'
 
-    # 使用模板格式化输出
+    # Format the output with the template
     try:
         output_content = _render_template_items(
             items,
@@ -493,17 +493,17 @@ def generate_text_from_template(
     Generates a custom text format based on a free-form text template file.
     保留用于向后兼容，现在会同时生成原文和翻译两个文件
     """
-    # 生成原文
+    # Generate the original text
     original_result = generate_original_text(detailed_json_path, template_path)
     if original_result.startswith("Error"):
         logger.warning(f"Failed to generate original text: {original_result}")
 
-    # 生成翻译
+    # Generate the translation
     translated_result = generate_translated_text(detailed_json_path, template_path)
     if translated_result.startswith("Error"):
         return translated_result
 
-    # 返回翻译文件路径（保持向后兼容）
+    # Return the path of the translation file (kept for backward compatibility)
     return translated_result
 
 def get_template_path_from_config(custom_path: str = None) -> str:
@@ -518,7 +518,7 @@ def get_template_path_from_config(custom_path: str = None) -> str:
     """
     base_path = get_application_dir()
 
-    # 优先级: 用户指定 > 环境变量 > 默认路径
+    # Priority: given by the user > environment variable > default path
     if custom_path:
         path_to_check = custom_path if os.path.isabs(custom_path) else os.path.join(base_path, custom_path)
         if os.path.exists(path_to_check):
@@ -551,13 +551,13 @@ def create_template_selection_dialog(parent=None):
         import tkinter as tk
         from tkinter import filedialog
         
-        # 如果没有父窗口，创建一个隐藏的root窗口
+        # Without a parent window, create a hidden root window
         if parent is None:
             root = tk.Tk()
             root.withdraw()
             parent = root
         
-        # 打开文件选择对话框
+        # Open the file dialog
         template_path = filedialog.askopenfilename(
             parent=parent,
             title="选择翻译模板文件",
@@ -598,16 +598,16 @@ def export_with_custom_template(
     if not os.path.exists(json_path):
         return f"错误：JSON文件不存在: {json_path}"
     
-    # 获取模板路径
+    # Get the template path
     final_template_path = get_template_path_from_config(template_path)
     if not os.path.exists(final_template_path):
         return f"错误：模板文件不存在: {final_template_path}"
     
-    # 生成输出路径
+    # Build the output path
     if output_path is None:
         base_name = os.path.splitext(json_path)[0]
         if base_name.endswith("_translations"):
-            # 从 "image_translations.json" 生成 "image_translations.txt"
+            # From "image_translations.json" build "image_translations.txt"
             output_path = base_name + ".txt"
         else:
             output_path = base_name + ".txt"
@@ -641,7 +641,7 @@ def import_with_custom_template(
     if not os.path.exists(txt_path):
         return f"错误：TXT文件不存在: {txt_path}"
     
-    # 自动推断JSON路径
+    # Infer the JSON path automatically
     if json_path is None:
         base_name = os.path.splitext(txt_path)[0]
         json_path = base_name + ".json"
@@ -649,7 +649,7 @@ def import_with_custom_template(
     if not os.path.exists(json_path):
         return f"错误：JSON文件不存在: {json_path}"
     
-    # 获取模板路径
+    # Get the template path
     final_template_path = get_template_path_from_config(template_path)
     if not os.path.exists(final_template_path):
         return f"错误：模板文件不存在: {final_template_path}"
@@ -689,7 +689,7 @@ def smart_update_translations_from_images(
     if not image_file_paths:
         return "错误：未提供图片文件路径"
 
-    # 使用默认模板如果未指定，并确保模板文件存在
+    # Use the default template when none is given, and make sure the template file exists
     if template_path is None:
         template_path = ensure_default_template_exists()
         if template_path is None:
@@ -705,23 +705,23 @@ def smart_update_translations_from_images(
             results.append(f"✗ {os.path.basename(image_path)}: 图片文件不存在")
             continue
 
-        # 使用path_manager查找JSON和TXT文件（支持新目录结构）
+        # Find the JSON and TXT files with path_manager (supports the new folder structure)
         json_path = find_json_path(image_path)
         original_txt_path, translated_txt_path = find_txt_files(image_path)
 
-        # 检查文件存在性
+        # Check that the files exist
         if not json_path:
             results.append(f"- {os.path.basename(image_path)}: 未找到JSON文件")
             continue
 
-        # 使用原文TXT（用户修改原文后导入）
+        # Use the original-text TXT (imported after the user edited the original text)
         txt_path = original_txt_path if original_txt_path else translated_txt_path
 
         if not txt_path:
             results.append(f"- {os.path.basename(image_path)}: 未找到TXT文件")
             continue
 
-        # 执行翻译更新
+        # Update the translations
         try:
             result = safe_update_large_json_from_text(txt_path, json_path, template_path)
             results.append(f"✓ {os.path.basename(image_path)}: {result}")
@@ -731,7 +731,7 @@ def smart_update_translations_from_images(
     if not results:
         return "未找到任何可处理的文件"
 
-    # 统计结果
+    # Count the results
     successful = len([r for r in results if r.startswith("✓")])
     total = len(results)
 
@@ -754,7 +754,7 @@ def auto_detect_and_update_translations(
         str: 处理结果报告
     """
     if isinstance(directory_or_files, str):
-        # 如果是目录路径，扫描目录中的图片文件
+        # For a folder path, scan the folder for image files
         if os.path.isdir(directory_or_files):
             import glob
             
@@ -763,7 +763,7 @@ def auto_detect_and_update_translations(
             for ext in IMAGE_FILE_GLOB_PATTERNS:
                 pattern = os.path.join(directory_or_files, "**", ext)
                 image_files.extend(glob.glob(pattern, recursive=True))
-                # 也搜索大写扩展名
+                # Search for upper-case extensions as well
                 pattern = os.path.join(directory_or_files, "**", ext.upper())
                 image_files.extend(glob.glob(pattern, recursive=True))
             
@@ -775,7 +775,7 @@ def auto_detect_and_update_translations(
             return f"错误：目录不存在: {directory_or_files}"
     
     elif isinstance(directory_or_files, list):
-        # 如果是文件列表，直接处理
+        # For a file list, process it directly
         return smart_update_translations_from_images(directory_or_files, template_path)
     
     else:
@@ -786,11 +786,11 @@ def _load_large_json_optimized(json_file_path: str):
     """优化的大文件JSON加载"""
     import ijson
     try:
-        # 使用ijson进行流式解析，并立即物化为字典
+        # Parse as a stream with ijson and materialise as a dictionary at once
         with open(json_file_path, 'rb') as f:
             return dict(ijson.kvitems(f, ''))
     except ImportError:
-        # 如果没有ijson，回退到标准方法但分块读取
+        # Without ijson, fall back to the standard method but read in chunks
         logger.warning("ijson is unavailable; using standard loading for large files")
         with open(json_file_path, 'r', encoding='utf-8') as f:
             return json.load(f)
@@ -821,17 +821,17 @@ def safe_update_large_json_from_text(
     import tempfile
     import time
     
-    # 检查文件存在
+    # Check that the file exists
     for file_path, name in [(text_file_path, "TXT"), (json_file_path, "JSON"), (template_path, "模板")]:
         if not os.path.exists(file_path):
             return f"错误：{name}文件不存在: {file_path}"
     
-    # 获取文件大小信息
+    # Get the file size
     json_size_mb = os.path.getsize(json_file_path) / (1024 * 1024)
     logger.info(f"Processing JSON file: {os.path.basename(json_file_path)} ({json_size_mb:.2f} MB)")
     
     try:
-        # 1. 解析模板和TXT文件
+        # 1. Parse the template and the TXT file
         logger.debug("Reading template and text files.")
         with open(template_path, 'r', encoding='utf-8') as f:
             template_string = f.read()
@@ -845,11 +845,11 @@ def safe_update_large_json_from_text(
     except ValueError as e:
         return f"错误：解析模板失败: {e}"
 
-    # 2. 解析翻译内容
+    # 2. Parse the translation content
     logger.debug("Parsing translations from text content.")
     translations = {}
     
-    # 首先尝试直接解析为JSON（支持紧凑格式）
+    # First try to parse it directly as JSON (supports the compact format)
     try:
         parsed_json = json.loads(text_content)
         if isinstance(parsed_json, dict):
@@ -858,40 +858,40 @@ def safe_update_large_json_from_text(
         else:
             raise ValueError("Not a dict")
     except (json.JSONDecodeError, ValueError):
-        # 如果JSON解析失败，使用原来的模板解析逻辑
-        # 移除前缀和后缀
+        # When JSON parsing fails, use the original template parsing logic
+        # Remove the prefix and the suffix
         if prefix and text_content.startswith(prefix):
             text_content = text_content[len(prefix):]
         if suffix and text_content.endswith(suffix):
             text_content = text_content[:-len(suffix)]
 
-        # 分割条目
+        # Split into entries
         if separator:
-            # 尝试使用separator分割
+            # Try to split with the separator
             items = text_content.split(separator)
-            # 如果只分割出1个item，可能是紧凑格式（没有换行），尝试用逗号分割
+            # When only 1 item comes out, it may be the compact format (no line breaks): try splitting on commas
             if len(items) == 1 and ',' in text_content:
-                # 使用正则表达式分割：匹配 "key": "value", 的模式
+                # Split with a regular expression: matches the pattern "key": "value",
                 items = re.split(r'",\s*"', text_content)
         else:
             items = [text_content] if text_content.strip() else []
         logger.debug(f"Found {len(items)} items in text file.")
 
-        # 解析每个条目
+        # Parse each entry
         parts = re.split(f'({re.escape("<original>")}|{re.escape("<translated>")})', item_template)
         parser_regex_str = ""
         group_order = []
         for part in parts:
             if part == "<original>":
-                parser_regex_str += "(.+?)"  # 原文必须至少有一个字符
+                parser_regex_str += "(.+?)"  # The original text must have at least one character
                 group_order.append("original")
             elif part == "<translated>":
-                parser_regex_str += "(.*)"  # 译文可以为空，匹配到结尾
+                parser_regex_str += "(.*)"  # The translation may be empty; match to the end
                 group_order.append("translated")
             else:
                 parser_regex_str += re.escape(part)
         
-        # 添加结尾匹配，确保匹配到字符串末尾
+        # Add an end anchor, so it matches to the end of the string
         parser_regex_str += "$"
         parser_regex = re.compile(parser_regex_str, re.DOTALL)
 
@@ -909,7 +909,7 @@ def safe_update_large_json_from_text(
                         result[group_name] = captured_string
                     translations[result['original']] = result['translated']
                 except (IndexError, KeyError):
-                    continue  # 跳过解析失败的条目
+                    continue  # Skip entries that fail to parse
 
     if not translations:
         logger.warning(f"Could not parse any translations from '{os.path.basename(text_file_path)}'.")
@@ -917,41 +917,41 @@ def safe_update_large_json_from_text(
 
     logger.info(f"Parsed {len(translations)} translations")
 
-    # 2.5. 创建标准化映射（用于模糊匹配）
+    # 2.5. Create a normalised mapping (for fuzzy matching)
     def normalize_text(text):
         """标准化文本：去除特殊字符、统一空白字符"""
         import unicodedata
-        # 去除控制字符(C)、格式字符(Cf)、替换字符(�)等
-        # 保留字母(L)、数字(N)、标点(P)、符号(S)、标记(M)
+        # Remove control characters (C), format characters (Cf), the replacement character (U+FFFD) and so on
+        # Keep letters (L), numbers (N), punctuation (P), symbols (S) and marks (M)
         text = ''.join(ch for ch in text if unicodedata.category(ch)[0] not in ['C', 'Z'] and ch != '\ufffd')
-        # 统一空白字符
+        # Normalise whitespace
         text = ' '.join(text.split())
         return text
 
-    # 创建标准化映射：normalized_text -> original_text
+    # Create the normalised mapping: normalized_text -> original_text
     normalized_to_original = {}
     for original_text in translations.keys():
         normalized = normalize_text(original_text)
         normalized_to_original[normalized] = original_text
-        if len(normalized_to_original) <= 3:  # 只记录前3个
+        if len(normalized_to_original) <= 3:  # Only the first 3 are logged
             logger.debug(f"Normalized mapping: '{original_text}' -> '{normalized}'")
 
-    # 3. 创建临时备份文件
+    # 3. Create a temporary backup file
     backup_path = None
     temp_path = None
     try:
-        # 创建备份
+        # Create the backup
         # timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         # backup_path = f"{json_file_path}.backup_{timestamp}"
         # shutil.copy2(json_file_path, backup_path)
-        # logger.info(f"创建备份: {os.path.basename(backup_path)}")
+        # logger.info(f"Created backup: {os.path.basename(backup_path)}")
 
-        # 4. 使用内存优化的方式加载和更新JSON
+        # 4. Load and update the JSON in a memory-saving way
         pass
         start_time = time.time()
         
-        # 对于大文件使用流式处理以减少内存占用
-        if json_size_mb > 50:  # 大于50MB使用优化处理
+        # Large files are processed as a stream, to use less memory
+        if json_size_mb > 50:  # Above 50MB the optimised processing is used
             logger.debug(f"Loading large file with streaming parser: {os.path.basename(json_file_path)}")
             source_data = _load_large_json_optimized(json_file_path)
         else:
@@ -962,7 +962,7 @@ def safe_update_large_json_from_text(
         load_time = time.time() - start_time
         logger.info(f"JSON loaded in {load_time:.2f} seconds")
 
-        # 5. 更新翻译内容
+        # 5. Update the translations
         logger.debug("Updating translations in memory.")
         updated_count = 0
         image_key = next(iter(source_data.keys()), None)
@@ -975,21 +975,21 @@ def safe_update_large_json_from_text(
         for region in source_data[image_key]['regions']:
             original_text = region.get('text', '')
 
-            # 首先尝试精确匹配
+            # Try an exact match first
             if original_text in translations:
                 old_translation = region.get('translation', '')
                 new_translation = _strip_legacy_horizontal_tags(translations[original_text])
 
-                # 总是更新translation字段，即使原文和译文相同
+                # The translation field is always updated, even when original and translation are the same
                 if old_translation != new_translation:
                     region['translation'] = new_translation
-                    # 写纯文本译文必须同步失效富文本文档（渲染时 rich 优先，
-                    # 不清会导致成图渲染旧译文；与 editor_controller 写入姿势一致）
+                    # Writing a plain-text translation must also invalidate the rich-text document (rich takes precedence when rendering;
+                    # without clearing it the output image would show the old translation; this matches how editor_controller writes)
                     region.pop('translation_rich', None)
                     updated_count += 1
                     logger.debug(f"Updating translation: '{original_text[:30]}...' -> '{new_translation[:30]}...'")
             else:
-                # 如果精确匹配失败，尝试模糊匹配
+                # When the exact match fails, try a fuzzy match
                 normalized = normalize_text(original_text)
                 logger.debug(f"Exact match failed; trying fuzzy match: '{original_text}' -> '{normalized}'")
                 if normalized in normalized_to_original:
@@ -999,10 +999,10 @@ def safe_update_large_json_from_text(
 
                     logger.debug(f"Fuzzy match succeeded: '{original_text}' -> '{matched_original}', old='{old_translation}', new='{new_translation}'")
 
-                    # 总是更新translation字段，即使原文和译文相同
+                    # The translation field is always updated, even when original and translation are the same
                     if old_translation != new_translation:
                         region['translation'] = new_translation
-                        # 同上：写 translation 时同步 pop translation_rich
+                        # As above: pop translation_rich when writing translation
                         region.pop('translation_rich', None)
                         updated_count += 1
                 else:
@@ -1011,25 +1011,25 @@ def safe_update_large_json_from_text(
         update_time = time.time() - start_time
         logger.info(f"Update completed in {update_time:.2f} seconds; updated {updated_count} entries")
 
-        # 导入翻译并渲染：无论导入内容是否与现有 translation 完全相同，
-        # 只要这次走了导入流程，后续渲染都应重新执行文字缩放。
+        # Import translation and render: whether or not the imported content is identical to the existing translation,
+        # once this import has run, later rendering should scale the text again.
         source_data[image_key]['skip_font_scaling'] = False
 
-        # 6. 写回文件（使用临时文件确保原子性）
+        # 6. Write the file back (through a temporary file, for atomicity)
         logger.debug("Writing updated data to temporary file.")
         with tempfile.NamedTemporaryFile(mode='w', encoding='utf-8', delete=False, 
                                        dir=os.path.dirname(json_file_path), 
                                        suffix='.tmp') as temp_file:
             temp_path = temp_file.name
             
-            # 使用优化的JSON编码器
+            # Use the optimised JSON encoder
             class OptimizedJSONEncoder(json.JSONEncoder):
                 def default(self, obj):
-                    if hasattr(obj, 'tolist'):  # numpy数组
+                    if hasattr(obj, 'tolist'):  # numpy array
                         return obj.tolist()
-                    if hasattr(obj, '__int__'):  # numpy整数
+                    if hasattr(obj, '__int__'):  # numpy integer
                         return int(obj)
-                    if hasattr(obj, '__float__'):  # numpy浮点数
+                    if hasattr(obj, '__float__'):  # numpy float
                         return float(obj)
                     return super().default(obj)
             
@@ -1040,39 +1040,39 @@ def safe_update_large_json_from_text(
         write_time = time.time() - start_time
         logger.info(f"Temporary file written in {write_time:.2f} seconds")
 
-        # 7. 原子性替换原文件
+        # 7. Replace the original file atomically
         logger.debug(f"Atomically moving temporary file to final destination: {os.path.basename(json_file_path)}")
         if os.name == 'nt':  # Windows
-            # Windows需要先删除目标文件
+            # On Windows the target file has to be deleted first
             if os.path.exists(json_file_path):
                 os.remove(json_file_path)
         
         shutil.move(temp_path, json_file_path)
-        temp_path = None  # 标记已经移动，避免重复删除
+        temp_path = None  # Mark as moved, so it is not deleted a second time
         
-        # 8. 清理内存
+        # 8. Free memory
         logger.debug("Clearing source data from memory.")
         del source_data
         pass
-        # 9. 验证文件完整性
+        # 9. Verify the integrity of the file
         try:
             logger.debug("Verifying integrity of written JSON file.")
             with open(json_file_path, 'r', encoding='utf-8') as f:
                 json.load(f)
             logger.info("File integrity verification passed")
         except Exception:
-            # 如果验证失败，恢复备份
+            # When verification fails, restore the backup
             logger.error("File integrity check failed! Restoring backup.")
             if backup_path and os.path.exists(backup_path):
                 shutil.copy2(backup_path, json_file_path)
                 return "错误：文件写入后验证失败，已恢复备份。请检查磁盘空间和文件权限。"
         
-        # 10. 清理旧备份（可选，保留最近3个备份）
+        # 10. Remove old backups (optional; the 3 most recent are kept)
         try:
             logger.debug("Cleaning up old backups.")
             backup_pattern = f"{json_file_path}.backup_*"
             backup_files = sorted(glob.glob(backup_pattern), reverse=True)
-            for old_backup in backup_files[3:]:  # 保留最近3个备份
+            for old_backup in backup_files[3:]:  # Keep the 3 most recent backups
                 try:
                     os.remove(old_backup)
                     logger.debug(f"Deleting old backup: {os.path.basename(old_backup)}")
@@ -1084,11 +1084,11 @@ def safe_update_large_json_from_text(
         return f"成功更新 {updated_count} 条翻译 (总时间: {load_time + update_time + write_time:.2f}秒)"
 
     except Exception as e:
-        # 错误恢复
+        # Error recovery
         error_msg = f"错误：更新过程中出现异常: {e}"
         backup_recovery = "not attempted"
         
-        # 清理临时文件
+        # Remove the temporary file
         if temp_path and os.path.exists(temp_path):
             try:
                 logger.debug(f"Cleaning up temporary file: {temp_path}")
@@ -1096,7 +1096,7 @@ def safe_update_large_json_from_text(
             except Exception:
                 pass
         
-        # 尝试恢复备份
+        # Try to restore the backup
         if backup_path and os.path.exists(backup_path):
             try:
                 logger.warning("Exception occurred, attempting to restore backup.")
@@ -1111,7 +1111,7 @@ def safe_update_large_json_from_text(
         return error_msg
 
     finally:
-        # 强制垃圾回收
+        # Force garbage collection
         logger.debug("Running final garbage collection.")
         pass
 def batch_update_directory_translations(
@@ -1136,7 +1136,7 @@ def batch_update_directory_translations(
     if not os.path.isdir(directory_path):
         return f"错误：目录不存在: {directory_path}"
 
-    # 使用默认模板如果未指定，并确保模板文件存在
+    # Use the default template when none is given, and make sure the template file exists
     if template_path is None:
         logger.debug("No template path provided, using default.")
         template_path = ensure_default_template_exists()
@@ -1158,13 +1158,13 @@ def batch_update_directory_translations(
     for json_path in json_files:
         logger.debug(f"Processing file: {json_path}")
 
-        # 从JSON路径推断图片路径，然后使用path_manager获取TXT路径
+        # Infer the image path from the JSON path, then get the TXT path with path_manager
         json_dir = os.path.dirname(json_path)
         json_basename = os.path.basename(json_path)
 
-        # 检查是否在新目录结构中
+        # Check whether it is in the new folder structure
         if json_dir.endswith(os.path.join('manga_translator_work', 'json')):
-            # 推断原图片路径
+            # Infer the path of the original image
             work_dir = os.path.dirname(json_dir)
             image_dir = os.path.dirname(work_dir)
             image_name = json_basename.replace('_translations.json', '')
@@ -1180,10 +1180,10 @@ def batch_update_directory_translations(
                 from manga_translator.utils.path_manager import get_original_txt_path
                 txt_path = get_original_txt_path(image_path, create_dir=False)
             else:
-                # 如果找不到图片，使用JSON同目录
+                # When the image is not found, use the folder of the JSON
                 txt_path = os.path.splitext(json_path)[0] + ".txt"
         else:
-            # 旧格式，使用JSON同目录
+            # Old format: use the folder of the JSON
             txt_path = os.path.splitext(json_path)[0] + ".txt"
 
         if not os.path.exists(txt_path):

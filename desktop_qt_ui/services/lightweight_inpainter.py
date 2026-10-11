@@ -21,10 +21,10 @@ from .erase_config_service import (
 @dataclass
 class PreviewConfig:
     """预览配置"""
-    max_size: int = 512  # 预览最大尺寸
-    quality: float = 0.8  # 预览质量 (0.1-1.0)
-    cache_enabled: bool = True  # 是否启用缓存
-    timeout: float = 5.0  # 超时时间(秒)
+    max_size: int = 512  # Maximum preview size
+    quality: float = 0.8  # Preview quality (0.1-1.0)
+    cache_enabled: bool = True  # Whether the cache is on
+    timeout: float = 5.0  # Timeout (seconds)
 
 class PreviewResult:
     """预览结果"""
@@ -43,29 +43,29 @@ class LightweightInpainter:
         self.logger = logging.getLogger(__name__)
         self.config_service = get_erase_config_service()
         
-        # 预览缓存
+        # Preview cache
         self.preview_cache: Dict[str, PreviewResult] = {}
         self.cache_max_size = 10
         
-        # 线程池用于异步处理
+        # Thread pool for asynchronous processing
         self.executor = ThreadPoolExecutor(max_workers=2, thread_name_prefix="preview")
         
-        # 算法实现映射
+        # Mapping of algorithm implementations
         self.algorithm_handlers = {
             InpainterType.NONE: self._inpaint_none,
             InpainterType.ORIGINAL: self._inpaint_original,
-            InpainterType.DEFAULT: self._inpaint_simple_blur,  # 简化版AOT
-            InpainterType.LAMA_MPE: self._inpaint_simple_blur,  # 简化版Lama
-            InpainterType.LAMA_LARGE: self._inpaint_simple_blur,  # 简化版(不适合实时)
-            InpainterType.STABLE_DIFFUSION: self._inpaint_simple_blur,  # 简化版(不适合实时)
+            InpainterType.DEFAULT: self._inpaint_simple_blur,  # Simplified AOT
+            InpainterType.LAMA_MPE: self._inpaint_simple_blur,  # Simplified LaMa
+            InpainterType.LAMA_LARGE: self._inpaint_simple_blur,  # Simplified (not suitable for real time)
+            InpainterType.STABLE_DIFFUSION: self._inpaint_simple_blur,  # Simplified (not suitable for real time)
         }
         
-        # self.logger.info("轻量级擦除算法接口初始化完成")
+        # self.logger.info("Lightweight erase algorithm interface initialised")
     
     def _generate_cache_key(self, image: np.ndarray, mask: np.ndarray, 
                           algorithm: InpainterType, config: PreviewConfig) -> str:
         """生成缓存键"""
-        # 使用图像和蒙版的哈希值作为缓存键
+        # The hashes of the image and the mask are the cache key
         img_hash = hash(image.tobytes())
         mask_hash = hash(mask.tobytes())
         return f"{algorithm.value}_{img_hash}_{mask_hash}_{config.max_size}_{config.quality}"
@@ -76,12 +76,12 @@ class LightweightInpainter:
         if max(h, w) <= max_size:
             return image.copy(), 1.0
         
-        # 计算缩放比例
+        # Work out the scale
         scale = max_size / max(h, w)
         new_w = int(w * scale)
         new_h = int(h * scale)
         
-        # 确保尺寸为偶数(某些算法要求)
+        # Make sure the size is even (some algorithms require it)
         new_w = new_w if new_w % 2 == 0 else new_w - 1
         new_h = new_h if new_h % 2 == 0 else new_h - 1
         
@@ -102,17 +102,17 @@ class LightweightInpainter:
         """简单模糊填充算法（适合实时预览）"""
         result = image.copy()
         
-        # 将蒙版区域设为白色
+        # Set the mask area to white
         result[mask > 0] = [255, 255, 255]
         
-        # 对蒙版边缘进行轻微模糊以减少硬边
+        # Blur the mask edge slightly to soften hard edges
         if np.any(mask > 0):
-            # 创建边缘蒙版
+            # Create the edge mask
             kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
             mask_dilated = cv2.dilate(mask, kernel, iterations=1)
             edge_mask = mask_dilated - mask
             
-            # 对边缘区域进行高斯模糊
+            # Gaussian blur on the edge area
             if np.any(edge_mask > 0):
                 blurred = cv2.GaussianBlur(result, (15, 15), 0)
                 result[edge_mask > 0] = blurred[edge_mask > 0]
@@ -123,11 +123,11 @@ class LightweightInpainter:
         """高级填充算法（更好的质量但仍然轻量）"""
         result = image.copy()
         
-        # 使用OpenCV的inpaint函数进行快速修复
+        # Fast repair with OpenCV's inpaint function
         mask_binary = (mask > 0).astype(np.uint8) * 255
         
         try:
-            # 使用快速修复算法
+            # Use the fast repair algorithm
             result = cv2.inpaint(image, mask_binary, 3, cv2.INPAINT_TELEA)
         except Exception as e:
             self.logger.warning(f"Advanced fill failed; falling back to simple blur: {e}")
@@ -147,7 +147,7 @@ class LightweightInpainter:
         
         start_time = time.time()
         
-        # 检查缓存
+        # Check the cache
         if config.cache_enabled:
             cache_key = self._generate_cache_key(image, mask, algorithm, config)
             if cache_key in self.preview_cache:
@@ -160,7 +160,7 @@ class LightweightInpainter:
                     cached=True
                 )
         
-        # 异步处理
+        # Process asynchronously
         loop = asyncio.get_event_loop()
         result_image = await loop.run_in_executor(
             self.executor, 
@@ -171,7 +171,7 @@ class LightweightInpainter:
         process_time = time.time() - start_time
         result = PreviewResult(result_image, algorithm, process_time)
         
-        # 存储到缓存
+        # Store in the cache
         if config.cache_enabled:
             self._update_cache(cache_key, result)
         
@@ -182,17 +182,17 @@ class LightweightInpainter:
                         algorithm: InpainterType, config: PreviewConfig) -> np.ndarray:
         """处理预览（在线程池中执行）"""
         try:
-            # 调整尺寸
+            # Resize
             preview_image, scale = self._resize_for_preview(image, config.max_size)
             preview_mask = cv2.resize(mask, 
                                     (preview_image.shape[1], preview_image.shape[0]), 
                                     interpolation=cv2.INTER_NEAREST)
             preview_mask = np.where(preview_mask > 0, 255, 0).astype(np.uint8)
             
-            # 选择算法处理
+            # Choose the algorithm
             handler = self.algorithm_handlers.get(algorithm, self._inpaint_simple_blur)
             
-            # 根据算法和配置选择最优实现
+            # Choose the best implementation for the algorithm and the settings
             if algorithm in [InpainterType.DEFAULT, InpainterType.LAMA_MPE]:
                 if config.quality > 0.7:
                     result = self._inpaint_advanced_fill(preview_image, preview_mask)
@@ -201,7 +201,7 @@ class LightweightInpainter:
             else:
                 result = handler(preview_image, preview_mask)
             
-            # 如果调整了尺寸，需要恢复到原始尺寸
+            # When the size was changed, it has to be restored to the original size
             if scale != 1.0:
                 original_size = (image.shape[1], image.shape[0])
                 result = cv2.resize(result, original_size, interpolation=cv2.INTER_LINEAR)
@@ -210,7 +210,7 @@ class LightweightInpainter:
             
         except Exception as e:
             self.logger.error(f"Preview processing failed: {e}")
-            # 回退到最简单的处理
+            # Fall back to the simplest processing
             return self._inpaint_none(image, mask)
     
     def preview_sync(self, image: np.ndarray, mask: np.ndarray,
@@ -225,7 +225,7 @@ class LightweightInpainter:
         
         start_time = time.time()
         
-        # 检查缓存
+        # Check the cache
         if config.cache_enabled:
             cache_key = self._generate_cache_key(image, mask, algorithm, config)
             if cache_key in self.preview_cache:
@@ -238,12 +238,12 @@ class LightweightInpainter:
                     cached=True
                 )
         
-        # 同步处理
+        # Process synchronously
         result_image = self._process_preview(image, mask, algorithm, config)
         process_time = time.time() - start_time
         result = PreviewResult(result_image, algorithm, process_time)
         
-        # 存储到缓存
+        # Store in the cache
         if config.cache_enabled:
             self._update_cache(cache_key, result)
         
@@ -251,9 +251,9 @@ class LightweightInpainter:
     
     def _update_cache(self, cache_key: str, result: PreviewResult):
         """更新缓存"""
-        # 检查缓存大小限制
+        # Check the cache size limit
         if len(self.preview_cache) >= self.cache_max_size:
-            # 删除最旧的缓存项
+            # Remove the oldest cache entry
             oldest_key = min(self.preview_cache.keys(), 
                            key=lambda k: self.preview_cache[k].timestamp)
             del self.preview_cache[oldest_key]
@@ -263,7 +263,7 @@ class LightweightInpainter:
     def clear_cache(self):
         """清空缓存"""
         self.preview_cache.clear()
-        # self.logger.info("预览缓存已清空")
+        # self.logger.info("Preview cache cleared")
     
     def get_cache_info(self) -> Dict[str, Any]:
         """获取缓存信息"""
@@ -286,9 +286,9 @@ class LightweightInpainter:
         """关闭服务"""
         self.executor.shutdown(wait=True)
         self.clear_cache()
-        # self.logger.info("轻量级擦除算法接口已关闭")
+        # self.logger.info("Lightweight erase algorithm interface closed")
 
-# 全局服务实例
+# Global service instance
 _lightweight_inpainter: Optional[LightweightInpainter] = None
 
 def get_lightweight_inpainter() -> LightweightInpainter:

@@ -12,12 +12,12 @@ from typing import Any, Dict, List, Optional
 
 class InpainterType(Enum):
     """擦除算法类型枚举"""
-    DEFAULT = "default"  # AOT算法
-    LAMA_LARGE = "lama_large"  # Lama Large算法 
-    LAMA_MPE = "lama_mpe"  # Lama MPE算法
-    STABLE_DIFFUSION = "sd"  # Stable Diffusion算法
-    NONE = "none"  # 不进行擦除，填充白色
-    ORIGINAL = "original"  # 保持原图不变
+    DEFAULT = "default"  # AOT algorithm
+    LAMA_LARGE = "lama_large"  # Lama Large algorithm
+    LAMA_MPE = "lama_mpe"  # Lama MPE algorithm
+    STABLE_DIFFUSION = "sd"  # Stable Diffusion algorithm
+    NONE = "none"  # No erasing; fill with white
+    ORIGINAL = "original"  # Keep the original image unchanged
 
 class InpaintPrecision(Enum):
     """修复精度枚举"""
@@ -57,7 +57,7 @@ class AlgorithmInfo:
     description: str
     supports_gpu: bool = True
     supports_precision: bool = True
-    preview_suitable: bool = True  # 是否适合实时预览
+    preview_suitable: bool = True  # Whether it is suitable for a live preview
 
 class EraseConfigService:
     """擦除算法配置管理服务"""
@@ -65,10 +65,10 @@ class EraseConfigService:
     def __init__(self):
         self.logger = logging.getLogger(__name__)
         
-        # 当前配置
+        # Current configuration
         self.current_config = InpainterConfig()
         
-        # 算法信息映射
+        # Mapping of algorithm information
         self.algorithm_info = {
             InpainterType.DEFAULT: AlgorithmInfo(
                 name="default",
@@ -84,7 +84,7 @@ class EraseConfigService:
                 description="高质量的Lama修复算法，效果最佳",
                 supports_gpu=True,
                 supports_precision=True,
-                preview_suitable=False  # 模型较大，不适合实时预览
+                preview_suitable=False  # The model is large and not suitable for a live preview
             ),
             InpainterType.LAMA_MPE: AlgorithmInfo(
                 name="lama_mpe",
@@ -100,7 +100,7 @@ class EraseConfigService:
                 description="基于扩散模型的修复算法，质量很高但速度慢",
                 supports_gpu=True,
                 supports_precision=True,
-                preview_suitable=False  # 速度太慢，不适合实时预览
+                preview_suitable=False  # Too slow for a live preview
             ),
             InpainterType.NONE: AlgorithmInfo(
                 name="none",
@@ -131,7 +131,7 @@ class EraseConfigService:
             with open(config_path, 'r', encoding='utf-8') as f:
                 config_data = json.load(f)
             
-            # 提取inpainter配置
+            # Extract the inpainter configuration
             inpainter_data = config_data.get("inpainter", {})
             if inpainter_data:
                 self.current_config = InpainterConfig.from_dict(inpainter_data)
@@ -148,16 +148,16 @@ class EraseConfigService:
     def save_config_to_file(self, config_path: str) -> bool:
         """保存配置到文件"""
         try:
-            # 读取现有配置
+            # Read the existing configuration
             config_data = {}
             if os.path.exists(config_path):
                 with open(config_path, 'r', encoding='utf-8') as f:
                     config_data = json.load(f)
             
-            # 更新inpainter配置
+            # Update the inpainter configuration
             config_data["inpainter"] = self.current_config.to_dict()
             
-            # 保存配置
+            # Save the configuration
             with open(config_path, 'w', encoding='utf-8') as f:
                 json.dump(config_data, f, indent=2, ensure_ascii=False)
             
@@ -225,10 +225,10 @@ class EraseConfigService:
     
     def get_recommended_preview_algorithm(self) -> InpainterType:
         """获取推荐的预览算法"""
-        # 优先推荐适合预览且效果较好的算法
+        # Recommend first the algorithms that suit a preview and give good results
         preview_algorithms = self.get_preview_suitable_algorithms()
         
-        # 优先级顺序：lama_mpe > default > none > original
+        # Order of priority: lama_mpe > default > none > original
         priority_order = [
             InpainterType.LAMA_MPE,
             InpainterType.DEFAULT, 
@@ -240,10 +240,10 @@ class EraseConfigService:
             if algo in preview_algorithms:
                 return algo
         
-        # 如果都不可用，返回第一个
+        # When none is available, return the first one
         return preview_algorithms[0] if preview_algorithms else InpainterType.NONE
 
-# 全局服务实例
+# Global service instance
 _erase_config_service: Optional[EraseConfigService] = None
 
 def get_erase_config_service() -> EraseConfigService:

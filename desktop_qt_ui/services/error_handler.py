@@ -44,7 +44,7 @@ class InputValidator:
     def __init__(self):
         self.logger = logging.getLogger(__name__)
         
-        # API密钥验证模式
+        # API key validation patterns
         self.api_patterns = {
             'openai': r'^sk-[a-zA-Z0-9]{48}$',
         }
@@ -90,7 +90,7 @@ class InputValidator:
         
         return result
 
-# 全局验证器
+# Global validator
 _validator = None
 
 def get_validator() -> InputValidator:

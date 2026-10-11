@@ -15,7 +15,7 @@ import cv2
 import numpy as np
 from PIL import Image
 
-# 添加项目根目录到路径以便导入path_manager
+# Add the project root to the path, so path_manager can be imported
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 from manga_translator.image_formats import SUPPORTED_IMAGE_EXTENSIONS
 from manga_translator.utils import open_pil_image
@@ -29,13 +29,13 @@ class FileService:
         from services import get_config_service
         self.logger = logging.getLogger(__name__)
         self.config_service = get_config_service()
-        # 支持的图片格式
+        # Supported image formats
         self.supported_image_extensions = set(SUPPORTED_IMAGE_EXTENSIONS)
-        # 支持的压缩包/文档格式
+        # Supported archive and document formats
         self.supported_archive_extensions = {
             '.pdf', '.epub', '.cbz', '.cbr', '.zip'
         }
-        # 支持的配置文件格式
+        # Supported configuration file formats
         self.supported_config_extensions = {
             '.json', '.yaml', '.yml', '.toml'
         }
@@ -48,7 +48,7 @@ class FileService:
         overlays 为 {'paint': RGBA数组|None, 'stamp': RGBA数组|None,
                     'paste_overlays': [贴片字典...]}（base64 PNG 解码，未对齐尺寸）。
         """
-        # 使用path_manager查找JSON文件（新位置优先）
+        # Find the JSON file with path_manager (the new location is preferred)
         json_path = find_json_path(image_path)
         regions = []
         raw_mask = None
@@ -91,8 +91,8 @@ class FileService:
                     if not region.get('target_lang'):
                         region['target_lang'] = default_target_lang
 
-            # 旧 JSON 兼容:缺 translation_raw 时用 translation 回填,
-            # 保证编辑器"替换前译文"框始终有值显示
+            # For old JSON files: when translation_raw is missing it is filled from translation,
+            # so the editor's "translation before replacement" box always has a value to show
             for region in regions:
                 if 'translation_raw' not in region:
                     region['translation_raw'] = region.get('translation', '')
@@ -111,7 +111,7 @@ class FileService:
             
             original_size = (image_data.get('original_width'), image_data.get('original_height'))
 
-            # 画笔层/印章层（base64 PNG，RGBA）
+            # Paint layer / stamp layer (base64 PNG, RGBA)
             for overlay_name, json_key in (('paint', 'paint_overlay'), ('stamp', 'stamp_overlay')):
                 overlay_b64 = image_data.get(json_key)
                 if not isinstance(overlay_b64, str) or not overlay_b64:
@@ -126,7 +126,7 @@ class FileService:
 
             self.logger.debug(f"Loaded {len(regions)} regions from {os.path.basename(json_path)}")
 
-            # 贴片（图块叠加）列表：逐项规范化，脏数据跳过并告警
+            # List of paste overlays (image patches laid on top): normalised item by item; bad data is skipped with a warning
             paste_raw = image_data.get('paste_overlays')
             if isinstance(paste_raw, list) and paste_raw:
                 try:
@@ -150,23 +150,23 @@ class FileService:
             if not os.path.exists(file_path):
                 return False
                 
-            # 检查文件扩展名
+            # Check the file extension
             _, ext = os.path.splitext(file_path)
             ext_lower = ext.lower()
             
-            # 支持压缩包格式
+            # Archive formats are supported
             if ext_lower in self.supported_archive_extensions:
                 return os.access(file_path, os.R_OK)
             
             if ext_lower not in self.supported_image_extensions:
                 return False
                 
-            # 检查MIME类型
+            # Check the MIME type
             mime_type, _ = mimetypes.guess_type(file_path)
             if mime_type and not mime_type.startswith('image/'):
                 return False
                 
-            # 检查文件是否可读
+            # Check whether the file is readable
             if not os.access(file_path, os.R_OK):
                 return False
                 
@@ -205,19 +205,19 @@ class FileService:
         """
         import re
         
-        # 规范化路径分隔符
+        # Normalise the path separators
         normalized_path = path.replace('\\', '/')
         
-        # 将整个路径分割成文本和数字部分
-        # 使用元组确保类型安全：(是否为数字, 排序值)
-        # 数字用整数排序，文本用字符串排序，通过第一个元素区分类型避免跨类型比较
+        # Split the whole path into text and number parts
+        # A tuple keeps the types safe: (is it a number, sort value)
+        # Numbers sort as integers and text as strings; the first element tells the types apart, so no comparison crosses types
         parts = []
         for part in re.split(r'(\d+)', normalized_path):
             if part.isdigit():
-                # 数字部分：(False, 整数值) - False 排在 True 前面
+                # Number part: (False, integer value) - False sorts before True
                 parts.append((False, int(part)))
-            elif part:  # 忽略空字符串
-                # 文本部分：(True, 小写文本) - True 排在 False 后面
+            elif part:  # Ignore empty strings
+                # Text part: (True, lower-case text) - True sorts after False
                 parts.append((True, part.lower()))
         
         return parts
@@ -282,7 +282,7 @@ class FileService:
         errors = []
         
         try:
-            # 解析拖拽数据
+            # Parse the dropped data
             file_paths = self._parse_drop_data(dropped_data)
             
             for file_path in file_paths:
@@ -293,7 +293,7 @@ class FileService:
                         errors.append(f"不支持的图片格式: {os.path.basename(file_path)}")
                         
                 elif os.path.isdir(file_path):
-                    # 处理文件夹
+                    # Handle folders
                     folder_images = self.get_image_files_from_folder(file_path)
                     if folder_images:
                         image_files.extend(folder_images)
@@ -312,19 +312,19 @@ class FileService:
         """解析拖拽数据，提取文件路径"""
         file_paths = []
         
-        # 处理不同操作系统的换行符
+        # Handle the line endings of different operating systems
         lines = dropped_data.replace('\r\n', '\n').replace('\r', '\n').split('\n')
         
         for line in lines:
             line = line.strip()
             if line:
-                # 移除可能的URI前缀
+                # Remove a possible URI prefix
                 if line.startswith('file:///'):
-                    line = line[8:]  # 移除 'file:///'
+                    line = line[8:]  # Remove 'file:///'
                 elif line.startswith('file://'):
-                    line = line[7:]  # 移除 'file://'
+                    line = line[7:]  # Remove 'file://'
                 
-                # URL解码
+                # URL-decode
                 try:
                     import urllib.parse
                     line = urllib.parse.unquote(line)
@@ -355,7 +355,7 @@ class FileService:
             
             if self.validate_image_file(file_path):
                 file_info['type'] = 'image'
-                # 获取图片尺寸
+                # Get the image size
                 try:
                     with open_pil_image(file_path, eager=False) as img:
                         file_info['width'] = img.width
@@ -389,14 +389,14 @@ class FileService:
                 
             os.makedirs(backup_dir, exist_ok=True)
             
-            # 生成备份文件名
+            # Build the backup file name
             import time
             timestamp = time.strftime('%Y%m%d_%H%M%S')
             name, ext = os.path.splitext(os.path.basename(file_path))
             backup_name = f"{name}_{timestamp}{ext}"
             backup_path = os.path.join(backup_dir, backup_name)
             
-            # 复制文件
+            # Copy the file
             shutil.copy2(file_path, backup_path)
             self.logger.info(f"Creating backup: {backup_path}")
             

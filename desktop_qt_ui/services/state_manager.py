@@ -11,23 +11,23 @@ from typing import Any, Dict, List
 
 class AppStateKey(Enum):
     """应用状态键枚举"""
-    # 翻译相关状态
+    # Translation state
     IS_TRANSLATING = "is_translating"
     TRANSLATION_PROGRESS = "translation_progress"
     CURRENT_FILES = "current_files"
     TRANSLATION_RESULTS = "translation_results"
     
-    # 配置相关状态
+    # Configuration state
     CURRENT_CONFIG = "current_config"
     CONFIG_PATH = "config_path"
     ENV_VARS = "env_vars"
     
-    # UI相关状态
+    # UI state
     CURRENT_VIEW = "current_view"
     SELECTED_FILES = "selected_files"
     EDITOR_STATE = "editor_state"
     
-    # 应用相关状态
+    # Application state
     APP_READY = "app_ready"
     ERROR_MESSAGES = "error_messages"
     STATUS_MESSAGE = "status_message"
@@ -48,7 +48,7 @@ class StateManager(QObject):
     状态管理器 (Qt Refactored)
     使用信号/槽机制进行状态通知
     """
-    # --- 定义信号 ---
+    # --- Signal definitions ---
     is_translating_changed = pyqtSignal(bool)
     translation_progress_changed = pyqtSignal(float)
     current_files_changed = pyqtSignal(list)
@@ -71,7 +71,7 @@ class StateManager(QObject):
         
         self._initialize_default_state()
 
-        # 信号映射，用于在 set_state 中动态发射信号
+        # Signal mapping, for emitting signals dynamically in set_state
         self._signal_map = {
             AppStateKey.IS_TRANSLATING: self.is_translating_changed,
             AppStateKey.TRANSLATION_PROGRESS: self.translation_progress_changed,
@@ -119,7 +119,7 @@ class StateManager(QObject):
         signal = None
         with self._lock:
             old_value = self._state.get(key)
-            # 使用 deepcopy 或其他方式进行复杂对象的值比较可能更稳健
+            # Comparing complex objects by value with deepcopy or some other way might be more robust
             if old_value == value:
                 return
             
@@ -150,7 +150,7 @@ class StateManager(QObject):
         for key in AppStateKey:
             self.set_state(key, self._state.get(key))
 
-    # --- 便捷方法 ---
+    # --- Convenience methods ---
     
     def is_translating(self) -> bool:
         return self.get_state(AppStateKey.IS_TRANSLATING) or False
@@ -187,11 +187,11 @@ class StateManager(QObject):
     
     def add_error_message(self, error: str) -> None:
         errors = self.get_state(AppStateKey.ERROR_MESSAGES) or []
-        # 避免重复添加完全相同的错误信息
+        # Avoid adding exactly the same error message twice
         if any(e['message'] == error for e in errors):
             return
         errors.append({'message': error, 'timestamp': __import__('time').time()})
-        if len(errors) > 20: # 增加错误消息保留数量
+        if len(errors) > 20: # Keep more error messages
             errors = errors[-20:]
         self.set_state(AppStateKey.ERROR_MESSAGES, errors)
     
@@ -217,7 +217,7 @@ class StateManager(QObject):
         self.set_state(AppStateKey.APP_READY, ready)
 
 
-# 全局状态管理器实例
+# Global state manager instance
 _state_manager = None
 
 def get_state_manager() -> StateManager:

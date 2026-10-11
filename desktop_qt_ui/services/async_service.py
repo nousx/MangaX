@@ -2,7 +2,7 @@
 import logging
 from typing import Coroutine, Optional
 
-# 使用绝对导入避免相对导入问题
+# Absolute import, to avoid relative import problems
 from desktop_qt_ui.editor.core import AsyncJobManager
 
 

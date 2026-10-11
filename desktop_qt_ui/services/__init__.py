@@ -6,12 +6,12 @@ import logging
 import os
 from typing import Any, Dict, Optional
 
-# 导入编辑器核心模块（使用绝对导入）
+# Import the editor core module (absolute import)
 from desktop_qt_ui.editor.core import ResourceManager
 
 from .async_service import AsyncService
 
-# 导入所有服务
+# Import all services
 from .config_service import ConfigService
 from .file_service import FileService
 from .history_service import EditorStateManager as HistoryService
@@ -33,7 +33,7 @@ class ServiceContainer:
         self.initialized = False
         self._root_widget = None
         
-        # 初始化日志
+        # Initialise logging
         self._setup_logging()
         self.logger = logging.getLogger(__name__)
         
@@ -69,16 +69,16 @@ class ServiceContainer:
         self.services['state'] = StateManager()
         self.services['config'] = ConfigService(self.root_dir)
         
-        # 初始化i18n服务 - 从配置读取语言设置
+        # Initialise the i18n service - the language setting is read from the configuration
         locale_dir = os.path.join(self.root_dir, "desktop_qt_ui", "locales")
         config = self.services['config'].get_config()
         ui_language = config.app.ui_language if hasattr(config.app, 'ui_language') else "auto"
         self.services['i18n'] = I18nManager(locale_dir=locale_dir, fallback_locale="zh_CN", config_language=ui_language)
         
-        # 初始化预设服务
+        # Initialise the preset service
         self.services['preset'] = PresetService(config_service=self.services['config'])
         
-        # 根据配置设置日志级别
+        # Set the log level from the configuration
         try:
             config = self.services['config'].get_config()
             if hasattr(config, 'cli') and hasattr(config.cli, 'verbose'):
@@ -99,7 +99,7 @@ class ServiceContainer:
             self.services['async'] = AsyncService()
             self.services['history'] = HistoryService()
             self.services['render_parameter'] = RenderParameterService()
-            self.services['resource_manager'] = ResourceManager()  # 新的资源管理器
+            self.services['resource_manager'] = ResourceManager()  # The new resource manager
 
             
         except Exception as e:
@@ -260,7 +260,7 @@ class ServiceManager:
             cls._container.shutdown_services()
             cls._container = None
 
-# 便捷函数
+# Convenience functions
 def init_services(root_dir: str, root_widget=None) -> bool:
     """初始化服务的便捷函数"""
     return ServiceManager.initialize(root_dir, root_widget)
@@ -320,7 +320,7 @@ def shutdown_services():
     """关闭服务的便捷函数"""
     ServiceManager.shutdown()
 
-# 依赖注入装饰器
+# Dependency injection decorator
 def inject_service(service_name: str):
     """服务注入装饰器"""
     def decorator(func):
@@ -330,7 +330,7 @@ def inject_service(service_name: str):
         return wrapper
     return decorator
 
-# 服务健康检查
+# Service health check
 def check_services_health() -> Dict[str, bool]:
     """检查所有服务的健康状态"""
     health_status = {}
@@ -338,7 +338,7 @@ def check_services_health() -> Dict[str, bool]:
     if ServiceManager._container:
         for service_name, service in ServiceManager._container.services.items():
             try:
-                # 基本的健康检查
+                # Basic health check
                 if hasattr(service, 'is_healthy'):
                     health_status[service_name] = service.is_healthy()
                 else:

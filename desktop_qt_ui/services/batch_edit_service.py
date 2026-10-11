@@ -47,7 +47,7 @@ class BatchEditService(QObject):
         self._futures: dict[str, Future] = {}
         self._shutdown = False
 
-    # ─── 提交 ───
+    # ─── Submitting ───
 
     def _begin(self, channel: str) -> tuple[int, threading.Event]:
         with self._lock:
@@ -101,7 +101,7 @@ class BatchEditService(QObject):
             progress=self._progress_reporter(CHANNEL_APPLY, generation),
         )
 
-    # ─── 回调 ───
+    # ─── Callbacks ───
 
     def request_restore(self, json_paths: Sequence[str]) -> int:
         generation, cancel_event = self._begin(CHANNEL_RESTORE)
@@ -114,7 +114,7 @@ class BatchEditService(QObject):
             progress=self._progress_reporter(CHANNEL_RESTORE, generation),
         )
 
-    # ─── 回调 ───
+    # ─── Callbacks ───
 
     def _progress_reporter(self, channel: str, generation: int):
         def report(done: int, total: int) -> None:
@@ -135,7 +135,7 @@ class BatchEditService(QObject):
             result = future.result()
         except BatchEditCancelled:
             return
-        except Exception as exc:  # noqa: BLE001 - 后台异常必须回到 UI，不能吞
+        except Exception as exc:  # noqa: BLE001 - a background exception has to reach the UI and must not be swallowed
             if self._is_active(channel, generation):
                 try:
                     self.error.emit(channel, generation, str(exc))
@@ -159,7 +159,7 @@ class BatchEditService(QObject):
         except RuntimeError:
             pass
 
-    # ─── 取消 / 关闭 ───
+    # ─── Cancelling / closing ───
 
     def cancel(self, channel: str) -> None:
         with self._lock:

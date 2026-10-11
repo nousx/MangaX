@@ -19,17 +19,17 @@ class PresetService:
         self.logger = logging.getLogger(__name__)
         self.config_service = config_service
         
-        # 预设存储目录
+        # Folder where presets are stored
         if presets_dir is None:
-            # 打包后位于 app.exe 同级，开发时位于项目根目录。
+            # Next to app.exe when packaged, in the project root in development.
             self.presets_dir = os.path.join(get_application_dir(), "presets")
         else:
             self.presets_dir = presets_dir
         
-        # 确保预设目录存在
+        # Make sure the preset folder exists
         os.makedirs(self.presets_dir, exist_ok=True)
         
-        # 创建默认预设（如果不存在）
+        # Create the default preset (when it does not exist)
         self._create_default_preset()
         
 
@@ -113,7 +113,7 @@ class PresetService:
             presets = []
             for filename in os.listdir(self.presets_dir):
                 if filename.endswith('.json'):
-                    preset_name = filename[:-5]  # 移除.json后缀
+                    preset_name = filename[:-5]  # Remove the .json suffix
                     presets.append(preset_name)
             
             return sorted(presets)
@@ -128,7 +128,7 @@ class PresetService:
                 self.logger.error("Preset name cannot be empty")
                 return False
             
-            # 清理预设名称，移除非法字符
+            # Clean the preset name, removing invalid characters
             preset_name = self._sanitize_filename(preset_name.strip())
             
             preset_path = os.path.join(self.presets_dir, f"{preset_name}.json")
@@ -137,7 +137,7 @@ class PresetService:
             with open(preset_path, 'w', encoding='utf-8') as f:
                 json.dump(normalized_env_vars, f, indent=2, ensure_ascii=False)
             
-            # 不输出日志，避免刷屏
+            # Not logged, to avoid flooding the log
             return True
         except Exception as e:
             self.logger.error(f"Failed to save preset: {e}")
@@ -182,7 +182,7 @@ class PresetService:
     
     def _sanitize_filename(self, filename: str) -> str:
         """清理文件名，移除非法字符"""
-        # 移除Windows和Unix系统中的非法字符
+        # Remove the characters that are invalid on Windows and Unix
         illegal_chars = ['<', '>', ':', '"', '/', '\\', '|', '?', '*']
         for char in illegal_chars:
             filename = filename.replace(char, '_')
