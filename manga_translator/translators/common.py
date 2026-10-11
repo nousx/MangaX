@@ -229,7 +229,7 @@ class BRMarkersValidationException(Exception):
 
 
 # ============================================================================
-# AsyncOpenAI 客户端包装器 - 使用 curl_cffi 绕过 TLS 指纹检测
+# AsyncOpenAI client wrapper - uses curl_cffi to get past TLS fingerprint checks
 # ============================================================================
 
 class AsyncOpenAICurlCffi:
@@ -267,11 +267,11 @@ class AsyncOpenAICurlCffi:
             if self.parent.api_key:
                 headers["Authorization"] = f"Bearer {self.parent.api_key}"
 
-            # 合并默认请求头
+            # Merge in the default request headers
             if self.parent.default_headers:
                 headers.update(self.parent.default_headers)
 
-            # 构建请求数据
+            # Build the request data
             data = {
                 "model": model,
                 "messages": messages
@@ -282,17 +282,17 @@ class AsyncOpenAICurlCffi:
             if max_tokens is not None:
                 data["max_tokens"] = max_tokens
 
-            # 添加其他参数
+            # Add the other parameters
             data.update(kwargs)
 
             stream_mode = bool(data.get("stream"))
-            # 部分 OpenAI 兼容站点会在缺省 stream 参数时错误地默认返回 SSE。
-            # 普通请求显式传 false，确保响应遵循非流式 JSON 格式。
+            # Some OpenAI-compatible sites wrongly default to SSE when the stream parameter is missing.
+            # Ordinary requests pass false explicitly, so the response is non-streaming JSON.
             data["stream"] = stream_mode
             if stream_mode:
                 return self._create_stream(url, data, headers)
 
-            # 发送异步请求
+            # Send the request asynchronously
             response = await self.parent.session.post(
                 url,
                 json=data,
@@ -317,7 +317,7 @@ class AsyncOpenAICurlCffi:
                     f"Failed to parse the API JSON response: {e}. {_response_diagnostics(response)}"
                 ) from e
 
-            # 转换为类似 OpenAI SDK 的响应对象
+            # Convert to a response object like the one of the OpenAI SDK
             return _OpenAIResponse(result)
 
         def _create_stream(self, url, data, headers):
@@ -379,11 +379,11 @@ class AsyncOpenAICurlCffi:
             if self.parent.api_key:
                 headers["Authorization"] = f"Bearer {self.parent.api_key}"
 
-            # 合并默认请求头
+            # Merge in the default request headers
             if self.parent.default_headers:
                 headers.update(self.parent.default_headers)
 
-            # 发送异步请求
+            # Send the request asynchronously
             response = await self.parent.session.get(
                 url,
                 headers=headers,
@@ -400,10 +400,10 @@ class AsyncOpenAICurlCffi:
                 )
                 raise Exception(error_msg)
 
-            # 检查响应内容类型
+            # Check the content type of the response
             content_type = response.headers.get('content-type', '')
             if 'application/json' not in content_type and 'text/json' not in content_type:
-                # 可能返回了 HTML 页面，说明 API 不支持 /models 端点
+                # An HTML page may have come back, which means the API has no /models endpoint
                 raise Exception(
                     "API does not support model listing (returned a non-JSON response). "
                     f"{_response_diagnostics(response)}. Enter the model name manually."
@@ -417,7 +417,7 @@ class AsyncOpenAICurlCffi:
                     f"{_response_diagnostics(response)}. Enter the model name manually."
                 ) from e
 
-            # 转换为类似 OpenAI SDK 的响应对象
+            # Convert to a response object like the one of the OpenAI SDK
             return _ModelsResponse(result)
 
     def __init__(self, api_key, base_url="https://api.openai.com/v1",
@@ -455,9 +455,9 @@ class AsyncOpenAICurlCffi:
                 "Install it with: pip install curl_cffi"
             )
 
-        # 创建聊天接口
+        # Create the chat interface
         self.chat = self.Chat(self)
-        # 创建模型列表接口
+        # Create the model list interface
         self.models = self.Models(self)
 
     async def close(self):
@@ -550,7 +550,7 @@ class _ModelsResponse:
 
 
 # ============================================================================
-# AsyncGemini 客户端包装器 - 使用 curl_cffi 绕过 TLS 指纹检测
+# AsyncGemini client wrapper - uses curl_cffi to get past TLS fingerprint checks
 # ============================================================================
 
 class AsyncGeminiCurlCffi:
@@ -580,24 +580,24 @@ class AsyncGeminiCurlCffi:
 
         async def generate_content(self, model, contents, generation_config=None, safety_settings=None, **kwargs):
             """生成内容请求"""
-            # 对模型名进行 URL 编码，处理包含 "/" 的模型名（如 z-ai/glm4.7）
+            # URL-encode the model name, for names that contain "/" (such as z-ai/glm4.7)
             import urllib.parse
             encoded_model = urllib.parse.quote(model, safe='')
 
-            # 构建 URL - Gemini API 格式
+            # Build the URL - Gemini API format
             url = f"{self.parent.base_url}/v1beta/models/{encoded_model}:generateContent"
 
-            # 实际请求使用完整的 API Key
+            # The actual request uses the full API key
             request_headers = {
                 "Content-Type": "application/json",
                 "x-goog-api-key": self.parent.api_key
             }
 
-            # 合并默认请求头
+            # Merge in the default request headers
             if self.parent.default_headers:
                 request_headers.update(self.parent.default_headers)
 
-            # 构建请求数据
+            # Build the request data
             data = {}
 
             def _normalize_system_instruction(value):
@@ -629,16 +629,16 @@ class AsyncGeminiCurlCffi:
                     return {"parts": [{"text": json.dumps(dumped, ensure_ascii=False)}]}
                 return {"parts": [{"text": str(value)}]}
 
-            # 处理 contents 参数
+            # Handle the contents parameter
             if isinstance(contents, str):
                 data["contents"] = [{"role": "user", "parts": [{"text": contents}]}]
             elif isinstance(contents, list):
-                # 如果是列表，检查是否已有 role 字段，没有则添加
+                # For a list, check whether each item has a role field and add one when it is missing
                 processed_contents = []
                 for item in contents:
                     if isinstance(item, dict):
                         if "role" not in item:
-                            # 添加默认 role
+                            # Add the default role
                             item = {"role": "user", **item}
                         processed_contents.append(item)
                     else:
@@ -647,7 +647,7 @@ class AsyncGeminiCurlCffi:
             else:
                 data["contents"] = [{"role": "user", "parts": [{"text": str(contents)}]}]
 
-            # 添加生成配置
+            # Add the generation settings
             if generation_config:
                 config_dict = {}
                 if hasattr(generation_config, 'temperature'):
@@ -671,18 +671,18 @@ class AsyncGeminiCurlCffi:
             if kw_system_instruction:
                 data["systemInstruction"] = kw_system_instruction
 
-            # 添加安全设置
+            # Add the safety settings
             if safety_settings:
                 safety_list = []
                 for setting in safety_settings:
                     if hasattr(setting, 'category') and hasattr(setting, 'threshold'):
-                        # 提取枚举值名称，去掉类名前缀
-                        # 例如: "HarmCategory.HARM_CATEGORY_HARASSMENT" -> "HARM_CATEGORY_HARASSMENT"
-                        # 例如: "HarmBlockThreshold.OFF" -> "OFF"
+                        # Take the name of the enum value, without the class name prefix
+                        # For example: "HarmCategory.HARM_CATEGORY_HARASSMENT" -> "HARM_CATEGORY_HARASSMENT"
+                        # For example: "HarmBlockThreshold.OFF" -> "OFF"
                         category_str = str(setting.category)
                         threshold_str = str(setting.threshold)
 
-                        # 去掉枚举类名前缀
+                        # Remove the enum class name prefix
                         if '.' in category_str:
                             category_str = category_str.split('.')[-1]
                         if '.' in threshold_str:
@@ -695,14 +695,14 @@ class AsyncGeminiCurlCffi:
                 if safety_list:
                     data["safetySettings"] = safety_list
 
-            # 添加其他参数
+            # Add the other parameters
             data.update(kwargs)
 
             stream_mode = bool(data.pop("stream", False))
             if stream_mode:
                 return self._generate_content_stream(url, data, request_headers)
 
-            # 发送异步请求
+            # Send the request asynchronously
             response = await self.parent.session.post(
                 url,
                 json=data,
@@ -727,7 +727,7 @@ class AsyncGeminiCurlCffi:
                     )
                 raise Exception(error_msg)
 
-            # 检查响应内容类型和内容
+            # Check the content type and the content of the response
             content_type = response.headers.get('content-type', '')
             if 'application/json' not in content_type and 'text/json' not in content_type:
                 raise Exception(
@@ -743,7 +743,7 @@ class AsyncGeminiCurlCffi:
                     f"{summarize_response_text(response.text)}"
                 )
 
-            # 转换为类似 Gemini SDK 的响应对象
+            # Convert to a response object like the one of the Gemini SDK
             return _GeminiResponse(result)
 
         async def generate_content_stream(self, model, contents, config=None, **kwargs):
@@ -800,11 +800,11 @@ class AsyncGeminiCurlCffi:
                 "x-goog-api-key": self.parent.api_key
             }
 
-            # 合并默认请求头
+            # Merge in the default request headers
             if self.parent.default_headers:
                 headers.update(self.parent.default_headers)
 
-            # 发送异步请求
+            # Send the request asynchronously
             response = await self.parent.session.get(
                 url,
                 headers=headers,
@@ -825,10 +825,10 @@ class AsyncGeminiCurlCffi:
                     error_msg = f"{error_msg}: {summarize_response_text(response.text)}"
                 raise Exception(error_msg)
 
-            # 检查响应内容类型
+            # Check the content type of the response
             content_type = response.headers.get('content-type', '')
             if 'application/json' not in content_type and 'text/json' not in content_type:
-                # 可能返回了 HTML 页面，说明 API 不支持 /models 端点
+                # An HTML page may have come back, which means the API has no /models endpoint
                 raise Exception("API does not support model listing (returned a non-JSON response). Enter the model name manually.")
 
             try:
@@ -836,7 +836,7 @@ class AsyncGeminiCurlCffi:
             except Exception as e:
                 raise Exception(f"Failed to parse the API response: {str(e)}. Enter the model name manually.")
 
-            # 返回模型列表
+            # Return the model list
             return _GeminiModelsResponse(result)
 
     def __init__(self, api_key, base_url="https://generativelanguage.googleapis.com",
@@ -871,7 +871,7 @@ class AsyncGeminiCurlCffi:
                 "Install it with: pip install curl_cffi"
             )
 
-        # 创建模型接口
+        # Create the models interface
         self.models = self.Models(self)
 
     async def close(self):
@@ -920,7 +920,7 @@ class _GeminiResponse:
         self.candidates = [self.Candidate(c) for c in candidates_data]
         self.prompt_feedback = self.PromptFeedback(self.raw.get('promptFeedback') or {})
 
-        # 提供便捷的 text 属性
+        # Convenience text property
         if self.candidates and self.candidates[0].content.parts:
             self._text = self.candidates[0].content.parts[0].text
         else:
@@ -939,14 +939,14 @@ class _GeminiModelsResponse:
             self.name = model_data.get('name', '')
             self.display_name = model_data.get('displayName', '')
             self.description = model_data.get('description', '')
-            # 从 name 中提取模型 ID (格式: models/gemini-1.5-flash)
+            # Take the model ID from name (format: models/gemini-1.5-flash)
             if '/' in self.name:
                 self.id = self.name.split('/')[-1]
             else:
                 self.id = self.name
 
     def __init__(self, data):
-        # 使用 or [] 确保即使 models 是 None 也能正确处理
+        # "or []" keeps this working when models is None
         models_data = data.get('models') or [] if data else []
         self._models = [self.Model(m) for m in models_data]
 
@@ -968,7 +968,7 @@ def validate_openai_response(response, logger=None) -> bool:
     Raises:
         Exception: 如果响应对象无效
     """
-    # 检查响应对象是否有choices属性
+    # Check whether the response object has a choices attribute
     if not hasattr(response, 'choices'):
         error_msg = f"API returned an invalid response object: {type(response).__name__}, content: {str(response)[:200]}"
         if logger:
@@ -991,14 +991,14 @@ def validate_gemini_response(response, logger=None) -> bool:
     Raises:
         Exception: 如果响应对象无效
     """
-    # 检查响应对象是否有candidates属性
+    # Check whether the response object has a candidates attribute
     if not hasattr(response, 'candidates'):
         error_msg = f"Gemini API returned an invalid response object: {type(response).__name__}, content: {str(response)[:200]}"
         if logger:
             logger.error(error_msg)
         raise Exception(f"Gemini API returned an invalid response object, type: {type(response).__name__}")
     
-    # 检查是否有text属性（某些错误响应可能没有）
+    # Check for a text attribute (some error responses have none)
     if not hasattr(response, 'text'):
         diagnostics = extract_gemini_response_diagnostics(response)
         error_msg = f"Gemini API response is missing the text attribute: {format_gemini_response_diagnostics(diagnostics)}"
@@ -1006,7 +1006,7 @@ def validate_gemini_response(response, logger=None) -> bool:
             logger.error(error_msg)
         raise Exception("Gemini API response is missing the text attribute")
     
-    # text 可能存在但为 None（如安全拦截/空回），后续 .strip() 会崩溃
+    # text may exist but be None (for example a safety block or an empty reply); a later .strip() would crash
     if getattr(response, 'text', None) is None:
         diagnostics = extract_gemini_response_diagnostics(response)
         error_msg = f"Gemini returned empty content ({format_gemini_response_diagnostics(diagnostics)})"
@@ -1198,7 +1198,7 @@ def draw_text_boxes_on_image(image, text_regions: List[Any], text_order: List[in
     if image is None or len(text_regions) == 0:
         return image
     
-    # 检查是否为PIL Image，如果是则转换为numpy数组
+    # Convert a PIL Image to a numpy array
     from PIL import Image as PILImage
     is_pil = isinstance(image, PILImage.Image)
     if is_pil:
@@ -1208,7 +1208,7 @@ def draw_text_boxes_on_image(image, text_regions: List[Any], text_order: List[in
     
     h, w = canvas.shape[:2]
     
-    # 计算坐标缩放比例（超分坐标 -> 原图坐标）
+    # Coordinate scale (upscaled coordinates -> original image coordinates)
     scale_x, scale_y = 1.0, 1.0
     if upscaled_size is not None:
         upscaled_h, upscaled_w = upscaled_size
@@ -1216,24 +1216,24 @@ def draw_text_boxes_on_image(image, text_regions: List[Any], text_order: List[in
             scale_x = w / upscaled_w
             scale_y = h / upscaled_h
     
-    # 计算线宽
+    # Work out the line width
     lw = max(round(sum(canvas.shape[:2]) / 2 * 0.003), 2)
     
-    # 定义多种颜色（RGB格式）
+    # Several colours (RGB)
     colors = [
-        (255, 0, 0),     # 红
-        (0, 255, 0),     # 绿
-        (0, 0, 255),     # 蓝
-        (255, 165, 0),   # 橙
-        (128, 0, 128),   # 紫
-        (0, 255, 255),   # 青
-        (255, 0, 255),   # 品红
-        (255, 255, 0),   # 黄
-        (0, 128, 0),     # 深绿
-        (128, 0, 0),     # 深红
+        (255, 0, 0),     # red
+        (0, 255, 0),     # green
+        (0, 0, 255),     # blue
+        (255, 165, 0),   # orange
+        (128, 0, 128),   # purple
+        (0, 255, 255),   # cyan
+        (255, 0, 255),   # magenta
+        (255, 255, 0),   # yellow
+        (0, 128, 0),     # dark green
+        (128, 0, 0),     # dark red
     ]
     
-    # 先收集所有框的边界信息
+    # Collect the bounds of every box first
     all_boxes = []
     for region in text_regions:
         if hasattr(region, 'xyxy'):
@@ -1255,12 +1255,12 @@ def draw_text_boxes_on_image(image, text_regions: List[Any], text_order: List[in
         for i, (bx1, by1, bx2, by2) in enumerate(all_boxes):
             if i == exclude_idx:
                 continue
-            # 检查矩形是否重叠
+            # Check whether the rectangles overlap
             if not (label_rect[2] < bx1 or label_rect[0] > bx2 or label_rect[3] < by1 or label_rect[1] > by2):
                 return True
         return False
     
-    # 遍历每个文本区域并绘制
+    # Go through the text regions and draw each one
     for idx, region in enumerate(text_regions):
         if idx >= len(text_order):
             break
@@ -1268,15 +1268,15 @@ def draw_text_boxes_on_image(image, text_regions: List[Any], text_order: List[in
         order_num = text_order[idx]
         color = colors[idx % len(colors)]
         
-        # 获取文本框坐标并转换
-        # 边框向外扩展，避免粗边框覆盖文字内容
-        expand = lw  # 向外扩展的像素数（等于线宽）
+        # Get the box coordinates and convert them
+        # Move the border outwards, so a thick border does not cover the text
+        expand = lw  # Number of pixels to move outwards (equal to the line width)
         
         if hasattr(region, 'xyxy'):
             x1, y1, x2, y2 = region.xyxy
             x1, x2 = x1 * scale_x, x2 * scale_x
             y1, y2 = y1 * scale_y, y2 * scale_y
-            # 向外扩展边框
+            # Move the border outwards
             box_x1, box_y1 = int(x1) - expand, int(y1) - expand
             box_x2, box_y2 = int(x2) + expand, int(y2) + expand
             cv2.rectangle(canvas, (box_x1, box_y1), (box_x2, box_y2), color, lw)
@@ -1284,7 +1284,7 @@ def draw_text_boxes_on_image(image, text_regions: List[Any], text_order: List[in
             pts = region.min_rect.astype(np.float64)
             pts[:, 0] *= scale_x
             pts[:, 1] *= scale_y
-            # 计算中心点，向外扩展多边形
+            # Work out the centre and expand the polygon outwards
             center_x = pts[:, 0].mean()
             center_y = pts[:, 1].mean()
             for i in range(len(pts)):
@@ -1301,7 +1301,7 @@ def draw_text_boxes_on_image(image, text_regions: List[Any], text_order: List[in
         else:
             continue
         
-        # 绘制编号标签
+        # Draw the number label
         label_text = str(order_num)
         font = cv2.FONT_HERSHEY_SIMPLEX
         font_scale = max(lw / 2, 0.6)
@@ -1310,34 +1310,34 @@ def draw_text_boxes_on_image(image, text_regions: List[Any], text_order: List[in
         (text_width, text_height), _ = cv2.getTextSize(label_text, font, font_scale, font_thickness)
         margin = 3
         
-        # 四个候选位置：上、下、左、右
+        # Four candidate positions: above, below, left, right
         candidates = [
-            (box_x1, box_y1 - margin),                          # 上
-            (box_x1, box_y2 + text_height + margin),            # 下
-            (box_x1 - text_width - margin, box_y1 + text_height), # 左
-            (box_x2 + margin, box_y1 + text_height),            # 右
+            (box_x1, box_y1 - margin),                          # above
+            (box_x1, box_y2 + text_height + margin),            # below
+            (box_x1 - text_width - margin, box_y1 + text_height), # left
+            (box_x2 + margin, box_y1 + text_height),            # right
         ]
         
-        # 选择不重叠且在图片范围内的位置
-        label_x, label_y = candidates[0]  # 默认上方
+        # Pick a position that does not overlap and is inside the image
+        label_x, label_y = candidates[0]  # Above by default
         for cx, cy in candidates:
-            # 检查是否在图片范围内
+            # Check whether it is inside the image
             if cx < 0 or cy - text_height < 0 or cx + text_width > w or cy > h:
                 continue
-            # 检查是否与其他框重叠
+            # Check whether it overlaps another box
             if not check_overlap(cx, cy, text_width, text_height, idx):
                 label_x, label_y = cx, cy
                 break
         
-        # 最终边界检查
+        # Final bounds check
         label_x = max(0, min(label_x, w - text_width))
         label_y = max(text_height, min(label_y, h))
         
-        # 绘制编号文本（带黑色描边）
+        # Draw the number (with a black outline)
         cv2.putText(canvas, label_text, (label_x, label_y), font, font_scale, (0, 0, 0), font_thickness + 2, cv2.LINE_AA)
         cv2.putText(canvas, label_text, (label_x, label_y), font, font_scale, color, font_thickness, cv2.LINE_AA)
     
-    # 如果输入是PIL Image，转换回PIL格式
+    # If the input was a PIL Image, convert back to PIL
     if is_pil:
         return PILImage.fromarray(canvas)
     return canvas
@@ -1411,11 +1411,11 @@ class CommonTranslator(InfererModule):
         self.post_check_repetition_threshold = 5
         self.post_check_max_retry_attempts = 2
         self.attempts = -1
-        self._MAX_SPLIT_ATTEMPTS = 3  # 最大分割层级
-        self._SPLIT_THRESHOLD = 2  # 重试N次后触发分割
-        self._global_attempt_count = 0  # 全局尝试计数器
-        self._max_total_attempts = -1  # 全局最大尝试次数
-        self._cancel_check_callback = None  # 取消检查回调
+        self._MAX_SPLIT_ATTEMPTS = 3  # Maximum split depth
+        self._SPLIT_THRESHOLD = 2  # Split after N retries
+        self._global_attempt_count = 0  # Global attempt counter
+        self._max_total_attempts = -1  # Global maximum number of attempts
+        self._cancel_check_callback = None  # Cancel-check callback
         self._custom_api_params_config = None
         self._enable_streaming = True
         self._stream_inline_last_len = 0
@@ -1558,30 +1558,30 @@ class CommonTranslator(InfererModule):
             if not current_text:
                 return piece_text
 
-            # 标准累计块：piece = current + delta
+            # Standard cumulative chunk: piece = current + delta
             if piece_text.startswith(current_text):
                 return piece_text[len(current_text):]
 
-            # 回退/截断块：piece 只是 current 的前缀（且不是极短 token），忽略
+            # Rolled back or truncated chunk: piece is only a prefix of current (and not a very short token), ignore it
             if len(piece_text) >= 16 and current_text.startswith(piece_text):
                 return ""
 
-            # 某些服务会把 current 放在 piece 中间，取最后一次出现后的尾部
+            # Some services put current in the middle of piece; take the tail after its last occurrence
             pos = piece_text.rfind(current_text)
             if pos != -1:
                 return piece_text[pos + len(current_text):]
 
-            # 明确重发：较长片段且 current 已以该片段结尾，忽略
+            # Plain resend: a longer fragment that current already ends with, ignore it
             if len(piece_text) >= 16 and current_text.endswith(piece_text):
                 return ""
 
-            # 处理部分重叠：current 尾部 + piece 头部
+            # Partial overlap: the end of current + the start of piece
             max_overlap = min(len(piece_text), len(current_text))
             for overlap in range(max_overlap, 0, -1):
                 if current_text.endswith(piece_text[:overlap]):
                     return piece_text[overlap:]
 
-            # 无法判断关系时按增量处理（保守）
+            # When the relation cannot be decided, treat it as a delta (the cautious choice)
             return piece_text
 
         text_parts: List[str] = []
@@ -1690,16 +1690,16 @@ class CommonTranslator(InfererModule):
             f"[Attempt {attempt} - Previous attempts failed quality check]"
         ]
         
-        # 根据尝试次数选择不同的提示（循环使用）
+        # Choose a hint by attempt number (cycling through them)
         base_hint = hints[(attempt - 1) % len(hints)]
         
-        # 如果提供了原因，添加到提示中
+        # When a reason was given, add it to the hint
         if reason:
             return f"{base_hint} Reason: {reason}\n\n"
         else:
             return f"{base_hint}\n\n"
 
-    # HQ 翻译器用的详细 fallback 提示词（当 system_prompt_hq.yaml/json 不存在时）
+    # Detailed fallback prompt for the HQ translators (when system_prompt_hq.yaml/json does not exist)
     _HQ_FALLBACK_PROMPT = """You are an expert manga translator. Your task is to accurately translate manga text from the source language into **{{{target_lang}}}**. You will be given the full manga page for context.
 
 **CRITICAL INSTRUCTIONS (FOLLOW STRICTLY):**
@@ -1849,17 +1849,17 @@ class CommonTranslator(InfererModule):
         """
         target_lang_full = VALID_LANGUAGES.get(target_lang, target_lang)
 
-        # --- 处理自定义提示词 ---
+        # --- Custom prompt ---
         custom_prompt_str = ""
         if custom_prompt_json:
             custom_prompt_str = _flatten_prompt_data(custom_prompt_json)
 
-        # --- 处理断句提示词 ---
+        # --- Line-breaking prompt ---
         line_break_prompt_str = ""
         if line_break_prompt_json and line_break_prompt_json.get('line_break_prompt'):
             line_break_prompt_str = line_break_prompt_json['line_break_prompt']
 
-        # --- 加载 HQ System Prompt（优先 YAML，兼容 JSON） ---
+        # --- Load the HQ system prompt (YAML preferred, JSON still accepted) ---
         import os
 
         from ..utils import BASE_PATH
@@ -1871,7 +1871,7 @@ class CommonTranslator(InfererModule):
         if not base_prompt:
             base_prompt = self._HQ_FALLBACK_PROMPT
 
-        # --- 替换占位符 ---
+        # --- Replace the placeholders ---
         base_prompt = base_prompt.replace("{{{target_lang}}}", target_lang_full)
         if custom_prompt_str:
             custom_prompt_str = custom_prompt_str.replace("{{{target_lang}}}", target_lang_full)
@@ -1914,20 +1914,20 @@ class CommonTranslator(InfererModule):
         """
         import json
         
-        # 检查是否开启AI断句
+        # Check whether AI line breaking is on
         enable_ai_break = False
         if ctx and hasattr(ctx, 'config') and ctx.config and hasattr(ctx.config, 'render'):
             enable_ai_break = getattr(ctx.config.render, 'disable_auto_wrap', False)
 
         prompt = ""
 
-        # 添加重试提示到最前面（如果是重试）
+        # Put the retry hint first (when this is a retry)
         if retry_attempt > 0:
             prompt += self._get_retry_hint(retry_attempt, retry_reason) + "\n"
 
         if is_image_mode:
             prompt += "Please translate the following manga text regions. I'm providing multiple images with their text regions in reading order:\n\n"
-            # 添加图片信息
+            # Add the image information
             for i, data in enumerate(batch_data):
                 prompt += f"=== Image {i+1} ===\n"
                 prompt += f"Text regions ({len(data['original_texts'])} regions):\n"
@@ -1944,30 +1944,30 @@ class CommonTranslator(InfererModule):
         input_data = []
         text_index = 1
         for img_idx, data in enumerate(batch_data):
-            # 获取 text_regions 用于 AI 断句
+            # Get text_regions for AI line breaking
             text_regions = data.get('text_regions', [])
             text_order = data.get('text_order', [])
             
             for region_idx, text in enumerate(data['original_texts']):
-                # 跳过 None 值
+                # Skip None values
                 if text is None:
                     self.logger.warning(f"Skipping None text (img_idx={img_idx}, region_idx={region_idx})")
                     continue
                 
-                # 预处理文本：移除换行符
+                # Preprocess the text: remove line breaks
                 text_clean = text.replace('\n', ' ').replace('\ufffd', '')
                 
-                # HQ 模式优先使用 text_order，确保与图片编号一致
+                # HQ mode prefers text_order, so the numbers match the ones on the image
                 item_id = text_order[region_idx] if region_idx < len(text_order) else text_index
                 item = {
                     "id": item_id,
                     "text": text_clean
                 }
                 
-                # AI 断句逻辑：获取 original_region_count
+                # AI line breaking: get original_region_count
                 if enable_ai_break:
                     region_count = 1
-                    # 尝试从 text_regions 获取
+                    # Try to get it from text_regions
                     if text_regions and region_idx < len(text_regions):
                         region = text_regions[region_idx]
                         if hasattr(region, 'lines') and region.lines is not None:
@@ -1975,7 +1975,7 @@ class CommonTranslator(InfererModule):
                         elif isinstance(region, dict) and 'lines' in region:
                             region_count = len(region['lines'])
                     
-                    # 如果获取失败（比如纯文本模式下 text_regions 为空），回退到数换行符
+                    # When that fails (for example text_regions is empty in plain-text mode), fall back to counting line breaks
                     if region_count == 1 and text:
                         newline_count = text.count('\n')
                         if newline_count > 0:
@@ -1997,7 +1997,7 @@ class CommonTranslator(InfererModule):
 
     def _build_user_prompt_for_texts(self, texts: List[str], ctx=None, prev_context: str = "", retry_attempt: int = 0, retry_reason: str = "") -> str:
         """Alias for text mode: wraps texts into batch_data"""
-        # 构造伪 batch_data
+        # Build a stand-in batch_data
         batch_data = [{
             'original_texts': texts,
             'text_regions': getattr(ctx, 'text_regions', []) if ctx else []
@@ -2026,25 +2026,25 @@ class CommonTranslator(InfererModule):
         """
         import re
 
-        # 如果分割级别过深（>=3），跳过BR检查以避免无限重试
+        # When the split depth is too large (>=3), skip the BR check to avoid endless retries
         if split_level >= 3:
             self.logger.info(f"[AI Line Break Check] Split level is too deep (split_level={split_level}); skipping the BR marker check")
             return True
 
-        # 检查是否启用了AI断句
+        # Check whether AI line breaking is on
         ai_break_enabled = False
         if ctx and hasattr(ctx, 'config') and hasattr(ctx.config, 'render'):
             ai_break_enabled = getattr(ctx.config.render, 'disable_auto_wrap', False)
 
         if not ai_break_enabled:
-            return True  # AI断句未启用，不需要处理BR
+            return True  # AI line breaking is off, so BR needs no handling
 
-        # 提取每个翻译对应的区域数
+        # Get the number of regions for each translation
         region_counts = []
-        single_region_indices = []  # 已确认是单区域（region_count < 2）的翻译下标
+        single_region_indices = []  # Indexes of translations confirmed to be a single region (region_count < 2)
         if ctx and hasattr(ctx, 'text_regions') and ctx.text_regions:
             for idx in range(len(translations)):
-                # 确定实际的region索引
+                # Work out the actual region index
                 if batch_indices and idx < len(batch_indices):
                     region_idx = batch_indices[idx]
                 else:
@@ -2057,9 +2057,9 @@ class CommonTranslator(InfererModule):
                     if region_count < 2:
                         single_region_indices.append(idx)
                 else:
-                    region_counts.append(1)  # 默认为1
+                    region_counts.append(1)  # 1 by default
         elif batch_data:
-            # HQ翻译器使用batch_data
+            # The HQ translators use batch_data
             for idx in range(len(translations)):
                 region_idx = idx
                 for data in batch_data:
@@ -2073,11 +2073,11 @@ class CommonTranslator(InfererModule):
                 else:
                     region_counts.append(1)
         else:
-            region_counts = [1] * len(translations)  # 默认都为1
+            region_counts = [1] * len(translations)  # All 1 by default
 
-        # 单区域清理（与「AI断句检查」开关无关，只依赖 AI 断句开启）：
-        # 模型不遵守 N=1 规则返回 [BR]/<br>/【BR】 时，统一清理成单行，
-        # 避免单区域被渲染成多行。
+        # Single-region clean-up (independent of the "AI line-breaking check" switch; it only needs AI line breaking to be on):
+        # when the model ignores the N=1 rule and returns [BR]/<br>/【BR】, reduce it to one line,
+        # so a single region is not rendered as several lines.
         for idx in single_region_indices:
             translation = translations[idx]
             if translation:
@@ -2088,24 +2088,24 @@ class CommonTranslator(InfererModule):
                     )
                     translations[idx] = cleaned
 
-        # 检查是否启用了BR检查
+        # Check whether the BR check is on
         check_enabled = False
         if ctx and hasattr(ctx, 'config') and hasattr(ctx.config, 'render'):
             check_enabled = getattr(ctx.config.render, 'check_br_and_retry', False)
 
         if not check_enabled:
-            return True  # 检查未启用，直接通过
+            return True  # The check is off: pass
 
-        # 检查每个翻译，统计缺失BR的数量
+        # Check each translation and count the missing BRs
         needs_check_count = 0
         missing_br_count = 0
         missing_indices = []
 
         for idx, (translation, region_count) in enumerate(zip(translations, region_counts)):
-            # 只检查区域数≥2的翻译
+            # Only translations with 2 or more regions are checked
             if region_count >= 2:
                 needs_check_count += 1
-                # 检查是否包含BR标记
+                # Check whether it contains a BR marker
                 has_br = bool(re.search(r'(\[BR\]|【BR】|<br>)', translation, flags=re.IGNORECASE))
                 if not has_br:
                     missing_br_count += 1
@@ -2114,28 +2114,28 @@ class CommonTranslator(InfererModule):
                         f"Translation {idx+1} missing [BR] markers (expected for {region_count} regions): {translation[:50]}..."
                     )
 
-        # 计算容忍的错误数量：十分之一，最少1个
+        # Tolerated number of errors: one tenth, at least 1
         if needs_check_count > 0:
             tolerance = max(1, needs_check_count // 10)
 
             if missing_br_count > tolerance:
-                # 超过容忍度，验证失败
+                # Above the tolerance: validation fails
                 self.logger.warning(
                     f"[AI Line Break Check] Translations missing BR markers ({missing_br_count}/{needs_check_count}) exceed the tolerance ({tolerance}); retry required"
                 )
                 return False
             elif missing_br_count > 0:
-                # 在容忍度内，警告但通过
+                # Within the tolerance: warn but pass
                 self.logger.warning(
                     f"[AI Line Break Check] ⚠ {missing_br_count}/{needs_check_count} translations are missing BR markers, but this is within the tolerance ({tolerance}); continuing"
                 )
                 return True
             else:
-                # 全部通过
+                # All passed
                 self.logger.info(f"[AI Line Break Check] ✓ All translations for multiline regions contain [BR] markers (checked {needs_check_count}/{len(translations)} translations)")
                 return True
 
-        return True  # 没有需要检查的翻译，直接通过
+        return True  # No translation needs checking: pass
 
     def _validate_translation_quality(self, queries: List[str], translations: List[str]) -> Tuple[bool, str]:
         """
@@ -2148,11 +2148,11 @@ class CommonTranslator(InfererModule):
         Returns:
             (is_valid, error_message)
         """
-        # 1. 检查数量匹配 (这是必须的，不能跳过)
+        # 1. Check that the counts match (required, cannot be skipped)
         if len(translations) != len(queries):
             return False, f"Translation count mismatch: expected {len(queries)}, got {len(translations)}"
 
-        # 2. 检查空翻译（原文不为空但译文为空）- 已禁用
+        # 2. Check for empty translations (the original is not empty but the translation is) - disabled
         # empty_translation_errors = []
         # for i, (source, translation) in enumerate(zip(queries, translations)):
         #     if source.strip() and not translation.strip():
@@ -2161,7 +2161,7 @@ class CommonTranslator(InfererModule):
         # if empty_translation_errors:
         #     return False, f"Empty translation detected at positions: {empty_translation_errors}"
 
-        # 3. 检查合并翻译（原文是正常文本但译文只有标点）- 已禁用
+        # 3. Check for merged translations (the original is normal text but the translation is only punctuation) - disabled
         # for i, (source, translation) in enumerate(zip(queries, translations)):
         #     is_source_simple = all(char in string.punctuation or char.isspace() for char in source)
         #     is_translation_simple = all(char in string.punctuation or char.isspace() for char in translation)
@@ -2169,7 +2169,7 @@ class CommonTranslator(InfererModule):
         #     if is_translation_simple and not is_source_simple:
         #         return False, f"Detected potential merged translation at position {i+1}"
 
-        # 4. 检查可疑符号（模型幻觉）- 已禁用
+        # 4. Check for suspicious symbols (model hallucination) - disabled
         # SUSPICIOUS_SYMBOLS = ["ହ", "ି", "ഹ"]
         # for symbol in SUSPICIOUS_SYMBOLS:
         #     for translation in translations:
@@ -2193,11 +2193,11 @@ class CommonTranslator(InfererModule):
         """
         self._global_attempt_count += 1
 
-        # 无限重试模式
+        # Unlimited retry mode
         if self._max_total_attempts == -1:
             return True
 
-        # 检查是否超过上限（注意：允许等于上限的这次请求执行）
+        # Check whether the limit is exceeded (note: the request that reaches the limit is still allowed to run)
         if self._global_attempt_count > self._max_total_attempts:
             self.logger.warning(f"Exceeded max total attempts: {self._global_attempt_count}/{self._max_total_attempts}")
             return False
@@ -2224,32 +2224,32 @@ class CommonTranslator(InfererModule):
         Returns:
             翻译结果列表
         """
-        # 检查是否超过全局尝试次数
+        # Check whether the global attempt count is exceeded
         if self._max_total_attempts != -1 and self._global_attempt_count >= self._max_total_attempts:
             self.logger.error(f"Global attempt limit reached before translation: {self._global_attempt_count}/{self._max_total_attempts}")
             raise Exception(f"Translation failed: reached max total attempts ({self._max_total_attempts})")
 
         try:
-            # 尝试翻译（内部会检查是否需要分割）
+            # Try to translate (whether to split is checked inside)
             translations = await translator_func(texts, split_level=split_level, **kwargs)
             return translations
 
         except self.SplitException as split_ex:
-            # 触发分割
+            # Start a split
             if split_level < self._MAX_SPLIT_ATTEMPTS and len(texts) > 1:
                 self.logger.warning(
                     f"Splitting after {split_ex.attempt_count} attempts at split_level={split_level}, "
                     f"batch size {len(texts)} → splitting into two halves"
                 )
 
-                # 分成两半（只分割texts，不分割batch_data等其他参数）
+                # Split in two (only texts is split, not batch_data or the other parameters)
                 mid = len(texts) // 2
                 left_texts = texts[:mid]
                 right_texts = texts[mid:]
 
                 self.logger.info(f"Split: left={len(left_texts)}, right={len(right_texts)}, global_attempts={self._global_attempt_count}/{self._max_total_attempts}")
 
-                # 并发翻译左右两部分（kwargs保持完整传递）
+                # Translate the two halves concurrently (kwargs is passed on unchanged)
                 try:
                     left_translations, right_translations = await asyncio.gather(
                         self._translate_with_split(translator_func, left_texts, split_level + 1, **kwargs),
@@ -2257,16 +2257,16 @@ class CommonTranslator(InfererModule):
                         return_exceptions=False
                     )
                 except Exception as split_error:
-                    # 如果并发失败，回退到串行处理
+                    # When the concurrent run fails, fall back to one after the other
                     self.logger.warning(f"Concurrent split failed, falling back to sequential: {split_error}")
                     left_translations = await self._translate_with_split(translator_func, left_texts, split_level + 1, **kwargs)
                     right_translations = await self._translate_with_split(translator_func, right_texts, split_level + 1, **kwargs)
 
-                # 合并结果
+                # Join the results
                 return left_translations + right_translations
 
             else:
-                # 不能再分割了，终止翻译进程
+                # It cannot be split any further: stop the translation
                 if len(texts) == 1:
                     self.logger.error(f"Single text translation failed at split_level={split_level}: {texts[0][:50]}...")
                     raise Exception(f"Translation failed for single text after {split_ex.attempt_count} attempts")
@@ -2275,7 +2275,7 @@ class CommonTranslator(InfererModule):
                     raise Exception(f"Translation failed: max split level reached with batch size {len(texts)}")
 
         except Exception as e:
-            # 其他异常（非分割触发的），直接终止
+            # Any other exception (not caused by a split) stops it at once
             self.logger.error(f"Translation failed with exception at split_level={split_level}: {e}")
             raise e
 
@@ -2381,7 +2381,7 @@ class CommonTranslator(InfererModule):
                             continue
                         if prev_category and not term_c:
                             continue
-                    # 无分类先缓存，不立即输出；后续若拿到分类再输出，避免重复两条
+                    # Without a category, buffer it instead of printing; print later if a category arrives, so there are not two lines
                     if not term_c and prev_category is None:
                         self._stream_term_seen[key] = ""
                         continue
@@ -2623,7 +2623,7 @@ class CommonTranslator(InfererModule):
             return
         self._stream_inline_buffer += str(delta_text)
 
-        # 输出完整行（包含模型返回的换行）
+        # Print the complete line (with the line breaks the model returned)
         while "\n" in self._stream_inline_buffer:
             line_text, rest = self._stream_inline_buffer.split("\n", 1)
             self._stream_inline_buffer = rest
@@ -2637,7 +2637,7 @@ class CommonTranslator(InfererModule):
                 self._emit_stream_lines(prefix, line_text)
             self._stream_inline_last_len = 0
 
-        # 没有换行时做同一行刷新
+        # Without a line break, refresh on the same line
         text = self._stream_inline_buffer
         if not text:
             return
@@ -2646,7 +2646,7 @@ class CommonTranslator(InfererModule):
         except Exception as ignored_error:
             note_ignored_error(ignored_error, "manga_translator/translators/common.py:CommonTranslator._update_stream_inline")
             term_width = 120
-        # 预留少量边距，避免贴边抖动
+        # Leave a small margin, so the text does not jitter at the edge
         available = max(20, term_width - len(prefix) - 2)
         tail = text[-available:]
         line = f"{prefix} {tail}"
@@ -2657,7 +2657,7 @@ class CommonTranslator(InfererModule):
             self._stream_inline_last_len = len(line)
         except Exception as ignored_error:
             note_ignored_error(ignored_error, "manga_translator/translators/common.py:CommonTranslator._update_stream_inline")
-            # 终端不可写时退回普通日志
+            # When the terminal is not writable, fall back to ordinary logging
             self._emit_stream_lines(prefix, tail)
 
     def _finish_stream_inline(self) -> None:
@@ -2707,7 +2707,7 @@ class CommonTranslator(InfererModule):
         self.logger.info(f'Translating into {VALID_LANGUAGES[to_lang]}')
 
         if from_lang == to_lang:
-            # 即使源语言和目标语言相同，也应用文本清理（如全角句点替换）
+            # Text clean-up (such as replacing full-width periods) applies even when source and target language are the same
             return [self._clean_translation_output(q, q, to_lang) for q in queries]
 
         # Dont translate queries without text
@@ -2813,14 +2813,14 @@ class CommonTranslator(InfererModule):
         if not query or not trans:
             return ''
 
-        # 移除内部标记：【Original regions: X】或 [Original regions: X]
+        # Remove the internal marker: 【Original regions: X】 or [Original regions: X]
         # Remove internal markers: 【Original regions: X】 or [Original regions: X]
         trans = re.sub(r'【Original regions:\s*\d+】\s*', '', trans, flags=re.IGNORECASE)
         trans = re.sub(r'\[Original regions:\s*\d+\]\s*', '', trans, flags=re.IGNORECASE)
-        # 只清理翻译器返回文本中的 BR 邻接空白；编辑器手输文本不经过此处。
+        # Only whitespace next to BR in text returned by the translator is cleaned; text typed in the editor does not pass through here.
         trans = _BR_EDGE_WHITESPACE_RE.sub(r"\1", trans)
 
-        # 替换全角句点连续出现（．．．或．．）为省略号
+        # Replace runs of full-width periods (．．． or ．．) with an ellipsis
         trans = trans.replace('．．．', '…')
         trans = trans.replace('．．', '…')
 
@@ -2901,10 +2901,10 @@ def sanitize_text_encoding(text: str) -> str:
         return text
     
     try:
-        # 1. 尝试检测并修复UTF-16-LE编码问题
-        # 如果文本包含UTF-16-LE的BOM或特征，尝试重新解码
+        # 1. Try to detect and repair UTF-16-LE encoding problems
+        # When the text has a UTF-16-LE BOM or its signature, try to decode it again
         if isinstance(text, bytes):
-            # 如果是bytes，尝试多种编码
+            # For bytes, try several encodings
             for encoding in ['utf-8', 'utf-16-le', 'utf-16-be', 'latin-1']:
                 try:
                     text = text.decode(encoding, errors='ignore')
@@ -2912,32 +2912,32 @@ def sanitize_text_encoding(text: str) -> str:
                 except (UnicodeDecodeError, AttributeError):
                     continue
         
-        # 2. 移除不可见的控制字符和损坏的字符
-        # 保留常用的控制字符：换行(\n)、回车(\r)、制表符(\t)
+        # 2. Remove invisible control characters and damaged characters
+        # Keep the common control characters: line feed (\n), carriage return (\r), tab (\t)
         import unicodedata
         cleaned = []
         for char in text:
-            # 跳过控制字符（除了\n, \r, \t）
+            # Skip control characters (other than \n, \r, \t)
             if unicodedata.category(char)[0] == 'C' and char not in '\n\r\t':
                 continue
-            # 跳过私有使用区字符（可能是损坏的编码）
-            if '\uE000' <= char <= '\uF8FF':  # 私有使用区
+            # Skip private-use characters (possibly a damaged encoding)
+            if '\uE000' <= char <= '\uF8FF':  # private use area
                 continue
-            # 跳过替换字符（表示解码失败）
+            # Skip the replacement character (it marks a decoding failure)
             if char == '\ufffd':
                 continue
             cleaned.append(char)
         
         text = ''.join(cleaned)
         
-        # 3. 修复常见的编码混淆问题
-        # UTF-16-LE误识别为UTF-8时会产生的特征模式
-        # 例如：每个字符后跟\x00
+        # 3. Repair common encoding mix-ups
+        # The pattern produced when UTF-16-LE is read as UTF-8,
+        # for example every character followed by \x00
         if '\x00' in text:
             text = text.replace('\x00', '')
         
-        # 4. 确保文本是有效的UTF-8
-        # 通过编码再解码来验证和清理
+        # 4. Make sure the text is valid UTF-8
+        # Validate and clean by encoding and decoding again
         text = text.encode('utf-8', errors='ignore').decode('utf-8', errors='ignore')
         
         return text
@@ -2946,7 +2946,7 @@ def sanitize_text_encoding(text: str) -> str:
         import logging
         logger = logging.getLogger('manga_translator')
         logger.warning(f"Text encoding cleanup failed: {e}; returning the original text")
-        # 如果清理失败，至少移除明显的问题字符
+        # When cleaning fails, at least remove the obviously bad characters
         if isinstance(text, str):
             return text.replace('\ufffd', '').replace('\x00', '')
         return str(text)
@@ -3107,7 +3107,7 @@ def parse_hq_response(result_text: str) -> Tuple[List[str], List[Dict[str, Any]]
     
     logger = logging.getLogger('manga_translator')
     
-    # 统一的编码清理
+    # Shared encoding clean-up
     result_text = sanitize_text_encoding(result_text)
     result_text = normalize_model_output_text(result_text)
     extracted_payload, extracted = extract_json_payload_from_mixed_text(result_text)
@@ -3120,7 +3120,7 @@ def parse_hq_response(result_text: str) -> Tuple[List[str], List[Dict[str, Any]]
     if not result_text:
         return [], []
 
-    # 1. 从原始文本中收集候选 JSON 片段（兼容流式重复块）
+    # 1. Collect candidate JSON fragments from the raw text (tolerates repeated streaming chunks)
     def _extract_balanced_json_candidates(text: str) -> List[str]:
         candidates = []
         stack = []
@@ -3171,7 +3171,7 @@ def parse_hq_response(result_text: str) -> Tuple[List[str], List[Dict[str, Any]]
             candidate_texts.append(stripped_text)
         result_text = stripped_text or raw_text
 
-    # 2. 查找JSON起始 (清理前缀)
+    # 2. Find where the JSON starts (drops a prefix)
     first_bracket = result_text.find('[')
     first_brace = result_text.find('{')
     json_start = -1
@@ -3184,10 +3184,10 @@ def parse_hq_response(result_text: str) -> Tuple[List[str], List[Dict[str, Any]]
     if result_text:
         candidate_texts.append(result_text)
 
-    # 原文中所有平衡 JSON 片段也作为候选
+    # Every balanced JSON fragment in the raw text is a candidate too
     candidate_texts.extend(_extract_balanced_json_candidates(raw_text))
 
-    # 去重且保序
+    # Remove duplicates, keeping the order
     dedup_candidates = []
     seen_candidates = set()
     for c in candidate_texts:
@@ -3251,7 +3251,7 @@ def parse_hq_response(result_text: str) -> Tuple[List[str], List[Dict[str, Any]]
             note_ignored_error(ignored_error, "manga_translator/translators/common.py:parse_hq_response._parse_candidate")
             return None
 
-    # 优先选择“翻译条目数最多”的候选；同分时选术语更多
+    # Prefer the candidate with the most translation entries; on a tie, the one with more glossary terms
     best = None
     best_score = (-1, -1)
     for c in dedup_candidates:
@@ -3267,10 +3267,10 @@ def parse_hq_response(result_text: str) -> Tuple[List[str], List[Dict[str, Any]]
     if best is not None:
         return best[0], best[1]
 
-    # === 策略3: 正则表达式暴力提取 ===
+    # === Strategy 3: brute-force extraction with regular expressions ===
     logger.warning("JSON parsing failed, falling back to Regex extraction")
     
-    # 3.1 尝试提取带ID的对象: {"id": 1, "translation": "..."}
+    # 3.1 Try to extract objects with an ID: {"id": 1, "translation": "..."}
     object_pattern = r'\{\s*"id"\s*:\s*(\d+)\s*,\s*"translation"\s*:\s*"((?:[^"\\]|\\.)*)"\s*\}'
     matches = re.findall(object_pattern, result_text)
     
@@ -3280,7 +3280,7 @@ def parse_hq_response(result_text: str) -> Tuple[List[str], List[Dict[str, Any]]
         
         return translations, new_terms
 
-    # 3.2 尝试只提取 translation 字段
+    # 3.2 Try to extract only the translation field
     translation_pattern = r'"translation"\s*:\s*"((?:[^"\\]|\\.)*)"'
     matches = re.findall(translation_pattern, result_text)
     if matches:
@@ -3288,7 +3288,7 @@ def parse_hq_response(result_text: str) -> Tuple[List[str], List[Dict[str, Any]]
          translations = [match.replace('\\"', '"').replace('\\n', '\n') for match in matches]
          return translations, []
 
-    # 3.3 最后的兜底：按行分割 (仅当不像JSON时)
+    # 3.3 Last resort: split by lines (only when it does not look like JSON)
     if not result_text.startswith('{') and not result_text.startswith('['):
          for line in result_text.split('\n'):
             line = line.strip()
@@ -3433,22 +3433,22 @@ def merge_glossary_to_file(file_path: str, new_terms: List[Dict[str, Any]]) -> b
     is_yaml = ext in ('.yaml', '.yml')
 
     try:
-        # 读取现有文件（统一使用 prompt_loader，自动支持 JSON/YAML）
+        # Read the existing file (always through prompt_loader, which handles JSON and YAML)
         data = {}
         if os.path.exists(file_path):
             loaded = load_prompt_file(file_path)
             if loaded is not None:
                 data = loaded
         
-        # 确保结构完整
+        # Make sure the structure is complete
         if "glossary" not in data or not isinstance(data["glossary"], dict):
-            # 如果旧格式是列表，或者没有 glossary，初始化为新的分类结构
+            # When the old format is a list, or there is no glossary, start a new categorised structure
             data["glossary"] = {
                 "Person": [], "Location": [], "Org": [], "Item": [], "Skill": [], "Creature": []
             }
         
         glossary = data["glossary"]
-        # 确保所有标准分类键都存在
+        # Make sure every standard category key exists
         valid_keys_map = {
             "person": "Person", 
             "location": "Location", 
@@ -3459,7 +3459,7 @@ def merge_glossary_to_file(file_path: str, new_terms: List[Dict[str, Any]]) -> b
             "creature": "Creature"
         }
         
-        # 确保标准键存在于 glossary 中
+        # Make sure the standard keys exist in the glossary
         for key in set(valid_keys_map.values()):
             if key not in glossary:
                 glossary[key] = []
@@ -3476,7 +3476,7 @@ def merge_glossary_to_file(file_path: str, new_terms: List[Dict[str, Any]]) -> b
             if not original or not incoming_aliases:
                 continue
 
-            # 映射 Category 到标准 Key
+            # Map the category to its standard key
             normalized_cat = str(raw_category or "").strip().lower()
             target_key = valid_keys_map.get(normalized_cat)
             if target_key is None:
@@ -3519,7 +3519,7 @@ def merge_glossary_to_file(file_path: str, new_terms: List[Dict[str, Any]]) -> b
             modified = True
         
         if modified:
-            # 确保存储目录存在
+            # Make sure the storage folder exists
             os.makedirs(os.path.dirname(os.path.abspath(file_path)), exist_ok=True)
             with open(file_path, 'w', encoding='utf-8') as f:
                 if is_yaml:
@@ -3528,7 +3528,7 @@ def merge_glossary_to_file(file_path: str, new_terms: List[Dict[str, Any]]) -> b
                     if yaml is not None:
                         yaml.dump(data, f, allow_unicode=True, default_flow_style=False, sort_keys=False)
                     else:
-                        # YAML 不可用，回退到 JSON
+                        # YAML is not available: fall back to JSON
                         json.dump(data, f, indent=2, ensure_ascii=False)
                 else:
                     json.dump(data, f, indent=2, ensure_ascii=False)

@@ -12,7 +12,7 @@ from typing import Any, Dict, Optional, Tuple
 
 logger = logging.getLogger('manga_translator')
 
-# 缓存已加载的 yaml 模块
+# Cache of the loaded yaml module
 _yaml_module = None
 _yaml_available = None
 
@@ -258,11 +258,11 @@ def load_custom_prompt(path: str) -> Optional[Dict[str, Any]]:
     if not path:
         return None
 
-    # 直接路径存在
+    # The path exists as given
     if os.path.exists(path):
         return load_prompt_file(path)
 
-    # 尝试替换扩展名
+    # Try with the other extension
     base, ext = os.path.splitext(path)
     alt_exts = ['.yaml', '.yml', '.json']
     for alt_ext in alt_exts:

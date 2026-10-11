@@ -31,7 +31,7 @@ from .common import (
 )
 from manga_translator.utils.swallowed import note_ignored_error
 
-# 浏览器身份由 curl_cffi 的 impersonate 配置生成；这里只保留业务请求头。
+# The browser identity comes from curl_cffi's impersonate setting; only the request headers of the application are kept here.
 BROWSER_HEADERS = GEMINI_CURL_HEADERS
 
 
@@ -39,14 +39,14 @@ def encode_image_for_gemini(image, max_size=1024):
     """将图片处理为适合Gemini API的格式，返回bytes和mime_type"""
     image = normalize_rgb_image(image)
 
-    # 调整图片大小
+    # Resize the image
     w, h = image.size
     if max(w, h) > max_size:
         scale = max_size / max(w, h)
         new_w, new_h = int(w * scale), int(h * scale)
         image = image.resize((new_w, new_h), Image.LANCZOS)
 
-    # 转换为 JPEG bytes
+    # Convert to JPEG bytes
     buffer = BytesIO()
     image.save(buffer, format='JPEG', quality=85)
     image_bytes = buffer.getvalue()
@@ -68,15 +68,15 @@ class GeminiHighQualityTranslator(CommonTranslator):
     LOG_PROVIDER_NAME = "Gemini HQ"
     STREAM_LOG_PREFIX = "[Gemini HQ Stream]"
     
-    # 类变量: 跨实例共享的RPM限制时间戳
+    # Class variable: RPM limit timestamp shared across instances
     _GLOBAL_LAST_REQUEST_TS = {}  # {model_name: timestamp}
     
     def __init__(self):
         super().__init__()
         self.client = None
-        self.prev_context = ""  # 用于存储多页上下文
+        self.prev_context = ""  # Holds the multi-page context
         # Initial setup from environment variables
-        # 只在非Web环境下重新加载.env文件
+        # Reload the .env file only outside the web environment
         is_web_server = os.getenv('MANGA_TRANSLATOR_WEB_SERVER', 'false').lower() == 'true'
         if not is_web_server:
             load_app_dotenv(override=True)
@@ -86,13 +86,13 @@ class GeminiHighQualityTranslator(CommonTranslator):
         self.model_name = os.getenv(self.MODEL_ENV, self.DEFAULT_MODEL_NAME)
         self._runtime_api_settings = None
         self._refresh_runtime_api_settings(None)
-        self.max_tokens = None  # 不限制，使用模型默认最大值
-        self._MAX_REQUESTS_PER_MINUTE = 0  # 默认无限制
-        # 使用全局时间戳,跨实例共享
+        self.max_tokens = None  # No limit: use the model's default maximum
+        self._MAX_REQUESTS_PER_MINUTE = 0  # No limit by default
+        # Use the global timestamp, shared across instances
         if self.model_name not in type(self)._GLOBAL_LAST_REQUEST_TS:
             type(self)._GLOBAL_LAST_REQUEST_TS[self.model_name] = 0
         self._last_request_ts_key = self.model_name
-        # 新版 SDK 的安全设置
+        # Safety settings of the new SDK
         self.safety_settings = [
             types.SafetySetting(
                 category=types.HarmCategory.HARM_CATEGORY_HARASSMENT,
@@ -122,24 +122,24 @@ class GeminiHighQualityTranslator(CommonTranslator):
     
     def parse_args(self, args):
         """解析配置参数"""
-        # 调用父类的 parse_args 来设置通用参数（包括 attempts、post_check 等）
+        # Call the parent parse_args to set the common parameters (attempts, post_check and so on)
         super().parse_args(args)
         translator_args = self._resolve_translator_config(args)
         
-        # 同步重试次数到“总尝试次数”（首次请求 + 重试）
+        # Sync the retry count to the "total attempts" (first request + retries)
         self._max_total_attempts = self._resolve_max_total_attempts()
         
-        # 从配置中读取RPM限制
+        # Read the RPM limit from the configuration
         max_rpm = self._get_config_value(translator_args, 'max_requests_per_minute', 0)
         if max_rpm > 0:
             self._MAX_REQUESTS_PER_MINUTE = max_rpm
             self.logger.info(f"Setting {self._log_provider_name()} max requests per minute to: {max_rpm}")
         
-        # 读取自定义API参数配置
+        # Read the custom API parameter configuration
         self._configure_custom_api_params(args)
         
-        # 从配置中读取用户级 API Key（优先于环境变量）
-        # 这允许 Web 服务器为每个用户使用不同的 API Key
+        # Read the per-user API key from the configuration (it takes precedence over the environment variable)
+        # This lets the web server use a different API key for each user
         need_rebuild_client = False
         
         user_api_key = self._get_config_value(translator_args, 'user_api_key', None)
@@ -157,7 +157,7 @@ class GeminiHighQualityTranslator(CommonTranslator):
         user_api_model = self._get_config_value(translator_args, 'user_api_model', None)
         if user_api_model:
             self.model_name = user_api_model
-            # 更新全局时间戳的 key
+            # Update the key of the global timestamp
             if self.model_name not in type(self)._GLOBAL_LAST_REQUEST_TS:
                 type(self)._GLOBAL_LAST_REQUEST_TS[self.model_name] = 0
             self._last_request_ts_key = self.model_name
@@ -171,7 +171,7 @@ class GeminiHighQualityTranslator(CommonTranslator):
             if (self.api_key or "", self.base_url, self.model_name) != old_signature:
                 need_rebuild_client = True
 
-        # 如果 API Key 或 Base URL 变化，重建客户端
+        # Rebuild the client when the API key or the base URL changed
         if need_rebuild_client:
             self.client = None
             self._setup_client()
@@ -255,7 +255,7 @@ class GeminiHighQualityTranslator(CommonTranslator):
     def _setup_client(self, system_instruction=None):
         """设置高质量翻译客户端"""
         if not self.client and self.api_key:
-            # 检查是否使用自定义 API Base
+            # Check whether a custom API base is used
             is_custom_api = (
                 self.base_url
                 and self.base_url.strip()
@@ -311,7 +311,7 @@ class GeminiHighQualityTranslator(CommonTranslator):
     
     def _get_system_instruction(self, source_lang: str, target_lang: str, custom_prompt_json: Dict[str, Any] = None, line_break_prompt_json: Dict[str, Any] = None, retry_attempt: int = 0, retry_reason: str = "", extract_glossary: bool = False) -> str:
         """获取完整的系统指令（包含断句提示词、自定义提示词和基础系统提示词）"""
-        # 构建系统提示词（包含所有指令）
+        # Build the system prompt (with all instructions)
         return self._build_system_prompt(source_lang, target_lang, custom_prompt_json=custom_prompt_json, line_break_prompt_json=line_break_prompt_json, retry_attempt=retry_attempt, retry_reason=retry_reason, extract_glossary=extract_glossary)
 
     async def _translate_batch_high_quality(self, texts: List[str], batch_data: List[Dict], source_lang: str, target_lang: str, custom_prompt_json: Dict[str, Any] = None, line_break_prompt_json: Dict[str, Any] = None, ctx: Any = None, split_level: int = 0) -> List[str]:
@@ -321,19 +321,19 @@ class GeminiHighQualityTranslator(CommonTranslator):
         if batch_data is None:
             batch_data = []
         
-        # 保存参数供重试时使用
+        # Keep the parameters for retries
         _source_lang = source_lang
         _target_lang = target_lang
         _custom_prompt_json = custom_prompt_json
         _line_break_prompt_json = line_break_prompt_json
         
-        # 打印输入的原文
+        # Print the original input text
         self.logger.info("--- Original Texts for Translation ---")
         for i, text in enumerate(texts):
             self.logger.info(f"{i+1}: {text}")
         self.logger.info("------------------------------------")
 
-        # 打印图片信息
+        # Print the image information
         self.logger.info("--- Image Info ---")
         for i, data in enumerate(batch_data):
             image = data.get('image')
@@ -345,7 +345,7 @@ class GeminiHighQualityTranslator(CommonTranslator):
             self.logger.info(f"Image {i+1}: size={image_size}, mode={image_mode}")
         self.logger.info("--------------------")
 
-        # 准备图片列表（放在最后）- 使用新版 SDK 的 Part 格式
+        # Prepare the image list (placed last) - in the Part format of the new SDK
         image_parts = []
         for i, data in enumerate(batch_data):
             image = data.get('image')
@@ -353,7 +353,7 @@ class GeminiHighQualityTranslator(CommonTranslator):
                 self.logger.debug(f"Image [{i + 1}] has no image data; skipping upload")
                 continue
             
-            # 在图片上绘制带编号的文本框
+            # Draw the numbered text boxes on the image
             text_regions = data.get('text_regions', [])
             text_order = data.get('text_order', [])
             upscaled_size = data.get('upscaled_size')
@@ -361,7 +361,7 @@ class GeminiHighQualityTranslator(CommonTranslator):
                 image = draw_text_boxes_on_image(image, text_regions, text_order, upscaled_size)
                 self.logger.debug(f"Drew {len(text_regions)} numbered text boxes on the image")
             
-            # 使用新版 SDK 的格式
+            # Use the format of the new SDK
             try:
                 image_bytes, mime_type = encode_image_for_gemini(image)
                 image_parts.append(
@@ -375,56 +375,56 @@ class GeminiHighQualityTranslator(CommonTranslator):
                 self.logger.warning(f"Failed to process image [{i + 1}]; skipping upload: {image_error}")
                 continue
         
-        # 初始化重试信息
+        # Initialise the retry information
         retry_attempt = 0
         retry_reason = ""
         
-        # 发送请求
+        # Send the request
         max_retries = self._resolve_max_total_attempts()
         attempt = 0
         is_infinite = max_retries == -1
         last_exception = None
-        local_attempt = 0  # 本次批次的尝试次数
+        local_attempt = 0  # Number of attempts for this batch
         
-        # 标记是否需要回退（不发送安全设置）
+        # Whether to fall back (no safety settings are sent)
         should_retry_without_safety = False
         
-        # 标记是否发送图片（降级机制）
+        # Whether images are sent (downgrade mechanism)
         send_images = len(image_parts) > 0
         if not send_images:
             self.logger.info(f"No usable images provided; {self._log_provider_name()} will use text-only requests")
 
         while is_infinite or attempt < max_retries:
-            # 检查是否被取消
+            # Check whether the task was cancelled
             self._check_cancelled()
             
-            # 检查全局尝试次数
+            # Check the global attempt count
             if not self._increment_global_attempt():
                 self.logger.error("Reached global attempt limit. Stopping translation.")
-                # 包含最后一次错误的真正原因
+                # Include the real cause of the last error
                 last_error_msg = str(last_exception) if last_exception else "Unknown error"
                 raise Exception(f"Maximum attempts reached ({self._max_total_attempts}). Last error: {last_error_msg}")
 
             local_attempt += 1
             attempt += 1
 
-            # 文本分割逻辑已禁用
+            # Text splitting is disabled
             # if local_attempt > self._SPLIT_THRESHOLD and len(texts) > 1 and split_level < self._MAX_SPLIT_ATTEMPTS:
             #     self.logger.warning(f"Triggering split after {local_attempt} local attempts")
             #     raise self.SplitException(local_attempt, texts)
             
-            # 确定是否开启术语提取
-            # 必须同时满足：1. 有自定义提示词（才有地方存） 2. 配置开启了提取开关
+            # Decide whether glossary extraction is on
+            # Both must hold: 1. there is a custom prompt (somewhere to store the terms) 2. extraction is switched on in the settings
             config_extract = False
             if ctx and hasattr(ctx, 'config') and hasattr(ctx.config, 'translator'):
                 config_extract = getattr(ctx.config.translator, 'extract_glossary', False)
             
             extract_glossary = bool(_custom_prompt_json) and config_extract
 
-            # 获取系统指令（通过 systemInstruction 发送）
+            # Get the system instruction (sent through systemInstruction)
             system_instruction = self._get_system_instruction(_source_lang, _target_lang, custom_prompt_json=_custom_prompt_json, line_break_prompt_json=_line_break_prompt_json, retry_attempt=retry_attempt, retry_reason=retry_reason, extract_glossary=extract_glossary)
             
-            # 初始化客户端（不传入 system_instruction）
+            # Initialise the client (system_instruction is not passed in)
             if not self.client:
                 self._setup_client(system_instruction=None)
             
@@ -434,7 +434,7 @@ class GeminiHighQualityTranslator(CommonTranslator):
                     f"{self.API_KEY_ENV} / {self.API_BASE_ENV} / {self.MODEL_ENV} settings"
                 )
             
-            # 构建用户提示词（包含重试信息以避免缓存）
+            # Build the user prompt (with the retry information, to avoid cached answers)
             user_prompt = self._build_user_prompt(batch_data, ctx, retry_attempt=retry_attempt, retry_reason=retry_reason)
             contents = self._build_gemini_context_messages(self.prev_context)
 
@@ -442,22 +442,22 @@ class GeminiHighQualityTranslator(CommonTranslator):
             if send_images:
                 current_user_parts.extend(image_parts)
             else:
-                if retry_attempt > 0: # 仅在重试且被标记为不发图时打印
+                if retry_attempt > 0: # Printed only on a retry that is flagged to send no images
                      self.logger.warning("Fallback mode: sending text only, without images")
             contents.append({"role": "user", "parts": current_user_parts})
             
-            # 构建生成配置
+            # Build the generation settings
             config_params = {
                 "top_p": 0.95,
                 "top_k": 64,
                 "safety_settings": None if should_retry_without_safety else self.safety_settings,
             }
-            # 只在 max_tokens 不为 None 时才设置（兼容新模型）
+            # Set only when max_tokens is not None (for newer models)
             if self.max_tokens is not None:
                 config_params["max_output_tokens"] = self.max_tokens
             
             try:
-                # RPM限制
+                # RPM limit
                 if self._MAX_REQUESTS_PER_MINUTE > 0:
                     import time
                     now = time.time()
@@ -496,7 +496,7 @@ class GeminiHighQualityTranslator(CommonTranslator):
                     if use_streaming:
                         try:
                             self._reset_stream_json_preview()
-                            # 自动尝试流式；不支持时回退普通请求
+                            # Try streaming automatically; fall back to an ordinary request when it is not supported
                             def _extract_stream_finish_reason(chunk):
                                 nonlocal streamed_diagnostics
                                 streamed_diagnostics = extract_gemini_response_diagnostics(chunk)
@@ -522,7 +522,7 @@ class GeminiHighQualityTranslator(CommonTranslator):
                             streamed_finish_reason = None
                             streamed_diagnostics = None
                             self.logger.warning(f"Streaming request unavailable; fell back to a non-streaming request: {stream_error}")
-                            # 使用标准 SDK（同步调用包装为异步）
+                            # Use the standard SDK (the synchronous call is wrapped to be asynchronous)
                             if getattr(self, '_use_curl_cffi', False):
                                 response = await self._await_with_cancel_polling(
                                     self.client.models.generate_content(
@@ -581,13 +581,13 @@ class GeminiHighQualityTranslator(CommonTranslator):
 
                 await self._run_with_api_rotation(_send_gemini_request, "translation request")
 
-                # 在API调用成功后立即更新时间戳，确保所有请求（包括重试）都被计入速率限制
+                # Update the timestamp right after a successful API call, so every request (retries included) counts towards the rate limit
                 if self._MAX_REQUESTS_PER_MINUTE > 0:
                     import time
                     type(self)._GLOBAL_LAST_REQUEST_TS[self._last_request_ts_key] = time.time()
 
                 if streamed_text is None:
-                    # 验证响应对象是否有效
+                    # Check that the response object is valid
                     validate_gemini_response(response, self.logger)
 
                 diagnostics = streamed_diagnostics or extract_gemini_response_diagnostics(
@@ -597,7 +597,7 @@ class GeminiHighQualityTranslator(CommonTranslator):
                 diagnostics_text = format_gemini_response_diagnostics(diagnostics)
                 finish_reason = diagnostics.get('finish_reason')
                 finish_reason_str = diagnostics.get('finish_reason_str') or ""
-                if finish_reason and "STOP" not in finish_reason_str.upper():  # 不是成功
+                if finish_reason and "STOP" not in finish_reason_str.upper():  # Not a success
                     log_attempt = f"{attempt}/{max_retries}" if not is_infinite else f"Attempt {attempt}"
 
                     self.logger.warning(f"{self._log_provider_name()} API failed ({log_attempt}): {diagnostics_text}")
@@ -615,14 +615,14 @@ class GeminiHighQualityTranslator(CommonTranslator):
                     await self._sleep_with_cancel_polling(1)
                     continue
 
-                # 兼容 text 为 None/非字符串的场景，避免 .strip() 崩溃
+                # Handle text that is None or not a string, so .strip() does not crash
                 if streamed_text is not None:
                     result_text = streamed_text.strip()
                 else:
                     raw_text = getattr(response, "text", "")
                     result_text = (raw_text if isinstance(raw_text, str) else str(raw_text or "")).strip()
                 
-                # 统一的编码清理（处理UTF-16-LE等编码问题）
+                # Shared encoding clean-up (handles UTF-16-LE and similar problems)
                 from .common import sanitize_text_encoding
                 result_text = sanitize_text_encoding(result_text)
                 
@@ -636,10 +636,10 @@ class GeminiHighQualityTranslator(CommonTranslator):
                     raise Exception(f"{self._log_provider_name()} returned empty content ({diagnostics_text})")
 
 
-                # 使用通用函数解析响应（支持JSON和纯文本，以及术语提取）
+                # Parse the response with the shared function (JSON and plain text, plus glossary extraction)
                 translations, new_terms = parse_hq_response(result_text)
                 
-                # 处理提取到的术语
+                # Handle the extracted glossary terms
                 if extract_glossary and new_terms:
                     self._emit_terms_from_list(new_terms)
                     prompt_path = None
@@ -660,7 +660,7 @@ class GeminiHighQualityTranslator(CommonTranslator):
                     self.logger.warning(f"Expected texts: {texts}")
                     self.logger.warning(f"Got translations: {translations}")
                     
-                    # 记录错误以便在达到最大尝试次数时显示
+                    # Record the error so it can be shown when the maximum number of attempts is reached
                     last_exception = Exception(f"Translation count mismatch: expected {len(texts)}, got {len(translations)}")
 
                     if not is_infinite and attempt >= max_retries:
@@ -669,7 +669,7 @@ class GeminiHighQualityTranslator(CommonTranslator):
                     await self._sleep_with_cancel_polling(2)
                     continue
 
-                # 质量验证：检查空翻译、合并翻译、可疑符号等
+                # Quality validation: empty translations, merged translations, suspicious symbols and so on
                 is_valid, error_msg = self._validate_translation_quality(texts, translations)
                 if not is_valid:
                     retry_attempt += 1
@@ -677,7 +677,7 @@ class GeminiHighQualityTranslator(CommonTranslator):
                     log_attempt = f"{attempt}/{max_retries}" if not is_infinite else f"Attempt {attempt}"
                     self.logger.warning(f"[{log_attempt}] {retry_reason}. Retrying...")
                     
-                    # 记录错误以便在达到最大尝试次数时显示
+                    # Record the error so it can be shown when the maximum number of attempts is reached
                     last_exception = Exception(f"Quality check failed: {error_msg}")
 
                     if not is_infinite and attempt >= max_retries:
@@ -686,10 +686,10 @@ class GeminiHighQualityTranslator(CommonTranslator):
                     await self._sleep_with_cancel_polling(2)
                     continue
 
-                # 打印原文和译文的对应关系
+                # Print each original text with its translation
                 self._emit_final_translation_results(texts, translations)
 
-                # BR检查：检查翻译结果是否包含必要的[BR]标记
+                # BR check: whether the translation contains the required [BR] markers
                 # BR check: Check if translations contain necessary [BR] markers
                 if not self._validate_br_markers(translations, batch_data=batch_data, ctx=ctx):
                     retry_attempt += 1
@@ -697,15 +697,15 @@ class GeminiHighQualityTranslator(CommonTranslator):
                     log_attempt = f"{attempt}/{max_retries}" if not is_infinite else f"Attempt {attempt}"
                     self.logger.warning(f"[{log_attempt}] {retry_reason}, retrying...")
                     
-                    # 记录错误以便在达到最大尝试次数时显示
+                    # Record the error so it can be shown when the maximum number of attempts is reached
                     last_exception = Exception("AI line break validation failed: BR markers missing in translations")
                     
-                    # 如果达到最大重试次数，抛出友好的异常
+                    # When the maximum number of retries is reached, raise a readable exception
                     if not is_infinite and attempt >= max_retries:
                         from .common import BRMarkersValidationException
                         self.logger.error(f"{self._log_provider_name()} still failed after multiple retries: AI line break validation failed.")
                         raise BRMarkersValidationException(
-                            missing_count=0,  # 具体数字在_validate_br_markers中已记录
+                            missing_count=0,  # The exact numbers were logged in _validate_br_markers
                             total_count=len(texts),
                             tolerance=max(1, len(texts) // 10)
                         )
@@ -718,16 +718,16 @@ class GeminiHighQualityTranslator(CommonTranslator):
             except APIRotationExhaustedError:
                 raise
             except Exception as e:
-                # 检查是否是400错误或多模态不支持问题
+                # Check whether it is a 400 error or multimodal input is unsupported
                 error_message = str(e)
-                last_exception = e  # 保存最后一次错误
+                last_exception = e  # Keep the last error
                 is_bad_request = '400' in error_message or 'BadRequest' in error_message
                 is_multimodal_unsupported = any(keyword in error_message.lower() for keyword in [
                     'image_url', 'multimodal', 'vision', 'expected `text`', 'unknown variant', 'does not support'
                 ])
                 is_empty_content = 'returned empty content' in error_message.lower()
                 
-                # 降级检查：502错误、安全设置错误或400错误（非多模态不支持）
+                # Downgrade check: a 502 error, a safety settings error or a 400 error (other than unsupported multimodal input)
                 is_502_error = '502' in error_message
                 is_safety_error = any(keyword in error_message.lower() for keyword in [
                     'safety_settings', 'safetysettings', 'harm', 'block', 'safety'
@@ -748,11 +748,11 @@ class GeminiHighQualityTranslator(CommonTranslator):
                     self.logger.error("   3. Check whether the third-party API supports image input")
                     raise Exception(f"Model does not support multimodal input: {self.model_name}") from e
                 
-                # 如果是安全设置错误且还没有尝试回退，则标记回退
+                # For a safety settings error with no fallback tried yet, flag the fallback
                 if is_safety_error and not should_retry_without_safety:
                     self.logger.warning(f"Safety settings error detected; safety settings will be removed on the next retry: {error_message}")
                     should_retry_without_safety = True
-                    # 不增加attempt计数，直接重试
+                    # Retry at once without increasing the attempt count
                     await self._sleep_with_cancel_polling(1)
                     continue
                     
@@ -761,9 +761,9 @@ class GeminiHighQualityTranslator(CommonTranslator):
 
                 if gemini_error_message_indicates_safety(error_message):
                     self.logger.warning(f"{self._log_provider_name()} safety policy block detected. Retrying...")
-                    send_images = False # 显式确保降级
+                    send_images = False # Make the downgrade explicit
                 
-                # 检查是否达到最大重试次数
+                # Check whether the maximum number of retries is reached
                 if not is_infinite and attempt >= max_retries:
                     self.logger.error(f"{self._log_provider_name()} translation still failed after multiple retries. Terminating.")
                     raise e
@@ -784,12 +784,12 @@ class GeminiHighQualityTranslator(CommonTranslator):
         if not queries:
             return []
 
-        # 重置全局尝试计数器
+        # Reset the global attempt counter
         self._reset_global_attempt_count()
 
         batch_data = getattr(ctx, 'high_quality_batch_data', None) if ctx else None
         if not batch_data:
-            # 统一后备路径：仍走高质量批量函数，不再保留第二套 API 请求实现
+            # Single fallback path: still goes through the high-quality batch function; no second API request implementation is kept
             self.logger.info(f"No batch_data provided for {self._log_provider_name()}; using the unified fallback batch path")
             fallback_regions = getattr(ctx, 'text_regions', []) if ctx else []
             batch_data = [{
@@ -806,7 +806,7 @@ class GeminiHighQualityTranslator(CommonTranslator):
         custom_prompt_json = getattr(ctx, 'custom_prompt_json', None)
         line_break_prompt_json = getattr(ctx, 'line_break_prompt_json', None)
 
-        # 使用分割包装器进行翻译
+        # Translate through the splitting wrapper
         translations = await self._translate_with_split(
             self._translate_batch_high_quality,
             queries,
@@ -819,6 +819,6 @@ class GeminiHighQualityTranslator(CommonTranslator):
             ctx=ctx
         )
 
-        # 应用文本后处理（与普通翻译器保持一致）
+        # Apply text post-processing (the same as the ordinary translators)
         translations = [self._clean_translation_output(q, r, to_lang) for q, r in zip(queries, translations)]
         return translations

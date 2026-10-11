@@ -5,11 +5,11 @@ from ..utils.dotenv_utils import load_app_dotenv
 load_app_dotenv(override=True)
 
 # baidu
-BAIDU_APP_ID = os.getenv('BAIDU_APP_ID', '') #你的appid
-BAIDU_SECRET_KEY = os.getenv('BAIDU_SECRET_KEY', '') #你的密钥
+BAIDU_APP_ID = os.getenv('BAIDU_APP_ID', '') # your appid
+BAIDU_SECRET_KEY = os.getenv('BAIDU_SECRET_KEY', '') # your secret key
 # youdao
-YOUDAO_APP_KEY = os.getenv('YOUDAO_APP_KEY', '') # 应用ID
-YOUDAO_SECRET_KEY = os.getenv('YOUDAO_SECRET_KEY', '') # 应用秘钥
+YOUDAO_APP_KEY = os.getenv('YOUDAO_APP_KEY', '') # application ID
+YOUDAO_SECRET_KEY = os.getenv('YOUDAO_SECRET_KEY', '') # application secret
 # deepl
 DEEPL_AUTH_KEY = os.getenv('DEEPL_AUTH_KEY', '') #YOUR_AUTH_KEY
 # openai
@@ -20,15 +20,15 @@ GROQ_API_KEY = os.getenv('GROQ_API_KEY', '')
 GROQ_MODEL = os.getenv('GROQ_MODEL', 'mixtral-8x7b-32768')
 
 OPENAI_HTTP_PROXY = os.getenv('OPENAI_HTTP_PROXY') # TODO: Replace with --proxy
-OPENAI_GLOSSARY_PATH = os.getenv('OPENAI_GLOSSARY_PATH', './dict/mit_glossary.txt') # OpenAI术语表路径
-OPENAI_API_BASE = os.getenv('OPENAI_API_BASE', 'https://api.openai.com/v1') #使用api-for-open-llm例子 http://127.0.0.1:8000/v1
+OPENAI_GLOSSARY_PATH = os.getenv('OPENAI_GLOSSARY_PATH', './dict/mit_glossary.txt') # path of the OpenAI glossary
+OPENAI_API_BASE = os.getenv('OPENAI_API_BASE', 'https://api.openai.com/v1') # example with api-for-open-llm: http://127.0.0.1:8000/v1
 
 # sakura
-SAKURA_API_BASE = os.getenv('SAKURA_API_BASE', 'http://127.0.0.1:8080/v1') #SAKURA API地址
-SAKURA_DICT_PATH = os.getenv('SAKURA_DICT_PATH', './dict/sakura_dict.txt') #SAKURA 术语表路径
+SAKURA_API_BASE = os.getenv('SAKURA_API_BASE', 'http://127.0.0.1:8080/v1') # SAKURA API address
+SAKURA_DICT_PATH = os.getenv('SAKURA_DICT_PATH', './dict/sakura_dict.txt') # path of the SAKURA glossary
 
 
-CAIYUN_TOKEN = os.getenv('CAIYUN_TOKEN', '') # 彩云小译API访问令牌
+CAIYUN_TOKEN = os.getenv('CAIYUN_TOKEN', '') # Caiyun Xiaoyi API access token
 
 # Gemini
 GEMINI_API_KEY = os.getenv('GEMINI_API_KEY', '')

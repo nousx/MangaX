@@ -77,7 +77,7 @@ async def dispatch(chain: TranslatorChain, queries: List[str], config: Config, u
         if key.value in ["gemini_hq", "openai_hq"]:
             queries = await translator.translate('auto', tgt_lang, queries, ctx=args)
         else:
-            # 传递ctx参数（用于AI断句）
+            # Pass the ctx argument (for AI line breaking)
             queries = await translator.translate('auto', tgt_lang, queries, use_mtpe=use_mtpe, ctx=args)
         if args is not None:
             args['translations'][tgt_lang] = queries
@@ -100,19 +100,19 @@ async def dispatch_batch(chain: TranslatorChain, batch_queries: List[List[str]],
     if not batch_queries or not any(batch_queries):
         return batch_queries
     
-    # 将批量查询平铺为单一列表
+    # Flatten the batched queries into one list
     flat_queries = []
-    query_mapping = []  # 记录每个查询属于哪个批次
+    query_mapping = []  # Record which batch each query belongs to
     
     for batch_idx, queries in enumerate(batch_queries):
         for query in queries:
             flat_queries.append(query)
             query_mapping.append(batch_idx)
     
-    # 使用现有的翻译调度器处理平铺的查询列表
+    # Handle the flattened query list with the existing translation dispatcher
     flat_results = await dispatch(chain, flat_queries, translator_config, use_mtpe, args, device)
     
-    # 将结果重新分组回批量结构
+    # Group the results back into the batch structure
     batch_results = [[] for _ in batch_queries]
     for result, batch_idx in zip(flat_results, query_mapping):
         batch_results[batch_idx].append(result)
@@ -150,5 +150,5 @@ LANGDETECT_MAP = {
 async def unload(key: Translator):
     translator = translator_cache.pop(key, None)
     if isinstance(translator, OfflineTranslator):
-        # 参数仅为兼容 OfflineTranslator.unload(device) 签名，内部不依赖具体值。
+        # The parameter only exists to match the signature of OfflineTranslator.unload(device); its value is not used.
         await translator.unload('cuda')

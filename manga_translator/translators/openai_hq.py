@@ -27,11 +27,11 @@ from .common import (
 from .keys import OPENAI_API_KEY
 from manga_translator.utils.swallowed import note_ignored_error
 
-# 禁用openai库的DEBUG日志,避免打印base64图片数据
+# Turn off DEBUG logging of the openai library, so base64 image data is not printed
 logging.getLogger("openai").setLevel(logging.WARNING)
 logging.getLogger("httpx").setLevel(logging.WARNING)
 
-# 浏览器身份由 curl_cffi 的 impersonate 配置生成；这里只保留业务请求头。
+# The browser identity comes from curl_cffi's impersonate setting; only the request headers of the application are kept here.
 BROWSER_HEADERS = OPENAI_CURL_HEADERS
 
 
@@ -39,14 +39,14 @@ def encode_image_for_openai(image, max_size=1024):
     """将图片编码为base64格式，适合OpenAI API"""
     image = normalize_rgb_image(image)
 
-    # 调整图片大小
+    # Resize the image
     w, h = image.size
     if max(w, h) > max_size:
         scale = max_size / max(w, h)
         new_w, new_h = int(w * scale), int(h * scale)
         image = image.resize((new_w, new_h), Image.LANCZOS)
 
-    # 编码为base64（使用PNG格式确保质量和兼容性）
+    # Encode as base64 (PNG, for quality and compatibility)
     buf = BytesIO()
     image.save(buf, format="PNG")
     return base64.b64encode(buf.getvalue()).decode('utf-8')
@@ -61,16 +61,16 @@ class OpenAIHighQualityTranslator(CommonTranslator):
     """
     _LANGUAGE_CODE_MAP = VALID_LANGUAGES
     
-    # 类变量: 跨实例共享的RPM限制时间戳
+    # Class variable: RPM limit timestamp shared across instances
     _GLOBAL_LAST_REQUEST_TS = {}  # {model_name: timestamp}
     
     def __init__(self):
         super().__init__()
         self.client = None
-        self.prev_context = ""  # 用于存储多页上下文
+        self.prev_context = ""  # Holds the multi-page context
         
-        # 只在非Web环境下重新加载.env文件
-        # Web环境下不重新加载，避免覆盖用户临时设置的环境变量
+        # Reload the .env file only outside the web environment
+        # In the web environment it is not reloaded, so environment variables a user set temporarily are not overwritten
         is_web_server = os.getenv('MANGA_TRANSLATOR_WEB_SERVER', 'false').lower() == 'true'
         if not is_web_server:
             load_app_dotenv(override=True)
@@ -80,9 +80,9 @@ class OpenAIHighQualityTranslator(CommonTranslator):
         self.model = os.getenv('OPENAI_MODEL', "gpt-4o")
         self._runtime_api_settings = None
         self._refresh_runtime_api_settings(None)
-        self.max_tokens = None  # 不限制，使用模型默认最大值
-        self._MAX_REQUESTS_PER_MINUTE = 0  # 默认无限制
-        # 使用全局时间戳,跨实例共享
+        self.max_tokens = None  # No limit: use the model's default maximum
+        self._MAX_REQUESTS_PER_MINUTE = 0  # No limit by default
+        # Use the global timestamp, shared across instances
         if self.model not in OpenAIHighQualityTranslator._GLOBAL_LAST_REQUEST_TS:
             OpenAIHighQualityTranslator._GLOBAL_LAST_REQUEST_TS[self.model] = 0
         self._last_request_ts_key = self.model
@@ -94,24 +94,24 @@ class OpenAIHighQualityTranslator(CommonTranslator):
     
     def parse_args(self, args):
         """解析配置参数"""
-        # 调用父类的 parse_args 来设置通用参数（包括 attempts、post_check 等）
+        # Call the parent parse_args to set the common parameters (attempts, post_check and so on)
         super().parse_args(args)
         translator_args = self._resolve_translator_config(args)
         
-        # 同步重试次数到“总尝试次数”（首次请求 + 重试）
+        # Sync the retry count to the "total attempts" (first request + retries)
         self._max_total_attempts = self._resolve_max_total_attempts()
         
-        # 从配置中读取RPM限制
+        # Read the RPM limit from the configuration
         max_rpm = self._get_config_value(translator_args, 'max_requests_per_minute', 0)
         if max_rpm > 0:
             self._MAX_REQUESTS_PER_MINUTE = max_rpm
             self.logger.info(f"Setting OpenAI HQ max requests per minute to: {max_rpm}")
         
-        # 读取自定义API参数配置
+        # Read the custom API parameter configuration
         self._configure_custom_api_params(args)
         
-        # 从配置中读取用户级 API Key（优先于环境变量）
-        # 这允许 Web 服务器为每个用户使用不同的 API Key
+        # Read the per-user API key from the configuration (it takes precedence over the environment variable)
+        # This lets the web server use a different API key for each user
         need_rebuild_client = False
         
         user_api_key = self._get_config_value(translator_args, 'user_api_key', None)
@@ -139,7 +139,7 @@ class OpenAIHighQualityTranslator(CommonTranslator):
             if (self.api_key or "", self.base_url, self.model) != old_signature:
                 need_rebuild_client = True
 
-        # 如果 API Key 或 Base URL 变化，重建客户端
+        # Rebuild the client when the API key or the base URL changed
         if need_rebuild_client:
             self.client = None
             self._setup_client()
@@ -222,21 +222,21 @@ class OpenAIHighQualityTranslator(CommonTranslator):
             force_recreate: 是否强制重建客户端（用于重试时断开旧连接）
         """
         if force_recreate and self.client:
-            # 关闭旧客户端，断开连接
+            # Close the old client and drop the connection
             try:
                 loop = asyncio.get_event_loop()
                 if loop.is_running():
-                    # 如果事件循环正在运行，创建任务异步关闭
+                    # When the event loop is running, create a task that closes it asynchronously
                     asyncio.create_task(self.client.close())
                 else:
-                    # 否则同步关闭
+                    # Otherwise close it synchronously
                     loop.run_until_complete(self.client.close())
             except Exception as e:
                 self.logger.debug(f"Error closing the previous client (safe to ignore): {e}")
             self.client = None
 
         if not self.client:
-            # 强制使用 curl_cffi 客户端（不回退标准 SDK）
+            # Always use the curl_cffi client (no fallback to the standard SDK)
             self.client = AsyncOpenAICurlCffi(
                 api_key=self.api_key,
                 base_url=self.base_url,
@@ -254,7 +254,7 @@ class OpenAIHighQualityTranslator(CommonTranslator):
                 await self.client.close()
             except Exception as ignored_error:
                 note_ignored_error(ignored_error, "manga_translator/translators/openai_hq.py:OpenAIHighQualityTranslator._cleanup")
-                pass  # 忽略清理时的错误
+                pass  # Ignore errors during clean-up
 
     async def _abort_inflight_request(self):
         """取消时中断当前请求连接，避免长时间阻塞。"""
@@ -273,11 +273,11 @@ class OpenAIHighQualityTranslator(CommonTranslator):
             try:
                 loop = asyncio.get_event_loop()
                 if not loop.is_running() and not loop.is_closed():
-                    # 如果事件循环未关闭，同步执行清理
+                    # When the event loop is not closed, clean up synchronously
                     loop.run_until_complete(self._cleanup())
             except Exception as ignored_error:
                 note_ignored_error(ignored_error, "manga_translator/translators/openai_hq.py:OpenAIHighQualityTranslator.__del__")
-                pass  # 忽略所有清理错误
+                pass  # Ignore all clean-up errors
 
 
     def _build_user_prompt(self, batch_data: List[Dict], ctx: Any, retry_attempt: int = 0, retry_reason: str = "") -> str:
@@ -299,7 +299,7 @@ class OpenAIHighQualityTranslator(CommonTranslator):
         if batch_data is None:
             batch_data = []
         
-        # 准备图片
+        # Prepare the images
         self.logger.info(f"High-quality translation mode: packaging and sending {len(batch_data)} images...")
 
         image_contents = []
@@ -309,7 +309,7 @@ class OpenAIHighQualityTranslator(CommonTranslator):
                 self.logger.debug(f"Image [{img_idx + 1}] has no image data; skipping upload")
                 continue
             
-            # 在图片上绘制带编号的文本框
+            # Draw the numbered text boxes on the image
             text_regions = data.get('text_regions', [])
             text_order = data.get('text_order', [])
             upscaled_size = data.get('upscaled_size')
@@ -323,55 +323,55 @@ class OpenAIHighQualityTranslator(CommonTranslator):
                 "image_url": {"url": f"data:image/png;base64,{base64_img}"}
             })
         
-        # 初始化重试信息
+        # Initialise the retry information
         retry_attempt = 0
         retry_reason = ""
         
-        # 标记是否发送图片（降级机制）
+        # Whether images are sent (downgrade mechanism)
         send_images = len(image_contents) > 0
         if not send_images:
             self.logger.info("No usable images provided; OpenAI HQ will use text-only requests")
         
-        # 发送请求
+        # Send the request
         max_retries = self._resolve_max_total_attempts()
         attempt = 0
         is_infinite = max_retries == -1
         last_exception = None
-        local_attempt = 0  # 本次批次的尝试次数
+        local_attempt = 0  # Number of attempts for this batch
 
         while is_infinite or attempt < max_retries:
-            # 检查是否被取消
+            # Check whether the task was cancelled
             self._check_cancelled()
             
-            # 检查全局尝试次数
+            # Check the global attempt count
             if not self._increment_global_attempt():
                 self.logger.error("Reached global attempt limit. Stopping translation.")
-                # 包含最后一次错误的真正原因
+                # Include the real cause of the last error
                 last_error_msg = str(last_exception) if last_exception else "Unknown error"
                 raise Exception(f"Maximum attempts reached ({self._max_total_attempts}). Last error: {last_error_msg}")
 
             local_attempt += 1
             attempt += 1
 
-            # 文本分割逻辑已禁用
+            # Text splitting is disabled
             # if local_attempt > self._SPLIT_THRESHOLD and len(texts) > 1 and split_level < self._MAX_SPLIT_ATTEMPTS:
             #     self.logger.warning(f"Triggering split after {local_attempt} local attempts")
             #     raise self.SplitException(local_attempt, texts)
             
-            # 确定是否开启术语提取
-            # 必须同时满足：1. 有自定义提示词（才有地方存） 2. 配置开启了提取开关
+            # Decide whether glossary extraction is on
+            # Both must hold: 1. there is a custom prompt (somewhere to store the terms) 2. extraction is switched on in the settings
             config_extract = False
             if ctx and hasattr(ctx, 'config') and hasattr(ctx.config, 'translator'):
                 config_extract = getattr(ctx.config.translator, 'extract_glossary', False)
             
             extract_glossary = bool(custom_prompt_json) and config_extract
 
-            # 构建系统提示词和用户提示词（包含重试信息以避免缓存）
+            # Build the system and user prompts (with the retry information, to avoid cached answers)
             system_prompt = self._get_system_prompt(source_lang, target_lang, custom_prompt_json=custom_prompt_json, line_break_prompt_json=line_break_prompt_json, retry_attempt=retry_attempt, retry_reason=retry_reason, extract_glossary=extract_glossary)
             user_prompt = self._build_user_prompt(batch_data, ctx, retry_attempt=retry_attempt, retry_reason=retry_reason)
             user_content = [{"type": "text", "text": user_prompt}]
             
-            # 降级检查：如果 send_images 为 True，则发送图片
+            # Downgrade check: images are sent when send_images is True
             if send_images:
                 user_content.extend(image_contents)
             elif retry_attempt > 0:
@@ -382,7 +382,7 @@ class OpenAIHighQualityTranslator(CommonTranslator):
             messages.append({"role": "user", "content": user_content})
 
             try:
-                # RPM限制
+                # RPM limit
                 if self._MAX_REQUESTS_PER_MINUTE > 0:
                     import time
                     now = time.time()
@@ -393,7 +393,7 @@ class OpenAIHighQualityTranslator(CommonTranslator):
                         self.logger.info(f'Ratelimit sleep: {sleep_time:.2f}s')
                         await self._sleep_with_cancel_polling(sleep_time)
                 
-                # 构建API参数，只有当max_tokens有值时才传递（新模型如o1/gpt-4.1不支持null值）
+                # Build the API parameters; max_tokens is only passed when it has a value (newer models such as o1/gpt-4.1 reject null)
                 api_params = {
                     "model": self.model,
                     "messages": messages,
@@ -414,7 +414,7 @@ class OpenAIHighQualityTranslator(CommonTranslator):
                     return getattr(chunk.choices[0], 'finish_reason', None)
                 
                 def _on_stream_chunk(delta_text, _full_text):
-                    # 避免 INFO 级别下流式增量刷屏；仅在 DEBUG 时显示逐块预览
+                    # Avoid flooding INFO with streaming deltas; the chunk-by-chunk preview is shown at DEBUG only
                     if self.logger.isEnabledFor(logging.DEBUG):
                         self._emit_stream_json_preview("[OpenAI HQ Stream]", delta_text, source_texts=texts)
 
@@ -482,7 +482,7 @@ class OpenAIHighQualityTranslator(CommonTranslator):
 
                 await self._run_with_api_rotation(_send_openai_request, "translation request")
 
-                # 在API调用成功后立即更新时间戳，确保所有请求（包括重试）都被计入速率限制
+                # Update the timestamp right after a successful API call, so every request (retries included) counts towards the rate limit
                 if self._MAX_REQUESTS_PER_MINUTE > 0:
                     OpenAIHighQualityTranslator._GLOBAL_LAST_REQUEST_TS[self._last_request_ts_key] = time.time()
 
@@ -490,42 +490,42 @@ class OpenAIHighQualityTranslator(CommonTranslator):
                     finish_reason = streamed_finish_reason
                     has_content = bool(streamed_text)
                 else:
-                    # 验证响应对象是否有效
+                    # Check that the response object is valid
                     validate_openai_response(response, self.logger)
-                    # 检查成功条件：有内容就尝试处理，后续会有质量检查
+                    # Success condition: any content is processed; quality checks follow later
                     finish_reason = response.choices[0].finish_reason if (hasattr(response, 'choices') and response.choices) else None
                     has_content = response.choices and response.choices[0].message.content
                  
                 if has_content:
                     result_text = streamed_text.strip() if streamed_text is not None else response.choices[0].message.content.strip()
                     
-                    # 统一的编码清理（处理UTF-16-LE等编码问题）
+                    # Shared encoding clean-up (handles UTF-16-LE and similar problems)
                     from .common import sanitize_text_encoding
                     result_text = sanitize_text_encoding(result_text)
                     
                     self.logger.debug(f"--- OpenAI Raw Response ---\n{result_text}\n---------------------------")
                     
-                    # ✅ 检测HTML错误响应（404等）- 抛出特定异常供统一错误处理
+                    # ✅ Detect an HTML error response (404 and so on) - raise a specific exception for the shared error handling
                     if result_text.startswith('<!DOCTYPE') or result_text.startswith('<html') or '<h1>404</h1>' in result_text:
                         raise Exception(f"API_404_ERROR: API returned an HTML error page - check the API URL ({self.base_url}) or model ({self.model}) settings")
                     
-                    # 去除 <think>...</think> 标签及内容（LM Studio 等本地模型的思考过程）
+                    # Remove <think>...</think> tags and their content (the reasoning of local models such as LM Studio)
                     result_text = re.sub(r'(</think>)?<think>.*?</think>', '', result_text, flags=re.DOTALL)
-                    # 提取 <answer>...</answer> 中的内容（如果存在）
+                    # Take the content of <answer>...</answer> (when present)
                     answer_match = re.search(r'<answer>(.*?)</answer>', result_text, flags=re.DOTALL)
                     if answer_match:
                         result_text = answer_match.group(1).strip()
                     
-                    # 如果结果为空字符串
+                    # When the result is an empty string
                     if not result_text:
                         self.logger.warning("OpenAI API returned empty text; images will be omitted on the next retry")
                         send_images = False
                         raise Exception("OpenAI API returned empty text")
                     
-                    # 解析翻译结果（支持提取翻译和术语）
+                    # Parse the translation result (translations and glossary terms can both be extracted)
                     translations, new_terms = parse_hq_response(result_text)
                     
-                    # 处理提取到的术语
+                    # Handle the extracted glossary terms
                     if extract_glossary and new_terms:
                         self._emit_terms_from_list(new_terms)
                         prompt_path = None
@@ -546,19 +546,19 @@ class OpenAIHighQualityTranslator(CommonTranslator):
                         self.logger.warning(f"Expected texts: {texts}")
                         self.logger.warning(f"Got translations: {translations}")
                         
-                        # 记录错误以便在达到最大尝试次数时显示
+                        # Record the error so it can be shown when the maximum number of attempts is reached
                         last_exception = Exception(f"Translation count mismatch: expected {len(texts)}, got {len(translations)}")
 
                         if not is_infinite and attempt >= max_retries:
                             raise Exception(f"Translation count mismatch after {max_retries} attempts: expected {len(texts)}, got {len(translations)}")
 
-                        # 重试前断开连接，重建客户端
+                        # Drop the connection and rebuild the client before retrying
                         self.logger.info("Closing the previous connection and rebuilding the client before retrying...")
                         self._setup_client(force_recreate=True)
                         await self._sleep_with_cancel_polling(2)
                         continue
 
-                    # 质量验证：检查空翻译、合并翻译、可疑符号等
+                    # Quality validation: empty translations, merged translations, suspicious symbols and so on
                     is_valid, error_msg = self._validate_translation_quality(texts, translations)
                     if not is_valid:
                         retry_attempt += 1
@@ -566,13 +566,13 @@ class OpenAIHighQualityTranslator(CommonTranslator):
                         log_attempt = f"{attempt}/{max_retries}" if not is_infinite else f"Attempt {attempt}"
                         self.logger.warning(f"[{log_attempt}] {retry_reason}. Retrying...")
                         
-                        # 记录错误以便在达到最大尝试次数时显示
+                        # Record the error so it can be shown when the maximum number of attempts is reached
                         last_exception = Exception(f"Quality check failed: {error_msg}")
 
                         if not is_infinite and attempt >= max_retries:
                             raise Exception(f"Quality check failed after {max_retries} attempts: {error_msg}")
 
-                        # 重试前断开连接，重建客户端
+                        # Drop the connection and rebuild the client before retrying
                         self.logger.info("Closing the previous connection and rebuilding the client before retrying...")
                         self._setup_client(force_recreate=True)
                         await self._sleep_with_cancel_polling(2)
@@ -580,7 +580,7 @@ class OpenAIHighQualityTranslator(CommonTranslator):
 
                     self._emit_final_translation_results(texts, translations)
 
-                    # BR检查：检查翻译结果是否包含必要的[BR]标记
+                    # BR check: whether the translation contains the required [BR] markers
                     # BR check: Check if translations contain necessary [BR] markers
                     if not self._validate_br_markers(translations, batch_data=batch_data, ctx=ctx):
                         retry_attempt += 1
@@ -588,20 +588,20 @@ class OpenAIHighQualityTranslator(CommonTranslator):
                         log_attempt = f"{attempt}/{max_retries}" if not is_infinite else f"Attempt {attempt}"
                         self.logger.warning(f"[{log_attempt}] {retry_reason}, retrying...")
                         
-                        # 记录错误以便在达到最大尝试次数时显示
+                        # Record the error so it can be shown when the maximum number of attempts is reached
                         last_exception = Exception("AI line break validation failed: BR markers missing in translations")
                         
-                        # 如果达到最大重试次数，抛出友好的异常
+                        # When the maximum number of retries is reached, raise a readable exception
                         if not is_infinite and attempt >= max_retries:
                             from .common import BRMarkersValidationException
                             self.logger.error("OpenAI high-quality translation still failed after multiple retries: AI line break validation failed.")
                             raise BRMarkersValidationException(
-                                missing_count=0,  # 具体数字在_validate_br_markers中已记录
+                                missing_count=0,  # The exact numbers were logged in _validate_br_markers
                                 total_count=len(texts),
                                 tolerance=max(1, len(texts) // 10)
                             )
                         
-                        # 重试前断开连接，重建客户端
+                        # Drop the connection and rebuild the client before retrying
                         self.logger.info("Closing the previous connection and rebuilding the client before retrying...")
                         self._setup_client(force_recreate=True)
                         await self._sleep_with_cancel_polling(2)
@@ -609,10 +609,10 @@ class OpenAIHighQualityTranslator(CommonTranslator):
 
                     return translations[:len(texts)]
                 
-                # 如果不成功，则记录原因并准备重试
+                # When it did not succeed, record the reason and prepare to retry
                 log_attempt = f"{attempt}/{max_retries}" if not is_infinite else f"Attempt {attempt}"
                 
-                # finish_reason 已在上面获取，根据不同情况处理
+                # finish_reason was read above; handle each case
                 if finish_reason == 'content_filter':
                     self.logger.warning(f"OpenAI content blocked by safety policy ({log_attempt}); images will be omitted on the next retry")
                     send_images = False
@@ -638,7 +638,7 @@ class OpenAIHighQualityTranslator(CommonTranslator):
                     self.logger.error("OpenAI translation still failed after multiple retries. Terminating.")
                     raise last_exception
                 
-                # 重试前断开连接，重建客户端
+                # Drop the connection and rebuild the client before retrying
                 self.logger.info("Closing the previous connection and rebuilding the client before retrying...")
                 self._setup_client(force_recreate=True)
                 await self._sleep_with_cancel_polling(1)
@@ -646,7 +646,7 @@ class OpenAIHighQualityTranslator(CommonTranslator):
             except APIRotationExhaustedError:
                 raise
             except openai.BadRequestError as e:
-                # 专门处理400错误，检查是否是多模态不支持问题
+                # Handle 400 errors separately: check whether multimodal input is unsupported
                 error_message = str(e)
                 is_multimodal_unsupported = any(keyword in error_message.lower() for keyword in [
                     'image_url', 'multimodal', 'vision', 'expected `text`', 'unknown variant'
@@ -660,7 +660,7 @@ class OpenAIHighQualityTranslator(CommonTranslator):
                     self.logger.error("   3. DeepSeek models do not support multimodal input; do not use OpenAI high-quality translation")
                     raise Exception(f"Model does not support multimodal input: {self.model}") from e
                 else:
-                    # 其他400错误，正常重试
+                    # Other 400 errors: retry as usual
                     log_attempt = f"{attempt}/{max_retries}" if not is_infinite else f"Attempt {attempt}"
                     last_exception = e
                     self.logger.warning(f"OpenAI high-quality translation failed ({log_attempt}): {e}")
@@ -669,7 +669,7 @@ class OpenAIHighQualityTranslator(CommonTranslator):
                         self.logger.error("OpenAI translation still failed after multiple retries. Terminating.")
                         raise last_exception
                     
-                    # 重试前断开连接，重建客户端
+                    # Drop the connection and rebuild the client before retrying
                     self.logger.info("Closing the previous connection and rebuilding the client before retrying...")
                     self._setup_client(force_recreate=True)
                     await self._sleep_with_cancel_polling(1)
@@ -678,7 +678,7 @@ class OpenAIHighQualityTranslator(CommonTranslator):
                 log_attempt = f"{attempt}/{max_retries}" if not is_infinite else f"Attempt {attempt}"
                 last_exception = e
 
-                # 降级检查：502/429错误
+                # Downgrade check: 502/429 errors
                 error_text = str(e)
                 if '502' in error_text or '429' in error_text or 'rate limit' in error_text.lower():
                      if '502' in error_text:
@@ -693,12 +693,12 @@ class OpenAIHighQualityTranslator(CommonTranslator):
                     self.logger.error("OpenAI translation still failed after multiple retries. Terminating.")
                     raise last_exception
                 
-                # 重试前断开连接，重建客户端
+                # Drop the connection and rebuild the client before retrying
                 self.logger.info("Closing the previous connection and rebuilding the client before retrying...")
                 self._setup_client(force_recreate=True)
                 await self._sleep_with_cancel_polling(1)
 
-        # 只有在所有重试都失败后才会执行到这里
+        # Reached only after every retry has failed
         raise last_exception if last_exception else Exception("OpenAI translation failed after all retries")
 
     async def _translate(self, from_lang: str, to_lang: str, queries: List[str], ctx=None) -> List[str]:
@@ -706,12 +706,12 @@ class OpenAIHighQualityTranslator(CommonTranslator):
         if not queries:
             return []
 
-        # 重置全局尝试计数器
+        # Reset the global attempt counter
         self._reset_global_attempt_count()
 
         batch_data = getattr(ctx, 'high_quality_batch_data', None) if ctx else None
         if not batch_data:
-            # 统一后备路径：仍走高质量批量函数，不再保留第二套 API 请求实现
+            # Single fallback path: still goes through the high-quality batch function; no second API request implementation is kept
             self.logger.info("No batch_data provided for OpenAI HQ; using the unified fallback batch path")
             fallback_regions = getattr(ctx, 'text_regions', []) if ctx else []
             batch_data = [{
@@ -726,7 +726,7 @@ class OpenAIHighQualityTranslator(CommonTranslator):
         custom_prompt_json = getattr(ctx, 'custom_prompt_json', None)
         line_break_prompt_json = getattr(ctx, 'line_break_prompt_json', None)
 
-        # 使用分割包装器进行翻译
+        # Translate through the splitting wrapper
         translations = await self._translate_with_split(
             self._translate_batch_high_quality,
             queries,
@@ -739,6 +739,6 @@ class OpenAIHighQualityTranslator(CommonTranslator):
             ctx=ctx
         )
 
-        # 应用文本后处理（与普通翻译器保持一致）
+        # Apply text post-processing (the same as the ordinary translators)
         translations = [self._clean_translation_output(q, r, to_lang) for q, r in zip(queries, translations)]
         return translations

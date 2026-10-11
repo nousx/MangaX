@@ -45,16 +45,16 @@ class SakuraDict():
         for line in dic_lines:
             if line.startswith("\n"):
                 continue
-            elif line.startswith("\\\\") or line.startswith("//"):  # 注释行跳过
+            elif line.startswith("\\\\") or line.startswith("//"):  # Skip comment lines
                 continue
 
-            # 四个空格换成Tab
+            # Replace four spaces with a tab
             line = line.replace("    ", "\t")
 
-            sp = line.rstrip("\r\n").split("\t")  # 去多余换行符，Tab分割
+            sp = line.rstrip("\r\n").split("\t")  # Strip extra line breaks and split on tabs
             len_sp = len(sp)
 
-            if len_sp < 2:  # 至少是2个元素
+            if len_sp < 2:  # At least 2 elements
                 continue
 
             src = sp[0]
@@ -98,17 +98,17 @@ class SakuraDict():
         for line in dic_lines:
             if line.startswith("\n"):
                 continue
-            elif line.startswith("\\\\") or line.startswith("//"):  # 注释行跳过
+            elif line.startswith("\\\\") or line.startswith("//"):  # Skip comment lines
                 continue
 
-            sp = line.rstrip("\r\n").split("->")  # 去多余换行符，->分割
+            sp = line.rstrip("\r\n").split("->")  # Strip extra line breaks and split on ->
             len_sp = len(sp)
 
-            if len_sp < 2:  # 至少是2个元素
+            if len_sp < 2:  # At least 2 elements
                 continue
 
             src = sp[0]
-            dst_info = sp[1].split("#")  # 使用#分割目标和信息
+            dst_info = sp[1].split("#")  # Split the target and the note on #
             dst = dst_info[0].strip()
             info = dst_info[1].strip() if len(dst_info) > 1 else None
             if info:
@@ -134,7 +134,7 @@ class SakuraDict():
         if len(dic_lines) == 0:
             return "unknown"
 
-        # 判断是否为Galtransl字典
+        # Whether it is a Galtransl dictionary
         is_galtransl = True
         for line in dic_lines:
             if line.startswith("\n"):
@@ -149,7 +149,7 @@ class SakuraDict():
         if is_galtransl:
             return "galtransl"
 
-        # 判断是否为Sakura字典
+        # Whether it is a Sakura dictionary
         is_sakura = True
         for line in dic_lines:
             if line.startswith("\n"):
@@ -197,11 +197,11 @@ class SakuraDict():
 
 class SakuraTranslator(CommonTranslator):
 
-    _TIMEOUT = 999  # 等待服务器响应的超时时间(秒)
-    _RETRY_ATTEMPTS = 3  # 请求出错时的重试次数
-    _TIMEOUT_RETRY_ATTEMPTS = 3  # 请求超时时的重试次数
-    _RATELIMIT_RETRY_ATTEMPTS = 3  # 请求被限速时的重试次数
-    _REPEAT_DETECT_THRESHOLD = 20  # 重复检测的阈值
+    _TIMEOUT = 999  # Timeout for the server response (seconds)
+    _RETRY_ATTEMPTS = 3  # Number of retries when a request fails
+    _TIMEOUT_RETRY_ATTEMPTS = 3  # Number of retries when a request times out
+    _RATELIMIT_RETRY_ATTEMPTS = 3  # Number of retries when a request is rate-limited
+    _REPEAT_DETECT_THRESHOLD = 20  # Threshold for repetition detection
 
     _CHAT_SYSTEM_TEMPLATE = (
         '你是一个轻小说翻译模型，可以流畅通顺地以日本轻小说的风格将日文翻译成简体中文，并联系上下文正确使用人称代词，注意不要擅自添加原文中没有的代词，也不要擅自增加或减少换行。'
@@ -308,13 +308,13 @@ class SakuraTranslator(CommonTranslator):
             if repeated:
                 break
 
-        # 计算重复次数的众数
+        # Mode of the repetition counts
         if counts:
             mode_count = max(set(counts), key=counts.count)
         else:
             mode_count = 0
 
-        # 根据默认阈值和众数计算实际阈值
+        # Work out the actual threshold from the default threshold and the mode
         actual_threshold = max(threshold, mode_count)
 
         return repeated, s, count, pattern, actual_threshold
@@ -438,11 +438,11 @@ class SakuraTranslator(CommonTranslator):
                     return response
             return None
 
-        # 检查请求内容是否含有超过默认阈值的重复内容
+        # Check whether the request contains repetition above the default threshold
         if self._detect_repeats(''.join(queries), self._REPEAT_DETECT_THRESHOLD):
             self.logger.warning(f'The request itself contains repeated content exceeding the default threshold of {self._REPEAT_DETECT_THRESHOLD}.')
 
-        # 根据译文众数和默认阈值计算实际阈值
+        # Work out the actual threshold from the mode of the translation and the default threshold
         actual_threshold = max(max(self._get_repeat_count(query) for query in queries), self._REPEAT_DETECT_THRESHOLD)
 
         if self._detect_repeats(response, actual_threshold):
@@ -514,15 +514,15 @@ class SakuraTranslator(CommonTranslator):
         text_prompt = '\n'.join(queries)
         self.logger.debug('-- Sakura Prompt --\n' + self._format_prompt_log(text_prompt) + '\n\n')
 
-        # 预处理查询文本
+        # Preprocess the query text
         queries = self._preprocess_queries(queries)
 
-        # 发送翻译请求
+        # Send the translation request
         response = await self._handle_translation_request(queries)
         response = self._normalize_response_text(response)
         self.logger.debug(f'-- Sakura Response --\n{response}\n\n')
 
-        # 检查翻译结果是否存在重复或行数不匹配的问题
+        # Check the translation for repetition or a line count mismatch
         translations = await self._check_translation_quality(queries, response)
 
         return self._delete_quotation_mark(translations)
@@ -602,10 +602,10 @@ class SakuraTranslator(CommonTranslator):
             extra_query=extra_query,
         )
         
-        # 验证响应对象是否有效
+        # Check that the response object is valid
         validate_openai_response(response, self.logger)
         
-        # 提取并返回响应文本
+        # Extract and return the response text
         for choice in response.choices:
             if 'text' in choice:
                 return choice.text
