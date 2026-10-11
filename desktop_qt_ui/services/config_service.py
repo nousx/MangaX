@@ -1,6 +1,6 @@
 """
-配置管理服务
-负责应用程序的配置加载、保存、验证和环境变量管理
+Configuration management service.
+Responsible for loading, saving and validating the application configuration and for managing environment variables
 """
 
 import json
@@ -129,7 +129,7 @@ RUNTIME_API_REQUIREMENTS = {
 
 @dataclass
 class TranslatorConfig:
-    """翻译器配置信息"""
+    """Translator configuration information"""
 
     name: str
     display_name: str
@@ -142,7 +142,7 @@ from PyQt6.QtCore import QObject, QThread, QTimer, pyqtSignal, pyqtSlot
 
 
 class ConfigService(QObject):
-    """配置管理服务"""
+    """Configuration management service"""
 
     config_changed = pyqtSignal(dict)
     write_failed = pyqtSignal(str)
@@ -241,13 +241,13 @@ class ConfigService(QObject):
 
     @property
     def translator_configs(self):
-        """延迟加载翻译器配置"""
+        """Load the translator configurations lazily"""
         if self._translator_configs is None:
             self._translator_configs = self._init_translator_configs()
         return self._translator_configs
 
     def _init_translator_configs(self) -> Dict[str, TranslatorConfig]:
-        """从JSON文件初始化翻译器配置注册表"""
+        """Initialise the registry of translator configurations from the JSON file"""
         configs = {}
 
         config_path = get_config_path("config", "translators.json")
@@ -264,27 +264,27 @@ class ConfigService(QObject):
         return configs
 
     def get_translator_configs(self) -> Dict[str, TranslatorConfig]:
-        """获取所有翻译器配置"""
+        """Get all translator configurations"""
         return self.translator_configs
 
     def get_translator_config(self, translator_name: str) -> Optional[TranslatorConfig]:
-        """获取特定翻译器配置"""
+        """Get the configuration of a specific translator"""
         return self.translator_configs.get(translator_name)
 
     def get_required_env_vars(self, translator_name: str) -> List[str]:
-        """获取翻译器必需的环境变量"""
+        """Get the environment variables a translator requires"""
         config = self.get_translator_config(translator_name)
         return config.required_env_vars if config else []
 
     def get_all_env_vars(self, translator_name: str) -> List[str]:
-        """获取翻译器所有相关环境变量"""
+        """Get all environment variables related to a translator"""
         config = self.get_translator_config(translator_name)
         if not config:
             return []
         return config.required_env_vars + config.optional_env_vars
 
     def get_all_preset_env_vars(self) -> List[str]:
-        """获取预设应包含的全部 API 环境变量。"""
+        """Get every API environment variable a preset should contain."""
         env_keys: List[str] = []
         seen = set()
 
@@ -326,7 +326,7 @@ class ConfigService(QObject):
         config: AppSettings,
         env_vars: Optional[Dict[str, str]] = None,
     ) -> List[Dict[str, Any]]:
-        """获取当前配置下缺失的运行时 API Key 要求。"""
+        """Get the run-time API key requirements that are missing under the current configuration."""
         merged_env_vars = {
             key: str(value or "") for key, value in self.load_env_vars().items()
         }
@@ -389,7 +389,7 @@ class ConfigService(QObject):
         return missing
 
     def validate_api_key(self, key: str, var_name: str, translator_name: str) -> bool:
-        """验证API密钥格式"""
+        """Validate the format of an API key"""
         config = self.get_translator_config(translator_name)
         if not config or var_name not in config.validation_rules:
             return True  # Without a validation rule it counts as valid
@@ -398,7 +398,7 @@ class ConfigService(QObject):
         return bool(re.match(pattern, key))
 
     def load_config_file(self, config_path: str) -> bool:
-        """加载JSON配置文件并与默认设置合并，逐个键验证，错误的键使用默认值"""
+        """Load the JSON configuration file and merge it with the default settings, validating key by key; a wrong key gets its default value"""
         try:
             if not os.path.exists(config_path):
                 self.logger.error(f"Configuration file does not exist: {config_path}")
@@ -418,7 +418,7 @@ class ConfigService(QObject):
             error_keys = []
 
             def safe_deep_update(target, source, path=""):
-                """安全的深层合并，逐个键验证"""
+                """Safe deep merge, validating key by key"""
                 for key, value in source.items():
                     current_path = f"{path}.{key}" if path else key
                     try:
@@ -724,8 +724,8 @@ class ConfigService(QObject):
 
     def reload_config(self):
         """
-        强制从 .env 和 JSON 文件完全重新加载配置。
-        这能确保外部对文件的任何修改都能在程序中生效。
+        Force a complete reload of the configuration from the .env and JSON files.
+        This makes sure any change made to the files from outside takes effect in the program.
         """
         self.logger.info("Forcing configuration reload...")
         self.flush_pending_writes()
@@ -750,7 +750,7 @@ class ConfigService(QObject):
 
     def reload_from_disk(self):
         """
-        强制从当前设置的 config_path 重新加载配置, 并通知所有监听者。
+        Force a reload of the configuration from the currently set config_path, and notify all listeners.
         """
         self.flush_pending_writes()
         if self.config_path and os.path.exists(self.config_path):
@@ -760,19 +760,19 @@ class ConfigService(QObject):
             self.logger.warning("Cannot reload configuration: config_path is unset or the file does not exist.")
 
     def get_config(self) -> AppSettings:
-        """获取当前配置模型的深拷贝副本"""
+        """Get a deep copy of the current configuration model"""
         return self.current_config.model_copy(deep=True)
 
     def get_config_reference(self) -> AppSettings:
-        """获取对当前配置模型的直接引用，谨慎使用。"""
+        """Get a direct reference to the current configuration model; use with care."""
         return self.current_config
 
     def get_current_preset(self) -> str:
-        """获取当前预设名称"""
+        """Get the name of the current preset"""
         return getattr(self.current_config.app, "current_preset", "默认")
 
     def set_current_preset(self, preset_name: str) -> bool:
-        """设置当前预设名称并保存到配置文件"""
+        """Set the name of the current preset and save it to the configuration file"""
         try:
             self.current_config.app.current_preset = preset_name
             self.save_config_file()
@@ -783,20 +783,21 @@ class ConfigService(QObject):
             return False
 
     def _convert_config_for_ui(self, config_dict: Dict[str, Any]) -> Dict[str, Any]:
-        """已废弃: 历史上把 upscale_ratio 的 None 改成 '不使用' 字符串,
-        但下游 UI 全部按 `value is None` 判分支, 转换后反而错乱(mangajanai 落到 else=>'x4')。
-        现保留空实现仅作兼容, 实际不再做任何转换。"""
+        """Deprecated: None for upscale_ratio used to be changed into a display string meaning "not used",
+        but all the UI downstream branches on `value is None`, and the conversion only confused it (mangajanai fell into else => 'x4').
+        The empty implementation is kept for compatibility only; no conversion is done any more.
+        """
         return config_dict
 
     def set_config(self, config: AppSettings) -> None:
-        """设置配置并通知监听者"""
+        """Set the configuration and notify the listeners"""
         self.current_config = config.model_copy(deep=True)
         self.logger.debug("Configuration updated; notifying listeners...")
         config_dict = self.current_config.model_dump()
         self.config_changed.emit(config_dict)
 
     def update_config(self, updates: Dict[str, Any]) -> None:
-        """更新配置的部分内容"""
+        """Update part of the configuration"""
         new_config_dict = self.current_config.model_dump()
 
         def deep_update(target, source):
@@ -856,7 +857,7 @@ class ConfigService(QObject):
             return False
 
     def delete_env_vars(self, keys: list[str] | tuple[str, ...] | set[str]) -> bool:
-        """删除多个环境变量，并立即同步到运行环境。"""
+        """Delete several environment variables and sync to the running environment at once."""
         try:
             normalized_keys = [validate_env_key(str(key)) for key in keys]
             with self._write_lock:
@@ -878,7 +879,7 @@ class ConfigService(QObject):
             return False
 
     def replace_env_file(self, env_vars: Dict[str, str]) -> bool:
-        """完全替换.env文件内容"""
+        """Replace the content of the .env file completely"""
         try:
             normalized_env_vars = {
                 validate_env_key(str(key)): (
@@ -937,7 +938,7 @@ class ConfigService(QObject):
         return success
 
     def validate_translator_env_vars(self, translator_name: str) -> Dict[str, bool]:
-        """验证翻译器的环境变量是否完整"""
+        """Check whether the environment variables of a translator are complete"""
         env_vars = self.load_env_vars()
         required_vars = self.get_required_env_vars(translator_name)
 
@@ -955,37 +956,37 @@ class ConfigService(QObject):
         return validation_result
 
     def get_missing_env_vars(self, translator_name: str) -> List[str]:
-        """获取缺失的环境变量"""
+        """Get the missing environment variables"""
         validation_result = self.validate_translator_env_vars(translator_name)
         return [var for var, is_valid in validation_result.items() if not is_valid]
 
     def is_translator_configured(self, translator_name: str) -> bool:
-        """检查翻译器是否已完整配置"""
+        """Check whether a translator is fully configured"""
         missing_vars = self.get_missing_env_vars(translator_name)
         return len(missing_vars) == 0
 
     def get_default_config_path(self) -> str:
         """
-        获取默认配置文件路径
+        Get the path of the default configuration file
 
-        打包后配置文件在 app.exe 同级/config/config-example.json
-        开发时在 项目根目录/config/config-example.json
+        Packaged: config/config-example.json next to app.exe
+        Development: config/config-example.json in the project root
         """
         return get_config_path("config-example.json")
 
     def get_user_config_path(self) -> str:
         """
-        获取用户配置文件路径
+        Get the path of the user configuration file
 
-        打包后：用户配置在 app.exe 同级/config/config.json（可写）
-        开发时：在项目根目录的 config 目录
+        Packaged: config/config.json next to app.exe (writable)
+        Development: in the config folder of the project root
         """
         return get_config_path("config.json")
 
     def _load_configs_with_priority(self):
         """
-        按优先级加载配置文件
-        优先级：用户配置 > 默认配置 > 代码默认值
+        Load the configuration files by priority.
+        Priority: user configuration > default configuration > defaults in the code
         """
         # 1. Load the default configuration first (when it exists)
         if os.path.exists(self.default_config_path):
@@ -1024,10 +1025,10 @@ class ConfigService(QObject):
 
     def _sync_user_config(self):
         """
-        同步用户配置文件
-        - 如果默认配置新增字段 → 添加到用户配置
-        - 如果默认配置删除字段 → 从用户配置删除
-        - 保持用户修改的值不变
+        Sync the user configuration file
+        - a field added to the default configuration → added to the user configuration
+        - a field removed from the default configuration → removed from the user configuration
+        - values the user changed stay as they are
         """
         if not os.path.exists(self.default_config_path):
             self.logger.warning("Default configuration does not exist; skipping synchronization")
@@ -1061,10 +1062,10 @@ class ConfigService(QObject):
 
     def _sync_dict(self, template: dict, user: dict) -> dict:
         """
-        递归同步字典
-        - 保留模板中存在的键
-        - 删除模板中不存在的键
-        - 保持用户设置的值
+        Sync a dictionary recursively
+        - keys that exist in the template are kept
+        - keys that do not exist in the template are removed
+        - values the user set are kept
         """
         result = {}
 
@@ -1084,6 +1085,6 @@ class ConfigService(QObject):
         return result
 
     def load_default_config(self) -> bool:
-        """加载默认配置"""
+        """Load the default configuration"""
         default_path = self.get_default_config_path()
         return self.load_config_file(default_path)

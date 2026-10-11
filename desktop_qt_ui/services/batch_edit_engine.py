@@ -1,19 +1,19 @@
-"""批量管理引擎 —— 条件求值、批量动作、``_translations.json`` 读改写。
+"""Batch edit engine - evaluating conditions, batch actions, and reading, changing and writing ``_translations.json``.
 
-纯逻辑，零 Qt 依赖，线程封装在 ``batch_edit_service`` 里；这样条件求值和写回
-语义可以直接单测（与 ``file_list_data_service.build_file_catalog_snapshot``
-把纯函数入口独立出来是同一个理由）。
+Pure logic with no Qt dependency; the threading is wrapped in ``batch_edit_service``. This way the condition evaluation and the write-back
+semantics can be unit-tested directly (the same reason ``file_list_data_service.build_file_catalog_snapshot``
+keeps its pure-function entry separate).
 
-三条必须守住的约定（来自对现有链路的调研）：
+Three conventions that must hold (from studying the existing chain):
 
-1. **全量读 → 局部改 → 全量写。** ``export_service`` 保存时是从零重建 dict 的，
-   会丢 ``mask_raw`` / ``original_width|height`` / overlays。这里只替换命中的
-   region 条目，其余键原样保留。
-2. **匹配跑在富文本正文（``\\n``）上**，不是 ``translation``（``[BR]``）上，
-   否则 ``[BR]`` 四个字符会污染字符下标。
-3. **改文字后富文本必须跟着走。** 用 ``apply_text_change`` 做区间拼接（未改动
-   字符保住自己的样式），结果无样式时删掉 ``translation_rich`` 字段而不是留个
-   空文档。
+1. **Read everything → change locally → write everything.** ``export_service`` rebuilds the dict from scratch when it saves
+   and loses ``mask_raw`` / ``original_width|height`` / overlays. Here only the matched
+   region entries are replaced, and every other key is kept as it is.
+2. **Matching runs on the rich-text body (``\\n``)**, not on ``translation`` (``[BR]``),
+   otherwise the four characters of ``[BR]`` would pollute the character indexes.
+3. **After the text changes, the rich text has to follow.** ``apply_text_change`` splices ranges (unchanged
+   characters keep their own style), and when the result has no style the ``translation_rich`` field is deleted instead of leaving an
+   empty document.
 """
 
 from __future__ import annotations
@@ -59,7 +59,7 @@ from .batch_edit_schemes import (
 
 
 class BatchEditCancelled(RuntimeError):
-    """扫描/执行被调用方取消。"""
+    """The scan or the run was cancelled by the caller."""
 
 
 # ─── Field table ───
@@ -160,7 +160,7 @@ _COLOR_FALLBACKS = {"fg_colors": "font_color", "bg_colors": "bg_color"}
 
 
 def region_visible_text(region: dict) -> str:
-    """region 的译文正文，``\\n`` 口径（富文本优先，其次 ``translation`` 的 BR）。"""
+    """The translation body of a region, in ``\\n`` convention (rich text first, then the BR of ``translation``)."""
     try:
         return visible_text_from_document(document_from_region(region))
     except (TypeError, ValueError):
@@ -199,7 +199,7 @@ def _normalize_direction(value: Any) -> str:
 
 
 def region_field_value(region: dict, key: str, region_index: int = 0) -> Any:
-    """按字段表取值，吸收 region 里的历史形态差异。"""
+    """Read a value by the field table, absorbing the differences between old forms of a region."""
     if key == "translation":
         return region_visible_text(region)
     if key == "has_rich_text":
@@ -323,7 +323,7 @@ def _match_bool(value: Any, op: str) -> bool:
 
 
 def _style_value_matches(actual: Any, expected: Any) -> bool:
-    """富文本样式值比较；嵌套对象按所选子项做包含比较。"""
+    """Comparison of rich-text style values; nested objects are compared by containment of the chosen sub-items."""
     if isinstance(expected, dict):
         if not isinstance(actual, dict):
             return False
@@ -340,7 +340,7 @@ def _style_value_matches(actual: Any, expected: Any) -> bool:
 
 
 def _rich_text_style_criteria(value: Any) -> Optional[list[tuple[str, Any]]]:
-    """卡片中的扁平样式值转成可逐项比较的标准属性。"""
+    """Turn the flat style values of a card into standard properties that can be compared item by item."""
     if not isinstance(value, dict):
         return None
     selected = copy.deepcopy(value)
@@ -373,7 +373,7 @@ def _matching_rich_text_spans(
     expected: Any,
     logic: str,
 ) -> list[tuple[int, int]]:
-    """返回文字区间内同时满足现有富文本条件的字符片段。"""
+    """Return the character fragments inside a text range that also satisfy the existing rich-text conditions."""
     criteria = _rich_text_style_criteria(expected)
     if not criteria:
         return []
@@ -412,7 +412,7 @@ def evaluate_condition(region: dict, condition: dict, region_index: int = 0) -> 
 
 
 def evaluate_conditions(region: dict, match: dict, region_index: int = 0) -> bool:
-    """无条件 = 匹配全部 region（与"筛选器留空"的直觉一致）。"""
+    """No conditions = every region matches (the intuitive meaning of "the filter is left empty")."""
     conditions = (match or {}).get("conditions") or []
     if not conditions:
         return True
@@ -468,15 +468,15 @@ def _sync_translation(
     post_text: str,
     keep_raw: bool = False,
 ) -> None:
-    """写回译文三件套，富文本走编辑器的 ``sync_region_rich_translation``。
+    """Write back the three translation fields; rich text goes through the editor's ``sync_region_rich_translation``.
 
-    ``ops`` 给出 ``[pos, removed_len, inserted_text]`` 序列（同
-    ``manga_translator/utils/text_edit_ops.py`` 的口径）时回放编辑：未改动字符
-    原地保住自己的样式与 ruby/tcy 节点归属，只有被替换掉的那几个字失去样式。
-    ``ops=None`` 表示整段改写译文，旧富文本与新正文对不上，只能丢。
+    When ``ops`` gives a sequence of ``[pos, removed_len, inserted_text]`` (the same convention as
+    ``manga_translator/utils/text_edit_ops.py``), the edit is replayed: unchanged characters
+    keep their own style and ruby/tcy node membership in place, and only the few characters that were replaced lose their style.
+    ``ops=None`` means the whole translation was rewritten; the old rich text no longer matches the new body and can only be dropped.
 
-    两条路都以"产物无样式就删掉 translation_rich"收尾 —— 富文本的渲染优先级
-    高于纯文本，留着旧的等于改了个寂寞。
+    Both paths end with "delete translation_rich when the result has no style" - rich text takes precedence over
+    plain text when rendering, so keeping the old one would make the change pointless.
     """
     storage_text = plain_text_to_storage_text(post_text)
     rich = None
@@ -533,7 +533,7 @@ def _apply_set_fields(region: dict, action: dict) -> None:
 
 
 def _store_document(region: dict, document: dict) -> None:
-    """无样式的文档不值得占一个字段 —— 删掉而不是留个空壳。"""
+    """A document without styling is not worth a field - it is deleted instead of leaving an empty shell."""
     try:
         has_styling = document_has_styling(ensure_rich_text_document(document))
     except (TypeError, ValueError):
@@ -556,10 +556,10 @@ def _expand_replacement(match: re.Match, action: dict) -> str:
 
 
 def _collapsed_index_map(raw_text: str) -> list[int]:
-    """压缩换行后的下标 → 原文档下标。
+    """Index after collapsing line breaks → index in the original document.
 
-    ops 跑在"连续换行压成一个"的坐标系上，读原文档的样式却要用原下标，
-    两边差多少取决于文中有几处连续换行，只能逐字符记一份对照。
+    ops run in the coordinate system where "consecutive line breaks are collapsed into one", while the styles of the original document have to be read with the original indexes;
+    how far the two differ depends on how many runs of line breaks the text has, so a character-by-character table is the only way.
     """
     mapping: list[int] = []
     previous_is_break = False
@@ -572,7 +572,7 @@ def _collapsed_index_map(raw_text: str) -> list[int]:
 
 
 def _style_at(document: dict, index: int) -> tuple[dict, Optional[str], str]:
-    """取正文某个位置上的样式与 ruby/tcy 归属；无样式返回空。"""
+    """Get the style and the ruby/tcy membership at a position in the body; empty when there is no style."""
     for segment in styled_segments_for_range(document, index, index + 1, expand_empty=False):
         if segment.start <= index < segment.end:
             return segment.style or {}, segment.node_type, segment.ruby_text
@@ -580,12 +580,12 @@ def _style_at(document: dict, index: int) -> tuple[dict, Optional[str], str]:
 
 
 def _restore_replaced_styles(region: dict, carried: Sequence[tuple]) -> None:
-    """把被替换掉那段文字的样式接到替换出来的新字上。
+    """Attach the style of the text that was replaced to the new characters that replace it.
 
-    ops 回放只在"插入点前后邻居样式相同"时才让新字继承样式，而替换出的新字
-    多半落在样式边界上继承不到 —— 结果就是加了样式的词一被替换样式就没了。
-    这里按用户拍板的口径补一刀：整段取命中区间首字的样式（区间内本来有多种
-    样式时只能取一种）。
+    Replaying ops lets new characters inherit a style only when "the neighbours before and after the insertion point have the same style", and the new characters of a replacement
+    mostly sit on a style boundary and inherit nothing - so a styled word would lose its style as soon as it is replaced.
+    This adds the rule the user decided on: the whole span takes the style of the first character of the matched range (when the range had several
+    styles, only one can be taken).
     """
     if not carried:
         return
@@ -650,10 +650,10 @@ def _apply_replace_text(region: dict, action: dict) -> None:
 
 
 def _rich_text_spans(document: dict, action: dict) -> list[tuple[int, int]]:
-    """富文本动作在正文里的目标区间。
+    """Target ranges of a rich-text action in the body.
 
-    pattern 留空 = 整条 region 的全部文字 —— 筛哪些 region 是匹配条件的活儿，
-    这里只管在选中的 region 里定位子串。
+    An empty pattern = all the text of the whole region - choosing which regions is the job of the match conditions;
+    here only the substrings inside the selected regions are located.
     """
     text = visible_text_from_document(document)
     if not text:
@@ -685,11 +685,11 @@ def _rich_text_spans(document: dict, action: dict) -> list[tuple[int, int]]:
 
 
 def _uniform_style_spans(document: dict, start: int, end: int) -> list[tuple[int, int, dict, bool]]:
-    """把 ``[start, end)`` 切成若干样式一致的子区间。
+    """Cut ``[start, end)`` into sub-ranges that each have one consistent style.
 
-    ``styled_segments_for_range`` 只报带样式的片段，中间的空白段要自己补回来
-    —— 添加模式靠这份切分判断每个位置缺哪些项，漏掉空白段等于漏补。
-    每项是 ``(起, 止, 该段已有样式, 该段是否已在 ruby/tcy 节点里)``。
+    ``styled_segments_for_range`` only reports the styled fragments, so the blank stretches in between have to be filled back in here
+    - fill mode uses this partition to decide which items each position lacks, and a missed blank stretch would be a missed fill.
+    Each item is ``(start, end, the existing style of the stretch, whether the stretch is already inside a ruby/tcy node)``.
     """
     spans: list[tuple[int, int, dict, bool]] = []
     cursor = start
@@ -707,7 +707,7 @@ def _uniform_style_spans(document: dict, start: int, end: int) -> list[tuple[int
 
 
 def _overwrite_rich_text(document: dict, start: int, end: int, preset: dict) -> dict:
-    """覆盖：你编的那几项赢，命中区间上的其他项原样保留。"""
+    """overwrite: the items you edited win, and other items on the matched range are kept as they are."""
     if preset["style"]:
         document = apply_style_to_range(document, start, end, preset["style"])
     if preset["ruby"]:
@@ -718,7 +718,7 @@ def _overwrite_rich_text(document: dict, start: int, end: int, preset: dict) -> 
 
 
 def _fill_rich_text(document: dict, start: int, end: int, preset: dict) -> dict:
-    """添加：命中区间已有的同名项赢，只补它没有的。"""
+    """fill: an existing item of the same name on the matched range wins; only what it lacks is added."""
     spans = _uniform_style_spans(document, start, end)
     for span_start, span_end, existing, _ in reversed(spans):
         # Nested items (stroke/glow/transform...) are judged by their top-level key: when a stroke already exists, it is left alone entirely
@@ -736,7 +736,7 @@ def _fill_rich_text(document: dict, start: int, end: int, preset: dict) -> dict:
 
 
 def _replace_rich_text(document: dict, start: int, end: int, preset: dict) -> dict:
-    """替换：清掉命中区间原有的样式与节点，再应用新样式。"""
+    """replace: the existing styles and nodes of the matched range are cleared, then the new style is applied."""
     document = clear_styles_from_range(document, start, end)
     return _overwrite_rich_text(document, start, end, preset)
 
@@ -772,10 +772,10 @@ _ACTION_HANDLERS: dict[str, Callable[[dict, dict], None]] = {
 
 
 def region_is_sane(region: Any) -> bool:
-    """后端 ``TextBlock(**region)`` 能不能吃下这条 region。
+    """Whether the backend's ``TextBlock(**region)`` can take this region.
 
-    ``texts`` 空或 ``lines`` 形状不对时后端会整条跳过（并触发保险丝停写），
-    这种 region 我们也不碰 —— 改了反而可能把它写成看似合法的坏数据。
+    When ``texts`` is empty or ``lines`` has the wrong shape, the backend skips the whole region (and trips the fuse that stops the write);
+    such a region is not touched here either - changing it might turn it into bad data that looks valid.
     """
     if not isinstance(region, dict):
         return False
@@ -795,7 +795,7 @@ def region_is_sane(region: Any) -> bool:
 
 
 def apply_scheme_to_region(region: dict, scheme: dict) -> Optional[dict]:
-    """返回改过的 region 副本；没有任何变化时返回 ``None``。"""
+    """Return the changed copy of a region; ``None`` when nothing changed."""
     updated = copy.deepcopy(region)
     for action in scheme.get("actions") or []:
         handler = _ACTION_HANDLERS.get(str(action.get("type", "")))
@@ -862,10 +862,10 @@ def _check_cancelled(cancel_event: Optional[threading.Event]) -> None:
 
 
 def iter_pages(data: Any) -> Iterable[tuple[str, dict]]:
-    """遍历顶层的每个图片条目。
+    """Go through every image entry at the top level.
 
-    现有写者都只产出一个 key，但跨机器搬迁后 key 是旧机器的绝对路径，读端一律
-    靠"取第一个 value"兜底；这里直接遍历全部，比挑一个更稳。
+    The existing writers all produce a single key, but after moving to another machine the key is an absolute path of the old machine, and readers always
+    fall back to "take the first value"; going through all of them here is more robust than picking one.
     """
     if not isinstance(data, dict):
         return
@@ -875,7 +875,7 @@ def iter_pages(data: Any) -> Iterable[tuple[str, dict]]:
 
 
 def detect_indent(raw: str, default: int = 4) -> int:
-    """探测原文件缩进并沿用（后端写 4，编辑器写 2），让 diff 最小。"""
+    """Detect the indentation of the original file and keep it (the backend writes 4, the editor writes 2), for the smallest diff."""
     for line in raw.splitlines()[1:]:
         stripped = line.lstrip(" ")
         if not stripped:
@@ -891,10 +891,10 @@ def read_json_document(json_path: str) -> tuple[Any, int]:
 
 
 def write_json_document(json_path: str, data: Any, indent: int = 4, backup: bool = True) -> Optional[str]:
-    """原子写；返回备份路径（未备份时为 ``None``）。
+    """Atomic write; returns the backup path (``None`` when no backup was made).
 
-    现有链路完全没有备份机制，而批量修改是一次改几十上百个文件的破坏性操作，
-    所以默认自带 ``.bak``。
+    The existing chain has no backup mechanism at all, and a batch change is a destructive operation on dozens or hundreds of files at once,
+    so a ``.bak`` is made by default.
     """
     backup_path = None
     if backup and os.path.exists(json_path):
@@ -974,10 +974,10 @@ def apply_matches(
     cancel_event: Optional[threading.Event] = None,
     progress: Optional[Callable[[int, int], None]] = None,
 ) -> ApplyReport:
-    """把方案落到选中的 ``(json_path, image_key, region_index)`` 上。
+    """Apply a scheme to the selected ``(json_path, image_key, region_index)`` items.
 
-    执行时重新读盘再跑一遍方案（而不是套用预览缓存的结果），预览与执行之间
-    文件被别的进程改过时不会写出基于陈旧数据的结果。
+    When it runs, the files are read from disk again and the scheme is run once more (instead of applying the cached preview result), so a file
+    changed by another process between preview and run does not get a result based on stale data.
     """
     grouped: dict[str, dict[str, set[int]]] = {}
     for json_path, image_key, region_index in selected:
@@ -1052,10 +1052,10 @@ def restore_files(
     progress: Optional[Callable[[int, int], None]] = None,
     cancel_event: Optional[threading.Event] = None,
 ) -> RestoreReport:
-    """把每个 json 还原成它旁边的 ``.bak``，还原后 ``.bak`` 就地消耗掉。
+    """Restore each json from the ``.bak`` next to it; the ``.bak`` is used up in place by the restore.
 
-    用 ``os.replace`` 而不是"读出来再原子写回"：改的只是目录项，不搬数据，
-    既比逐字节拷贝快，本身也已经是原子的 —— 没有折中。
+    ``os.replace`` is used instead of "read it and write it back atomically": only the directory entry changes and no data moves,
+    which is faster than copying byte by byte and is atomic in itself - there is no trade-off.
     """
     report = RestoreReport()
     paths = sorted({os.path.abspath(path) for path in json_paths})

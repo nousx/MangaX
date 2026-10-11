@@ -1,6 +1,6 @@
 """
-应用状态管理器
-实现响应式状态管理，支持状态订阅和通知机制
+Application state manager.
+Implements reactive state management with subscription and notification
 """
 import logging
 import threading
@@ -10,7 +10,7 @@ from typing import Any, Dict, List
 
 
 class AppStateKey(Enum):
-    """应用状态键枚举"""
+    """Enumeration of the application state keys"""
     # Translation state
     IS_TRANSLATING = "is_translating"
     TRANSLATION_PROGRESS = "translation_progress"
@@ -34,7 +34,7 @@ class AppStateKey(Enum):
 
 @dataclass
 class StateChange:
-    """状态变化事件"""
+    """State change event"""
     key: AppStateKey
     old_value: Any
     new_value: Any
@@ -45,8 +45,8 @@ from PyQt6.QtCore import QObject, pyqtSignal
 
 class StateManager(QObject):
     """
-    状态管理器 (Qt Refactored)
-    使用信号/槽机制进行状态通知
+    State manager (Qt Refactored).
+    State notifications use the signal/slot mechanism
     """
     # --- Signal definitions ---
     is_translating_changed = pyqtSignal(bool)
@@ -89,7 +89,7 @@ class StateManager(QObject):
         }
     
     def _initialize_default_state(self):
-        """初始化默认状态值"""
+        """Initialise the default state values"""
         default_state = {
             AppStateKey.IS_TRANSLATING: False,
             AppStateKey.TRANSLATION_PROGRESS: 0.0,
@@ -110,12 +110,12 @@ class StateManager(QObject):
             self._state.update(default_state)
     
     def get_state(self, key: AppStateKey) -> Any:
-        """获取状态值"""
+        """Get a state value"""
         with self._lock:
             return self._state.get(key)
     
     def set_state(self, key: AppStateKey, value: Any, notify: bool = True) -> None:
-        """设置状态值并根据键发射对应的信号"""
+        """Set a state value and emit the signal that matches the key"""
         signal = None
         with self._lock:
             old_value = self._state.get(key)
@@ -135,17 +135,17 @@ class StateManager(QObject):
                 self.logger.error(f"Failed to emit signal {key.value}: {e}")
 
     def update_state(self, updates: Dict[AppStateKey, Any]) -> None:
-        """批量更新状态"""
+        """Update the state as a batch"""
         for key, value in updates.items():
             self.set_state(key, value)
 
     def get_all_state(self) -> Dict[AppStateKey, Any]:
-        """获取所有状态"""
+        """Get all state"""
         with self._lock:
             return self._state.copy()
 
     def reset_state(self) -> None:
-        """重置所有状态到默认值并通知"""
+        """Reset all state to the defaults and notify"""
         self._initialize_default_state()
         for key in AppStateKey:
             self.set_state(key, self._state.get(key))
@@ -221,7 +221,7 @@ class StateManager(QObject):
 _state_manager = None
 
 def get_state_manager() -> StateManager:
-    """获取全局状态管理器实例"""
+    """Get the global state manager instance"""
     global _state_manager
     if _state_manager is None:
         _state_manager = StateManager()

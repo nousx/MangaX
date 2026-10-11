@@ -1,6 +1,6 @@
 """
-轻量级擦除算法接口
-为实时预览优化的图像修复算法实现，适配后端的多种inpainter算法
+Lightweight interface to the erase algorithms.
+An image inpainting implementation tuned for live preview, adapted to the several inpainter algorithms of the backend
 """
 import asyncio
 import logging
@@ -20,14 +20,14 @@ from .erase_config_service import (
 
 @dataclass
 class PreviewConfig:
-    """预览配置"""
+    """Preview configuration"""
     max_size: int = 512  # Maximum preview size
     quality: float = 0.8  # Preview quality (0.1-1.0)
     cache_enabled: bool = True  # Whether the cache is on
     timeout: float = 5.0  # Timeout (seconds)
 
 class PreviewResult:
-    """预览结果"""
+    """Preview result"""
     def __init__(self, image: np.ndarray, algorithm: InpainterType, 
                  process_time: float, cached: bool = False):
         self.image = image
@@ -37,7 +37,7 @@ class PreviewResult:
         self.timestamp = time.time()
 
 class LightweightInpainter:
-    """轻量级图像修复器"""
+    """Lightweight image inpainter"""
     
     def __init__(self):
         self.logger = logging.getLogger(__name__)
@@ -64,14 +64,14 @@ class LightweightInpainter:
     
     def _generate_cache_key(self, image: np.ndarray, mask: np.ndarray, 
                           algorithm: InpainterType, config: PreviewConfig) -> str:
-        """生成缓存键"""
+        """Build the cache key"""
         # The hashes of the image and the mask are the cache key
         img_hash = hash(image.tobytes())
         mask_hash = hash(mask.tobytes())
         return f"{algorithm.value}_{img_hash}_{mask_hash}_{config.max_size}_{config.quality}"
     
     def _resize_for_preview(self, image: np.ndarray, max_size: int) -> Tuple[np.ndarray, float]:
-        """调整图像尺寸用于预览"""
+        """Resize the image for the preview"""
         h, w = image.shape[:2]
         if max(h, w) <= max_size:
             return image.copy(), 1.0
@@ -89,17 +89,17 @@ class LightweightInpainter:
         return resized, scale
     
     def _inpaint_none(self, image: np.ndarray, mask: np.ndarray) -> np.ndarray:
-        """无擦除：填充白色"""
+        """No erasing: fill with white"""
         result = image.copy()
         result[mask > 0] = [255, 255, 255]
         return result
     
     def _inpaint_original(self, image: np.ndarray, mask: np.ndarray) -> np.ndarray:
-        """保持原图不变"""
+        """Keep the original image unchanged"""
         return image.copy()
     
     def _inpaint_simple_blur(self, image: np.ndarray, mask: np.ndarray) -> np.ndarray:
-        """简单模糊填充算法（适合实时预览）"""
+        """Simple blur fill algorithm (suited to live preview)"""
         result = image.copy()
         
         # Set the mask area to white
@@ -120,7 +120,7 @@ class LightweightInpainter:
         return result
     
     def _inpaint_advanced_fill(self, image: np.ndarray, mask: np.ndarray) -> np.ndarray:
-        """高级填充算法（更好的质量但仍然轻量）"""
+        """Advanced fill algorithm (better quality but still lightweight)"""
         result = image.copy()
         
         # Fast repair with OpenCV's inpaint function
@@ -138,7 +138,7 @@ class LightweightInpainter:
     async def preview_async(self, image: np.ndarray, mask: np.ndarray, 
                           algorithm: Optional[InpainterType] = None,
                           config: Optional[PreviewConfig] = None) -> PreviewResult:
-        """异步预览擦除效果"""
+        """Preview the erase effect asynchronously"""
         if config is None:
             config = PreviewConfig()
         
@@ -180,7 +180,7 @@ class LightweightInpainter:
     
     def _process_preview(self, image: np.ndarray, mask: np.ndarray,
                         algorithm: InpainterType, config: PreviewConfig) -> np.ndarray:
-        """处理预览（在线程池中执行）"""
+        """Process the preview (runs in the thread pool)"""
         try:
             # Resize
             preview_image, scale = self._resize_for_preview(image, config.max_size)
@@ -216,7 +216,7 @@ class LightweightInpainter:
     def preview_sync(self, image: np.ndarray, mask: np.ndarray,
                     algorithm: Optional[InpainterType] = None,
                     config: Optional[PreviewConfig] = None) -> PreviewResult:
-        """同步预览擦除效果"""
+        """Preview the erase effect synchronously"""
         if config is None:
             config = PreviewConfig()
         
@@ -250,7 +250,7 @@ class LightweightInpainter:
         return result
     
     def _update_cache(self, cache_key: str, result: PreviewResult):
-        """更新缓存"""
+        """Update the cache"""
         # Check the cache size limit
         if len(self.preview_cache) >= self.cache_max_size:
             # Remove the oldest cache entry
@@ -261,12 +261,12 @@ class LightweightInpainter:
         self.preview_cache[cache_key] = result
     
     def clear_cache(self):
-        """清空缓存"""
+        """Clear the cache"""
         self.preview_cache.clear()
         # self.logger.info("Preview cache cleared")
     
     def get_cache_info(self) -> Dict[str, Any]:
-        """获取缓存信息"""
+        """Get the cache information"""
         return {
             "cache_size": len(self.preview_cache),
             "max_size": self.cache_max_size,
@@ -275,15 +275,15 @@ class LightweightInpainter:
         }
     
     def is_algorithm_suitable_for_preview(self, algorithm: InpainterType) -> bool:
-        """检查算法是否适合实时预览"""
+        """Check whether an algorithm is suited to live preview"""
         return self.config_service.is_preview_suitable(algorithm)
     
     def get_recommended_preview_algorithm(self) -> InpainterType:
-        """获取推荐的预览算法"""
+        """Get the recommended preview algorithm"""
         return self.config_service.get_recommended_preview_algorithm()
     
     def shutdown(self):
-        """关闭服务"""
+        """Shut down the service"""
         self.executor.shutdown(wait=True)
         self.clear_cache()
         # self.logger.info("Lightweight erase algorithm interface closed")
@@ -292,7 +292,7 @@ class LightweightInpainter:
 _lightweight_inpainter: Optional[LightweightInpainter] = None
 
 def get_lightweight_inpainter() -> LightweightInpainter:
-    """获取轻量级擦除算法接口实例"""
+    """Get the instance of the lightweight erase algorithm interface"""
     global _lightweight_inpainter
     if _lightweight_inpainter is None:
         _lightweight_inpainter = LightweightInpainter()

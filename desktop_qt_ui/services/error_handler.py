@@ -1,6 +1,6 @@
 """
-错误处理和验证服务
-提供统一的错误处理、输入验证功能
+Error handling and validation service.
+Provides error handling and input validation in one place
 """
 import logging
 import os
@@ -20,7 +20,7 @@ class ErrorLevel(Enum):
 
 @dataclass
 class ValidationResult:
-    """验证结果"""
+    """Validation result"""
     is_valid: bool = True
     errors: List[str] = None
     warnings: List[str] = None
@@ -39,7 +39,7 @@ class ValidationResult:
         self.warnings.append(message)
 
 class InputValidator:
-    """输入验证器"""
+    """Input validator"""
     
     def __init__(self):
         self.logger = logging.getLogger(__name__)
@@ -50,7 +50,7 @@ class InputValidator:
         }
     
     def validate_file_path(self, file_path: str) -> ValidationResult:
-        """验证文件路径"""
+        """Validate a file path"""
         result = ValidationResult()
         
         if not file_path:
@@ -65,7 +65,7 @@ class InputValidator:
         return result
     
     def validate_image_file(self, file_path: str) -> ValidationResult:
-        """验证图片文件"""
+        """Validate an image file"""
         result = self.validate_file_path(file_path)
         
         if result.is_valid:
@@ -77,7 +77,7 @@ class InputValidator:
         return result
     
     def validate_api_key(self, api_key: str, provider: str) -> ValidationResult:
-        """验证API密钥"""
+        """Validate an API key"""
         result = ValidationResult()
         
         if not api_key:

@@ -1,6 +1,6 @@
 """
-翻译服务
-支持多种翻译器的选择和配置管理，根据配置文件参数调用相应的翻译器
+Translation service.
+Supports choosing and configuring several translators, and calls the matching translator by the parameters of the configuration file
 """
 import logging
 import os
@@ -59,7 +59,7 @@ class TranslationService:
         self.current_target_lang = initial_config.translator.target_lang or 'CHS'
     
     def _t(self, key: str, **kwargs) -> str:
-        """翻译辅助方法"""
+        """Translation helper methods"""
         if self.i18n:
             return self.i18n.translate(key, **kwargs)
         return key
@@ -70,7 +70,7 @@ class TranslationService:
         return [t.value for t in Translator]
 
     def get_target_languages(self) -> Dict[str, str]:
-        """获取支持的目标语言列表（支持国际化）"""
+        """Get the list of supported target languages (localised)"""
         return {
             'CHS': self._t('lang_CHS'),
             'CHT': self._t('lang_CHT'),
@@ -101,7 +101,7 @@ class TranslationService:
         }
 
     def get_keep_languages(self) -> Dict[str, str]:
-        """获取合并后保留语言过滤可选项（支持国际化）"""
+        """Get the choices of the filter for languages kept after merging (localised)"""
         if not TRANSLATOR_AVAILABLE:
             return {}
         return {
@@ -247,4 +247,4 @@ class TranslationService:
         self.current_target_lang = lang_code
 
     def cleanup(self):
-        """释放翻译服务持有的运行期状态。"""
+        """Release the run-time state the translation service holds."""

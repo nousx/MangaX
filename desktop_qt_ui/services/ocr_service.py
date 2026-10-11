@@ -1,6 +1,6 @@
 """
-OCR识别服务
-集成后端OCR模块，实现文本框内容的光学字符识别功能
+OCR service.
+Integrates the backend OCR module to recognise the characters inside text boxes
 """
 import asyncio
 import logging
@@ -29,14 +29,14 @@ except ImportError as e:
 
 @dataclass
 class OcrResult:
-    """OCR识别结果"""
+    """OCR result"""
     text: str
     confidence: float
     bbox: Tuple[int, int, int, int]  # (x, y, width, height)
     processing_time: float
 
 class OcrService:
-    """OCR识别服务"""
+    """OCR service"""
     
     def __init__(self, config_service=None):
         self.logger = logging.getLogger(__name__)
@@ -86,7 +86,7 @@ class OcrService:
         return config
     
     def _get_current_config(self) -> OcrConfig:
-        """从配置服务获取当前OCR配置"""
+        """Get the current OCR configuration from the configuration service"""
         if not self.config_service:
             # Fall back to the default configuration
             return OcrConfig(
@@ -131,7 +131,7 @@ class OcrService:
             )
         
     def _check_gpu_available(self) -> bool:
-        """检查GPU是否可用"""
+        """Check whether a GPU is available"""
         try:
             import torch
             return torch.cuda.is_available()
@@ -139,7 +139,7 @@ class OcrService:
             return False
     
     async def prepare_model(self, ocr_type: Optional[Ocr] = None):
-        """准备OCR模型（若切换了模型，自动销毁卸载旧模型）"""
+        """Prepare the OCR model (when the model was switched, the old one is destroyed and unloaded automatically)"""
         if not OCR_AVAILABLE:
             raise RuntimeError("OCR后端模块不可用")
             
@@ -173,7 +173,7 @@ class OcrService:
             raise
 
     async def unload_current_model(self):
-        """显式销毁当前已加载的 OCR 模型"""
+        """Destroy the currently loaded OCR model explicitly"""
         if self.current_prepared_ocr and OCR_AVAILABLE:
             try:
                 await unload_ocr(self.current_prepared_ocr)
@@ -185,7 +185,7 @@ class OcrService:
                 self.model_prepared = False
     
     def _region_to_quadrilateral(self, region: Dict[str, Any], image_shape: Tuple[int, int]) -> Quadrilateral:
-        """将文本框区域转换为OCR所需的Quadrilateral格式"""
+        """Convert a text box region to the Quadrilateral format OCR needs"""
         try:
             # Get the four corners of the text box
             lines = region.get('lines', [[]])
@@ -214,7 +214,7 @@ class OcrService:
             return None
     
     def _extract_region_image(self, image: np.ndarray, region: Dict[str, Any]) -> Optional[np.ndarray]:
-        """从图像中提取文本框区域"""
+        """Extract the text box region from the image"""
         try:
             lines = region.get('lines', [[]])
             if not lines or not lines[0]:
@@ -248,7 +248,7 @@ class OcrService:
     # ------------------------------------------------------------------
 
     async def _get_yolo_detector(self):
-        """懒加载项目的 YOLOOBBDetector"""
+        """Load the project's YOLOOBBDetector lazily"""
         if self._yolo_detector is not None:
             return self._yolo_detector
         try:
@@ -260,7 +260,7 @@ class OcrService:
             return None
 
     async def _detect_yolo_lines_cropped(self, image: np.ndarray, pts: np.ndarray) -> list:
-        """对大框裁剪区域做 YOLO OBB 检测，返回原图坐标的 Quadrilateral 列表"""
+        """Run YOLO OBB detection on the crop of a large box; returns a list of Quadrilateral objects in coordinates of the original image"""
         detector = await self._get_yolo_detector()
         if detector is None:
             return []
@@ -292,7 +292,7 @@ class OcrService:
     def _split_polygon_by_yolo(
         self, yolo_lines: list, pts: np.ndarray, overlap_thresh: float = 0.3
     ) -> List[np.ndarray]:
-        """用 YOLO 检测结果过滤出属于当前多边形的文本行"""
+        """Use the YOLO detection result to keep the text lines that belong to the current polygon"""
         if not yolo_lines:
             return []
 
@@ -329,7 +329,7 @@ class OcrService:
 
     @staticmethod
     def _sort_quads_by_direction(quads: list) -> list:
-        """方向感知排序：水平按 y 上到下，竖直按 -(x+w) 右到左"""
+        """Direction-aware sort: horizontal by y top to bottom, vertical by -(x+w) right to left"""
         if len(quads) <= 1:
             return quads
         from collections import Counter
@@ -342,7 +342,7 @@ class OcrService:
     
     async def recognize_region(self, image: np.ndarray, region: Dict[str, Any], 
                              config: Optional[OcrConfig] = None) -> Optional[OcrResult]:
-        """识别单个文本框区域的文字（支持一个区域包含多个多边形）"""
+        """Recognise the text of a single text box region (a region may hold several polygons)"""
         if not OCR_AVAILABLE:
             raise RuntimeError("OCR后端模块不可用")
 
@@ -458,7 +458,7 @@ class OcrService:
     
     async def recognize_multiple_regions(self, image: np.ndarray, regions: List[Dict[str, Any]], 
                                        config: Optional[OcrConfig] = None) -> List[Optional[OcrResult]]:
-        """批量识别多个文本框区域"""
+        """Recognise several text box regions as a batch"""
         if not OCR_AVAILABLE:
             raise RuntimeError("OCR后端模块不可用")
 
@@ -528,14 +528,14 @@ class OcrService:
             return [None] * len(regions)
     
     def get_available_models(self) -> List[str]:
-        """获取可用的OCR模型列表"""
+        """Get the list of available OCR models"""
         if not OCR_AVAILABLE:
             return []
             
         return [ocr.value for ocr in Ocr]
     
     def set_model(self, model_name: str):
-        """设置OCR模型，支持通过value或name设置"""
+        """Set the OCR model, by value or by name"""
         if not OCR_AVAILABLE:
             return
         
@@ -561,19 +561,19 @@ class OcrService:
             self.logger.error(f"Error setting OCR model: {e}")
     
     def get_current_model(self) -> str:
-        """获取当前OCR模型名称"""
+        """Get the name of the current OCR model"""
         return self.default_config.ocr.value
     
     
     def set_config(self, **kwargs):
-        """设置OCR配置"""
+        """Set the OCR configuration"""
         for key, value in kwargs.items():
             if hasattr(self.default_config, key):
                 setattr(self.default_config, key, value)
                 self.logger.info(f"OCR configuration updated: {key} = {value}")
     
     def get_config(self) -> Dict[str, Any]:
-        """获取当前OCR配置"""
+        """Get the current OCR configuration"""
         return {
             'ocr': self.default_config.ocr.value,
             'min_text_length': self.default_config.min_text_length,
@@ -583,11 +583,11 @@ class OcrService:
         }
     
     def is_available(self) -> bool:
-        """检查OCR服务是否可用"""
+        """Check whether the OCR service is available"""
         return OCR_AVAILABLE
     
     def _is_valid_quadrilateral(self, pts: np.ndarray) -> bool:
-        """检查四边形是否适合OCR识别"""
+        """Check whether a quadrilateral is suited to OCR"""
         if len(pts) < 4:
             return False
         

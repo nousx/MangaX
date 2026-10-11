@@ -1,6 +1,6 @@
 """
-国际化支持模块
-提供多语言翻译和本地化功能
+Internationalisation support module.
+Provides translation into several languages and localisation
 """
 import json
 import locale
@@ -12,14 +12,14 @@ from typing import Dict, Optional
 
 @dataclass
 class LocaleInfo:
-    """语言区域信息"""
+    """Locale information"""
     code: str  # Language code, such as 'zh_CN'
     name: str  # Language name in the language itself
     english_name: str  # English name, such as 'Simplified Chinese'
     direction: str = "ltr"  # Text direction: ltr (left to right) or rtl (right to left)
 
 class I18nManager:
-    """国际化管理器"""
+    """Internationalisation manager"""
     
     def __init__(self, locale_dir: str = "locales", fallback_locale: str = "zh_CN", config_language: str = "auto"):
         if not os.path.isabs(locale_dir):
@@ -59,7 +59,7 @@ class I18nManager:
         
     
     def _init_supported_locales(self):
-        """初始化支持的语言列表"""
+        """Initialise the list of supported languages"""
         self.available_locales = {
             "zh_CN": LocaleInfo("zh_CN", "简体中文", "Simplified Chinese"),
             "zh_TW": LocaleInfo("zh_TW", "繁體中文", "Traditional Chinese"),
@@ -71,7 +71,7 @@ class I18nManager:
         }
     
     def _detect_system_locale(self) -> str:
-        """检测系统语言"""
+        """Detect the system language"""
         try:
             # Try to get the system language
             system_locale = locale.getdefaultlocale()[0]
@@ -103,12 +103,12 @@ class I18nManager:
         return self.fallback_locale
     
     def _load_all_translations(self):
-        """加载所有语言的翻译"""
+        """Load the translations of all languages"""
         for locale_code in self.available_locales.keys():
             self._load_locale_translation(locale_code)
     
     def _load_locale_translation(self, locale_code: str):
-        """加载特定语言的翻译"""
+        """Load the translations of a specific language"""
         try:
             translation_file = os.path.join(self.locale_dir, f"{locale_code}.json")
             
@@ -129,7 +129,7 @@ class I18nManager:
             self.translations[locale_code] = {}
     
     def _create_base_translation_file(self, locale_code: str):
-        """创建基础翻译文件"""
+        """Create the base translation file"""
         try:
             base_translations = self._get_base_translations(locale_code)
             
@@ -144,7 +144,7 @@ class I18nManager:
             self.logger.error(f"Failed to create base translation file: {e}")
     
     def _get_base_translations(self, locale_code: str) -> Dict[str, str]:
-        """获取基础翻译内容"""
+        """Get the base translation content"""
         if locale_code == "zh_CN":
             return {
                 # Menus and buttons
@@ -305,7 +305,7 @@ class I18nManager:
             return {}
     
     def set_locale(self, locale_code: str) -> bool:
-        """设置当前语言"""
+        """Set the current language"""
         if locale_code not in self.available_locales:
             self.logger.warning(f"Unsupported language: {locale_code}")
             return False
@@ -320,21 +320,21 @@ class I18nManager:
         return True
     
     def get_current_locale(self) -> str:
-        """获取当前语言代码"""
+        """Get the code of the current language"""
         return self.current_locale
     
     def get_locale_info(self, locale_code: str = None) -> Optional[LocaleInfo]:
-        """获取语言信息"""
+        """Get the information of a language"""
         if locale_code is None:
             locale_code = self.current_locale
         return self.available_locales.get(locale_code)
     
     def get_available_locales(self) -> Dict[str, LocaleInfo]:
-        """获取所有可用语言"""
+        """Get all available languages"""
         return self.available_locales.copy()
     
     def translate(self, key: str, locale_code: str = None, **kwargs) -> str:
-        """翻译文本"""
+        """Translate a text"""
         if locale_code is None:
             locale_code = self.current_locale
         
@@ -362,12 +362,12 @@ class I18nManager:
         return translation
     
     def _get_translation(self, key: str, locale_code: str) -> str:
-        """获取翻译"""
+        """Get a translation"""
         locale_translations = self.translations.get(locale_code, {})
         return locale_translations.get(key, key)
     
     def add_translation(self, key: str, value: str, locale_code: str = None):
-        """添加翻译"""
+        """Add a translation"""
         if locale_code is None:
             locale_code = self.current_locale
         
@@ -377,7 +377,7 @@ class I18nManager:
         self.translations[locale_code][key] = value
     
     def add_translations(self, translations: Dict[str, str], locale_code: str = None):
-        """批量添加翻译"""
+        """Add translations as a batch"""
         if locale_code is None:
             locale_code = self.current_locale
         
@@ -387,7 +387,7 @@ class I18nManager:
         self.translations[locale_code].update(translations)
     
     def save_translations(self, locale_code: str = None) -> bool:
-        """保存翻译到文件"""
+        """Save the translations to files"""
         try:
             if locale_code is None:
                 # Save all languages
@@ -402,7 +402,7 @@ class I18nManager:
             return False
     
     def _save_locale_translation(self, locale_code: str) -> bool:
-        """保存特定语言的翻译"""
+        """Save the translations of a specific language"""
         try:
             translation_file = os.path.join(self.locale_dir, f"{locale_code}.json")
             translations = self.translations.get(locale_code, {})
@@ -418,7 +418,7 @@ class I18nManager:
             return False
     
     def export_missing_keys(self, locale_code: str, output_file: str) -> bool:
-        """导出缺失的翻译键"""
+        """Export the missing translation keys"""
         try:
             # Get every key of the default language
             default_keys = set(self.translations.get(self.fallback_locale, {}).keys())
@@ -448,7 +448,7 @@ class I18nManager:
             return False
     
     def get_text_direction(self, locale_code: str = None) -> str:
-        """获取文本方向"""
+        """Get the text direction"""
         if locale_code is None:
             locale_code = self.current_locale
         
@@ -456,38 +456,38 @@ class I18nManager:
         return locale_info.direction if locale_info else "ltr"
     
     def is_rtl_language(self, locale_code: str = None) -> bool:
-        """是否为从右到左的语言"""
+        """Whether the language is written right to left"""
         return self.get_text_direction(locale_code) == "rtl"
 
 # Global internationalisation manager
 _i18n_manager = None
 
 def get_i18n_manager() -> I18nManager:
-    """获取全局国际化管理器"""
+    """Get the global internationalisation manager"""
     global _i18n_manager
     if _i18n_manager is None:
         _i18n_manager = I18nManager()
     return _i18n_manager
 
 def setup_i18n(locale_dir: str = "locales", fallback_locale: str = "zh_CN", config_language: str = "auto") -> I18nManager:
-    """设置国际化"""
+    """Set up internationalisation"""
     global _i18n_manager
     _i18n_manager = I18nManager(locale_dir, fallback_locale, config_language)
     return _i18n_manager
 
 # Convenience functions
 def _(key: str, **kwargs) -> str:
-    """翻译函数的简短别名"""
+    """Short alias of the translation function"""
     return get_i18n_manager().translate(key, **kwargs)
 
 def set_language(locale_code: str) -> bool:
-    """设置语言的便捷函数"""
+    """Convenience function that sets the language"""
     return get_i18n_manager().set_locale(locale_code)
 
 def get_current_language() -> str:
-    """获取当前语言的便捷函数"""
+    """Convenience function that gets the current language"""
     return get_i18n_manager().get_current_locale()
 
 def get_available_languages() -> Dict[str, LocaleInfo]:
-    """获取可用语言的便捷函数"""
+    """Convenience function that gets the available languages"""
     return get_i18n_manager().get_available_locales()

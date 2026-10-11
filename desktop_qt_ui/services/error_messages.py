@@ -11,7 +11,7 @@ import textwrap
 
 def build_friendly_error_message(error_message: str, error_traceback: str, i18n=None) -> str:
     """
-    根据错误信息构建跟随当前界面语言的友好错误提示。
+    Build a friendly error hint from the error message, in the current interface language.
     """
     def _wrap_error_text(text: str, width: int = 88) -> str:
         wrapped_lines = []

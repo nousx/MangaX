@@ -1,4 +1,4 @@
-"""Qt 同步上下文下的后台协程提交服务。"""
+"""Service for submitting background coroutines from Qt's synchronous context."""
 import logging
 from typing import Coroutine, Optional
 
@@ -7,7 +7,7 @@ from desktop_qt_ui.editor.core import AsyncJobManager
 
 
 class AsyncService:
-    """AsyncJobManager 的兼容层。"""
+    """Compatibility layer over AsyncJobManager."""
     
     def __init__(self):
         self.logger = logging.getLogger(__name__)
@@ -15,7 +15,7 @@ class AsyncService:
         self._running = True
 
     def submit_task(self, coro: Coroutine):
-        """提交协程到后台事件循环。"""
+        """Submit a coroutine to the background event loop."""
         if not self._running:
             self.logger.warning("AsyncService is not running, task ignored")
             coro.close()
@@ -39,7 +39,7 @@ class AsyncService:
             return None
     
     def cancel_all_tasks(self):
-        """取消所有活跃的异步任务（非阻塞）"""
+        """Cancel all active asynchronous tasks (non-blocking)"""
         if not self._running:
             return
         
@@ -49,7 +49,7 @@ class AsyncService:
             self.logger.error(f"Error cancelling tasks: {e}")
 
     def shutdown(self):
-        """关闭服务"""
+        """Shut down the service"""
         self._running = False
         self._job_manager.shutdown(wait=False)
 

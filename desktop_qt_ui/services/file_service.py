@@ -1,6 +1,6 @@
 """
-文件服务层
-处理文件和文件夹的选择、验证、拖拽等操作
+File service layer.
+Handles selecting, validating and dragging files and folders
 """
 import base64
 import json
@@ -23,7 +23,7 @@ from manga_translator.utils.path_manager import find_json_path
 
 
 class FileService:
-    """文件操作服务"""
+    """File operation service"""
     
     def __init__(self):
         from services import get_config_service
@@ -42,11 +42,11 @@ class FileService:
 
     def load_translation_json(self, image_path: str, image: Image.Image = None) -> Tuple[List[dict], Optional[np.ndarray], Optional[Tuple[int, int]], Dict[str, Any]]:
         """
-        根据给定的图片路径，加载关联的 _translations.json 文件。
-        优先从新目录结构加载，支持向后兼容。
-        返回 regions, raw_mask, original_size, overlays。
-        overlays 为 {'paint': RGBA数组|None, 'stamp': RGBA数组|None,
-                    'paste_overlays': [贴片字典...]}（base64 PNG 解码，未对齐尺寸）。
+        Load the _translations.json file that belongs to the given image path.
+        The new folder structure is tried first, and the old one is still supported.
+        Returns regions, raw_mask, original_size, overlays.
+        overlays is {'paint': RGBA array|None, 'stamp': RGBA array|None,
+                    'paste_overlays': [overlay dictionaries...]} (decoded from base64 PNG, sizes not aligned).
         """
         # Find the JSON file with path_manager (the new location is preferred)
         json_path = find_json_path(image_path)
@@ -145,7 +145,7 @@ class FileService:
         return regions, raw_mask, original_size, overlays
         
     def validate_image_file(self, file_path: str) -> bool:
-        """验证是否为有效的图片文件或压缩包文件"""
+        """Check whether it is a valid image file or archive file"""
         try:
             if not os.path.exists(file_path):
                 return False
@@ -177,12 +177,12 @@ class FileService:
             return False
     
     def is_archive_file(self, file_path: str) -> bool:
-        """检查文件是否是压缩包/文档格式"""
+        """Check whether a file is an archive or document format"""
         _, ext = os.path.splitext(file_path)
         return ext.lower() in self.supported_archive_extensions
     
     def validate_config_file(self, file_path: str) -> bool:
-        """验证是否为有效的配置文件"""
+        """Check whether it is a valid configuration file"""
         try:
             if not os.path.exists(file_path):
                 return False
@@ -196,12 +196,12 @@ class FileService:
     
     def _natural_sort_key(self, path: str):
         """
-        生成自然排序的键，支持数字排序
-        例如: file1.jpg, file2.jpg, file10.jpg 会按 1, 2, 10 排序
-        而不是按字符串 1, 10, 2 排序
-        
-        对于包含路径的文件，会对整个路径进行自然排序，确保子文件夹也能正确排序
-        例如: 第1话/001.jpg, 第2话/001.jpg, 第10话/001.jpg 会按 1, 2, 10 排序
+        Build a natural sort key, in which numbers sort as numbers.
+        For example: file1.jpg, file2.jpg, file10.jpg sort as 1, 2, 10
+        instead of the string order 1, 10, 2
+
+        For a file with a path, the whole path is sorted naturally, so subfolders sort correctly as well.
+        For example: chapter folders numbered 1, 2 and 10, each holding 001.jpg, sort as 1, 2, 10
         """
         import re
         
@@ -225,7 +225,7 @@ class FileService:
     def get_supported_files_from_folder(
         self, folder_path: str, recursive: bool = True
     ) -> tuple[List[str], List[str]]:
-        """一次遍历返回图片与压缩包，忽略 manga_translator_work。"""
+        """Return the images and the archives in one walk, ignoring manga_translator_work."""
         image_files: List[str] = []
         archive_files: List[str] = []
         try:
@@ -261,7 +261,7 @@ class FileService:
         return self.get_supported_files_from_folder(folder_path, recursive)[1]
     
     def filter_valid_image_files(self, file_paths: List[str]) -> List[str]:
-        """过滤出有效的图片文件"""
+        """Keep only the valid image files"""
         valid_files = []
         
         for file_path in file_paths:
@@ -273,10 +273,10 @@ class FileService:
         return valid_files
     
     def process_dropped_files(self, dropped_data: str) -> Tuple[List[str], List[str]]:
-        """处理拖拽的文件数据
-        
+        """Handle dropped file data
+
         Returns:
-            Tuple[List[str], List[str]]: (有效的图片文件列表, 错误信息列表)
+            Tuple[List[str], List[str]]: (list of valid image files, list of error messages)
         """
         image_files = []
         errors = []
@@ -309,7 +309,7 @@ class FileService:
         return image_files, errors
     
     def _parse_drop_data(self, dropped_data: str) -> List[str]:
-        """解析拖拽数据，提取文件路径"""
+        """Parse the drop data and extract the file paths"""
         file_paths = []
         
         # Handle the line endings of different operating systems
@@ -337,7 +337,7 @@ class FileService:
         return file_paths
     
     def get_file_info(self, file_path: str) -> dict:
-        """获取文件信息"""
+        """Get the information of a file"""
         try:
             if not os.path.exists(file_path):
                 return {'error': '文件不存在'}
@@ -371,7 +371,7 @@ class FileService:
             return {'error': str(e)}
     
     def _format_file_size(self, size_bytes: int) -> str:
-        """格式化文件大小"""
+        """Format a file size"""
         if size_bytes < 1024:
             return f"{size_bytes} B"
         elif size_bytes < 1024**2:
@@ -382,7 +382,7 @@ class FileService:
             return f"{size_bytes/(1024**3):.1f} GB"
     
     def create_backup(self, file_path: str, backup_dir: Optional[str] = None) -> str:
-        """创建文件备份"""
+        """Create a backup of a file"""
         try:
             if backup_dir is None:
                 backup_dir = os.path.join(os.path.dirname(file_path), 'backups')
@@ -407,7 +407,7 @@ class FileService:
             raise
     
     def cleanup_temp_files(self, temp_dir: str, max_age_hours: int = 24) -> None:
-        """清理临时文件"""
+        """Remove the temporary files"""
         try:
             if not os.path.exists(temp_dir):
                 return
@@ -430,13 +430,13 @@ class FileService:
             self.logger.error(f"Failed to clean up temporary files: {e}")
     
     def get_supported_image_extensions(self) -> Set[str]:
-        """获取支持的图片文件扩展名"""
+        """Get the supported image file extensions"""
         return self.supported_image_extensions.copy()
     
     def get_supported_config_extensions(self) -> Set[str]:
-        """获取支持的配置文件扩展名"""
+        """Get the supported configuration file extensions"""
         return self.supported_config_extensions.copy()
     
     def normalize_path(self, path: str) -> str:
-        """标准化路径"""
+        """Normalise a path"""
         return os.path.normpath(os.path.abspath(path))

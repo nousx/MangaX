@@ -1,6 +1,6 @@
 """
-日志服务
-提供结构化日志记录、日志管理和监控功能
+Log service.
+Provides structured logging, log management and monitoring
 """
 import copy
 import json
@@ -208,7 +208,7 @@ def shutdown_queue_logging() -> None:
 
 
 class LogLevel:
-    """日志级别常量"""
+    """Log level constants"""
     DEBUG = logging.DEBUG
     INFO = logging.INFO
     WARNING = logging.WARNING
@@ -216,7 +216,7 @@ class LogLevel:
     CRITICAL = logging.CRITICAL
 
 class LogService:
-    """日志服务"""
+    """Log service"""
     
     def __init__(self, log_dir: str = "logs", app_name: str = "MangaTranslatorUI"):
         self.log_dir = log_dir
@@ -232,7 +232,7 @@ class LogService:
         self._setup_main_logger()
         
     def _setup_main_logger(self):
-        """设置主日志器"""
+        """Set up the main logger"""
         # Initialise the logging of manga_translator
         try:
             from manga_translator.utils.log import init_logging
@@ -286,7 +286,7 @@ class LogService:
             self.log_handlers.append(memory_handler)
 
     def _get_root_console_handlers(self) -> List[logging.Handler]:
-        """返回 root logger 上负责控制台输出的 handler。"""
+        """Return the handler on the root logger that is responsible for console output."""
         with _QUEUE_LOGGING_LOCK:
             queued_handlers = list(_QUEUE_DOWNSTREAM_HANDLERS)
         if queued_handlers:
@@ -309,10 +309,10 @@ class LogService:
     
     def set_console_log_level(self, verbose: bool = False):
         """
-        根据 verbose 配置设置控制台日志级别
-        
+        Set the console log level from the verbose setting
+
         Args:
-            verbose: 是否启用详细日志（DEBUG 级别）
+            verbose: whether detailed logging (DEBUG level) is enabled
         """
         level = logging.DEBUG if verbose else logging.INFO
         
@@ -340,7 +340,7 @@ class LogService:
         
     
     def get_logger(self, name: str = None) -> logging.Logger:
-        """获取日志器"""
+        """Get a logger"""
         if name is None:
             name = self.app_name
         
@@ -359,7 +359,7 @@ class LogService:
         return self.loggers[name]
     
     def log_operation(self, operation: str, details: Dict[str, Any] = None, level: int = LogLevel.INFO):
-        """记录操作日志"""
+        """Log an operation"""
         logger = self.get_logger()
         message = f"Operation: {operation}"
         
@@ -369,7 +369,7 @@ class LogService:
         logger.log(level, message)
     
     def log_error(self, error: Exception, context: Dict[str, Any] = None, operation: str = None):
-        """记录错误日志"""
+        """Log an error"""
         logger = self.get_logger()
         
         message = f"Error: {str(error)}"
@@ -382,7 +382,7 @@ class LogService:
         logger.error(message, exc_info=True)
     
     def log_translation_start(self, files: List[str], config: Dict[str, Any]):
-        """记录翻译开始"""
+        """Log the start of a translation"""
         self.log_operation("translation_start", {
             'file_count': len(files),
             'files': [os.path.basename(f) for f in files],
@@ -391,7 +391,7 @@ class LogService:
         })
     
     def log_translation_complete(self, results: List[Dict[str, Any]], duration: float):
-        """记录翻译完成"""
+        """Log the completion of a translation"""
         success_count = sum(1 for r in results if r.get('success', False))
         self.log_operation("translation_complete", {
             'total_files': len(results),
@@ -401,14 +401,14 @@ class LogService:
         })
     
     def log_config_change(self, config_path: str, changes: Dict[str, Any] = None):
-        """记录配置变更"""
+        """Log a configuration change"""
         self.log_operation("config_change", {
             'config_path': config_path,
             'changes': changes
         })
     
     def log_file_operation(self, operation: str, file_path: str, success: bool = True, error: str = None):
-        """记录文件操作"""
+        """Log a file operation"""
         details = {
             'file_path': file_path,
             'success': success
@@ -420,7 +420,7 @@ class LogService:
         self.log_operation(f"file_{operation}", details, level)
     
     def log_performance(self, operation: str, duration: float, details: Dict[str, Any] = None):
-        """记录性能指标"""
+        """Log a performance metric"""
         perf_details = {
             'duration_seconds': round(duration, 3)
         }
@@ -430,7 +430,7 @@ class LogService:
         self.log_operation(f"performance_{operation}", perf_details)
     
     def get_recent_logs(self, level: str = None, limit: int = 100) -> List[Dict[str, Any]]:
-        """获取最近的日志"""
+        """Get the recent logs"""
         with _RECENT_LOGS_LOCK:
             logs = list(_RECENT_LOGS)
         
@@ -440,7 +440,7 @@ class LogService:
         return logs[-limit:] if limit > 0 else logs
     
     def get_log_summary(self) -> Dict[str, Any]:
-        """获取日志摘要"""
+        """Get a summary of the logs"""
         with _RECENT_LOGS_LOCK:
             logs = list(_RECENT_LOGS)
         
@@ -467,17 +467,17 @@ class LogService:
         return summary
     
     def clear_recent_logs(self):
-        """清除最近的日志"""
+        """Clear the recent logs"""
         with _RECENT_LOGS_LOCK:
             _RECENT_LOGS.clear()
     
     def set_log_level(self, level: int):
-        """设置日志级别"""
+        """Set the log level"""
         for logger in self.loggers.values():
             logger.setLevel(level)
     
     def export_logs(self, output_path: str, level: str = None, start_time: datetime = None, end_time: datetime = None) -> bool:
-        """导出日志到文件"""
+        """Export the logs to a file"""
         try:
             logs = self.get_recent_logs(level=level)
             
@@ -507,7 +507,7 @@ class LogService:
             return False
     
     def cleanup_old_logs(self, days: int = 30):
-        """清理旧日志文件"""
+        """Remove old log files"""
         try:
             import time
             current_time = time.time()
@@ -532,7 +532,7 @@ class LogService:
             self.log_error(e, operation="cleanup_logs")
     
     def shutdown(self):
-        """关闭日志服务"""
+        """Shut down the log service"""
         for handler in self.log_handlers:
             try:
                 handler.close()
@@ -546,14 +546,14 @@ class LogService:
 _log_service = None
 
 def get_log_service() -> LogService:
-    """获取全局日志服务实例"""
+    """Get the global log service instance"""
     global _log_service
     if _log_service is None:
         _log_service = LogService()
     return _log_service
 
 def setup_logging(log_dir: str = "logs", app_name: str = "MangaTranslatorUI"):
-    """设置全局日志"""
+    """Set up global logging"""
     global _log_service
     # Before any handler receives a record: no credential may reach a log file. Idempotent.
     from manga_translator.utils.log_redaction import install_log_redaction

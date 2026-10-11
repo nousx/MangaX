@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-导出服务
-负责将编辑器中的内容导出为后端渲染的图片
+Export service.
+Responsible for exporting the content of the editor as an image rendered by the backend
 """
 
 import asyncio
@@ -48,7 +48,7 @@ class BackendExportResult:
 
 
 class ExportService:
-    """导出服务类"""
+    """Export service class"""
 
     def __init__(self):
         self.logger = logging.getLogger(__name__)
@@ -315,7 +315,7 @@ class ExportService:
         config: Optional[Dict[str, Any]] = None,
         paste_overlays: Optional[List[Dict[str, Any]]] = None,
     ):
-        """保存区域数据到JSON文件，确保格式与TextBlock兼容（用于导出）"""
+        """Save the region data to a JSON file, in a format compatible with TextBlock (for export)"""
         # Use the file name as the key (backward compatible)
         image_key = os.path.splitext(
             os.path.basename(json_path.replace("_translations.json", ""))
@@ -333,7 +333,7 @@ class ExportService:
     def _read_existing_image_data(
         self, json_path: str, image_key: str
     ) -> Dict[str, Any]:
-        """读取当前图片已有的 JSON 元数据，用于编辑器导出时保留底图来源标志。"""
+        """Read the existing JSON metadata of the current image, so the editor export keeps the flags on where the base image came from."""
         if not json_path or not os.path.exists(json_path):
             return {}
 
@@ -373,7 +373,7 @@ class ExportService:
         target_data: Dict[str, Any],
         existing_image_data: Dict[str, Any],
     ) -> None:
-        """保留 editor_base 是否有效所需的上色/超分标志。"""
+        """Keep the colorize/upscale flags needed to tell whether editor_base is valid."""
         if not existing_image_data:
             return
 
@@ -405,7 +405,7 @@ class ExportService:
         regions_data: List[Dict[str, Any]],
         config: Optional[Dict[str, Any]] = None,
     ) -> List[Dict[str, Any]]:
-        """把编辑器 region 规整为 load_text 兼容的字典列表（lines 形状、颜色、方向等）。"""
+        """Bring the editor regions into a list of dictionaries compatible with load_text (shape of lines, colours, direction and so on)."""
         default_region_font_family = ""
         if config:
             render_config = config.get("render", {})
@@ -612,7 +612,7 @@ class ExportService:
         stamp_overlay: Optional[np.ndarray] = None,
         paste_overlays: Optional[List[Dict[str, Any]]] = None,
     ):
-        """保存区域数据到JSON文件的内部实现"""
+        """Internal implementation of saving the region data to a JSON file"""
         save_data = self._normalize_regions_for_backend(regions_data, config)
 
         # The format load_text mode expects: a dictionary whose keys are image paths and whose values are dictionaries with regions
@@ -751,12 +751,12 @@ class ExportService:
         source_image: Optional[Image.Image] = None,
     ):
         """
-        保存渲染后的图像到文件
+        Save the rendered image to a file
 
         Args:
-            image: 要保存的图像
-            output_path: 输出路径
-            config: 配置字典
+            image: the image to save
+            output_path: the output path
+            config: the configuration dictionary
         """
         temp_output_path = output_path + ".tmp"
 
@@ -790,7 +790,7 @@ class ExportService:
             raise
 
     def _prepare_translator_params(self, config: Dict[str, Any]) -> Dict[str, Any]:
-        """准备翻译器参数"""
+        """Prepare the translator parameters"""
         translator_params = {}
 
         render_config = config.get("render", {})
@@ -837,7 +837,7 @@ class ExportService:
 
     @staticmethod
     def _take_context_result(ctx) -> Optional[Image.Image]:
-        """接管 ctx.result 的所有权（translate 内已保证结果独立，无需再整页拷贝）。"""
+        """Take over ownership of ctx.result (translate already guarantees the result is independent, so no whole-page copy is needed)."""
         result = getattr(ctx, "result", None)
         if result is None:
             return None
@@ -1074,7 +1074,7 @@ class ExportService:
         output_path: str,
         config: Optional[Dict[str, Any]] = None,
     ) -> bool:
-        """导出区域数据为JSON文件"""
+        """Export the region data as a JSON file"""
         try:
             self._save_regions_data(regions_data, output_path, None, config)
             self.logger.info(f"Region data exported to: {output_path}")

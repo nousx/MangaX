@@ -1,6 +1,6 @@
 """
-预设管理服务
-用于管理.env配置预设
+Preset management service.
+Used to manage presets of the .env configuration
 """
 import json
 import logging
@@ -13,7 +13,7 @@ DEFAULT_PRESET_NAME = "默认"
 
 
 class PresetService:
-    """预设管理服务"""
+    """Preset management service"""
     
     def __init__(self, presets_dir: str = None, config_service=None):
         self.logger = logging.getLogger(__name__)
@@ -34,7 +34,7 @@ class PresetService:
         
 
     def _get_known_preset_env_keys(self) -> List[str]:
-        """获取预设应覆盖的全部 env 键。"""
+        """Get every env key a preset should cover."""
         if self.config_service and hasattr(self.config_service, "get_all_preset_env_vars"):
             try:
                 return self.config_service.get_all_preset_env_vars()
@@ -71,7 +71,7 @@ class PresetService:
         ]
 
     def _normalize_preset_env_vars(self, env_vars: Optional[Dict[str, str]]) -> Dict[str, str]:
-        """补齐所有已知 API env 键，并保留额外自定义 env 键。"""
+        """Fill in all known API env keys and keep extra custom env keys."""
         source = env_vars or {}
         normalized: Dict[str, str] = {}
 
@@ -86,14 +86,14 @@ class PresetService:
         return normalized
 
     def _build_default_preset_env(self) -> Dict[str, str]:
-        """构建默认预设内容。"""
+        """Build the content of the default preset."""
         default_env = self._normalize_preset_env_vars({})
         default_env["OPENAI_API_BASE"] = "https://api.openai.com/v1"
         default_env["OPENAI_MODEL"] = "gpt-4o"
         return default_env
     
     def _create_default_preset(self):
-        """创建默认预设"""
+        """Create the default preset"""
         default_preset_path = os.path.join(self.presets_dir, f"{DEFAULT_PRESET_NAME}.json")
         if not os.path.exists(default_preset_path):
             default_env = self._build_default_preset_env()
@@ -105,7 +105,7 @@ class PresetService:
                 self.logger.error(f"Failed to create default preset: {e}")
     
     def get_presets_list(self) -> List[str]:
-        """获取所有预设名称列表"""
+        """Get the list of all preset names"""
         try:
             if not os.path.exists(self.presets_dir):
                 return []
@@ -122,7 +122,7 @@ class PresetService:
             return []
     
     def save_preset(self, preset_name: str, env_vars: Dict[str, str]) -> bool:
-        """保存预设"""
+        """Save a preset"""
         try:
             if not preset_name or not preset_name.strip():
                 self.logger.error("Preset name cannot be empty")
@@ -144,7 +144,7 @@ class PresetService:
             return False
     
     def load_preset(self, preset_name: str) -> Optional[Dict[str, str]]:
-        """加载预设"""
+        """Load a preset"""
         try:
             preset_path = os.path.join(self.presets_dir, f"{preset_name}.json")
             
@@ -161,7 +161,7 @@ class PresetService:
             return None
     
     def delete_preset(self, preset_name: str) -> bool:
-        """删除预设"""
+        """Delete a preset"""
         if preset_name == DEFAULT_PRESET_NAME:
             self.logger.warning("The default preset cannot be deleted")
             return False
@@ -181,7 +181,7 @@ class PresetService:
             return False
     
     def _sanitize_filename(self, filename: str) -> str:
-        """清理文件名，移除非法字符"""
+        """Clean a file name by removing illegal characters"""
         # Remove the characters that are invalid on Windows and Unix
         illegal_chars = ['<', '>', ':', '"', '/', '\\', '|', '?', '*']
         for char in illegal_chars:

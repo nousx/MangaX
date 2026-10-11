@@ -1,14 +1,14 @@
-"""批量管理方案的持久化 —— ``config/batch_edit_schemes.yaml``。
+"""Persistence of batch edit schemes - ``config/batch_edit_schemes.yaml``.
 
-与 ``text_replacements.yaml`` / ``rich_text_rules.yaml`` 同目录同格式，但方案
-只服务桌面 UI 的批量管理页、不进渲染管线，因此读写留在 ``desktop_qt_ui``
-一侧，也不加入 ``manga_translator/runtime_files.py`` 的启动引导（那会造成
-manga_translator → desktop_qt_ui 的反向依赖）。文件在首次访问时惰性创建。
+Same folder and same format as ``text_replacements.yaml`` / ``rich_text_rules.yaml``, but schemes
+only serve the batch edit page of the desktop UI and do not enter the render pipeline, so reading and writing stay on the ``desktop_qt_ui``
+side and are not added to the start-up bootstrap of ``manga_translator/runtime_files.py`` (which would create
+a reverse dependency manga_translator → desktop_qt_ui). The file is created lazily on first access.
 
-方案结构::
+Structure of a scheme::
 
     schemes:
-      - name: "方案名"
+      - name: "scheme name"
         enabled: true
         comment: ""
         match:
@@ -21,8 +21,8 @@ manga_translator → desktop_qt_ui 的反向依赖）。文件在首次访问时
           - {type: rich_text, mode: overwrite, pattern: '[（）]', regex: true,
              style: {transform: {rotation: -90}}, ruby: "", tcy: false}
 
-``replace_text`` 与 ``rich_text`` 都可以出现多条，按写下的先后依次执行
-（``ACTION_ORDER`` 的排序是稳定的，只分组不打乱组内顺序）。
+``replace_text`` and ``rich_text`` may both appear several times and run in the order they are written
+(the sort by ``ACTION_ORDER`` is stable: it only groups and does not reorder within a group).
 """
 
 from __future__ import annotations
@@ -181,7 +181,7 @@ def _clean_action(raw: Any) -> Optional[dict]:
 
 
 def normalize_scheme(raw: Any) -> Optional[dict]:
-    """校验并归一化一个方案；结构不可用时返回 ``None``。"""
+    """Validate and normalise a scheme; ``None`` is returned when the structure is unusable."""
     if not isinstance(raw, dict):
         return None
     name = str(raw.get("name", "") or "").strip()
@@ -219,7 +219,7 @@ def new_scheme(name: str) -> dict:
 
 
 def load_schemes(file_path: Optional[str] = None) -> list[dict]:
-    """读取全部方案；文件缺失/损坏时返回空列表而不是抛异常。"""
+    """Read all schemes; an empty list is returned, instead of raising, when the file is missing or damaged."""
     file_path = ensure_schemes_exists(file_path)
     try:
         with open(file_path, "r", encoding="utf-8") as handle:

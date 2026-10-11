@@ -1,9 +1,9 @@
-"""批量管理的后台执行 —— 扫描与写回都不能占着 UI 线程。
+"""Background execution of batch editing - neither scanning nor writing back may hold the UI thread.
 
-结构对齐 ``file_list_data_service``：``ThreadPoolExecutor`` + 每个频道一个
-generation + ``threading.Event`` 取消；纯逻辑全在 ``batch_edit_engine`` 里，
-这层只负责调度与信号。接收端一律用 ``Qt.ConnectionType.QueuedConnection``，
-因为回调是在 worker 线程上发的信号。
+The structure follows ``file_list_data_service``: a ``ThreadPoolExecutor`` + one generation per
+channel + cancellation with ``threading.Event``; the pure logic is all in ``batch_edit_engine``,
+and this layer only schedules and signals. Receivers always use ``Qt.ConnectionType.QueuedConnection``,
+because the callbacks emit their signals on the worker thread.
 """
 
 from __future__ import annotations
@@ -30,7 +30,7 @@ CHANNEL_RESTORE = "restore"
 
 
 class BatchEditService(QObject):
-    """扫描/执行各占一个频道，每个频道只接受最新 generation 的结果。"""
+    """Scanning and running each have a channel of their own, and each channel only accepts the result of the latest generation."""
 
     scan_ready = pyqtSignal(int, object)        # generation, ScanResult
     apply_ready = pyqtSignal(int, object)       # generation, ApplyReport

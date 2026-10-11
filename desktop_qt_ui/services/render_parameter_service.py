@@ -1,6 +1,6 @@
 """
-渲染参数管理服务
-提供字体和排列参数的计算、自定义、存储和管理功能
+Render parameter management service.
+Provides calculation, customisation, storage and management of font and layout parameters
 """
 import copy
 import logging
@@ -12,21 +12,21 @@ VALID_LAYOUT_MODES = {"smart_scaling", "strict", "balloon_fill"}
 
 
 class Alignment(Enum):
-    """对齐方式枚举"""
+    """Alignment enumeration"""
     LEFT = "left"
     CENTER = "center"
     RIGHT = "right"
     AUTO = "auto"
 
 class Direction(Enum):
-    """文本方向枚举"""
+    """Text direction enumeration"""
     HORIZONTAL = "h"
     VERTICAL = "v"
     AUTO = "auto"
 
 
 def _normalize_direction(value: Any) -> str:
-    """统一排版方向；历史反转值只作为别名，阅读顺序由语言决定。"""
+    """Unify the layout direction; old reversed values are only aliases, and the reading order is decided by the language."""
     direction = str(getattr(value, "value", value) or "auto").strip().lower()
     return {
         "horizontal": "h",
@@ -38,7 +38,7 @@ def _normalize_direction(value: Any) -> str:
 
 @dataclass
 class RenderParameters:
-    """渲染参数数据类"""
+    """Data class of the render parameters"""
     # Font parameters
     font_size: int = 12
     font_family: str = ""
@@ -88,31 +88,31 @@ class RenderParameters:
             )
     
     def to_dict(self) -> Dict[str, Any]:
-        """转换为字典格式"""
+        """Convert to dictionary form"""
         return asdict(self)
 
     @property
     def effective_stroke_width(self) -> float:
-        """描边测量和绘制共同消费的唯一有效宽度。"""
+        """The one effective width used by both the measuring and the drawing of the stroke."""
         if self.disable_font_border:
             return 0.0
         return max(float(self.stroke_width), 0.0)
     
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> 'RenderParameters':
-        """从字典创建参数对象"""
+        """Create a parameter object from a dictionary"""
         clean = dict(data or {})
         return cls(**clean)
 
 @dataclass
 class ParameterPreset:
-    """参数预设"""
+    """Parameter preset"""
     name: str
     description: str
     parameters: RenderParameters
 
 class RenderParameterService:
-    """渲染参数管理服务"""
+    """Render parameter management service"""
     
     def __init__(self):
         self.logger = logging.getLogger(__name__)
@@ -129,7 +129,7 @@ class RenderParameterService:
 
 
     def get_default_parameters(self) -> RenderParameters:
-        """获取当前配置服务的默认参数"""
+        """Get the default parameters from the current configuration service"""
         config = self.config_service.get_config()
         render_fields = RenderParameters.__dataclass_fields__.keys()
         global_render_config = config.render.model_dump()
@@ -187,7 +187,7 @@ class RenderParameterService:
         )
     
     def calculate_default_parameters(self, region_data: Dict[str, Any]) -> RenderParameters:
-        """基于原始文本框计算默认渲染参数"""
+        """Compute the default render parameters from the original text box"""
         params = self.get_default_parameters()
         try:
             lines = region_data.get('lines', [])
@@ -300,13 +300,13 @@ class RenderParameterService:
         return self._apply_region_overrides(base, region_data)
     
     def set_region_parameters(self, region_index: int, parameters: RenderParameters):
-        """设置指定区域的渲染参数"""
+        """Set the render parameters of the given region"""
         self.region_parameters[region_index] = copy.deepcopy(parameters)
         self.region_parameters[region_index].direction = _normalize_direction(parameters.direction)
         self.logger.debug(f"Setting rendering parameters for region {region_index}")
     
     def update_region_parameter(self, region_index: int, param_name: str, value: Any):
-        """更新指定区域的单个参数"""
+        """Update a single parameter of the given region"""
         if region_index not in self.region_parameters:
             self.region_parameters[region_index] = self.get_default_parameters()
 
@@ -319,7 +319,7 @@ class RenderParameterService:
             self.logger.warning(f"Unknown parameter: {param_name}")
     
     def apply_preset(self, region_index: int, preset_name: str) -> bool:
-        """应用预设参数到指定区域"""
+        """Apply a parameter preset to the given region"""
         if preset_name not in self.presets:
             self.logger.warning(f"Preset not found: {preset_name}")
             return False
@@ -330,7 +330,7 @@ class RenderParameterService:
         return True
     
     def create_custom_preset(self, name: str, description: str, parameters: RenderParameters):
-        """创建自定义预设"""
+        """Create a custom preset"""
         self.presets[name] = ParameterPreset(
             name=name,
             description=description,
@@ -339,7 +339,7 @@ class RenderParameterService:
         self.logger.info(f"Creating custom preset: {name}")
     
     def get_preset_list(self) -> List[Dict[str, str]]:
-        """获取预设列表"""
+        """Get the list of presets"""
         return [
             {
                 "name": preset.name,
@@ -350,7 +350,7 @@ class RenderParameterService:
         ]
     
     def export_parameters_for_backend(self, region_index: int, region_data: Dict[str, Any]) -> Dict[str, Any]:
-        """导出参数供后端识别和执行"""
+        """Export the parameters for the backend to recognise and apply"""
         params = self.get_region_parameters(region_index, region_data)
         
         # Convert to the format the backend understands
@@ -406,7 +406,7 @@ class RenderParameterService:
         return backend_params
     
     def import_parameters_from_json(self, region_index: int, json_data: Dict[str, Any]):
-        """从JSON数据导入参数"""
+        """Import parameters from JSON data"""
         try:
             # Keep the valid parameters only
             valid_params = {}
@@ -469,13 +469,13 @@ class RenderParameterService:
             return False
     
     def batch_update_parameters(self, updates: Dict[int, Dict[str, Any]]):
-        """批量更新多个区域的参数"""
+        """Update the parameters of several regions as a batch"""
         for region_index, param_updates in updates.items():
             for param_name, value in param_updates.items():
                 self.update_region_parameter(region_index, param_name, value)
     
     def copy_parameters(self, from_region: int, to_region: int):
-        """复制参数从一个区域到另一个区域"""
+        """Copy the parameters from one region to another"""
         if from_region in self.region_parameters:
             source_params = copy.deepcopy(self.region_parameters[from_region])
             self.set_region_parameters(to_region, source_params)
@@ -484,17 +484,17 @@ class RenderParameterService:
         return False
     
     def reset_region_parameters(self, region_index: int):
-        """重置区域参数为默认值"""
+        """Reset the parameters of a region to the defaults"""
         if region_index in self.region_parameters:
             del self.region_parameters[region_index]
             self.logger.info(f"Resetting parameters for region {region_index}")
 
     def clear_cache(self):
-        """清空所有区域的自定义参数缓存"""
+        """Clear the cache of custom parameters of all regions"""
         self.region_parameters.clear()
     
     def get_parameter_summary(self, region_index: int) -> Dict[str, str]:
-        """获取参数摘要信息"""
+        """Get summary information of the parameters"""
         params = self.get_region_parameters(region_index)
         
         direction_map = {

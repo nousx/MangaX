@@ -1,4 +1,4 @@
-"""后台构建桌面文件列表所需的完整、不可变快照。"""
+"""Build in the background the complete, immutable snapshot the desktop file list needs."""
 
 from __future__ import annotations
 
@@ -23,7 +23,7 @@ KIND_ARCHIVE = "archive"
 
 
 def canonical_path_key(path: str) -> str:
-    """Windows 友好的路径身份键；显示路径仍保留规范化后的原大小写。"""
+    """Path identity key that suits Windows; the displayed path keeps the original case after normalisation."""
     return os.path.normcase(os.path.abspath(os.path.normpath(path)))
 
 
@@ -73,7 +73,7 @@ class FileCatalogSnapshot:
         return cls(generation, (), (), (), (), (), {}, {}, {})
 
     def images_only(self) -> "FileCatalogSnapshot":
-        """生成编辑器投影；复用同一份扫描数据，不再次访问磁盘。"""
+        """Produce the editor projection; the same scan data is reused and the disk is not read again."""
         if self.files == self.image_files:
             return self
 
@@ -404,7 +404,7 @@ def build_file_catalog_snapshot(
     generation: int = 0,
     cancel_event: Optional[threading.Event] = None,
 ) -> FileCatalogSnapshot:
-    """同步构建函数，供后台线程和小型确定性测试共同使用。"""
+    """Synchronous build function, shared by the background thread and small deterministic tests."""
     return _CatalogBuilder(
         generation,
         sources,
@@ -415,7 +415,7 @@ def build_file_catalog_snapshot(
 
 
 class FileListDataService(QObject):
-    """两个常驻线程构建快照；每个频道只接受最新 generation。"""
+    """Two long-lived threads build the snapshots; each channel only accepts the latest generation."""
 
     loading = pyqtSignal(str, int)
     snapshot_ready = pyqtSignal(str, int, object)
