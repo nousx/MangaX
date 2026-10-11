@@ -120,7 +120,7 @@ Mask strokes, clearing all masks, paint/stamp strokes, and layer clearing all en
 - Mask-family tools depend on the inpainter configuration being loadable (model, size, precision). If loading fails or the model is missing, the mask still updates but the inpainted image does not refresh and an error is logged.
 - The left button of brush-like tools always draws; it cannot select or drag regions. Switch back to “No Selection” for region operations.
 - Switching tabs resets the active tool to the new tab’s “No Selection”, so the mask brush and the color brush are never active at the same time.
-- `Shift+wheel` adjusts the shared brush size (5–200) shared by all three tabs and never zooms the canvas; `Ctrl+wheel` adjusts the font size of selected regions. Both belong to [Shortcuts](./shortcuts.md).
+- `Shift+wheel` adjusts the shared brush size (5–200) shared by all three tabs and never zooms the canvas; `Ctrl+Shift+wheel` adjusts the font size of selected regions. Both belong to [Shortcuts](./shortcuts.md).
 - While the clone stamp is active, right-click is occupied by sampling and the context menu is fully suppressed; `Escape`/focus loss discards uncommitted strokes.
 - Stroke data is kept at full base-image resolution (RGBA layers are H×W×4), so very large images consume significant memory; display layers are downsampled, but dabs and stamps always run at full resolution.
 - The paint/stamp layers and the refined mask are written into the project file on export; the export and write-back formats are covered in [Import, Export, and Write-back](./import-export-and-writeback.md).

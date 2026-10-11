@@ -497,8 +497,10 @@ class EditorShortcutManager(ShortcutManager):
         Event filter that handles the mouse wheel shortcuts
 
         Supported shortcuts:
-        - Ctrl + wheel: scale the selected text boxes proportionally (both the box size and the font)
+        - Ctrl + Shift + wheel: scale the selected text boxes proportionally (both the box size and the font)
         - Shift + wheel: adjust the size of the mask brush
+
+        A plain wheel (scroll) and Ctrl + wheel (zoom) are left to the view.
         """
         if event.type() == QEvent.Type.Wheel:
             # Check whether it is the viewport of graphics_view
@@ -518,11 +520,15 @@ class EditorShortcutManager(ShortcutManager):
                     self.editor_view.model.set_brush_size(new_size)
                     return True  # Stop the event from propagating
 
-                # Ctrl + wheel (including combinations such as Ctrl+Shift): change the font size of the selected text boxes;
+                # Ctrl + Shift + wheel: change the font size of the selected text boxes;
                 # with no text box selected but a paste overlay selected, scale the overlay proportionally.
                 # The event is swallowed whether or not something is selected - this gesture means "change font size / scale overlay"
                 # and must never fall through to canvas zoom, where the user thinks the font size is changing while the canvas zooms.
-                elif modifiers & Qt.KeyboardModifier.ControlModifier:
+                # Ctrl + wheel alone is not handled here: it reaches the view, which zooms the canvas.
+                elif (
+                    modifiers & Qt.KeyboardModifier.ControlModifier
+                    and modifiers & Qt.KeyboardModifier.ShiftModifier
+                ):
                     angle_delta = event.angleDelta().y()
                     if angle_delta == 0:
                         angle_delta = event.pixelDelta().y()

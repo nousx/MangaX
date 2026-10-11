@@ -93,7 +93,7 @@ flowchart LR
 ### Zoom and fit to window
 
 - “Zoom In (+)” / “Zoom Out (-)” call `_apply_zoom(1.15)` / `_apply_zoom(1 / 1.15)` per step and clamp the target scale to `0.05`–`50.0`.
-- The canvas wheel zooms the same way (up zooms in, down zooms out, factor 1.15), anchored at the mouse position.
+- Holding `Ctrl`, the canvas wheel zooms the same way (up zooms in, down zooms out, factor 1.15), anchored at the mouse position.
 - “Fit to Window” calls `fitInView(..., KeepAspectRatio)` to place the current image fully inside the viewport.
 
 ### Original image opacity

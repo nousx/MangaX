@@ -15,7 +15,7 @@ Once you enter the editor, the canvas is the main workspace for adjusting text r
 
 - The canvas tool is a single active state `active_tool`. Its values are `select`, `brush`, `eraser`, `paint`, `paint_erase`, `clone`, `stamp_erase`, and the temporary drawing state `draw_textbox`. The UI changes it through the Property Editor buttons, the `1`/`2`/`3` and `Q`/`W`/`E` keys, and the context-menu item “Add Text Box”.
 - Selection (click, box select, multi-select) and region dragging happen only under the `select` tool. With a brush-like tool, pressing the left button no longer selects regions; it draws a stroke instead.
-- View zoom and panning (wheel zoom, zoom in/out, fit to window, middle-button drag) transform the whole canvas view and never change region data. `Ctrl+wheel` resizes the font of selected regions and `Shift+wheel` changes the shared brush size; both combinations belong to the [Shortcuts](./shortcuts.md) page.
+- View zoom and panning (`Ctrl` + wheel zoom, wheel scrolling, zoom in/out, fit to window, middle-button drag) transform the whole canvas view and never change region data. `Ctrl+Shift+wheel` resizes the font of selected regions and `Shift+wheel` changes the shared brush size; both combinations belong to the [Shortcuts](./shortcuts.md) page.
 - The selection is synchronized bidirectionally between the canvas, the region list, and the Property Editor. Region source/translation editing, find-and-replace, OCR/Translate buttons, and list behavior are covered in [Region List and Text Editing](./region-list-and-text-editing.md).
 - Mask refinement and the data structure and rendering of the paint/stamp layers belong to [Mask, Paint, and Clone Stamp](./mask-paint-and-clone-stamp.md); this guide only explains the tool entry points and pointer semantics.
 
@@ -52,7 +52,7 @@ Brush, eraser, paint, clone stamp, and stamp eraser all show a circular cursor w
 
 - Selection: with the `select` tool, click a text region to select it; hold `Ctrl` and click to add to the selection; press and drag on blank canvas to draw a dashed selection box, then on release regions intersecting the box are hit precisely (including rotated and thin regions), and the old selection is cleared unless `Ctrl` is held. Clicking blank canvas (a zero-size box) is equivalent to deselecting.
 - Dragging: drag a selected region (inside its white frame) to move it; other selected regions follow in the same drag. Drag the white square handles around the selection to resize the frame and drag the rotation handle to rotate. On release the geometry is written back through `update_region_geometry` and enters the undo history.
-- Zooming: the wheel zooms in by a factor of 1.15 and out by 1/1.15, clamped to 0.05–50, anchored at the mouse position. The “Zoom In (+)”, “Zoom Out (-)” items in the “Menu” and the persistent “Fit to Window” button drive the same view transform.
+- Zooming: a plain wheel scrolls the page; holding `Ctrl`, the wheel zooms in by a factor of 1.15 and out by 1/1.15, clamped to 0.05–50, anchored at the mouse position. The “Zoom In (+)”, “Zoom Out (-)” items in the “Menu” and the persistent “Fit to Window” button drive the same view transform.
 - Panning: press and hold the middle mouse button and drag to pan. Pressing the middle button internally switches to `ScrollHandDrag`; releasing restores `NoDrag`.
 - The view state (transform matrix and center) is emitted through `view_state_changed` to the original-compare panel and the floating rich-text editor for positioning.
 
@@ -97,7 +97,7 @@ flowchart LR
 
 - Region selection only happens under the `select` tool; the left button of a brush-like tool always draws and cannot pick a region.
 - `Delete` region deletion and `Ctrl+Z`/`Ctrl+Y` undo/redo are focus-aware: with focus in a text control they are left to text editing, and only with canvas focus do they act on regions; see [Shortcuts](./shortcuts.md).
-- `Ctrl+wheel` and `Shift+wheel` are intercepted by the shortcut manager to resize the selected regions’ font and the shared brush size respectively, and never fall through to canvas zoom.
+- `Ctrl+Shift+wheel` and `Shift+wheel` are intercepted by the shortcut manager to resize the selected regions’ font and the shared brush size respectively, and never fall through to canvas zoom.
 - Switching tabs resets the tool to that tab’s “No Selection”, so the mask brush and the color paint brush cannot be active at the same time.
 - The context-menu labels are translated through the `en_US.json` / `zh_CN.json` locale keys `OCR Selected Regions`, `Translate Selected Regions`, `Copy Region`, `Paste Style`, `Delete Selected Regions`, `Add Text Box`, `Paste Region`, and `Refresh View`; the delete label receives the selected-region count. While the clone stamp is active the right button is reserved for sampling and the menu is fully suppressed.
 - View zoom is clamped between 0.05 and 50 to keep wheel zoom from runaway and to avoid stroke artifacts at extremely small scales; zoom only changes the view transform, never the region data.

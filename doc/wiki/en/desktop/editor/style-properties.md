@@ -45,7 +45,7 @@ Use the “Style Settings” section of the property panel whenever you need to 
 
 ### Adjust font size from the canvas
 
-Hold Ctrl and scroll the wheel over the canvas to adjust the font size of all selected regions by about 5% of the current size per notch (clamped to a minimum of 1). Even with no selection the event is swallowed, so it never falls through to canvas zooming. Shift+wheel adjusts brush size, which belongs to the “Image Editing” section; see [Canvas tools and selection](./canvas-tools-and-selection.md).
+Hold Ctrl+Shift and scroll the wheel over the canvas to adjust the font size of all selected regions by about 5% of the current size per notch (clamped to a minimum of 1). Even with no selection the event is swallowed, so it never falls through to canvas zooming. Shift+wheel adjusts brush size, which belongs to the “Image Editing” section; see [Canvas tools and selection](./canvas-tools-and-selection.md).
 
 ## Parameters and options
 
@@ -57,7 +57,7 @@ Choose the text font in Property panel → Style Settings. The font dropdown is 
 
 #### Font Size {#font-size}
 
-Adjust the text size in Property panel → Style Settings: the spin box ranges 8–1000 and the slider ranges 8–150, kept in sync; the slider covers only the common range. You can also hold Ctrl and scroll the wheel over the canvas to resize all selected regions by about 5% of the current size per notch. The white frame is recomputed after a change and may overlap neighboring regions.
+Adjust the text size in Property panel → Style Settings: the spin box ranges 8–1000 and the slider ranges 8–150, kept in sync; the slider covers only the common range. You can also hold Ctrl+Shift and scroll the wheel over the canvas to resize all selected regions by about 5% of the current size per notch. The white frame is recomputed after a change and may overlap neighboring regions.
 
 #### Font Color {#font-color}
 
@@ -149,7 +149,7 @@ Limitation note: the stroke color is written to `bg_colors` rather than to a sam
 - A style preset saves font, color, stroke, spacing, alignment, and direction, but not font size or angle; applying a preset never changes those two fields.
 - “Copy Region / Paste Style” copies only `font_family`, `font_size`, `font_color`, `alignment`, `direction`, `line_spacing`, and `letter_spacing`; stroke color, stroke width, and angle are not copied. The right-click “🎨 粘贴样式” item is a hard-coded Chinese literal in the source, is not i18n'ed, and does not switch with the UI language.
 - Multi-selection style edits apply the same patch to all selected regions and are recorded as one undo command; multi-selection has no “mixed value” display.
-- Ctrl+wheel font-size adjustment on the canvas is a separate entry point that shares the `font_size` field with the panel spin box; Shift+wheel brush-size adjustment belongs to the “Image Editing” section.
+- Ctrl+Shift+wheel font-size adjustment on the canvas is a separate entry point that shares the `font_size` field with the panel spin box; Shift+wheel brush-size adjustment belongs to the “Image Editing” section.
 - `line_spacing`/`letter_spacing` fall back to the rendering config (otherwise `1.0`) only when the region value is missing; an explicit value overrides the global one.
 - The stroke color picker uses the `saved_stroke_colors` config key, but `AppSection` only defines `saved_colors`; cross-restart persistence may vary by release.
 - Style fields affect only the editor preview and final rendering; they never change the OCR, translation, or mask stages.

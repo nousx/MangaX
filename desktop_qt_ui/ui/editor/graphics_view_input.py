@@ -58,14 +58,9 @@ class GraphicsViewInputMixin:
 
     def wheelEvent(self, event):
         delta_y = int(event.angleDelta().y())
-        modifiers = event.modifiers()
-        if delta_y == 0 or not modifiers & Qt.KeyboardModifier.ControlModifier:
-            # Plain wheel scrolls the page; only Ctrl + wheel zooms
-            if delta_y != 0 and modifiers & Qt.KeyboardModifier.ShiftModifier:
-                bar = self.horizontalScrollBar()
-                bar.setValue(bar.value() - delta_y)
-                event.accept()
-                return
+        if delta_y == 0 or not event.modifiers() & Qt.KeyboardModifier.ControlModifier:
+            # Plain wheel scrolls the page; only Ctrl + wheel zooms.
+            # (Shift + wheel and Ctrl + Shift + wheel never get here: the shortcut manager takes them.)
             super().wheelEvent(event)
             return
         zoom_in_factor = 1.15

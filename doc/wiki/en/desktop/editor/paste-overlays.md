@@ -14,7 +14,7 @@ Besides writing translations into text regions, typesetting often needs to place
 ## What it does
 
 - Dropping supported image assets (**PNG/JPG/WebP/BMP/TIFF/AVIF**, etc.) creates a page-level overlay centered at the drop point, selected immediately; oversized assets (edge > 2048 px) are scaled down automatically.
-- Once selected, editing follows the same habits as text regions: **move / corner uniform resize / top rotation / hover cursors**; `Ctrl+Wheel` scales uniformly, `Ctrl+C` / `Ctrl+V` copy & paste, `Delete` removes, `Ctrl+Z` undoes.
+- Once selected, editing follows the same habits as text regions: **move / corner uniform resize / top rotation / hover cursors**; `Ctrl+Shift+Wheel` scales uniformly, `Ctrl+C` / `Ctrl+V` copy & paste, `Delete` removes, `Ctrl+Z` undoes.
 - Each change (move/resize/rotate/add/remove) is an undoable command.
 - Overlays are persisted with the page (see Storage below) and restored when reopening; **export** composites them into the final image at the same position/size/orientation as shown on the canvas, below rendered text.
 - Pages containing *only* overlays (no text regions) still export correctly, preserving transparency for transparent PNG assets.
@@ -38,7 +38,7 @@ The selected overlay shows the same decorations as text regions:
 - **Top ring**: drag to **rotate** around the center;
 - Hovering the corner/rotation handles switches the cursor to diagonal-resize / move, so the draggable areas are discoverable;
 - Dragging the body moves the overlay;
-- `Ctrl+Wheel` = uniform scaling (same entry point as the text-region font-size wheel: with no region selected it applies to the overlay);
+- `Ctrl+Shift+Wheel` = uniform scaling (same entry point as the text-region font-size wheel: with no region selected it applies to the overlay);
 - `Ctrl+C` / `Ctrl+V` = copy / paste (overlay clipboard is independent from the region clipboard);
 - `Delete` removes the selected overlay.
 

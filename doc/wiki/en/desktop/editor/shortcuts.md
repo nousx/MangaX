@@ -50,8 +50,9 @@ The following table lists every keyboard shortcut actually registered by `_setup
 | Combo | Effect | Limits |
 | --- | --- | --- |
 | `Shift + wheel` | Changes the shared brush size by ±1 per notch | Clamped to `5`–`200`; the event is swallowed and does not zoom the canvas |
-| Any `Ctrl`-containing wheel combo | Changes the font size of all selected regions by ±5% (minimum 1) | Swallowed even with no selection; never falls through to canvas zoom |
-| Plain wheel | Zooms the canvas anchored at the mouse position | Scale clamped to `0.05`–`50.0`, handled by `GraphicsView.wheelEvent()` |
+| `Ctrl + Shift + wheel` | Changes the font size of all selected regions by ±5% (minimum 1) | Swallowed even with no selection; never falls through to canvas zoom |
+| `Ctrl + wheel` | Zooms the canvas anchored at the mouse position | Scale clamped to `0.05`–`50.0`, handled by `GraphicsView.wheelEvent()` |
+| Plain wheel | Scrolls the canvas vertically | Default scroll-area behaviour, reached through `GraphicsView.wheelEvent()` |
 
 ## How changes are saved {#runtime-behavior}
 
@@ -82,11 +83,11 @@ When focus is in a text widget, the `V`/`1`/`2`/`3`/`Q`/`W`/`E`/`A`/`D` handlers
 flowchart LR
     W["Canvas viewport wheel event"] --> F{"EditorShortcutManager.eventFilter"}
     F -->|Shift| B["Change shared brush size<br/>±1 per notch, clamp 5–200, swallow"]
-    F -->|contains Ctrl| C["Change selected-region font size<br/>±5% (min 1), swallowed even without selection"]
-    F -->|other| Z["Not intercepted<br/>GraphicsView.wheelEvent<br/>zoom canvas by 1.15"]
+    F -->|contains Ctrl and Shift| C["Change selected-region font size<br/>±5% (min 1), swallowed even without selection"]
+    F -->|other| Z["Not intercepted<br/>GraphicsView.wheelEvent<br/>Ctrl: zoom canvas by 1.15<br/>otherwise: scroll"]
 ```
 
-The `Shift` branch matches “modifiers equal Shift”; the `Ctrl` branch matches “contains Ctrl”, so `Ctrl+Shift+wheel` also resizes fonts. Property-panel sliders, spin boxes, and dropdowns do not swallow the wheel without keyboard focus and let the parent scroll area take over; `CustomSlider` changes its value only while focused.
+The `Shift` branch matches “modifiers equal Shift”; the font-size branch matches “contains Ctrl and Shift”, so `Ctrl+wheel` alone passes through and zooms the canvas. Property-panel sliders, spin boxes, and dropdowns do not swallow the wheel without keyboard focus and let the parent scroll area take over; `CustomSlider` changes its value only while focused.
 
 ### Escape and canvas focus loss {#escape-and-focus-out}
 
