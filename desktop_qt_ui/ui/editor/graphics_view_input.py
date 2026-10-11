@@ -58,8 +58,14 @@ class GraphicsViewInputMixin:
 
     def wheelEvent(self, event):
         delta_y = int(event.angleDelta().y())
-        if delta_y == 0:
-            # Horizontal wheel / touchpad: not a zoom gesture, handed back to the default handling
+        modifiers = event.modifiers()
+        if delta_y == 0 or not modifiers & Qt.KeyboardModifier.ControlModifier:
+            # Plain wheel scrolls the page; only Ctrl + wheel zooms
+            if delta_y != 0 and modifiers & Qt.KeyboardModifier.ShiftModifier:
+                bar = self.horizontalScrollBar()
+                bar.setValue(bar.value() - delta_y)
+                event.accept()
+                return
             super().wheelEvent(event)
             return
         zoom_in_factor = 1.15
