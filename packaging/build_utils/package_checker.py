@@ -53,14 +53,14 @@ def _nonblank(text):
 def _is_requirement(line):
     """判断是否是依赖包行（过滤 pip 选项）"""
     line = line.strip()
-    # 过滤空行和注释
+    # Leave out empty lines and comments
     if not line or line.startswith('#'):
         return False
-    # 过滤 pip 选项 (--xxx 或 -x)
+    # Leave out pip options (--xxx or -x)
     if line.startswith('-'):
         return False
-    # 过滤 URL 形式的依赖（以 http:// 或 https:// 开头的需要保留）
-    # 这些是 wheel 文件的直接链接
+    # Dependencies given as a URL (starting with http:// or https://) have to be kept;
+    # these are direct links to wheel files
     return True
 
 
@@ -96,7 +96,7 @@ def load_req_file(requirements_file: str) -> List[str]:
     """加载requirements文件"""
     with pathlib.Path(requirements_file).open(encoding='utf-8') as reqfile:
         lines = join_continuation(map(drop_comment, yield_lines(reqfile)))
-        # 过滤掉 pip 选项（如 --extra-index-url）
+        # Leave out pip options (such as --extra-index-url)
         valid_reqs = [line for line in lines if _is_requirement(line)]
         return list(map(lambda x: str(Requirement(x)), valid_reqs))
 
@@ -112,17 +112,17 @@ def _yield_reqs_to_install(req: Requirement, current_extra: str = ''):
         yield req
     else:
         if not version_str:
-            # 存在损坏或不完整的 dist-info，但没有可比较的版本；重新安装该依赖。
+            # A damaged or incomplete dist-info exists but there is no version to compare; reinstall this dependency.
             yield req
             return
 
-        # 对于 PyTorch 等包，移除本地版本标识符（如 +cu128）进行比较
-        # 例如：2.9.1+cu128 -> 2.9.1
+        # For PyTorch and similar packages, remove the local version identifier (such as +cu128) before comparing
+        # For example: 2.9.1+cu128 -> 2.9.1
         version_base = version_str.split('+')[0]
 
-        # 先用基础版本号检查
+        # Check with the base version number first
         if req.specifier.contains(version_base, prereleases=True):
-            # 版本匹配，检查子依赖
+            # The version matches: check the sub-dependencies
             for child_req in (importlib_metadata.metadata(req.name).get_all('Requires-Dist') or []):
                 child_req_obj = Requirement(child_req)
                 need_check, ext = False, None
@@ -134,28 +134,28 @@ def _yield_reqs_to_install(req: Requirement, current_extra: str = ''):
                 if need_check:
                     yield from _yield_reqs_to_install(child_req_obj, ext)
         else:
-            # 版本不匹配，但如果已安装的版本更新，也认为满足
-            # 例如：要求 ==2.8.0，已安装 2.9.1，认为满足（向后兼容）
+            # The version does not match, but a newer installed version also counts as satisfied
+            # For example: ==2.8.0 is required and 2.9.1 is installed, which counts as satisfied (backward compatible)
             try:
                 installed_version = Version(version_base)
-                # 检查 specifier 中是否有精确版本要求（==）
+                # Check whether the specifier has an exact version requirement (==)
                 has_exact_match = any(spec.operator == '==' for spec in req.specifier)
 
                 if has_exact_match:
-                    # 有精确版本要求，检查已安装版本是否更新
-                    # 提取要求的版本号
+                    # There is an exact version requirement: check whether the installed version is newer
+                    # Extract the required version number
                     for spec in req.specifier:
                         if spec.operator == '==':
                             required_version = Version(spec.version)
                             if installed_version >= required_version:
-                                # 已安装版本更新或相等，认为满足
+                                # The installed version is newer or equal: satisfied
                                 return
                             break
 
-                # 其他情况，版本不匹配，需要安装
+                # Otherwise the version does not match and it has to be installed
                 yield req
             except Exception:
-                # 版本解析失败，按原逻辑处理
+                # The version could not be parsed: handle it with the original logic
                 yield req
 
 

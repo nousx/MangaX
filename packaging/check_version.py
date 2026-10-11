@@ -16,7 +16,7 @@ if str(PATH_ROOT) not in sys.path:
 
 from desktop_qt_ui.core.git_update_helpers import non_interactive_git_env
 
-# Git路径配置
+# Git path
 def get_git_command():
     """获取git命令路径"""
     portable_git = PATH_ROOT / "PortableGit" / "cmd" / "git.exe"
@@ -39,7 +39,7 @@ def get_remote_version():
     """获取远程版本"""
     git_cmd = get_git_command()
     try:
-        # 使用git show命令获取远程VERSION文件内容
+        # Get the content of the remote VERSION file with git show
         result = subprocess.run(
             [git_cmd, 'show', 'origin/main:packaging/VERSION'],
             capture_output=True,
@@ -80,14 +80,14 @@ def main():
     fetch_ok = fetch_remote_refs(git_cmd)
     remote_version = get_remote_version() if fetch_ok else "unknown"
     
-    # 导出环境变量格式（用于bat脚本）
+    # Output in environment variable format (for the bat scripts)
     if args.export_vars:
         print(f"CURRENT_VERSION={current_version}")
         print(f"REMOTE_VERSION={remote_version}")
         return 0
     
     if args.brief:
-        # 简洁模式 - 用于脚本3（启动界面）
+        # Brief mode - for script 3 (the launcher)
         print("")
         print("========================================")
         print("漫画翻译器 - 启动中")
@@ -110,11 +110,11 @@ def main():
             print("[信息] 已是最新版本")
             print("")
     else:
-        # 详细模式 - 用于脚本4（更新维护）
+        # Detailed mode - for script 4 (update and maintenance)
         print(f"当前版本 - {current_version}")
         print(f"远程版本 - {remote_version}")
         
-        # 检查是否有更新
+        # Check whether there is an update
         if remote_version == "unknown":
             print("")
             print("[警告] 无法获取远程版本信息,可能网络问题")
@@ -128,13 +128,13 @@ def main():
             print("[发现新版本]")
             print("")
             
-            # 尝试读取远程 CHANGELOG
+            # Try to read the remote CHANGELOG
             doc_dir = Path(__file__).parent.parent / "doc"
-            # 去除版本号中可能的 'v' 前缀
+            # Remove a possible 'v' prefix from the version number
             version_clean = remote_version.lstrip('v')
             changelog_file = doc_dir / f"CHANGELOG_v{version_clean}.md"
             
-            # 优先显示 CHANGELOG 文件
+            # Prefer showing the CHANGELOG file
             changelog_shown = False
             if changelog_file.exists():
                 try:
@@ -147,7 +147,7 @@ def main():
                 except Exception as e:
                     print(f"[警告] 无法读取更新文档: {e}")
             
-            # 如果没有 CHANGELOG 文件，显示 git log
+            # Without a CHANGELOG file, show git log
             if not changelog_shown:
                 print("最新更新内容 (最近10条):")
                 print("----------------------------------------")
@@ -170,7 +170,7 @@ def main():
                 
                 print("----------------------------------------")
             
-            return 2  # 有更新
+            return 2  # There is an update
     
     return 0
 

@@ -11,30 +11,30 @@ def detect_torch_type():
     try:
         import torch
         
-        # 检查是否是 AMD ROCm 版本
+        # Check whether it is the AMD ROCm build
         if hasattr(torch.version, 'hip') and torch.version.hip:
             # AMD ROCm PyTorch
             return "AMD", f"rocm{torch.version.hip}" if torch.version.hip else "rocm"
         
-        # 检查是否支持 CUDA (NVIDIA)
+        # Check whether CUDA (NVIDIA) is supported
         elif torch.cuda.is_available():
             cuda_version = torch.version.cuda
             return "GPU", f"cu{cuda_version.replace('.', '')}" if cuda_version else "unknown"
         
-        # 检查是否支持 MPS (Apple Silicon Metal)
+        # Check whether MPS (Apple Silicon Metal) is supported
         elif hasattr(torch.backends, 'mps') and torch.backends.mps.is_available():
             return "Metal", "mps"
         
         else:
-            # CPU 版本
+            # CPU build
             torch_version = torch.__version__
             if '+cpu' in torch_version or 'cpu' in torch_version:
                 return "CPU", "cpu"
             else:
-                # 可能是 CPU 版本但没有明确标识
+                # Possibly the CPU build, without an explicit marker
                 return "CPU", "cpu"
     except ImportError:
-        # PyTorch 未安装
+        # PyTorch is not installed
         return None, None
 
 def get_dependency_group():
@@ -50,7 +50,7 @@ def get_dependency_group():
     elif torch_type == "CPU":
         return "cpu"
     else:
-        # PyTorch 未安装，无法确定
+        # PyTorch is not installed, so it cannot be determined
         return None
 
 
@@ -69,7 +69,7 @@ if __name__ == "__main__":
         group = get_dependency_group()
         print(f"对应的依赖组: {group}")
         
-        # --file-only 保留为旧调用兼容别名
+        # --file-only is kept as an alias for old callers
         if len(sys.argv) > 1 and sys.argv[1] in ("--group-only", "--file-only"):
             print(group, end="")
     else:

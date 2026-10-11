@@ -1,7 +1,7 @@
 import os
 import sys
 
-# 添加onnxruntime的capi目录到DLL搜索路径
+# Add the capi folder of onnxruntime to the DLL search path
 if sys.platform == 'win32':
     if hasattr(os, 'add_dll_directory'):
         # Python 3.8+

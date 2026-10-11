@@ -55,20 +55,20 @@ def run_command(cmd, description, *, env=None):
 def build_wheel():
     """构建 pydensecrf wheel 文件"""
     
-    # 检查 Python 版本
+    # Check the Python version
     print(f"当前 Python 版本: {sys.version}")
     python_version = f"cp{sys.version_info.major}{sys.version_info.minor}"
     
-    # 创建输出目录
+    # Create the output folder
     wheels_dir = Path("dist/wheels")
     wheels_dir.mkdir(parents=True, exist_ok=True)
     
-    # 创建临时构建目录
+    # Create a temporary build folder
     build_dir = Path("build/pydensecrf_build")
     if build_dir.exists():
         print(f"清理旧的构建目录: {build_dir}")
         try:
-            # Windows 下 Git 仓库文件可能被锁定,需要特殊处理
+            # On Windows, files of a Git repository may be locked and need special handling
             if sys.platform == "win32":
                 def handle_remove_readonly(func, path, exc):
                     """处理只读文件删除错误"""
@@ -93,14 +93,14 @@ def build_wheel():
     print(f"\n✓ 输出目录: {wheels_dir.absolute()}")
     print(f"✓ 构建目录: {build_dir.absolute()}")
     
-    # 安装构建工具
+    # Install the build tools
     if not run_command(
         [sys.executable, "-m", "pip", "install", "--upgrade", "pip", "wheel", "setuptools", "build"],
         "安装构建工具"
     ):
         return False
     
-    # 克隆 pydensecrf 仓库
+    # Clone the pydensecrf repository
     repo_url = "https://github.com/lucasb-eyer/pydensecrf.git"
     repo_dir = build_dir / "pydensecrf"
     
@@ -112,19 +112,19 @@ def build_wheel():
 
         return False
     
-    # 构建 wheel
+    # Build the wheel
     original_dir = os.getcwd()
     try:
         os.chdir(repo_dir)
         
-        # 使用 python -m build 生成 wheel
+        # Build the wheel with python -m build
         if not run_command(
             [sys.executable, "-m", "build", "--wheel"],
             "构建 wheel 文件"
         ):
             return False
         
-        # build 默认输出到 ./dist,将文件移动到目标目录
+        # build writes to ./dist by default; move the files to the target folder
         build_dist = repo_dir / "dist"
         print(f"\n尝试从 {build_dist} 移动文件到 {wheels_dir}")
         
@@ -153,7 +153,7 @@ def build_wheel():
     finally:
         os.chdir(original_dir)
     
-    # 列出生成的 wheel 文件
+    # List the wheel files that were built
     print(f"\n{'='*60}")
     print("生成的 wheel 文件:")
     print(f"{'='*60}")
@@ -188,12 +188,12 @@ def main():
     print("pydensecrf Wheel 构建脚本")
     print("="*60)
     
-    # 检查是否有 git
+    # Check for git
     if not shutil.which("git"):
         print("❌ 错误: 未找到 git,请先安装 Git")
         return 1
     
-    # 检查是否有 C++ 编译工具
+    # Check for a C++ build toolchain
     if sys.platform == "win32":
         if not shutil.which("cl.exe"):
             print("⚠️  警告: 未找到 cl.exe (Microsoft C++ 编译器)")

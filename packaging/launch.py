@@ -12,11 +12,11 @@ import sys
 from pathlib import Path
 from urllib.parse import urlparse
 
-# 项目配置
+# Project settings
 PYTHON_VERSION_MIN = (3, 12)
-PYTHON_VERSION_MAX = (3, 12)  # 仅支持Python 3.12,不支持3.13+
+PYTHON_VERSION_MAX = (3, 12)  # Only Python 3.12 is supported, not 3.13+
 
-# 路径配置
+# Path settings
 PATH_ROOT = Path(__file__).parent.parent
 if str(PATH_ROOT) not in sys.path:
     sys.path.insert(0, str(PATH_ROOT))
@@ -40,12 +40,12 @@ from desktop_qt_ui.core.git_update_helpers import (
     update_branch as shared_update_branch,
 )
 
-# 获取环境变量
+# Read the environment variables
 python = sys.executable
 AUTO_UPDATE_MODE = False
 UPDATE_BRANCH_OVERRIDE = None
 
-# Git路径配置 (优先使用便携版)
+# Git path (the portable version is preferred)
 portable_git = PATH_ROOT / "PortableGit" / "cmd" / "git.exe"
 if portable_git.exists():
     git = str(portable_git)
@@ -54,18 +54,18 @@ else:
 
 index_url = os.environ.get('INDEX_URL', "")
 
-# 备用镜像源列表（按优先级排序）
+# Fallback mirror list (in order of priority)
 MIRROR_URLS = [
-    "https://pypi.tuna.tsinghua.edu.cn/simple/",  # 清华源
-    "https://mirrors.aliyun.com/pypi/simple/",     # 阿里云
-    "https://pypi.douban.com/simple/",             # 豆瓣
-    "https://pypi.org/simple/",                    # 官方源（作为最后备选）
+    "https://pypi.tuna.tsinghua.edu.cn/simple/",  # Tsinghua mirror
+    "https://mirrors.aliyun.com/pypi/simple/",     # Alibaba Cloud
+    "https://pypi.douban.com/simple/",             # Douban
+    "https://pypi.org/simple/",                    # Official index (as the last option)
 ]
 
-# PyTorch 专用源回退列表。
-# 说明：
-# - primary source 来自 pyproject.toml 中 [[tool.uv.index]] 定义的 PyTorch 源
-# - 这里补充官方源之外的镜像，安装 torch 相关包时按顺序回退
+# Fallback list of dedicated PyTorch sources.
+# Notes:
+# - the primary source is the PyTorch source defined by [[tool.uv.index]] in pyproject.toml
+# - mirrors besides the official source are added here; torch packages fall back through them in order
 PYTORCH_INDEX_FALLBACKS = {
     "https://download.pytorch.org/whl/cpu": [
         "https://mirror.sjtu.edu.cn/pytorch-wheels/cpu/",
@@ -79,8 +79,8 @@ PYTORCH_INDEX_FALLBACKS = {
     ],
 }
 
-# 对部分 PyTorch 源使用自定义尝试顺序。
-# 例如 cu130/cu126 优先走国内镜像，失败后再回退官方源。
+# Some PyTorch sources use a custom order of attempts.
+# For example, cu130/cu126 try the mirrors in China first and fall back to the official source on failure.
 PYTORCH_INDEX_PRIORITY = {
     "https://download.pytorch.org/whl/cu130": [
         "https://mirrors.aliyun.com/pytorch-wheels/cu130/",
@@ -167,8 +167,8 @@ def get_pytorch_index_candidates(primary_index_url):
 
 
 # ============================================================
-# pyproject.toml dependency groups 读取
-# 依赖声明在 pyproject.toml 中：公共依赖 + cpu/cuda13.0/cuda12.6/rocm7.2.1/metal 五个后端组
+# Reading the dependency groups of pyproject.toml
+# The dependencies are declared in pyproject.toml: common dependencies + five backend groups, cpu/cuda13.0/cuda12.6/rocm7.2.1/metal
 # ============================================================
 PYPROJECT_FILE = PATH_ROOT / 'pyproject.toml'
 DEP_VARIANTS = ('cpu', 'cuda13.0', 'cuda12.6', 'rocm7.2.1', 'metal')
@@ -329,7 +329,7 @@ def run(command, desc=None, errdesc=None, custom_env=None, live=False, timeout=N
     env = os.environ if custom_env is None else custom_env
 
     if live:
-        # 实时模式：直接显示输出
+        # Live mode: show the output directly
         result = subprocess.run(command, shell=True, env=env)
         if result.returncode != 0:
             raise RuntimeError(L(f"""{errdesc or '命令执行错误'}.
@@ -340,7 +340,7 @@ Exit code: {result.returncode}"""))
         return ""
 
     if not capture_output:
-        # 不捕获输出模式：丢弃输出避免死锁
+        # No-capture mode: discard the output to avoid a deadlock
         result = subprocess.run(
             command, 
             shell=True, 
@@ -357,7 +357,7 @@ Command: {command}
 Exit code: {result.returncode}"""))
         return ""
 
-    # 捕获输出模式：使用 Popen + communicate 避免死锁
+    # Capture mode: Popen + communicate to avoid a deadlock
     try:
         process = subprocess.Popen(
             command,
@@ -367,10 +367,10 @@ Exit code: {result.returncode}"""))
             stderr=subprocess.PIPE
         )
         
-        # communicate() 会同时读取 stdout 和 stderr，避免死锁
+        # communicate() reads stdout and stderr together, which avoids a deadlock
         stdout_bytes, stderr_bytes = process.communicate(timeout=timeout)
         
-        # 解码输出
+        # Decode the output
         try:
             stdout = stdout_bytes.decode('utf-8', errors='ignore')
         except Exception:
@@ -405,7 +405,7 @@ stderr: {stderr if stderr else '<empty>'}
         
     except subprocess.TimeoutExpired:
         process.kill()
-        process.communicate()  # 清理剩余输出
+        process.communicate()  # Drain the remaining output
         raise RuntimeError(L(f"""{errdesc or '命令超时'}.
 命令: {command}
 超时: {timeout}秒""", f"""{errdesc or 'Command timed out'}.
@@ -427,7 +427,7 @@ def run_pip(args, desc=None):
         
         return f'"{python}" -m pip {pip_args} --prefer-binary{index_url_line}{trusted_host_line} --disable-pip-version-check --no-warn-script-location'
     
-    # 如果用户指定了 INDEX_URL，优先使用
+    # When the user set INDEX_URL, it is used first
     if index_url:
         mirrors_to_try = [index_url] + [m for m in MIRROR_URLS if m != index_url]
     else:
@@ -461,34 +461,34 @@ def run_pip(args, desc=None):
     ))
 
 
-# 需要从 PyTorch 源下载的包列表（包括 PyTorch 及其依赖）
+# Packages that have to be downloaded from a PyTorch source (PyTorch and its dependencies)
 PYTORCH_SOURCE_PACKAGES = [
     'torch', 'torchvision', 'torchaudio', 'xformers',
-    # PyTorch 核心依赖
+    # Core PyTorch dependencies
     'pytorch-triton', 'pytorch-triton-rocm', 'pytorch-triton-xpu',
     'torch-cuda80', 'torch-model-archiver', 'torch-tb-profiler',
     'torch-tensorrt', 'torchao', 'torchaudio', 'torchcodec',
     'torchcsprng', 'torchdata', 'torchmetrics', 'torchrec',
     'torchrec-cpu', 'torchserve', 'torchtext', 'torchvision',
-    # NVIDIA CUDA 相关
+    # NVIDIA CUDA packages
     'nvidia-cublas-cu12', 'nvidia-cuda-cupti-cu12', 'nvidia-cuda-nvrtc-cu12',
     'nvidia-cuda-runtime-cu12', 'nvidia-cudnn-cu11', 'nvidia-cudnn-cu12',
     'nvidia-cudnn-cu13', 'nvidia-cufft-cu12', 'nvidia-cufile-cu12',
     'nvidia-curand-cu12', 'nvidia-cusolver-cu12', 'nvidia-cusparse-cu12',
     'nvidia-cusparselt-cu12', 'nvidia-nccl-cu12', 'nvidia-nvjitlink-cu12',
     'nvidia-nvshmem-cu12', 'nvidia-nvtx-cu12',
-    # Intel oneAPI 相关
+    # Intel oneAPI packages
     'intel-cmplr-lib-rt', 'intel-cmplr-lib-ur', 'intel-cmplr-lic-rt',
     'intel-opencl-rt', 'intel-openmp', 'intel-pti', 'intel-sycl-rt',
     'oneccl', 'oneccl-devel', 'onemkl-sycl-blas', 'onemkl-sycl-dft',
     'onemkl-sycl-lapack', 'onemkl-sycl-rng', 'onemkl-sycl-sparse',
-    # 其他 PyTorch 生态依赖
+    # Other dependencies of the PyTorch ecosystem
     'triton', 'fbgemm-gpu', 'fbgemm-gpu-genai', 'flashinfer',
     'flashinfer-python', 'vllm', 'cuda-bindings', 'dpcpp-cpp-rt',
     'mpi-rt', 'tcmlib'
 ]
 
-# 不应从 PyTorch 源下载的包（即使名字以 torch 开头）
+# Packages that should not be downloaded from a PyTorch source (even though their name starts with torch)
 PYTORCH_SOURCE_EXCLUDED = ['torchsummary', 'torchmetrics']
 
 
@@ -514,7 +514,7 @@ def find_uv():
     system_uv = shutil.which('uv')
     if system_uv:
         return f'"{system_uv}"'
-    # 环境内 pip 安装过 uv 的情况（conda 旧环境兼容）
+    # The case where uv was installed with pip inside the environment (for old conda environments)
     try:
         import importlib.util
         if importlib.util.find_spec('uv') is not None:
@@ -591,7 +591,7 @@ def run_uv_packages(uv, packages, primary_index_url, desc=None):
     """
     import urllib.parse
 
-    # 缓存放到包目录所在磁盘：跨盘无法硬链接会退化成整份复制（慢且占双倍空间）
+    # Put the cache on the disk of the package folder: across disks hard links are impossible and it degrades to a full copy (slow, and twice the space)
     os.environ.setdefault('UV_CACHE_DIR', str(PATH_ROOT / 'packaging' / 'uv_cache'))
 
     if primary_index_url:
@@ -611,9 +611,9 @@ def run_uv_packages(uv, packages, primary_index_url, desc=None):
         result = subprocess.run(cmd, shell=True, env=os.environ)
         return result.returncode == 0
 
-    # 先装 PyTorch 相关包（按优先级回退：国内镜像优先，官方源兜底）
-    # 官方源是标准 PEP 503 索引，直接当 --index-url 用；
-    # 国内镜像是静态 wheel 目录，用 --find-links 解析，其余依赖走 PyPI 镜像
+    # Install the PyTorch packages first (falling back by priority: mirrors in China first, the official source as the last resort)
+    # The official source is a standard PEP 503 index and is used directly as --index-url;
+    # the mirrors in China are static wheel folders resolved with --find-links, and the other dependencies come from a PyPI mirror
     if pytorch_pkgs:
         pypi_mirror = index_url or MIRROR_URLS[0]
         installed = False
@@ -631,7 +631,7 @@ def run_uv_packages(uv, packages, primary_index_url, desc=None):
         if not installed:
             raise RuntimeError(L('uv 安装 PyTorch 相关包失败（所有 PyTorch 源均失败）', 'uv could not install the PyTorch packages (every PyTorch index failed)'))
 
-    # 再批量装其余包（走 PyPI 镜像，按顺序回退）
+    # Then install the remaining packages in one go (from the PyPI mirrors, falling back in order)
     if normal_pkgs:
         if index_url:
             mirrors_to_try = [index_url] + [m for m in MIRROR_URLS if m != index_url]
@@ -659,7 +659,7 @@ def run_pip_requirements(variant, desc=None, exclude_packages=None):
         desc: 描述信息
         exclude_packages: 需要排除的包名列表（小写），如 AMD 模式下跳过 PyTorch 生态包
     """
-    # 从 pyproject.toml 读取包列表和 PyTorch 主源
+    # Read the package list and the primary PyTorch source from pyproject.toml
     packages = get_variant_packages(variant)
     primary_index_url = get_variant_index_url(variant)
     if exclude_packages:
@@ -685,14 +685,14 @@ def run_pip_packages(packages, primary_index_url, desc=None):
 def ensure_git_safe_directory():
     """确保当前目录在 Git safe.directory 列表中，解决所有权问题"""
     try:
-        # 将项目根目录添加到 Git safe.directory
+        # Add the project root to Git safe.directory
         subprocess.run(
             [git, 'config', '--global', '--add', 'safe.directory', str(PATH_ROOT)],
             capture_output=True,
             check=False
         )
     except Exception:
-        pass  # 忽略错误，不影响后续操作
+        pass  # Ignore errors; they do not affect what follows
 
 
 def restart_maintenance(action):
@@ -817,7 +817,7 @@ def is_integrated_gpu(gpu_type, gpu_name):
     """判断是否为核显/低性能显示适配器。"""
     upper = (gpu_name or '').upper()
 
-    # 先排除常见独显标记，避免把 "Radeon RX ... Graphics" 误判为核显。
+    # Rule out the usual discrete card markers first, so "Radeon RX ... Graphics" is not mistaken for integrated graphics.
     discrete_markers = [
         ' RX ', 'RX ', 'RADEON PRO', 'PRO W', 'MI300', 'MI350',
         'GEFORCE', 'RTX', 'GTX', 'QUADRO', 'TESLA', 'ARC A', 'ARC B',
@@ -840,19 +840,19 @@ def is_integrated_gpu(gpu_type, gpu_name):
 def check_nvidia_cuda_version():
     """检查 NVIDIA CUDA 驱动版本"""
     try:
-        # 尝试运行 nvidia-smi 获取驱动版本
+        # Try to run nvidia-smi to get the driver version
         cmd = 'nvidia-smi --query-gpu=driver_version --format=csv,noheader'
         output = subprocess.check_output(cmd, shell=True, text=True, stderr=subprocess.DEVNULL, timeout=5, encoding='gbk', errors='ignore')
         driver_version = output.strip().split('\n')[0].strip()
 
-        # 尝试从nvidia-smi直接输出获取CUDA版本
-        # nvidia-smi输出的第一行通常包含CUDA版本信息
+        # Try to get the CUDA version directly from the nvidia-smi output
+        # The first line of the nvidia-smi output usually holds the CUDA version
         try:
             cmd_full = 'nvidia-smi'
             full_output = subprocess.check_output(cmd_full, shell=True, text=True, stderr=subprocess.DEVNULL, timeout=5, encoding='gbk', errors='ignore')
-            # 解析 "CUDA Version: X.Y" 格式
+            # Parse the "CUDA Version: X.Y" format
             import re
-            # 兼容新旧 nvidia-smi 输出格式: "CUDA Version: 12.8" / "CUDA UMD Version: 13.3"
+            # Handles both the old and the new nvidia-smi output: "CUDA Version: 12.8" / "CUDA UMD Version: 13.3"
             cuda_match = re.search(r'CUDA (?:UMD )?Version:\s*(\d+\.\d+)', full_output)
             if cuda_match:
                 cuda_version = cuda_match.group(1)
@@ -861,7 +861,7 @@ def check_nvidia_cuda_version():
         except Exception:
             pass
 
-        # 如果无法获取CUDA版本，返回驱动版本
+        # When the CUDA version cannot be found, return the driver version
         return None, None, driver_version
     except Exception:
         return None, None, None
@@ -869,7 +869,7 @@ def check_nvidia_cuda_version():
 
 def prompt_user_choose_gpu(all_gpus, interactive=True):
     """选择多显卡中的计算设备；非交互模式直接采用默认设备。"""
-    # 只有一张显卡，直接返回
+    # Only one graphics card: return it directly
     if len(all_gpus) <= 1:
         return all_gpus[0]
 
@@ -900,18 +900,18 @@ def prompt_user_choose_gpu(all_gpus, interactive=True):
             max_priority = priority
             default_idx = idx
 
-    # 检查是否配置了环境变量来跳过手动选择
+    # Check whether an environment variable is set to skip the manual choice
     env_choice = os.environ.get('MANGAT_SELECTED_GPU')
     if env_choice:
         env_choice = env_choice.strip().upper()
-        # 1. 尝试匹配序号 (如 "1", "2")
+        # 1. Try to match a number (such as "1", "2")
         if env_choice.isdigit():
             choice_idx = int(env_choice)
             if 1 <= choice_idx <= len(options):
                 selected = options[choice_idx - 1]
                 print(L(f"检测到环境变量 MANGAT_SELECTED_GPU={env_choice}，已自动选择显卡: {selected[1]}", f"MANGAT_SELECTED_GPU={env_choice} is set; graphics card selected automatically: {selected[1]}"))
                 return selected
-        # 2. 尝试匹配显卡类型 (如 "NVIDIA", "AMD")。同类型多卡时选优先级最高的。
+        # 2. Try to match the card type (such as "NVIDIA", "AMD"). With several cards of the same type, the one with the highest priority is chosen.
         type_matches = [
             (gpu_type, gpu_name)
             for gpu_type, gpu_name in options
@@ -921,15 +921,15 @@ def prompt_user_choose_gpu(all_gpus, interactive=True):
             selected = max(type_matches, key=get_gpu_priority)
             print(L(f"检测到环境变量 MANGAT_SELECTED_GPU={env_choice}，已自动选择显卡: {selected[1]}", f"MANGAT_SELECTED_GPU={env_choice} is set; graphics card selected automatically: {selected[1]}"))
             return selected
-        # 3. 尝试模糊匹配显卡名称 (如 "4070", "780M")
+        # 3. Try a fuzzy match on the card name (such as "4070", "780M")
         for gpu_type, gpu_name in options:
             if env_choice in gpu_name.upper():
                 print(L(f"检测到环境变量 MANGAT_SELECTED_GPU={env_choice}，已自动选择显卡: {gpu_name}", f"MANGAT_SELECTED_GPU={env_choice} is set; graphics card selected automatically: {gpu_name}"))
                 return gpu_type, gpu_name
 
-    # 多张显卡，提示用户选择
+    # Several graphics cards: ask the user to choose
     if not interactive:
-        # 自动更新不能阻塞等待输入；沿用同一套默认优先级。
+        # An automatic update cannot block waiting for input; it follows the same default priority.
         return options[default_idx - 1]
 
     print()
@@ -980,7 +980,7 @@ def _detect_windows_gpus():
     """List the graphics cards on Windows as (type, name), trying each method in turn."""
     all_gpus = []
 
-    # 方法1: 尝试 PowerShell Get-CimInstance（Windows 8+，无需额外工具）
+    # Method 1: try PowerShell Get-CimInstance (Windows 8+, no extra tools needed)
     try:
         cmd = 'powershell -NoProfile -Command "Get-CimInstance Win32_VideoController | Select-Object -ExpandProperty Name"'
         output = subprocess.check_output(cmd, shell=True, text=True, stderr=subprocess.DEVNULL, timeout=5, encoding='gbk', errors='ignore')
@@ -988,7 +988,7 @@ def _detect_windows_gpus():
     except Exception:
         pass
 
-    # 方法2: 尝试 wmic（经典方法，兼容老系统）
+    # Method 2: try wmic (the classic way, works on old systems)
     try:
         cmd = 'wmic path win32_VideoController get name'
         output = subprocess.check_output(cmd, shell=True, text=True, stderr=subprocess.DEVNULL, timeout=5, encoding='gbk', errors='ignore')
@@ -996,7 +996,7 @@ def _detect_windows_gpus():
     except Exception:
         pass
 
-    # 方法3: 尝试 PowerShell Get-WmiObject（更老的 PowerShell）
+    # Method 3: try PowerShell Get-WmiObject (older PowerShell)
     try:
         cmd = 'powershell -NoProfile -Command "Get-WmiObject Win32_VideoController | Select-Object -ExpandProperty Name"'
         output = subprocess.check_output(cmd, shell=True, text=True, stderr=subprocess.DEVNULL, timeout=5, encoding='gbk', errors='ignore')
@@ -1004,7 +1004,7 @@ def _detect_windows_gpus():
     except Exception:
         pass
 
-    # 方法4: 尝试读取注册表（最底层的方法）
+    # Method 4: try reading the registry (the lowest-level way)
     try:
         cmd = 'reg query "HKLM\\SYSTEM\\CurrentControlSet\\Control\\Class\\{4d36e968-e325-11ce-bfc1-08002be10318}" /s /v DriverDesc'
         output = subprocess.check_output(cmd, shell=True, text=True, stderr=subprocess.DEVNULL, timeout=5, encoding='gbk', errors='ignore')
@@ -1012,7 +1012,7 @@ def _detect_windows_gpus():
     except Exception:
         pass
 
-    # 方法5: 尝试使用 wmi Python 库（需要额外安装，作为最后备选）
+    # Method 5: try the wmi Python library (needs an extra install, as the last option)
     if not all_gpus:
         try:
             try:
@@ -1042,18 +1042,18 @@ def _detect_windows_gpus():
 def _detect_apple_silicon():
     """Return the detection result for an Apple Silicon Mac, or None on any other machine."""
     try:
-        # 检测是否是 Apple Silicon (M1/M2/M3/M4 等)
+        # Detect Apple Silicon (M1/M2/M3/M4 and so on)
         import platform
         machine = platform.machine()
 
         if machine == 'arm64':
-            # Apple Silicon Mac，使用 system_profiler 获取芯片信息
+            # Apple Silicon Mac: get the chip information with system_profiler
             try:
                 output = subprocess.check_output(
                     "system_profiler SPHardwareDataType | grep 'Chip'",
                     shell=True, text=True, stderr=subprocess.DEVNULL, timeout=5
                 )
-                # 解析芯片名称，例如 "Chip: Apple M4 Pro"
+                # Parse the chip name, for example "Chip: Apple M4 Pro"
                 chip_name = ""
                 for line in output.strip().split('\n'):
                     if 'Chip' in line:
@@ -1065,15 +1065,15 @@ def _detect_apple_silicon():
                 if chip_name and ('M1' in chip_name or 'M2' in chip_name or 
                                   'M3' in chip_name or 'M4' in chip_name or
                                   'Apple' in chip_name):
-                    # Apple Silicon，支持 Metal
+                    # Apple Silicon, supports Metal
                     return "AppleSilicon", chip_name, None, None, None, None
             except Exception:
                 pass
 
-            # 如果无法获取具体芯片名称，但确定是 arm64，仍然返回 Apple Silicon
+            # When the exact chip name cannot be found but it is certainly arm64, Apple Silicon is still returned
             return "AppleSilicon", "Apple Silicon", None, None, None, None
 
-        # Intel Mac，继续使用下面的通用检测逻辑
+        # Intel Mac: continue with the general detection logic below
     except Exception:
         pass
     return None
@@ -1088,7 +1088,7 @@ def _detect_unix_gpus():
     except Exception:
         pass
 
-    # 尝试使用 lshw (Linux only) 作为补充
+    # Try lshw (Linux only) as a supplement
     if not all_gpus:
         try:
             output = subprocess.check_output("lshw -C display 2>/dev/null | grep 'product:'", shell=True, text=True, stderr=subprocess.DEVNULL, timeout=5, encoding='utf-8', errors='ignore')
@@ -1103,10 +1103,10 @@ def _gpu_details(all_gpus, interactive):
     if len(all_gpus) > 1:
         gpu_type, gpu_name = prompt_user_choose_gpu(all_gpus, interactive=interactive)
     else:
-        # 单张显卡：直接使用第一个
+        # A single graphics card: use the first one directly
         gpu_type, gpu_name = all_gpus[0]
 
-    # 如果选择了 NVIDIA，补充驱动 CUDA 上限与显卡计算能力。
+    # When NVIDIA was chosen, add the CUDA limit of the driver and the compute capability of the card.
     if gpu_type == "NVIDIA":
         cuda_major, cuda_version, driver_version = check_nvidia_cuda_version()
         compute_capability = detect_nvidia_compute_capability(gpu_name)
@@ -1149,9 +1149,9 @@ def detect_amd_gfx_version(gpu_name):
     
     gpu_name_upper = gpu_name.upper()
     
-    # AMD 显卡型号到 gfx 版本的映射（Windows ROCm 7.2.1 + PyTorch 支持列表）
+    # Mapping from AMD card models to gfx versions (the support list of Windows ROCm 7.2.1 + PyTorch)
     amd_gpu_mapping = {
-        # CDNA 数据中心系列 - 支持
+        # CDNA data centre series - supported
         'gfx94X-dcgpu': {
             'keywords': ['MI300A', 'MI300X'],
             'name': 'CDNA (MI300A/MI300X)',
@@ -1163,57 +1163,57 @@ def detect_amd_gfx_version(gpu_name):
             'has_torch': True
         },
 
-        # RDNA 3 架构 - 支持的具体型号
+        # RDNA 3 architecture - the specific supported models
         'gfx110X-dgpu': {
             'keywords': ['RX 7900 XTX', '7900 XTX', 'RX 7800 XT', '7800 XT', 'RX 7700S', '7700S', 'FRAMEWORK LAPTOP 16'],
             'name': 'RDNA 3 (RX 7900 XTX / RX 7800 XT / RX 7700S)',
             'has_torch': True
         },
 
-        # Strix Halo iGPU - 支持
+        # Strix Halo iGPU - supported
         'gfx1151': {
             'keywords': ['STRIX HALO'],
             'name': 'Strix Halo iGPU',
             'has_torch': True
         },
 
-        # RDNA 4 架构 - 支持的具体型号
+        # RDNA 4 architecture - the specific supported models
         'gfx120X-all': {
             'keywords': ['RX 9060 XT', 'RX 9060', 'RX 9070 XT', 'RX 9070'],
             'name': L('RDNA 4 (RX 9060/9070 系列)', 'RDNA 4 (RX 9060/9070 series)'),
             'has_torch': True
         },
 
-        # RDNA 3 APU 核显 - 官方不支持但可越狱加速
+        # RDNA 3 APU integrated graphics - not officially supported, but acceleration can be enabled with an override
         'gfx1103': {
             'keywords': ['780M', '760M', '740M'],
             'name': L('RDNA 3 APU (Radeon 780M / 760M / 740M) - 越狱加速', 'RDNA 3 APU (Radeon 780M / 760M / 740M) - unofficial acceleration'),
             'has_torch': False
         },
 
-        # RDNA 3.5 APU 核显 - 官方不支持但可越狱加速
+        # RDNA 3.5 APU integrated graphics - not officially supported, but acceleration can be enabled with an override
         'gfx1150': {
             'keywords': ['890M', '880M', '860M'],
             'name': L('RDNA 3.5 APU (Radeon 890M / 880M / 860M) - 越狱加速', 'RDNA 3.5 APU (Radeon 890M / 880M / 860M) - unofficial acceleration'),
             'has_torch': False
         },
         
-        # 以下架构不支持 torch（已验证）
-        # RDNA 2 架构 (RX 6000 系列) - 不支持
+        # The architectures below do not support torch (verified)
+        # RDNA 2 architecture (RX 6000 series) - not supported
         'gfx103X-dgpu': {
             'keywords': ['RX 6', '6900', '6800', '6700', '6600', '6500', '6400'],
             'name': L('RDNA 2 (RX 6000 系列) - 不支持 PyTorch', 'RDNA 2 (RX 6000 series) - PyTorch not supported'),
             'has_torch': False
         },
         
-        # RDNA 1 架构 (RX 5000 系列) - 不支持
+        # RDNA 1 architecture (RX 5000 series) - not supported
         'gfx101X-dgpu': {
             'keywords': ['RX 5', '5700', '5600', '5500'],
             'name': L('RDNA 1 (RX 5000 系列) - 不支持 PyTorch', 'RDNA 1 (RX 5000 series) - PyTorch not supported'),
             'has_torch': False
         },
         
-        # Vega 架构 - 不支持
+        # Vega architecture - not supported
         'gfx90X-dcgpu': {
             'keywords': ['VEGA', 'RADEON VII', 'MI25', 'MI50', 'MI60'],
             'name': L('Vega (Radeon VII / MI50/60) - 不支持 PyTorch', 'Vega (Radeon VII / MI50/60) - PyTorch not supported'),
@@ -1221,7 +1221,7 @@ def detect_amd_gfx_version(gpu_name):
         },
     }
     
-    # 尝试匹配
+    # Try to match
     for gfx_version, info in amd_gpu_mapping.items():
         for keyword in info['keywords']:
             if keyword in gpu_name_upper:
@@ -1273,8 +1273,8 @@ PYTORCH_RUNTIME_BROKEN_MARKERS = ("installation broken", "安装损坏", "WinErr
 def detect_installed_pytorch_version():
     """检测当前安装的PyTorch版本类型(CPU/GPU/Metal)"""
     try:
-        # 在子进程中检测，避免在主进程中加载 torch DLL
-        # 这样可以在需要时卸载 torch
+        # Detect in a subprocess, to avoid loading the torch DLLs in the main process,
+        # so that torch can be uninstalled when needed
         code = """
 import sys
 try:
@@ -1312,10 +1312,10 @@ except OSError as e:
             output = result.stdout.strip()
             if '|' in output:
                 pytorch_type, detail = output.split('|', 1)
-                # 兼容旧版/外部检测器使用的 ROCm 标签；内部统一使用 AMD。
+                # The ROCm label used by old versions and external detectors is still accepted; internally AMD is always used.
                 if pytorch_type == 'ROCm':
                     pytorch_type = 'AMD'
-                # 子进程输出 "None|未安装" 是字符串，转成真正的 None（未安装不算版本不匹配）
+                # The subprocess prints "None|<not installed>" as a string; turn it into a real None (not installed does not count as a version mismatch)
                 if pytorch_type == 'None':
                     return None, detail
                 return pytorch_type, detail
@@ -1370,7 +1370,7 @@ def get_update_variant_info():
             if detected_variant is not None:
                 target_variant = detected_variant
             elif is_nvidia_50_series_gpu(gpu_name):
-                # 50 系不能继续使用已安装的 cu126；交回自动安装流程提示升级驱动。
+                # A 50-series card cannot keep using an installed cu126; hand back to the automatic install flow, which asks for a driver upgrade.
                 target_variant = None
 
     return target_variant, installed_variant, pytorch_type, detail
@@ -1586,16 +1586,16 @@ def _variant_for_explicit_request(args, gpu_name):
     """
     use_amd_pytorch = False
     amd_gfx_version = None
-    # 用户手动指定,尊重用户选择
+    # Chosen by the user by hand: respect the choice
     requirements_file = normalize_variant(args.requirements)
     if requirements_file is None:
         print(L(f'错误: 无效的依赖方案 "{args.requirements}"，可选: {", ".join(DEP_VARIANTS)}', f'Error: invalid dependency variant "{args.requirements}". Available: {", ".join(DEP_VARIANTS)}'))
         return None
-    # 如果手动指定了 amd 方案，需要检测 gfx 版本并安装 AMD PyTorch
+    # When the amd variant is chosen by hand, the gfx version has to be detected and AMD PyTorch installed
     if requirements_file == 'rocm7.2.1':
         use_amd_pytorch = True
         detected_installed_amd = False
-        # 尝试从环境中检测已安装的 AMD PyTorch 版本（在子进程中检测）
+        # Try to detect the AMD PyTorch version already installed in the environment (in a subprocess)
         try:
             code = """
 import sys
@@ -1622,15 +1622,15 @@ except Exception:
                 if output.startswith('installed|'):
                     detected_installed_amd = True
                     rocm_version = output.split('|')[1]
-                    # 已安装 AMD ROCm PyTorch，获取版本信息
+                    # AMD ROCm PyTorch is installed: get the version information
                     print(L('\n检测到已安装 AMD ROCm PyTorch', '\nAMD ROCm PyTorch is already installed'))
                     print(L(f'ROCm 版本: {rocm_version}', f'ROCm version: {rocm_version}'))
                     print()
 
-                    # 询问是否更新
+                    # Ask whether to update
                     update_choice = input(L('是否更新 AMD ROCm PyTorch? (y/n, 默认n): ', 'Update AMD ROCm PyTorch? (y/n, default n): ')).strip().lower()
                     if update_choice in ['y', 'yes']:
-                        # 自动检测 gfx 版本
+                        # Detect the gfx version automatically
                         detected_gfx, arch_name, has_torch = detect_amd_gfx_version(gpu_name) if gpu_name else (None, None, False)
 
                         if detected_gfx and has_torch:
@@ -1666,11 +1666,11 @@ except Exception:
                     else:
                         use_amd_pytorch = False
         except Exception:
-            # 检测失败，继续
+            # Detection failed: carry on
             pass
 
         if not use_amd_pytorch:
-            # 未安装或非 AMD PyTorch
+            # Not installed, or not AMD PyTorch
             if requirements_file == 'rocm7.2.1':
                 if detected_installed_amd:
                     print(L('\n检测到已安装 AMD ROCm PyTorch，本次不更新。', '\nAMD ROCm PyTorch is already installed; not updating this time.'))
@@ -1691,10 +1691,10 @@ def _variant_for_nvidia(gpu_name, cuda_major, cuda_version, compute_capability):
     print('=' * 50)
     print()
 
-    # 50 系不支持项目的 CUDA 12.6 构建；未升级驱动时必须先提示，不能回退 cu126。
+    # The 50 series does not support the project's CUDA 12.6 build; without a driver upgrade the user must be told first, and cu126 is not a fallback.
     is_50_series = is_nvidia_50_series_gpu(gpu_name)
     if is_50_series and cuda_major is None:
-        cuda_major = 0  # 进入“不支持”分支，避免未知版本回退 CUDA 12.6。
+        cuda_major = 0  # Take the "unsupported" branch, so an unknown version does not fall back to CUDA 12.6.
     if cuda_major is not None:
         selected_variant = select_nvidia_dependency_variant(cuda_major, compute_capability, gpu_name)
         if selected_variant is None:
@@ -1776,7 +1776,7 @@ def _variant_for_nvidia(gpu_name, cuda_major, cuda_version, compute_capability):
                     print(L('无效输入,请输入 y 或 n',
                             'Invalid input; enter y or n'))
     else:
-        # 无法确认驱动/架构是否支持 CUDA 13 时，保守使用兼容性更好的 12.6。
+        # When it cannot be confirmed that the driver and architecture support CUDA 13, use 12.6, the more compatible and cautious choice.
         print(L('⚠️  无法检测 CUDA 版本 (可能未安装 nvidia-smi)',
                 '⚠️  Could not detect the CUDA version (nvidia-smi may be unavailable)'))
         print(L('⚠️  无法确认 CUDA 13.0 兼容性，将强制使用 CUDA 12.6',
@@ -1812,7 +1812,7 @@ def _variant_for_amd(gpu_name):
     """
     use_amd_pytorch = False
     amd_gfx_version = None
-    # 检测 AMD GPU 的 gfx 版本
+    # Detect the gfx version of the AMD GPU
     detected_gfx, arch_name, has_torch = detect_amd_gfx_version(gpu_name)
 
     print('=' * 50)
@@ -1842,7 +1842,7 @@ def _variant_for_amd(gpu_name):
         print(L('建议: 选择 [2] CPU 版本', 'Suggestion: choose [2] CPU version'))
     print()
 
-    # 检测到不支持时：展示支持型号并给出选择（默认 CPU）
+    # When it turns out to be unsupported: show the supported models and offer a choice (CPU by default)
     if not (detected_gfx and has_torch):
         user_action = choose_when_amd_unsupported()
         if user_action == 'exit':
@@ -1863,7 +1863,7 @@ def _variant_for_amd(gpu_name):
             choice = input(L('请选择 (1/2, 默认2): ', 'Choose (1/2, default 2): ')).strip()
             if choice == '1':
                 amd_gfx_version = detected_gfx
-                requirements_file = 'rocm7.2.1'  # 使用专用的 AMD 依赖方案
+                requirements_file = 'rocm7.2.1'  # Use the dedicated AMD dependency variant
                 use_amd_pytorch = True
                 print(L(f'✓ 自动识别并使用: {amd_gfx_version}', f'✓ Detected and using: {amd_gfx_version}'))
                 print(L(f'✓ 将使用 AMD ROCm PyTorch ({amd_gfx_version})', f'✓ AMD ROCm PyTorch will be used ({amd_gfx_version})'))
@@ -1880,7 +1880,7 @@ def _variant_for_amd(gpu_name):
 
 def _variant_for_apple_silicon(gpu_name):
     """Return the dependency variant for an Apple Silicon machine."""
-    # Apple Silicon Mac，使用 Metal 加速
+    # Apple Silicon Mac: use Metal acceleration
     print('=' * 50)
     print(L('检测到 Apple Silicon', 'Apple Silicon detected'))
     print('=' * 50)
@@ -1903,7 +1903,7 @@ def _variant_for_undetected_gpu(gpu_name):
     """
     use_amd_pytorch = False
     amd_gfx_version = None
-    # 自动检测失败,让用户手动选择
+    # Automatic detection failed: let the user choose by hand
     print('=' * 50)
     print(L('⚠️  无法自动检测显卡类型', '⚠️  Could not detect the graphics card type'))
     print('=' * 50)
@@ -1921,7 +1921,7 @@ def _variant_for_undetected_gpu(gpu_name):
             print(L(f'✓ 使用: {requirements_file} (NVIDIA CUDA)', f'✓ Using: {requirements_file} (NVIDIA CUDA)'))
             break
         elif choice == '2':
-            # AMD GPU（纯自动检测）
+            # AMD GPU (fully automatic detection)
             print()
             print(L('✓ 支持 PyTorch 的 AMD gfx 版本:', '✓ AMD gfx versions with PyTorch support:'))
             print('  - gfx94X-dcgpu: MI300A / MI300X')
@@ -1972,7 +1972,7 @@ def _variant_for_undetected_gpu(gpu_name):
 
 def _variant_for_other_gpu():
     """Ask which build to use on an Intel or other graphics card and return the variant."""
-    # Intel GPU - 在 Windows 上支持有限,推荐使用 CPU 版本
+    # Intel GPU - support on Windows is limited; the CPU version is recommended
     print('=' * 50)
     print(L('检测到 Intel GPU', 'Intel GPU detected'))
     print('=' * 50)
@@ -2005,11 +2005,11 @@ def _remove_mismatched_pytorch(requirements_file, use_amd_pytorch):
 
     Returns True when every dependency has to be installed again.
     """
-    # 检查是否需要卸载不匹配的 PyTorch 版本
+    # Check whether a mismatched PyTorch version has to be uninstalled
     need_reinstall = False
 
     if not need_reinstall:
-        # 检测当前安装的 PyTorch 精确运行时，CUDA 12.6 与 CUDA 13.0 也必须区分。
+        # Detect the exact runtime of the installed PyTorch; CUDA 12.6 and CUDA 13.0 have to be told apart as well.
         installed_pytorch_type, installed_detail = detect_installed_pytorch_version()
         installed_variant = dependency_variant_from_pytorch(
             installed_pytorch_type, installed_detail
@@ -2027,12 +2027,12 @@ def _remove_mismatched_pytorch(requirements_file, use_amd_pytorch):
             print()
             need_reinstall = True
 
-    # 如果需要重装 PyTorch，先卸载
+    # When PyTorch has to be reinstalled, uninstall it first
     if need_reinstall or use_amd_pytorch:
         print(L('正在卸载现有的 PyTorch...', 'Uninstalling the existing PyTorch...'))
         print(L('[提示] 请确保没有其他 Python 进程正在运行', '[NOTE] Make sure no other Python process is running'))
 
-        # 尝试多次卸载，处理文件占用问题
+        # Try to uninstall several times, to cope with files that are in use
         max_retries = 3
         for retry in range(max_retries):
             try:
@@ -2047,7 +2047,7 @@ def _remove_mismatched_pytorch(requirements_file, use_amd_pytorch):
                     print(L('警告: PyTorch 卸载失败，将尝试强制覆盖安装', 'Warning: PyTorch uninstall failed; trying to install over it'))
                     print(L(f'错误: {e}', f'Error: {e}'))
 
-        # 强制清理 pip 缓存，避免使用缓存的错误版本
+        # Clear the pip cache by force, so a cached wrong version is not used
         print(L('正在清理 pip 缓存...', 'Clearing the pip cache...'))
         try:
             run(f'"{python}" -m pip cache purge', L("清理缓存", "Clear cache"), L("无法清理缓存", "Could not clear the cache"))
@@ -2067,7 +2067,7 @@ def _install_amd_rocm_for_windows(amd_gfx_version):
     print(L('⚠️  前置要求: Windows 版 ROCm 7.2.1 PyTorch 必须安装 AMD 显卡驱动 26.2.2', '⚠️  Requirement: ROCm 7.2.1 PyTorch for Windows needs AMD graphics driver 26.2.2'))
     print()
 
-    # 第1步：先安装 ROCm SDK 依赖
+    # Step 1: install the ROCm SDK dependencies first
     rocm_sdk_urls = [
         "https://repo.radeon.com/rocm/windows/rocm-rel-7.2.1/rocm_sdk_core-7.2.1-py3-none-win_amd64.whl",
         "https://repo.radeon.com/rocm/windows/rocm-rel-7.2.1/rocm_sdk_devel-7.2.1-py3-none-win_amd64.whl",
@@ -2075,7 +2075,7 @@ def _install_amd_rocm_for_windows(amd_gfx_version):
         "https://repo.radeon.com/rocm/windows/rocm-rel-7.2.1/rocm-7.2.1.tar.gz",
     ]
 
-    # 第2步：再安装 PyTorch 三件套
+    # Step 2: then install the three PyTorch packages
     rocm_torch_urls = [
         "https://repo.radeon.com/rocm/windows/rocm-rel-7.2.1/torch-2.9.1%2Brocm7.2.1-cp312-cp312-win_amd64.whl",
         "https://repo.radeon.com/rocm/windows/rocm-rel-7.2.1/torchaudio-2.9.1%2Brocm7.2.1-cp312-cp312-win_amd64.whl",
@@ -2101,7 +2101,7 @@ def _install_amd_rocm_for_windows(amd_gfx_version):
         print(L('  1. 检查网络连接', '  1. Check the network connection'))
         print(L('  2. 确认 Python 版本为 3.12', '  2. Make sure Python is version 3.12'))
         print(L('  3. 如果仍有问题,请使用 CPU 版本重新安装', '  3. If it still fails, reinstall with the CPU version'))
-        # 安装失败，返回失败状态
+        # The install failed: return the failure state
         return False
     return True
 
@@ -2120,17 +2120,17 @@ def prepare_environment(args):
             "PyTorch DLL could not be loaded; install the VC++ runtime and retry.",
         ))
     
-    # 确保 packaging 已安装 (需要 < 25.0 版本)
+    # Make sure packaging is installed (a version < 25.0 is needed)
     try:
         import packaging.utils
         import packaging.version
 
         import packaging
-        # 检查是否有 packaging.requirements (在 25.0 中已移除)
+        # Check for packaging.requirements (removed in 25.0)
         try:
             from packaging.requirements import Requirement  # noqa: F401
         except (ImportError, AttributeError):
-            # packaging 版本过高,需要降级
+            # The packaging version is too new and has to be downgraded
             print(L('检测到 packaging 版本不兼容,正在安装兼容版本...', 'Incompatible packaging version detected, installing a compatible one...'))
             run_pip("install 'packaging<25.0'", "packaging")
             import packaging.utils
@@ -2152,12 +2152,12 @@ def prepare_environment(args):
 
     print(L('\n正在检查依赖...\n', '\nChecking dependencies...\n'))
     
-    # 将 packaging 目录添加到 Python 路径，以便导入 build_utils
+    # Add the packaging folder to the Python path, so build_utils can be imported
     packaging_dir = PATH_ROOT / 'packaging'
     if str(packaging_dir) not in sys.path:
         sys.path.insert(0, str(packaging_dir))
     
-    # 导入依赖检查工具
+    # Import the dependency checker
     try:
         from build_utils.package_checker import check_reqs
         check_variant_deps = lambda v: check_reqs(get_variant_packages(v))
@@ -2168,7 +2168,7 @@ def prepare_environment(args):
         print(L('   将跳过增量检查,强制重新安装所有依赖', '   Skipping the incremental check and reinstalling all dependencies'))
         check_variant_deps = lambda v: False
 
-    # 检测 GPU 并选择对应的依赖方案
+    # Detect the GPU and choose the matching dependency variant
     gpu_type, gpu_name, cuda_major, cuda_version, driver_version, compute_capability = detect_gpu()
     print(L(f'\n检测到的计算设备: {gpu_type}', f'\nCompute device detected: {gpu_type}'))
     if gpu_name:
@@ -2182,7 +2182,7 @@ def prepare_environment(args):
     print()
     
     if args.requirements != 'auto':
-        # 用户手动指定,尊重用户选择
+        # Chosen by the user by hand: respect the choice
         choice = _variant_for_explicit_request(args, gpu_name)
         if choice is None:
             return False, None
@@ -2198,21 +2198,21 @@ def prepare_environment(args):
         choice = (_variant_for_other_gpu(), False, None)
     requirements_file, use_amd_pytorch, amd_gfx_version = choice
 
-    # 选择对应的 PyTorch 版本（根据 pyproject.toml 中 dependency group 的版本）
-    # Windows AMD 使用固定 Radeon URL；Linux AMD 使用 pyproject.toml 中的 ROCm 索引。
-    # 这样可以避免版本冲突和 DLL 损坏问题
+    # Choose the matching PyTorch version (by the version in the dependency group of pyproject.toml)
+    # AMD on Windows uses a fixed Radeon URL; AMD on Linux uses the ROCm index in pyproject.toml.
+    # This avoids version conflicts and damaged DLLs
     
     windows_amd_install = use_amd_pytorch and sys.platform == 'win32'
 
     need_reinstall = _remove_mismatched_pytorch(requirements_file, use_amd_pytorch)
 
-    # Windows AMD 需要先安装 Radeon ROCm SDK，再安装配套 PyTorch wheels。
-    # Linux AMD 的 ROCm 依赖由 amd dependency group 统一交给 uv 处理。
+    # AMD on Windows needs the Radeon ROCm SDK installed first, then the matching PyTorch wheels.
+    # For AMD on Linux, the ROCm dependencies are handled by uv through the amd dependency group.
     if windows_amd_install:
         if not _install_amd_rocm_for_windows(amd_gfx_version):
             return False, None
 
-    # 检查并安装其他依赖
+    # Check and install the other dependencies
     if not PYPROJECT_FILE.exists():
         print(L(f'警告: 未找到 {PYPROJECT_FILE}', f'Warning: {PYPROJECT_FILE} was not found'))
         return False, None
@@ -2221,40 +2221,40 @@ def prepare_environment(args):
     if not check_variant_deps(requirements_file) or need_reinstall:
         if need_reinstall:
             print(L('强制重新安装所有依赖...', 'Reinstalling all dependencies...'))
-            # 只有 Windows AMD 用户才会在前面单独安装 PyTorch，其他平台从 dependency group 安装。
+            # Only AMD users on Windows get PyTorch installed separately earlier; other platforms install it from the dependency group.
             if windows_amd_install:
                 print(L('跳过依赖方案中的 PyTorch（AMD ROCm 已单独安装）', 'Skipping PyTorch in the dependency variant (AMD ROCm is installed separately)'))
-                # 排除 PyTorch 及其生态包（这些包依赖 torch，会触发 torch 安装）
+                # Leave out PyTorch and its ecosystem packages (they depend on torch and would start a torch install)
                 pytorch_related = ['torch', 'torchvision', 'torchaudio', 'xformers', 'torchsummary', 'open_clip_torch']
                 run_pip_requirements(requirements_file, L(f"{requirements_file} 方案依赖（跳过PyTorch）", f"{requirements_file} variant dependencies (PyTorch skipped)"), exclude_packages=pytorch_related)
             else:
                 run_pip_requirements(requirements_file, L(f"{requirements_file} 方案依赖", f"{requirements_file} variant dependencies"))
         else:
             print(L('发现缺失依赖,正在安装...', 'Missing dependencies found, installing...'))
-            # 使用逐个包安装，失败时从失败的包开始切换镜像重试
+            # Install package by package; on failure switch mirror and retry from the package that failed
             run_pip_requirements(requirements_file, L(f"{requirements_file} 方案依赖", f"{requirements_file} variant dependencies"))
     else:
         print(L('依赖已满足 ✓', 'Dependencies satisfied ✓'))
 
-    # 旧版本残留会因 ABI 不匹配导致 transformers 加载 libtorchaudio.pyd 失败。
-    # AMD ROCm 方案需要配套的 torchaudio，其他方案必须清理并确认卸载成功。
+    # Leftovers of an old version make transformers fail to load libtorchaudio.pyd because of an ABI mismatch.
+    # The AMD ROCm variant needs its matching torchaudio; for the other variants it must be removed, and the removal confirmed.
     if not cleanup_stale_torchaudio(requirements_file):
         raise RuntimeError(L('无法卸载残留的 torchaudio', 'Could not uninstall the leftover torchaudio'))
 
 
 
-    # 返回 AMD PyTorch 相关信息
+    # Return the AMD PyTorch information
     return use_amd_pytorch, amd_gfx_version
 
 
 # ============================================================
-# Git 镜像源 / 分支 / 版本(tag) 管理
+# Managing the Git mirror, branch and version (tag)
 # ============================================================
 GIT_MIRRORS = list(SHARED_GIT_MIRRORS)
 
 SUPPORTED_BRANCHES = list(SHARED_SUPPORTED_BRANCHES)
 
-# 维护菜单语言配置（持久化在 packaging/maintenance_config.json）
+# Language setting of the maintenance menu (stored in packaging/maintenance_config.json)
 MAINT_CONFIG_FILE = PATH_ROOT / 'packaging' / 'maintenance_config.json'
 LANG = 'zh'
 
@@ -2426,7 +2426,7 @@ def git_fetch_with_mirror_prompt(fetch_args=None, desc=None):
                 "[ERROR] Sync failed (network issue or current mirror unavailable)"))
         print(L(f"当前镜像源: {get_mirror_display_name()}",
                 f"Current mirror: {get_mirror_display_name()}"))
-        # 直接推荐另一条可用线路；其余线路仍可从菜单手动选择。
+        # Recommend the other working route directly; the remaining routes can still be chosen from the menu by hand.
         current = get_remote_url().removesuffix('.git')
         suggestion = None
         for zh_name, en_name, url in GIT_MIRRORS:
@@ -2544,7 +2544,7 @@ def switch_version_by_tag():
 
 def check_version_info():
     """检查版本信息（基于当前分支/镜像源）"""
-    ensure_git_safe_directory()  # 确保 safe.directory 已配置
+    ensure_git_safe_directory()  # Make sure safe.directory is set
     print()
     print(L("正在检查版本...", "Checking version..."))
     print("=" * 40)
@@ -2552,7 +2552,7 @@ def check_version_info():
     branch, detached = get_current_branch()
     update_branch = get_update_branch()
 
-    # 获取当前版本
+    # Get the current version
     version_file = PATH_ROOT / "packaging" / "VERSION"
     try:
         if version_file.exists():
@@ -2575,8 +2575,8 @@ def check_version_info():
         executable=git,
     )
 
-    # 只有本次 fetch 成功，后续远程版本/提交对比才可信；
-    # 否则避免拿旧的 origin/* 引用误报“已是最新”。
+    # The later comparison of remote versions and commits can only be trusted when this fetch succeeded;
+    # otherwise avoid reporting "already up to date" from an old origin/* reference.
     remote_version = "unknown"
     remote_commit = "unknown"
     behind = None
@@ -2625,7 +2625,7 @@ def update_code_force(skip_confirm=False, target_branch=None):
         skip_confirm: 是否跳过确认提示（用于完整更新流程中）
         target_branch: 目标分支（默认当前分支，游离状态回落 main）
     """
-    ensure_git_safe_directory()  # 确保 safe.directory 已配置
+    ensure_git_safe_directory()  # Make sure safe.directory is set
     branch = target_branch or get_update_branch()
     print()
     print("=" * 40)
@@ -2661,12 +2661,12 @@ def update_code_force(skip_confirm=False, target_branch=None):
                 continue
         return False
 
-    # 清理平台特定文件
+    # Remove platform-specific files
     import platform
     import shutil
 
     if platform.system() == 'Windows':
-        # Windows 环境清理 macOS 文件
+        # On Windows, remove the macOS files
         files_to_remove = [
             'Unix-Install-or-Update.sh',
             'Unix-Start.sh',
@@ -2676,7 +2676,7 @@ def update_code_force(skip_confirm=False, target_branch=None):
             '.gitignore',
         ]
     elif platform.system() in ('Darwin', 'Linux'):
-        # Linux/macOS 环境清理 Windows 启动文件和编辑器配置，保留仓库元数据和 Unix 脚本。
+        # On Linux/macOS, remove the Windows start files and editor settings, keeping the repository metadata and the Unix scripts.
         files_to_remove = [
             'Win-Start.bat',
             'Win-Install-or-Update.bat',
@@ -2694,7 +2694,7 @@ def update_code_force(skip_confirm=False, target_branch=None):
                 else:
                     path.unlink()
             except Exception:
-                pass  # 忽略删除失败
+                pass  # Ignore a failed delete
 
     return True
 
@@ -2714,7 +2714,7 @@ def update_dependencies(args, *, select_cuda_variant=False):
         return False
     
     if select_cuda_variant:
-        # 只有 Torch 核心包需要升级时，才按当前驱动重新选择 CUDA 方案。
+        # The CUDA variant is only chosen again from the current driver when the core Torch packages need an upgrade.
         req_file, installed_variant, pytorch_type, detail = get_update_variant_info()
     else:
         req_file, pytorch_type, detail = get_requirements_file_from_env()
@@ -2759,7 +2759,7 @@ def update_dependencies_selective(args, missing_packages):
         print(L("[信息] 没有缺失的依赖包", "[INFO] No missing packages"))
         return True
     
-    # 导入依赖检查工具
+    # Import the dependency checker
     packaging_dir = PATH_ROOT / 'packaging'
     if str(packaging_dir) not in sys.path:
         sys.path.insert(0, str(packaging_dir))
@@ -2772,7 +2772,7 @@ def update_dependencies_selective(args, missing_packages):
         has_checker = False
         print(L("[警告] 无法导入依赖检查工具，将不进行安装前检查", "[WARNING] Could not import the dependency checker; skipping the pre-install check"))
     
-    # 从 pyproject.toml 读取 PyTorch 源
+    # Read the PyTorch source from pyproject.toml
     primary_index_url = None
     req_file = getattr(args, 'requirements', None)
     try:
@@ -2782,7 +2782,7 @@ def update_dependencies_selective(args, missing_packages):
     except Exception:
         pass
     
-    # 安装前再过滤一遍已满足的包
+    # Filter out packages that are already satisfied once more before installing
     to_install = []
     skip_count = 0
     for pkg in missing_packages:
@@ -2825,7 +2825,7 @@ def check_all_updates():
     print("=" * 40)
     print()
     
-    # 1. 检查代码版本和提交
+    # 1. Check the code version and commit
     print(L(f"[1/2] 检查代码版本... (分支: {update_branch}, 镜像: {get_mirror_display_name()})", f"[1/2] Checking code version... (branch: {update_branch}, mirror: {get_mirror_display_name()})"))
     version_file = PATH_ROOT / "packaging" / "VERSION"
     try:
@@ -2843,7 +2843,7 @@ def check_all_updates():
     except Exception:
         fetch_ok = False
 
-    # 获取远程版本
+    # Get the remote version
     remote_version = "unknown"
     if fetch_ok:
         try:
@@ -2859,7 +2859,7 @@ def check_all_updates():
         except Exception:
             remote_version = "unknown"
     
-    # 获取本地和远程的 commit hash
+    # Get the local and remote commit hashes
     try:
         local_commit = subprocess.run(
             [git, 'rev-parse', 'HEAD'],
@@ -2884,7 +2884,7 @@ def check_all_updates():
         except Exception:
             remote_commit = "unknown"
     
-    # 判断是否需要更新：版本号不同 或 提交不同
+    # Whether an update is needed: a different version number or a different commit
     version_differs = (current_version != remote_version and remote_version != "unknown")
     commit_differs = (local_commit != remote_commit and remote_commit != "unknown" and local_commit != "unknown")
     code_needs_update = (not fetch_ok) or version_differs or commit_differs
@@ -2904,11 +2904,11 @@ def check_all_updates():
     else:
         print(L("  状态: [已是最新]", "  Status: [up to date]"))
     
-    # 2. 检查依赖
+    # 2. Check the dependencies
     print()
     print(L("[2/2] 检查依赖...", "[2/2] Checking dependencies..."))
     
-    # 更新检查只读取已安装方案；硬件 CUDA 检测延迟到 Torch 核心包确实需要升级时。
+    # The update check only reads the installed variant; hardware CUDA detection is put off until the core Torch packages really need an upgrade.
     req_file, pytorch_type, detail = get_requirements_file_from_env()
     if req_file:
         print(L(f"  检测到 PyTorch: {pytorch_type} ({detail})", f"  PyTorch detected: {pytorch_type} ({detail})"))
@@ -2917,11 +2917,11 @@ def check_all_updates():
         print(L(f"  未检测到可用的 PyTorch: {detail}", f"  No usable PyTorch detected: {detail}"))
         req_file = None
 
-    # 检查依赖是否满足
+    # Check whether the dependencies are satisfied
     deps_needs_update = False
     missing_packages = []
     if req_file and PYPROJECT_FILE.exists():
-        # 导入依赖检查工具
+        # Import the dependency checker
         packaging_dir = PATH_ROOT / 'packaging'
         if str(packaging_dir) not in sys.path:
             sys.path.insert(0, str(packaging_dir))
@@ -2933,7 +2933,7 @@ def check_all_updates():
             if missing_packages:
                 deps_needs_update = True
                 print(L(f"  状态: [有缺失依赖，共 {len(missing_packages)} 个]", f"  Status: [{len(missing_packages)} missing dependencies]"))
-                # 显示缺失的包（最多显示10个）
+                # Show the missing packages (at most 10)
                 if len(missing_packages) <= 10:
                     for pkg in missing_packages:
                         pkg_name = pkg.split('==')[0].split('>=')[0].split('<=')[0].split('[')[0].strip()
@@ -2952,13 +2952,13 @@ def check_all_updates():
         print(L("  状态: [需要安装]", "  Status: [installation needed]"))
         deps_needs_update = True
     
-    # 检查完成提示
+    # Message that the check is done
     print()
     print("=" * 40)
     print(L("检查完成", "Check complete"))
     print("=" * 40)
     
-    # 汇总结果
+    # Summarise the results
     print()
     print(L("检查结果汇总:", "Summary:"))
     print("=" * 40)
@@ -3110,7 +3110,7 @@ def run_install(args):
     print("=" * 40)
     print()
 
-    # 选择线路（镜像源）
+    # Choose the route (mirror)
     current = get_remote_url().removesuffix('.git')
     default_idx = 1
     for i, (zh_name, en_name, url) in enumerate(GIT_MIRRORS, 1):
@@ -3132,7 +3132,7 @@ def run_install(args):
         subprocess.run([git, 'remote', 'set-url', 'origin', selected[2]], capture_output=True)
     print(L(f"✓ 使用线路: {selected[0]}", f"✓ Route: {selected[1]}"))
 
-    # 同步代码到远程分支
+    # Sync the code to the remote branch
     print()
     print(L("[1/2] 同步代码...", "[1/2] Syncing code..."))
     if update_code_force(skip_confirm=True):
@@ -3212,7 +3212,7 @@ def maintenance_menu(resume_action=None, automatic=False):
     print(L("漫画翻译器 - 安装或更新", "Manga Translator UI - Install / Update"))
     print("=" * 40)
 
-    # 创建一个简单的 args 对象用于依赖更新
+    # Create a simple args object for the dependency update
     class Args:
         def __init__(self):
             self.requirements = 'auto'
@@ -3235,7 +3235,7 @@ def maintenance_menu(resume_action=None, automatic=False):
             raise SystemExit(1)
         return
 
-    # 首次显示版本信息
+    # Show the version information for the first time
     check_version_info()
 
     while True:
