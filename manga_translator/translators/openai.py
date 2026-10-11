@@ -28,8 +28,8 @@ BROWSER_HEADERS = OPENAI_CURL_HEADERS
 
 class OpenAITranslator(CommonTranslator):
     """
-    OpenAI纯文本翻译器
-    支持批量文本翻译，不包含图片处理
+    OpenAI text-only translator.
+    Translates text in batches, without image handling
     """
     _LANGUAGE_CODE_MAP = VALID_LANGUAGES
     
@@ -59,11 +59,11 @@ class OpenAITranslator(CommonTranslator):
         self._setup_client()
     
     def set_prev_context(self, context: str):
-        """设置多页上下文（用于context_size > 0时）"""
+        """Set the multi-page context (used when context_size > 0)"""
         self.prev_context = context if context else ""
     
     def parse_args(self, args):
-        """解析配置参数"""
+        """Parse the configuration parameters"""
         # Call the parent parse_args to set the common parameters (attempts, post_check and so on)
         super().parse_args(args)
         translator_args = self._resolve_translator_config(args)
@@ -185,10 +185,10 @@ class OpenAITranslator(CommonTranslator):
         )
 
     def _setup_client(self, force_recreate: bool = False):
-        """设置OpenAI客户端
+        """Set up the OpenAI client
 
         Args:
-            force_recreate: 是否强制重建客户端（用于重试时断开旧连接）
+            force_recreate: whether the client is rebuilt by force (used on retries, to drop the old connection)
         """
         if force_recreate and self.client:
             # Close the old client and drop the connection
@@ -217,7 +217,7 @@ class OpenAITranslator(CommonTranslator):
             self.logger.debug("Created a new OpenAI client connection (forced curl_cffi mode)")
     
     async def _cleanup(self):
-        """清理资源"""
+        """Release the resources"""
         if self.client:
             try:
                 await self.client.close()
@@ -226,7 +226,7 @@ class OpenAITranslator(CommonTranslator):
                 pass  # Ignore errors during clean-up
 
     async def _abort_inflight_request(self):
-        """取消时中断当前请求连接，避免长时间阻塞。"""
+        """On cancellation, break the connection of the current request, to avoid blocking for a long time."""
         if not self.client:
             return
         try:
@@ -237,7 +237,7 @@ class OpenAITranslator(CommonTranslator):
             self.client = None
     
     def __del__(self):
-        """析构函数，确保资源被清理"""
+        """Destructor; makes sure the resources are released"""
         if self.client:
             try:
                 loop = asyncio.get_event_loop()
@@ -249,15 +249,15 @@ class OpenAITranslator(CommonTranslator):
                 pass  # Ignore all clean-up errors
 
     def _build_user_prompt(self, texts: List[str], ctx: Any, retry_attempt: int = 0, retry_reason: str = "") -> str:
-        """构建用户提示词（纯文本版）- 使用 JSON 格式以配合 HQ Prompt"""
+        """Build the user prompt (text-only version) - in JSON format, to go with the HQ prompt"""
         return self._build_user_prompt_for_texts(texts, ctx, "", retry_attempt=retry_attempt, retry_reason=retry_reason)
 
     def _get_system_prompt(self, source_lang: str, target_lang: str, custom_prompt_json: Dict[str, Any] = None, line_break_prompt_json: Dict[str, Any] = None, retry_attempt: int = 0, retry_reason: str = "", extract_glossary: bool = False) -> str:
-        """获取完整的系统提示词"""
+        """Get the complete system prompt"""
         return self._build_system_prompt(source_lang, target_lang, custom_prompt_json=custom_prompt_json, line_break_prompt_json=line_break_prompt_json, retry_attempt=retry_attempt, retry_reason=retry_reason, extract_glossary=extract_glossary)
 
     async def _translate_batch(self, texts: List[str], source_lang: str, target_lang: str, custom_prompt_json: Dict[str, Any] = None, line_break_prompt_json: Dict[str, Any] = None, ctx: Any = None, split_level: int = 0) -> List[str]:
-        """批量翻译方法（纯文本）"""
+        """Batch translation method (text only)"""
         if not texts:
             return []
         
@@ -588,7 +588,7 @@ class OpenAITranslator(CommonTranslator):
         raise last_exception if last_exception else Exception("OpenAI translation failed after all retries")
 
     async def _translate(self, from_lang: str, to_lang: str, queries: List[str], ctx=None) -> List[str]:
-        """主翻译方法"""
+        """Main translation method"""
         if not queries:
             return []
 

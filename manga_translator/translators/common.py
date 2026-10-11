@@ -216,7 +216,7 @@ class LanguageUnsupportedException(Exception):
         super().__init__(error)
 
 class BRMarkersValidationException(Exception):
-    """AI断句检查失败异常"""
+    """Raised when the AI line-breaking check fails"""
     def __init__(self, missing_count: int, total_count: int, tolerance: int):
         self.missing_count = missing_count
         self.total_count = total_count
@@ -234,10 +234,10 @@ class BRMarkersValidationException(Exception):
 
 class AsyncOpenAICurlCffi:
     """
-    异步 OpenAI 客户端包装器，使用 curl_cffi 绕过 TLS 指纹检测
-    完全兼容 AsyncOpenAI 的接口，可直接替换使用
+    Asynchronous OpenAI client wrapper that uses curl_cffi to get past TLS fingerprint checks.
+    Fully compatible with the AsyncOpenAI interface, so it can be used as a drop-in replacement
 
-    用法:
+    Usage:
         client = AsyncOpenAICurlCffi(
             api_key="your-api-key",
             base_url="https://api.openai.com/v1",
@@ -252,13 +252,13 @@ class AsyncOpenAICurlCffi:
     """
 
     class ChatCompletions:
-        """聊天完成接口"""
+        """Chat completions interface"""
 
         def __init__(self, parent):
             self.parent = parent
 
         async def create(self, model, messages, temperature=None, max_tokens=None, **kwargs):
-            """创建聊天完成请求"""
+            """Create a chat completion request"""
             url = f"{self.parent.base_url}/chat/completions"
 
             headers = {
@@ -321,7 +321,7 @@ class AsyncOpenAICurlCffi:
             return _OpenAIResponse(result)
 
         def _create_stream(self, url, data, headers):
-            """SSE 流式请求，返回异步可迭代对象。"""
+            """SSE streaming request; returns an asynchronous iterable."""
 
             async def _gen():
                 async with self.parent.session.stream(
@@ -358,19 +358,19 @@ class AsyncOpenAICurlCffi:
             return _gen()
 
     class Chat:
-        """聊天接口"""
+        """Chat interface"""
 
         def __init__(self, parent):
             self.completions = AsyncOpenAICurlCffi.ChatCompletions(parent)
 
     class Models:
-        """模型列表接口"""
+        """Model list interface"""
 
         def __init__(self, parent):
             self.parent = parent
 
         async def list(self):
-            """获取可用模型列表"""
+            """Get the list of available models"""
             url = f"{self.parent.base_url}/models"
 
             headers = {
@@ -424,16 +424,16 @@ class AsyncOpenAICurlCffi:
                  default_headers=None, http_client=None, impersonate=CURL_CFFI_IMPERSONATE,
                  timeout=600, stream_timeout=300):
         """
-        初始化异步客户端
+        Initialise the asynchronous client
 
         Args:
-            api_key: OpenAI API 密钥
-            base_url: API 基础 URL
-            default_headers: 默认请求头
-            http_client: 忽略此参数（为了兼容性）
-            impersonate: 浏览器指纹；默认跟随 curl_cffi 的最新 Chrome 指纹
-            timeout: 非流式请求超时时间（秒）
-            stream_timeout: 流式 HTTP 请求超时时间（秒）
+            api_key: OpenAI API key
+            base_url: API base URL
+            default_headers: default request headers
+            http_client: ignored (accepted for compatibility)
+            impersonate: browser fingerprint; follows the latest Chrome fingerprint of curl_cffi by default
+            timeout: timeout of non-streaming requests (seconds)
+            stream_timeout: timeout of streaming HTTP requests (seconds)
         """
         self.api_key = validate_api_key_for_http_header(
             resolve_openai_compatible_api_key(api_key, base_url)
@@ -461,21 +461,21 @@ class AsyncOpenAICurlCffi:
         self.models = self.Models(self)
 
     async def close(self):
-        """关闭 session"""
+        """Close the session"""
         if hasattr(self.session, 'close'):
             await self.session.close()
 
     async def __aenter__(self):
-        """异步上下文管理器入口"""
+        """Entry of the asynchronous context manager"""
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
-        """异步上下文管理器退出"""
+        """Exit of the asynchronous context manager"""
         await self.close()
 
 
 class _OpenAIResponse:
-    """模拟 OpenAI SDK 的响应对象"""
+    """Imitates the response object of the OpenAI SDK"""
 
     class Choice:
         class Message:
@@ -510,7 +510,7 @@ class _OpenAIResponse:
 
 
 class _OpenAIStreamChunk:
-    """模拟 OpenAI SDK stream chunk 对象（最小字段集）"""
+    """Imitates a stream chunk object of the OpenAI SDK (the minimum set of fields)"""
 
     class Choice:
         class Delta:
@@ -532,7 +532,7 @@ class _OpenAIStreamChunk:
 
 
 class _ModelsResponse:
-    """模拟 OpenAI SDK 的模型列表响应对象"""
+    """Imitates the model list response object of the OpenAI SDK"""
 
     class Model:
         def __init__(self, model_data):
@@ -555,10 +555,10 @@ class _ModelsResponse:
 
 class AsyncGeminiCurlCffi:
     """
-    异步 Gemini 客户端包装器，使用 curl_cffi 绕过 TLS 指纹检测
-    兼容 Google genai SDK 的接口
+    Asynchronous Gemini client wrapper that uses curl_cffi to get past TLS fingerprint checks.
+    Compatible with the interface of the Google genai SDK
 
-    用法:
+    Usage:
         client = AsyncGeminiCurlCffi(
             api_key="your-api-key",
             base_url="https://generativelanguage.googleapis.com",
@@ -573,13 +573,13 @@ class AsyncGeminiCurlCffi:
     """
 
     class Models:
-        """模型接口"""
+        """Models interface"""
 
         def __init__(self, parent):
             self.parent = parent
 
         async def generate_content(self, model, contents, generation_config=None, safety_settings=None, **kwargs):
-            """生成内容请求"""
+            """Generate content request"""
             # URL-encode the model name, for names that contain "/" (such as z-ai/glm4.7)
             import urllib.parse
             encoded_model = urllib.parse.quote(model, safe='')
@@ -747,7 +747,7 @@ class AsyncGeminiCurlCffi:
             return _GeminiResponse(result)
 
         async def generate_content_stream(self, model, contents, config=None, **kwargs):
-            """兼容 google-genai 的流式接口"""
+            """Streaming interface compatible with google-genai"""
             generation_config = config or kwargs.pop("generation_config", None)
             return await self.generate_content(
                 model=model,
@@ -792,7 +792,7 @@ class AsyncGeminiCurlCffi:
             return _gen()
 
         async def list(self):
-            """获取可用模型列表"""
+            """Get the list of available models"""
             url = f"{self.parent.base_url}/v1beta/models"
 
             headers = {
@@ -843,15 +843,15 @@ class AsyncGeminiCurlCffi:
                  default_headers=None, impersonate=CURL_CFFI_IMPERSONATE,
                  timeout=600, stream_timeout=300):
         """
-        初始化异步客户端
+        Initialise the asynchronous client
 
         Args:
-            api_key: Gemini API 密钥
-            base_url: API 基础 URL
-            default_headers: 默认请求头
-            impersonate: 浏览器指纹；默认跟随 curl_cffi 的最新 Chrome 指纹
-            timeout: 非流式请求超时时间（秒）
-            stream_timeout: 流式 HTTP 请求超时时间（秒）
+            api_key: Gemini API key
+            base_url: API base URL
+            default_headers: default request headers
+            impersonate: browser fingerprint; follows the latest Chrome fingerprint of curl_cffi by default
+            timeout: timeout of non-streaming requests (seconds)
+            stream_timeout: timeout of streaming HTTP requests (seconds)
         """
         self.api_key = validate_api_key_for_http_header(api_key)
         self.base_url = base_url.rstrip('/')
@@ -875,21 +875,21 @@ class AsyncGeminiCurlCffi:
         self.models = self.Models(self)
 
     async def close(self):
-        """关闭 session"""
+        """Close the session"""
         if hasattr(self.session, 'close'):
             await self.session.close()
 
     async def __aenter__(self):
-        """异步上下文管理器入口"""
+        """Entry of the asynchronous context manager"""
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
-        """异步上下文管理器退出"""
+        """Exit of the asynchronous context manager"""
         await self.close()
 
 
 class _GeminiResponse:
-    """模拟 Gemini SDK 的响应对象"""
+    """Imitates the response object of the Gemini SDK"""
 
     class Candidate:
         class Content:
@@ -932,7 +932,7 @@ class _GeminiResponse:
 
 
 class _GeminiModelsResponse:
-    """模拟 Gemini SDK 的模型列表响应对象"""
+    """Imitates the model list response object of the Gemini SDK"""
 
     class Model:
         def __init__(self, model_data):
@@ -956,17 +956,17 @@ class _GeminiModelsResponse:
 
 def validate_openai_response(response, logger=None) -> bool:
     """
-    验证OpenAI API响应对象的有效性
-    
+    Check that an OpenAI API response object is valid
+
     Args:
-        response: API返回的响应对象
-        logger: 日志记录器（可选）
-    
+        response: the response object returned by the API
+        logger: logger (optional)
+
     Returns:
-        bool: 响应是否有效
-    
+        bool: whether the response is valid
+
     Raises:
-        Exception: 如果响应对象无效
+        Exception: when the response object is invalid
     """
     # Check whether the response object has a choices attribute
     if not hasattr(response, 'choices'):
@@ -979,17 +979,17 @@ def validate_openai_response(response, logger=None) -> bool:
 
 def validate_gemini_response(response, logger=None) -> bool:
     """
-    验证Gemini API响应对象的有效性
-    
+    Check that a Gemini API response object is valid
+
     Args:
-        response: API返回的响应对象
-        logger: 日志记录器（可选）
-    
+        response: the response object returned by the API
+        logger: logger (optional)
+
     Returns:
-        bool: 响应是否有效
-    
+        bool: whether the response is valid
+
     Raises:
-        Exception: 如果响应对象无效
+        Exception: when the response object is invalid
     """
     # Check whether the response object has a candidates attribute
     if not hasattr(response, 'candidates'):
@@ -1018,7 +1018,7 @@ def validate_gemini_response(response, logger=None) -> bool:
 
 
 def _get_gemini_field(obj: Any, *names: str) -> Any:
-    """兼容 SDK 对象 / 自定义对象 / dict 的 Gemini 字段读取。"""
+    """Read a Gemini field from an SDK object, a custom object or a dict."""
     if obj is None:
         return None
     for name in names:
@@ -1062,7 +1062,7 @@ def _normalize_gemini_safety_ratings(ratings: Any) -> List[Dict[str, Any]]:
 
 
 def extract_gemini_response_diagnostics(response: Any, fallback_finish_reason: Any = None) -> Dict[str, Any]:
-    """提取 Gemini 响应诊断信息，供日志与重试逻辑复用。"""
+    """Extract diagnostic information from a Gemini response, for the log and the retry logic."""
     candidate = None
     candidates = _get_gemini_field(response, 'candidates')
     if candidates:
@@ -1120,7 +1120,7 @@ def _format_gemini_safety_ratings(ratings: List[Dict[str, Any]]) -> str:
 
 
 def format_gemini_response_diagnostics(diagnostics: Dict[str, Any]) -> str:
-    """格式化 Gemini 诊断信息，便于日志输出。"""
+    """Format the Gemini diagnostic information for log output."""
     parts = [
         f"finish_reason={diagnostics.get('finish_reason_str') or 'None'}",
         f"block_reason={diagnostics.get('block_reason_str') or 'None'}",
@@ -1137,7 +1137,7 @@ def format_gemini_response_diagnostics(diagnostics: Dict[str, Any]) -> str:
 
 
 def gemini_diagnostics_indicate_safety(diagnostics: Dict[str, Any]) -> bool:
-    """根据 Gemini 响应诊断判断是否属于安全策略拦截。"""
+    """Decide from the Gemini response diagnostics whether the request was blocked by the safety policy."""
     values = [
         (diagnostics.get('finish_reason_str') or "").upper(),
         (diagnostics.get('block_reason_str') or "").upper(),
@@ -1160,7 +1160,7 @@ def gemini_diagnostics_indicate_safety(diagnostics: Dict[str, Any]) -> bool:
 
 
 def gemini_diagnostics_should_disable_images(diagnostics: Dict[str, Any]) -> bool:
-    """根据 Gemini 诊断判断 HQ 重试时是否应去掉图片。"""
+    """Decide from the Gemini diagnostics whether an HQ retry should drop the images."""
     if gemini_diagnostics_indicate_safety(diagnostics):
         return True
     finish_reason = (diagnostics.get('finish_reason_str') or "").upper()
@@ -1184,16 +1184,16 @@ def gemini_error_message_indicates_safety(error_message: str) -> bool:
 def draw_text_boxes_on_image(image, text_regions: List[Any], text_order: List[int], 
                              upscaled_size: Tuple[int, int] = None):
     """
-    在图片上绘制带编号的文本框
-    
+    Draw numbered text boxes on an image
+
     Args:
-        image: 原始图片 (numpy array 或 PIL Image)
-        text_regions: 文本区域列表，每个区域应该有 xyxy 或 min_rect 属性
-        text_order: 文本顺序列表，对应每个文本框的编号
-        upscaled_size: 超分后的图片尺寸 (height, width)，用于坐标转换。如果为None则不转换
-    
+        image: the original image (numpy array or PIL Image)
+        text_regions: list of text regions; each should have an xyxy or min_rect attribute
+        text_order: list of text order numbers, one for each text box
+        upscaled_size: size of the upscaled image (height, width), for coordinate conversion; no conversion when None
+
     Returns:
-        绘制了文本框的图片（与输入类型相同）
+        The image with the text boxes drawn (the same type as the input)
     """
     if image is None or len(text_regions) == 0:
         return image
@@ -1250,7 +1250,7 @@ def draw_text_boxes_on_image(image, text_regions: List[Any], text_order: List[in
             all_boxes.append((bx1, by1, bx2, by2))
     
     def check_overlap(lx, ly, lw_size, lh_size, exclude_idx):
-        """检查标签区域是否与其他框重叠"""
+        """Check whether the label area overlaps another box"""
         label_rect = (lx, ly - lh_size, lx + lw_size, ly)
         for i, (bx1, by1, bx2, by2) in enumerate(all_boxes):
             if i == exclude_idx:
@@ -1477,11 +1477,11 @@ class CommonTranslator(InfererModule):
         )
     
     def set_cancel_check_callback(self, callback):
-        """设置取消检查回调"""
+        """Set the cancel-check callback"""
         self._cancel_check_callback = callback
     
     def _check_cancelled(self):
-        """检查任务是否被取消"""
+        """Check whether the task was cancelled"""
         if self._cancel_check_callback and self._cancel_check_callback():
             raise asyncio.CancelledError("Translation cancelled by user")
 
@@ -1492,8 +1492,8 @@ class CommonTranslator(InfererModule):
         on_cancel: Optional[Callable[[], Awaitable[None] | None]] = None,
     ):
         """
-        等待一个长耗时 awaitable，并定期轮询取消状态。
-        在收到取消时，尝试取消内部任务并执行 on_cancel 清理回调。
+        Wait for a long-running awaitable while polling the cancel state at intervals.
+        On cancellation, try to cancel the inner task and run the on_cancel clean-up callback.
         """
         task = asyncio.create_task(awaitable)
         try:
@@ -1521,7 +1521,7 @@ class CommonTranslator(InfererModule):
             raise
 
     async def _sleep_with_cancel_polling(self, seconds: float, poll_interval: float = 0.2):
-        """可取消的 sleep，避免等待期间无法响应停止。"""
+        """A sleep that can be cancelled, so a stop is not ignored while waiting."""
         if seconds <= 0:
             self._check_cancelled()
             return
@@ -1544,14 +1544,14 @@ class CommonTranslator(InfererModule):
         idle_timeout: float = 300.0,
     ) -> Tuple[str, Any]:
         """
-        通用流式传输层：
-        - OpenAI async stream（异步迭代）
-        - Gemini stream（同步迭代，放入 to_thread 消费）
-        返回：(聚合后的完整文本, 最后一次 finish_reason)
+        General streaming transport layer:
+        - OpenAI async stream (asynchronous iteration)
+        - Gemini stream (synchronous iteration, consumed in to_thread)
+        Returns: (the complete aggregated text, the last finish_reason)
         """
         def _normalize_stream_piece(piece_text: str, current_text: str) -> str:
             """
-            兼容“增量块/累计块/重复块”三种常见流格式，尽量只返回新增部分。
+            Handles the three common stream formats, "delta chunks", "cumulative chunks" and "repeated chunks", and tries to return only the new part.
             """
             if not piece_text:
                 return ""
@@ -1673,14 +1673,14 @@ class CommonTranslator(InfererModule):
 
     def _get_retry_hint(self, attempt: int, reason: str = "") -> str:
         """
-        生成重试提示信息，用于避免模型服务器缓存导致的重复错误
-        
+        Build a retry hint, used to avoid repeated errors caused by caching on the model server
+
         Args:
-            attempt: 当前尝试次数
-            reason: 重试原因（可选）
-            
+            attempt: number of the current attempt
+            reason: reason for the retry (optional)
+
         Returns:
-            重试提示字符串
+            The retry hint string
         """
         hints = [
             f"[Retry attempt #{attempt}]",
@@ -1719,7 +1719,7 @@ class CommonTranslator(InfererModule):
 
 **FINAL INSTRUCTION:** Translate the provided text regions faithfully and follow the separate output-format requirements appended below."""
     def _parse_prev_context_turns(self, prev_context: str) -> List[Dict[str, str]]:
-        """解析历史上下文，只接受新的 user/assistant JSON 轮次。"""
+        """Parse the history context; only the new user/assistant JSON turns are accepted."""
         payload = (prev_context or "").strip()
         if not payload:
             return []
@@ -1743,7 +1743,7 @@ class CommonTranslator(InfererModule):
         return turns
 
     def _build_openai_context_messages(self, prev_context: str) -> List[Dict[str, Any]]:
-        """将历史上下文转换为 OpenAI 多轮消息，不附带图片。"""
+        """Turn the history context into OpenAI multi-turn messages, without images."""
         turns = self._parse_prev_context_turns(prev_context)
         if not turns:
             self.logger.info("[Context] None")
@@ -1758,7 +1758,7 @@ class CommonTranslator(InfererModule):
         return messages
 
     def _build_gemini_context_messages(self, prev_context: str) -> List[Dict[str, Any]]:
-        """将历史上下文转换为 Gemini 多轮消息，不附带图片。"""
+        """Turn the history context into Gemini multi-turn messages, without images."""
         turns = self._parse_prev_context_turns(prev_context)
         if not turns:
             self.logger.info("[Context] None")
@@ -1779,7 +1779,7 @@ class CommonTranslator(InfererModule):
         retry_attempt: int = 0,
         retry_reason: str = "",
     ) -> str:
-        """构建系统提示词前缀：[重试提示] → [断句提示] → [自定义提示]"""
+        """Build the prefix of the system prompt: [retry hint] -> [line-breaking hint] -> [custom prompt]"""
         prompt_prefix = ""
 
         if retry_attempt > 0:
@@ -1799,7 +1799,7 @@ class CommonTranslator(InfererModule):
         base_prompt: str,
         target_lang_full: str,
     ) -> str:
-        """普通翻译模式：基础系统提示 + 标准 translations 输出格式。"""
+        """Ordinary translation mode: base system prompt + the standard translations output format."""
         final_prompt = prompt_prefix + base_prompt
         output_format_prompt = get_system_prompt_hq_format_prompt(target_lang_full, extract_glossary=False)
         if output_format_prompt:
@@ -1814,7 +1814,7 @@ class CommonTranslator(InfererModule):
         base_prompt: str,
         target_lang_full: str,
     ) -> str:
-        """术语提取模式：基础系统提示 + 术语提取规则 + 扩展输出格式。"""
+        """Glossary extraction mode: base system prompt + glossary extraction rules + the extended output format."""
         final_prompt = prompt_prefix + base_prompt
         extraction_prompt = get_glossary_extraction_prompt(target_lang_full)
         output_format_prompt = get_system_prompt_hq_format_prompt(target_lang_full, extract_glossary=True)
@@ -1839,13 +1839,13 @@ class CommonTranslator(InfererModule):
         extract_glossary: bool = False,
     ) -> str:
         """
-        构建完整的系统提示词（统一实现，所有翻译器共享）。
+        Build the complete system prompt (one implementation shared by all translators).
 
-        不开启自动术语提取时：
-        [重试提示] → [断句提示] → [自定义提示] → [基础系统提示] → [标准输出格式]
+        Without automatic glossary extraction:
+        [retry hint] -> [line-breaking hint] -> [custom prompt] -> [base system prompt] -> [standard output format]
 
-        开启自动术语提取时：
-        [重试提示] → [断句提示] → [自定义提示] → [基础系统提示] → [术语提取规则] → [扩展输出格式]
+        With automatic glossary extraction:
+        [retry hint] -> [line-breaking hint] -> [custom prompt] -> [base system prompt] -> [glossary extraction rules] -> [extended output format]
         """
         target_lang_full = VALID_LANGUAGES.get(target_lang, target_lang)
 
@@ -1898,13 +1898,12 @@ class CommonTranslator(InfererModule):
 
     def _build_unified_user_prompt(self, batch_data: List[Dict], ctx=None, prev_context: str = "", retry_attempt: int = 0, retry_reason: str = "", is_image_mode: bool = True) -> str:
         """
-        统一的用户提示词构建方法（支持多模态和纯文本）
         Unified user prompt builder for both multimodal and text-only modes.
 
         Args:
             batch_data: List of dicts, each containing 'original_texts' and optional 'text_regions'.
             ctx: Context object.
-            prev_context: 保留兼容；历史上下文现在作为独立消息注入，不再拼进当前用户提示词。
+            prev_context: kept for compatibility; the history context is now injected as separate messages and is no longer joined into the current user prompt.
             retry_attempt: Retry attempt count.
             retry_reason: Reason for retry.
             is_image_mode: Whether to include image-specific descriptions.
@@ -2006,20 +2005,19 @@ class CommonTranslator(InfererModule):
 
     def _validate_br_markers(self, translations: List[str], queries: List[str] = None, ctx=None, batch_indices: List[int] = None, batch_data: List = None, split_level: int = 0) -> bool:
         """
-        检查翻译结果是否包含必要的[BR]标记
         Check if translations contain necessary [BR] markers
 
-        同时清理单区域（region_count == 1）翻译中多余的断句标记：
-        该清理只依赖 AI 断句（disable_auto_wrap）开关，与「AI断句检查」
-        （check_br_and_retry）是否开启无关。
+        Also removes surplus line-break markers from single-region (region_count == 1) translations:
+        that clean-up only depends on the AI line-breaking switch (disable_auto_wrap) and not on whether
+        the "AI line-breaking check" (check_br_and_retry) is on.
 
         Args:
-            translations: 翻译结果列表
-            queries: 原始查询列表（可选）
-            ctx: 上下文（用于获取配置和区域信息）
-            batch_indices: 批次索引列表（可选，用于定位text_regions）
-            batch_data: 批次数据列表（可选，HQ翻译器使用）
-            split_level: 分割级别（可选，用于跳过深度分割时的检查）
+            translations: list of translation results
+            queries: list of the original queries (optional)
+            ctx: context (for reading the configuration and the region information)
+            batch_indices: list of batch indexes (optional, used to locate text_regions)
+            batch_data: list of batch data (optional, used by the HQ translators)
+            split_level: split level (optional, used to skip the check for deep splits)
 
         Returns:
             True if validation passes, False if BR markers are missing
@@ -2139,11 +2137,11 @@ class CommonTranslator(InfererModule):
 
     def _validate_translation_quality(self, queries: List[str], translations: List[str]) -> Tuple[bool, str]:
         """
-        验证翻译质量，检测常见问题
+        Validate the translation quality and detect common problems
 
         Args:
-            queries: 原文列表
-            translations: 译文列表
+            queries: list of original texts
+            translations: list of translations
 
         Returns:
             (is_valid, error_message)
@@ -2179,17 +2177,17 @@ class CommonTranslator(InfererModule):
         return True, ""
 
     def _reset_global_attempt_count(self):
-        """重置全局尝试计数器（每次新的翻译任务开始时调用）"""
+        """Reset the global attempt counter (called at the start of each new translation task)"""
         self._global_attempt_count = 0
         self._max_total_attempts = self._resolve_max_total_attempts()
 
     def _increment_global_attempt(self) -> bool:
         """
-        增加全局尝试计数，返回是否还可以继续尝试
+        Increase the global attempt count and return whether another attempt is allowed
 
         Returns:
-            True: 还可以继续尝试
-            False: 已达到总次数上限
+            True: another attempt is allowed
+            False: the total limit has been reached
         """
         self._global_attempt_count += 1
 
@@ -2205,7 +2203,7 @@ class CommonTranslator(InfererModule):
         return True
 
     class SplitException(Exception):
-        """用于触发分割的特殊异常"""
+        """Special exception used to trigger a split"""
         def __init__(self, attempt_count, texts):
             self.attempt_count = attempt_count
             self.texts = texts
@@ -2213,16 +2211,16 @@ class CommonTranslator(InfererModule):
 
     async def _translate_with_split(self, translator_func, texts: List[str], split_level: int = 0, **kwargs) -> List[str]:
         """
-        带分割重试的翻译包装器（新逻辑）
+        Translation wrapper that retries by splitting (new logic)
 
         Args:
-            translator_func: 实际的翻译函数（async callable）
-            texts: 要翻译的文本列表
-            split_level: 当前分割层级
-            **kwargs: 传递给translator_func的其他参数
+            translator_func: the actual translation function (async callable)
+            texts: the list of texts to translate
+            split_level: the current split depth
+            **kwargs: other arguments passed on to translator_func
 
         Returns:
-            翻译结果列表
+            The list of translation results
         """
         # Check whether the global attempt count is exceeded
         if self._max_total_attempts != -1 and self._global_attempt_count >= self._max_total_attempts:
@@ -2305,7 +2303,7 @@ class CommonTranslator(InfererModule):
         self._max_total_attempts = self._resolve_max_total_attempts()
 
     def _emit_stream_lines(self, prefix: str, text: str, width: int = 100) -> None:
-        """将流式增量按固定宽度换行输出，避免命令行单行过长被截断。"""
+        """Print streaming deltas wrapped at a fixed width, so an overlong single line is not cut off on the command line."""
         content = (text or "").strip()
         if not content:
             return
@@ -2330,9 +2328,9 @@ class CommonTranslator(InfererModule):
 
     def _emit_final_translation_results(self, source_texts: List[str], translations: List[str]) -> None:
         """
-        输出最终翻译结果。
-        - 若流式预览没有完整覆盖最终结果，则补打一份最终快照
-        - 若预览内容与最终结果一致，则只输出结尾分隔线，避免重复刷屏
+        Print the final translation result.
+        - When the streaming preview did not cover the whole final result, print a final snapshot as well
+        - When the preview equals the final result, only the closing separator is printed, to avoid flooding the screen twice
         """
         should_log_full = not self._has_stream_result_pairs()
 
@@ -2358,7 +2356,7 @@ class CommonTranslator(InfererModule):
         self.logger.info("---------------------------")
 
     def _emit_terms_from_list(self, new_terms: List[Dict[str, Any]]) -> None:
-        """统一输出术语提取结果；按正式名称、叫法和译文去重。"""
+        """Print the glossary extraction result in one place; duplicates are removed by formal name, aliases and translation."""
         if not new_terms:
             return
         for term in new_terms:
@@ -2395,7 +2393,7 @@ class CommonTranslator(InfererModule):
 
     def _filter_stream_preview_delta(self, delta_text: str) -> str:
         """
-        以流式方式剥离 <think>/<answer> 标签，仅返回应参与 JSON 预览解析的新增正文。
+        Strip <think>/<answer> tags from a stream and return only the new body text that should take part in JSON preview parsing.
         """
         if not delta_text:
             return ""
@@ -2448,7 +2446,7 @@ class CommonTranslator(InfererModule):
 
     def _consume_completed_stream_preview_objects(self) -> List[str]:
         """
-        从 preview_buffer 的 scan_pos 开始增量扫描，提取新闭合的 JSON 对象。
+        Scan preview_buffer incrementally from scan_pos and extract the JSON objects that have newly closed.
         """
         completed_objects: List[str] = []
         i = self._stream_preview_scan_pos
@@ -2490,7 +2488,7 @@ class CommonTranslator(InfererModule):
 
     def _compact_stream_preview_buffer(self) -> None:
         """
-        丢弃已经扫描且不再需要的前缀，避免 buffer 无界增长。
+        Drop the prefix that was scanned and is no longer needed, so the buffer does not grow without bound.
         """
         if not self._stream_preview_buffer:
             return
@@ -2599,7 +2597,7 @@ class CommonTranslator(InfererModule):
 
     def _emit_stream_json_preview(self, prefix: str, delta_text: str, source_texts: Optional[List[str]] = None) -> None:
         """
-        仅消费新增 delta_text，通过 preview_buffer + scan_pos 增量提取新闭合的 JSON 对象。
+        Consume only the new delta_text and extract newly closed JSON objects incrementally through preview_buffer + scan_pos.
         """
         if not delta_text:
             return
@@ -2618,7 +2616,7 @@ class CommonTranslator(InfererModule):
             return
 
     def _update_stream_inline(self, prefix: str, delta_text: str) -> None:
-        """按增量流内容刷新；遇到换行符时真正换行输出。"""
+        """Refresh with the incoming stream content; a real line break is printed when a newline character arrives."""
         if not delta_text:
             return
         self._stream_inline_buffer += str(delta_text)
@@ -2661,7 +2659,7 @@ class CommonTranslator(InfererModule):
             self._emit_stream_lines(prefix, tail)
 
     def _finish_stream_inline(self) -> None:
-        """结束同一行刷新，补一个换行。"""
+        """End the same-line refresh by adding a newline."""
         if self._stream_inline_last_len > 0 or self._stream_inline_buffer:
             try:
                 sys.stdout.write("\n")
@@ -2888,14 +2886,13 @@ class OfflineTranslator(CommonTranslator, ModelWrapper):
 
 def sanitize_text_encoding(text: str) -> str:
     """
-    统一的文本编码清理函数，处理各种编码问题
     Unified text encoding sanitization to handle various encoding issues
-    
+
     Args:
-        text: 输入文本
-        
+        text: the input text
+
     Returns:
-        清理后的文本
+        The cleaned text
     """
     if not text:
         return text
@@ -2954,9 +2951,9 @@ def sanitize_text_encoding(text: str) -> str:
 
 def normalize_model_output_text(text: str, preview: bool = False) -> str:
     """
-    清理模型在正文外包裹的控制标签，避免思考区和回答区交叉污染解析。
+    Remove the control tags a model wraps around the body, so the thinking area and the answer area do not contaminate parsing.
 
-    preview=True 时会额外移除未闭合的 <think> 尾部，避免流式中途把思考区当正文。
+    With preview=True an unclosed <think> tail is removed as well, so the thinking area is not taken for body text in the middle of a stream.
     """
     if not text:
         return text
@@ -2977,8 +2974,8 @@ def normalize_model_output_text(text: str, preview: bool = False) -> str:
 
 def extract_json_payload_from_mixed_text(text: str) -> Tuple[str, bool]:
     """
-    通用 JSON 提取器：从混杂文本中优先提取最可能的 JSON 负载。
-    返回 (payload, extracted)，extracted=True 表示确实抽取到了 JSON 片段。
+    General JSON extractor: from mixed text, extract the most likely JSON payload first.
+    Returns (payload, extracted); extracted=True means a JSON fragment really was extracted.
     """
     import json
     import re
@@ -3095,9 +3092,8 @@ def extract_json_payload_from_mixed_text(text: str) -> Tuple[str, bool]:
 
 def parse_hq_response(result_text: str) -> Tuple[List[str], List[Dict[str, Any]]]:
     """
-    专门解析HQ翻译器的响应，支持提取翻译和新术语
     Parse HQ translator response, supporting extraction of translations and new terms
-    
+
     Returns:
         (translations, new_terms)
     """
@@ -3301,7 +3297,7 @@ def parse_hq_response(result_text: str) -> Tuple[List[str], List[Dict[str, Any]]
 
 def parse_json_or_text_response(result_text: str) -> List[str]:
     """
-    解析LLM返回的文本，支持JSON列表格式或按行分割格式
+    Parse the text returned by an LLM, as a JSON list or split by lines.
     Wrapper around parse_hq_response for backward compatibility
     """
     translations, _ = parse_hq_response(result_text)
@@ -3412,14 +3408,13 @@ def _merge_auto_glossary_aliases(
 
 def merge_glossary_to_file(file_path: str, new_terms: List[Dict[str, Any]]) -> bool:
     """
-    将新提取的术语合并到提示词文件中
     Merge newly extracted terms into the prompt file
-    
-    支持 JSON (.json) 和 YAML (.yaml/.yml) 格式，根据文件扩展名自动选择。
-    
+
+    JSON (.json) and YAML (.yaml/.yml) are supported; the format is chosen by the file extension.
+
     Args:
-        file_path: 提示词文件路径
-        new_terms: 统一别名结构的新增或追加增量
+        file_path: path of the prompt file
+        new_terms: the new or appended increment, in the unified alias structure
     """
     import json
     import os
@@ -3542,7 +3537,6 @@ def merge_glossary_to_file(file_path: str, new_terms: List[Dict[str, Any]]) -> b
 
 def get_glossary_extraction_prompt(target_lang: str) -> str:
     """
-    获取术语提取的追加提示词
     Get the additional prompt for glossary extraction
     """
     import os
@@ -3556,9 +3550,9 @@ def get_glossary_extraction_prompt(target_lang: str) -> str:
 
 def get_system_prompt_hq_format_prompt(target_lang: str, extract_glossary: bool = False) -> str:
     """
-    获取 HQ 通用输出格式提示词。
-    extract_glossary=False: 仅要求 translations
-    extract_glossary=True: 要求 translations + new_terms
+    Get the general HQ output format prompt.
+    extract_glossary=False: only translations is required
+    extract_glossary=True: translations + new_terms are required
     """
     import os
 
@@ -3571,6 +3565,6 @@ def get_system_prompt_hq_format_prompt(target_lang: str, extract_glossary: bool 
 
 def get_glossary_output_format_prompt(target_lang: str) -> str:
     """
-    兼容旧调用：获取开启术语提取时的 HQ 输出格式提示词。
+    For old callers: get the HQ output format prompt used when glossary extraction is on.
     """
     return get_system_prompt_hq_format_prompt(target_lang, extract_glossary=True)

@@ -30,7 +30,7 @@ class SakuraDict():
 
     def load_galtransl_dic(self, dic_path: str):
         """
-        载入Galtransl词典。
+        Load a Galtransl dictionary.
         """
 
         with open(dic_path, encoding="utf8") as f:
@@ -82,7 +82,7 @@ class SakuraDict():
 
     def load_sakura_dict(self, dic_path: str):
         """
-        直接载入标准的Sakura字典。
+        Load a standard Sakura dictionary directly.
         """
 
         with open(dic_path, encoding="utf8") as f:
@@ -126,7 +126,7 @@ class SakuraDict():
 
     def detect_type(self, dic_path: str):
         """
-        检测字典类型。
+        Detect the dictionary type.
         """
         with open(dic_path, encoding="utf8") as f:
             dic_lines = f.readlines()
@@ -168,7 +168,7 @@ class SakuraDict():
 
     def get_dict_str(self):
         """
-        获取字典内容。
+        Get the dictionary content.
         """
         if self.dict_str == "":
             if not os.path.exists(self.path):
@@ -183,7 +183,7 @@ class SakuraDict():
 
     def get_dict_from_file(self, dic_path: str):
         """
-        从文件载入字典。
+        Load the dictionary from a file.
         """
         dic_type = self.detect_type(dic_path)
         if dic_type == "galtransl":
@@ -280,8 +280,8 @@ class SakuraTranslator(CommonTranslator):
 
     def detect_and_caculate_repeats(self, s: str, threshold: int = _REPEAT_DETECT_THRESHOLD, remove_all=True) -> Tuple[bool, str, int, str]:
         """
-        检测文本中是否存在重复模式,并计算重复次数。
-        返回值: (是否重复, 去除重复后的文本, 重复次数, 重复模式)
+        Detect whether the text contains a repeating pattern and count the repetitions.
+        Returns: (whether it repeats, the text with the repetition removed, the repetition count, the repeating pattern)
         """
         repeated = False
         counts = []
@@ -321,21 +321,21 @@ class SakuraTranslator(CommonTranslator):
 
     @staticmethod
     def enlarge_small_kana(text, ignore=''):
-        """将小写平假名或片假名转换为普通大小
+        """Convert small hiragana or katakana to their normal size
 
-        参数
+        Parameters
         ----------
         text : str
-            全角平假名或片假名字符串。
-        ignore : str, 可选
-            转换时要忽略的字符。
+            A string of full-width hiragana or katakana.
+        ignore : str, optional
+            Characters to leave alone during the conversion.
 
-        返回
-        ------
+        Returns
+        -------
         str
-            平假名或片假名字符串，小写假名已转换为大写
+            The hiragana or katakana string, with small kana converted to full size
 
-        示例
+        Examples
         --------
         >>> print(enlarge_small_kana('さくらきょうこ'))
         さくらきようこ
@@ -364,7 +364,7 @@ class SakuraTranslator(CommonTranslator):
 
     def _format_prompt_log(self, prompt: str) -> str:
         """
-        格式化日志输出的提示文本。
+        Format the prompt text for log output.
         """
         gpt_dict_raw_text = self.sakura_dict.get_dict_str()
         if gpt_dict_raw_text:
@@ -387,7 +387,7 @@ class SakuraTranslator(CommonTranslator):
 
     def _split_text(self, text: str) -> List[str]:
         """
-        将字符串按换行符分割为列表。
+        Split a string into a list at line breaks.
         """
         if isinstance(text, list):
             return text
@@ -395,7 +395,7 @@ class SakuraTranslator(CommonTranslator):
 
     def _normalize_response_text(self, response) -> str:
         """
-        将模型响应统一转换为字符串，避免日志和后续处理发生类型错误。
+        Turn a model response into a string in one place, to avoid type errors in the log and in later processing.
         """
         if response is None:
             return ""
@@ -415,7 +415,7 @@ class SakuraTranslator(CommonTranslator):
 
     def _preprocess_queries(self, queries: List[str]) -> List[str]:
         """
-        预处理查询文本,去除emoji,替换特殊字符,并添加「」标记。
+        Preprocess the query text: remove emoji, replace special characters and add 「」 marks.
         """
         queries = [self.enlarge_small_kana(query) for query in queries]
         queries = [self._emoji_pattern.sub('', query) for query in queries]
@@ -426,7 +426,7 @@ class SakuraTranslator(CommonTranslator):
 
     async def _check_translation_quality(self, queries: List[str], response: str) -> List[str]:
         """
-        检查翻译结果的质量,包括重复和行数对齐问题,如果存在问题则尝试重新翻译或返回原始文本。
+        Check the quality of the translation result, including repetition and line count alignment; when there is a problem, try to translate again or return the original text.
         """
         async def _retry_translation(queries: List[str], check_func: Callable[[str], bool], error_message: str) -> str:
             styles = ["precise", "normal", "aggressive", ]
@@ -461,21 +461,21 @@ class SakuraTranslator(CommonTranslator):
 
     def _detect_repeats(self, text: str, threshold: int = _REPEAT_DETECT_THRESHOLD) -> bool:
         """
-        检测文本中是否存在重复模式。
+        Detect whether the text contains a repeating pattern.
         """
         is_repeated, text, count, pattern, actual_threshold = self.detect_and_caculate_repeats(text, threshold, remove_all=False)
         return is_repeated
 
     def _get_repeat_count(self, text: str, threshold: int = _REPEAT_DETECT_THRESHOLD) -> bool:
         """
-        计算文本中重复模式的次数。
+        Count how many times the repeating pattern occurs in the text.
         """
         is_repeated, text, count, pattern, actual_threshold = self.detect_and_caculate_repeats(text, threshold, remove_all=False)
         return count
 
     def _check_align(self, queries: List[str], response: str) -> bool:
         """
-        检查原始文本和翻译结果的行数是否对齐。
+        Check whether the original text and the translation have the same number of lines.
         """
         translations = self._split_text(response)
         is_aligned = len(queries) == len(translations)
@@ -485,7 +485,7 @@ class SakuraTranslator(CommonTranslator):
 
     async def _translate_single_lines(self, queries: List[str]) -> List[str]:
         """
-        逐行翻译查询文本。
+        Translate the query text line by line.
         """
         translations = []
         for query in queries:
@@ -499,7 +499,7 @@ class SakuraTranslator(CommonTranslator):
 
     def _delete_quotation_mark(self, texts: List[str]) -> List[str]:
         """
-        删除文本中的「」标记。
+        Remove the 「」 marks from the text.
         """
         new_texts = []
         for text in texts:
@@ -529,7 +529,7 @@ class SakuraTranslator(CommonTranslator):
 
     async def _handle_translation_request(self, prompt) -> str:
         """
-        处理翻译请求,包括错误处理和重试逻辑。
+        Handle a translation request, including error handling and the retry logic.
         """
         ratelimit_attempt = 0
         server_error_attempt = 0
@@ -561,7 +561,7 @@ class SakuraTranslator(CommonTranslator):
 
     async def _request_translation(self, input_text_list) -> str:
         """
-        向Sakura API发送翻译请求。
+        Send a translation request to the Sakura API.
         """
         if isinstance(input_text_list, list):
             raw_text = "\n".join(input_text_list)
@@ -614,7 +614,7 @@ class SakuraTranslator(CommonTranslator):
 
     def _set_gpt_style(self, style_name: str):
         """
-        设置GPT的生成风格。
+        Set the generation style of GPT.
         """
         if self._current_style == style_name:
             return

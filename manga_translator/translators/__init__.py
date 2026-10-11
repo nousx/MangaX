@@ -86,16 +86,16 @@ async def dispatch(chain: TranslatorChain, queries: List[str], config: Config, u
 
 async def dispatch_batch(chain: TranslatorChain, batch_queries: List[List[str]], translator_config: Optional[TranslatorConfig] = None, use_mtpe: bool = False, args:Optional[Context] = None, device: str = 'cpu') -> List[List[str]]:
     """
-    批量翻译调度器，将多个文本列表一次性发送给翻译器
+    Batch translation dispatcher: sends several lists of texts to the translator in one go
     Args:
-        chain: 翻译器链
-        batch_queries: 批量查询列表，每个元素是一个字符串列表
-        translator_config: 翻译器配置
-        use_mtpe: 是否使用机器翻译后编辑
-        args: 上下文参数
-        device: 设备
+        chain: the translator chain
+        batch_queries: list of batch queries; each element is a list of strings
+        translator_config: the translator configuration
+        use_mtpe: whether machine translation post-editing is used
+        args: context arguments
+        device: the device
     Returns:
-        批量翻译结果列表
+        The list of batch translation results
     """
     if not batch_queries or not any(batch_queries):
         return batch_queries

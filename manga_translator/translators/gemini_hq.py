@@ -36,7 +36,7 @@ BROWSER_HEADERS = GEMINI_CURL_HEADERS
 
 
 def encode_image_for_gemini(image, max_size=1024):
-    """将图片处理为适合Gemini API的格式，返回bytes和mime_type"""
+    """Prepare an image in a form suitable for the Gemini API; returns bytes and mime_type"""
     image = normalize_rgb_image(image)
 
     # Resize the image
@@ -56,8 +56,8 @@ def encode_image_for_gemini(image, max_size=1024):
 
 class GeminiHighQualityTranslator(CommonTranslator):
     """
-    Gemini高质量翻译器
-    支持多图片批量处理，提供文本框顺序、原文和原图给AI进行更精准的翻译
+    Gemini high-quality translator.
+    Handles several images per batch and gives the AI the text box order, the original text and the original image for a more accurate translation
     """
     _LANGUAGE_CODE_MAP = VALID_LANGUAGES
     API_KEY_ENV = "GEMINI_API_KEY"
@@ -117,11 +117,11 @@ class GeminiHighQualityTranslator(CommonTranslator):
         return self.LOG_PROVIDER_NAME
 
     def set_prev_context(self, context: str):
-        """设置多页上下文（用于context_size > 0时）"""
+        """Set the multi-page context (used when context_size > 0)"""
         self.prev_context = context if context else ""
     
     def parse_args(self, args):
-        """解析配置参数"""
+        """Parse the configuration parameters"""
         # Call the parent parse_args to set the common parameters (attempts, post_check and so on)
         super().parse_args(args)
         translator_args = self._resolve_translator_config(args)
@@ -253,7 +253,7 @@ class GeminiHighQualityTranslator(CommonTranslator):
         )
 
     def _setup_client(self, system_instruction=None):
-        """设置高质量翻译客户端"""
+        """Set up the high-quality translation client"""
         if not self.client and self.api_key:
             # Check whether a custom API base is used
             is_custom_api = (
@@ -289,7 +289,7 @@ class GeminiHighQualityTranslator(CommonTranslator):
             self.logger.info("Safety settings policy: send OFF by default and fall back automatically on errors")
 
     async def _abort_inflight_request(self):
-        """取消时尝试关闭当前客户端连接，尽快中断阻塞请求。"""
+        """On cancellation, try to close the connection of the current client, to interrupt a blocked request as soon as possible."""
         if not self.client:
             return
 
@@ -306,16 +306,16 @@ class GeminiHighQualityTranslator(CommonTranslator):
 
 
     def _build_user_prompt(self, batch_data: List[Dict], ctx: Any, retry_attempt: int = 0, retry_reason: str = "") -> str:
-        """构建用户提示词（高质量版）- 使用统一方法，只包含当前待翻译文本"""
+        """Build the user prompt (high-quality version) - uses the shared method and only contains the text to translate now"""
         return self._build_user_prompt_for_hq(batch_data, ctx, "", retry_attempt=retry_attempt, retry_reason=retry_reason)
     
     def _get_system_instruction(self, source_lang: str, target_lang: str, custom_prompt_json: Dict[str, Any] = None, line_break_prompt_json: Dict[str, Any] = None, retry_attempt: int = 0, retry_reason: str = "", extract_glossary: bool = False) -> str:
-        """获取完整的系统指令（包含断句提示词、自定义提示词和基础系统提示词）"""
+        """Get the complete system instruction (line-breaking prompt, custom prompt and base system prompt)"""
         # Build the system prompt (with all instructions)
         return self._build_system_prompt(source_lang, target_lang, custom_prompt_json=custom_prompt_json, line_break_prompt_json=line_break_prompt_json, retry_attempt=retry_attempt, retry_reason=retry_reason, extract_glossary=extract_glossary)
 
     async def _translate_batch_high_quality(self, texts: List[str], batch_data: List[Dict], source_lang: str, target_lang: str, custom_prompt_json: Dict[str, Any] = None, line_break_prompt_json: Dict[str, Any] = None, ctx: Any = None, split_level: int = 0) -> List[str]:
-        """高质量批量翻译方法"""
+        """High-quality batch translation method"""
         if not texts:
             return []
         if batch_data is None:
@@ -775,7 +775,7 @@ class GeminiHighQualityTranslator(CommonTranslator):
         )
 
     async def _translate(self, from_lang: str, to_lang: str, queries: List[str], ctx=None) -> List[str]:
-        """主翻译方法"""
+        """Main translation method"""
         if not self.client:
             from .. import manga_translator
             if hasattr(manga_translator, 'config'):

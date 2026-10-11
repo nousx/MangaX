@@ -33,8 +33,8 @@ BROWSER_HEADERS = GEMINI_CURL_HEADERS
 
 class GeminiTranslator(CommonTranslator):
     """
-    Gemini纯文本翻译器
-    支持批量文本翻译，不包含图片处理
+    Gemini text-only translator.
+    Translates text in batches, without image handling
     """
     _LANGUAGE_CODE_MAP = VALID_LANGUAGES
     API_KEY_ENV = "GEMINI_API_KEY"
@@ -89,11 +89,11 @@ class GeminiTranslator(CommonTranslator):
         self._setup_client()
     
     def set_prev_context(self, context: str):
-        """设置多页上下文（用于context_size > 0时）"""
+        """Set the multi-page context (used when context_size > 0)"""
         self.prev_context = context if context else ""
     
     def parse_args(self, args):
-        """解析配置参数"""
+        """Parse the configuration parameters"""
         # Call the parent parse_args to set the common parameters (attempts, post_check and so on)
         super().parse_args(args)
         translator_args = self._resolve_translator_config(args)
@@ -225,7 +225,7 @@ class GeminiTranslator(CommonTranslator):
         )
 
     def _setup_client(self, system_instruction=None):
-        """设置Gemini客户端"""
+        """Set up the Gemini client"""
         if not self.client and self.api_key:
             # Check whether a custom API base is used
             is_custom_api = (
@@ -259,7 +259,7 @@ class GeminiTranslator(CommonTranslator):
             self.logger.info("Safety settings policy: send OFF by default and fall back automatically on errors")
 
     async def _abort_inflight_request(self):
-        """取消时尝试关闭当前客户端连接，尽快中断阻塞请求。"""
+        """On cancellation, try to close the connection of the current client, to interrupt a blocked request as soon as possible."""
         if not self.client:
             return
 
@@ -277,15 +277,15 @@ class GeminiTranslator(CommonTranslator):
 
 
     def _build_user_prompt(self, texts: List[str], ctx: Any, retry_attempt: int = 0, retry_reason: str = "") -> str:
-        """构建用户提示词（纯文本版）- 使用 JSON 格式以配合 HQ Prompt"""
+        """Build the user prompt (text-only version) - in JSON format, to go with the HQ prompt"""
         return self._build_user_prompt_for_texts(texts, ctx, "", retry_attempt=retry_attempt, retry_reason=retry_reason)
     
     def _get_system_instruction(self, source_lang: str, target_lang: str, custom_prompt_json: Dict[str, Any] = None, line_break_prompt_json: Dict[str, Any] = None, retry_attempt: int = 0, retry_reason: str = "", extract_glossary: bool = False) -> str:
-        """获取完整的系统指令"""
+        """Get the complete system instruction"""
         return self._build_system_prompt(source_lang, target_lang, custom_prompt_json=custom_prompt_json, line_break_prompt_json=line_break_prompt_json, retry_attempt=retry_attempt, retry_reason=retry_reason, extract_glossary=extract_glossary)
 
     async def _translate_batch(self, texts: List[str], source_lang: str, target_lang: str, custom_prompt_json: Dict[str, Any] = None, line_break_prompt_json: Dict[str, Any] = None, ctx: Any = None, split_level: int = 0) -> List[str]:
-        """批量翻译方法（纯文本）"""
+        """Batch translation method (text only)"""
         if not texts:
             return []
         
@@ -644,7 +644,7 @@ class GeminiTranslator(CommonTranslator):
         raise last_exception if last_exception else RuntimeError("Gemini translation failed without a response")
 
     async def _translate(self, from_lang: str, to_lang: str, queries: List[str], ctx=None) -> List[str]:
-        """主翻译方法"""
+        """Main translation method"""
         if not self.client:
             from .. import manga_translator
             if hasattr(manga_translator, 'config'):
