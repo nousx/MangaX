@@ -1,4 +1,4 @@
-"""跨子模块共享的小工具：性能计时累加与 LRU 缓存原语、缓存容量常量。"""
+"""Small tools shared across the submodules: accumulated performance timing, LRU cache primitives and cache capacity constants."""
 from time import perf_counter
 from typing import Optional
 

@@ -67,13 +67,13 @@ class EmphasisPlan:
 
 @dataclass
 class UnderlinePlan:
-    """下划线：沿排版主轴（横排行方向 / 竖排列方向）的一条实心线。
+    """Underline: a solid line along the main axis of the layout (the line direction of horizontal text / the column direction of vertical text).
 
-    与着重号同构的列/行级装饰：``main_start``/``main_end`` 是主轴上的区间，
-    ``cross_center`` 是交叉轴上线条中心的位置（横排相对基线向下，竖排相对
-    列正文右边缘向右）。装饰跟排版方向走，不跟单个字形走 —— 字形自身的
-    旋转/镜像/斜体切变都不作用在它上面（竖排里被旋转 90° 的括号旁边，线
-    仍然是上下方向的一条）。
+    A column- or line-level decoration with the same structure as emphasis marks: ``main_start``/``main_end`` is the interval on the main axis, and
+    ``cross_center`` is the position of the line centre on the cross axis (downwards from the baseline for horizontal text, rightwards from
+    the right edge of the column body for vertical text). The decoration follows the layout direction, not the single glyph - the glyph's own
+    rotation, mirroring or italic shear do not apply to it (beside a bracket rotated 90 degrees in vertical text, the line
+    still runs top to bottom).
     """
 
     source: RenderSpan
@@ -163,7 +163,7 @@ def plan_emphasis(
 
 
 def _underline_thickness_px(font_size: int) -> int:
-    """下划线线宽（像素）：按字号比例缩放，横竖排共用一个口径。"""
+    """Underline thickness (pixels): scaled as a ratio of the font size, with one convention for horizontal and vertical text."""
     return max(1, int(round(font_size * RICH_TEXT_POLICY.underline_thickness)))
 
 

@@ -1,4 +1,4 @@
-"""字形层：character → GlyphSpec（字体+glyph id）→ GlyphRaster（alpha 位图与度量）。"""
+"""Glyph layer: character → GlyphSpec (font + glyph id) → GlyphRaster (alpha bitmap and metrics)."""
 
 import math
 from dataclasses import dataclass
@@ -185,11 +185,11 @@ def _glyph_raster(
     scale_x: float = 1.0,
     scale_y: float = 1.0,
 ) -> GlyphRaster:
-    """字形 alpha 位图与度量；剪切、旋转、拉伸均在矢量轮廓上完成。
+    """Alpha bitmap and metrics of a glyph; shear, rotation and stretching are all done on the vector outline.
 
-    pathForGlyph 的轮廓坐标以基线为原点。斜体先绕基线剪切；竖排自动旋转
-    和宽高拉伸随后以墨迹框中心为锚点执行，最后只光栅化一次，避免位图二次
-    缩放造成边缘模糊。advance 不随这些视觉变换改变。
+    The outline coordinates of pathForGlyph have the baseline as origin. Italics shear about the baseline first; automatic rotation in vertical text
+    and width/height stretching then use the centre of the ink box as anchor, and rasterisation happens only once at the end, which avoids the blurred edges
+    of scaling a bitmap a second time. The advance does not change with these visual transforms.
     """
     spec = _glyph_spec(cdpt, font_size)
     state = _state()

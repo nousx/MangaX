@@ -1,8 +1,8 @@
-"""中文语义断句与排版。
+"""Semantic line breaking and layout for Chinese.
 
-用 HanLP 粗分词 + 成分句法把译文组织成语义单元树,排版时按预算逐层拆分,
-使换行尽量落在语义边界上。模型缺失或推理失败时返回 None,由调用方回退
-普通换行。
+HanLP coarse segmentation + constituency parsing organise the translation into a tree of semantic units, which the layout splits level by level
+within the budget, so line breaks fall on semantic boundaries as far as possible. When the model is missing or inference fails, None is returned and the caller falls back
+to ordinary line breaking.
 """
 
 import asyncio
@@ -479,12 +479,12 @@ def _contains_phrase_punct(text: str) -> bool:
 
 
 def _inject_space_units(units: Tuple[SemanticUnit, ...], text: str) -> Optional[Tuple[SemanticUnit, ...]]:
-    """把分词时丢弃的空白按原文位置回填为独立单元。
+    """Put the whitespace dropped by segmentation back, as units of their own, at their positions in the original text.
 
-    空白通常落在 token 边界上,作为兄弟单元插入:嵌套单元内部的空白留在该
-    单元内,单元之间的空白落在最近公共祖先层。粗分词也可能把带空格的专名
-    (如 "HELLO WORLD")合成一个 token,此时在叶子内部还原空白并拆出子节点。
-    与原文对不齐时返回 None,由调用方回退。
+    Whitespace usually falls on a token boundary and is inserted as a sibling unit: whitespace inside a nested unit stays in that
+    unit, and whitespace between units goes to the level of their nearest common ancestor. Coarse segmentation may also merge a proper name with a space
+    (such as "HELLO WORLD") into one token; the whitespace is then restored inside the leaf and child nodes are split off.
+    None is returned when it cannot be aligned with the original text, and the caller falls back.
     """
     rebuilt, cursor = _inject_space_walk(units, text, 0)
     if rebuilt is None:
@@ -519,10 +519,10 @@ def _inject_space_walk(
 
 
 def _match_leaf_span(leaf_text: str, text: str, cursor: int) -> tuple[Optional[str], int]:
-    """把去除过空白的叶子 token 对齐回原文,允许原文在字符间夹带空白。
+    """Align leaf tokens, from which whitespace was removed, back to the original text, which may have whitespace between characters.
 
-    返回 (含原文空白的片段, 新游标);对不齐返回 (None, 原游标)。
-    尾随空白不消费,留给兄弟单元层处理。
+    Returns (the fragment with the original whitespace, the new cursor); (None, the old cursor) when it cannot be aligned.
+    Trailing whitespace is not consumed and is left to the sibling unit level.
     """
     start = cursor
     for char in leaf_text:
@@ -764,11 +764,11 @@ def _merge_lines_to_target_segments(
     lines: list[str],
     target_segments: int,
 ) -> list[list[str]]:
-    """枚举已有语义断点的全部目标分区，不在此处做评分或择优。
+    """Enumerate every target partition of the existing semantic break points, without scoring or choosing here.
 
-    ``lines`` 是语义布局已经暴露出的合法断点序列。函数只删除其中的
-    一部分断点，生成所有连续分区；候选的语义代价、像素均匀度和气泡
-    适配统一交给调用方评估，避免在生成阶段偷偷丢掉语义更好的方案。
+    ``lines`` is the sequence of legal break points the semantic layout has already exposed. The function only removes some
+    of those break points and produces all contiguous partitions; the semantic cost, pixel evenness and bubble
+    fit of the candidates are all evaluated by the caller, so a semantically better option is not dropped quietly at the generation stage.
     """
     target = max(1, int(target_segments))
     count = len(lines)
@@ -1069,11 +1069,11 @@ def _bubble_candidate_budgets(total_budget: float, line_budget: float, target_se
 
 
 def candidate_semantic_break_penalty(source_text: str, text_with_br: str) -> int:
-    """候选断行相对原文的语义边界代价。
+    """Semantic boundary cost of a candidate set of line breaks relative to the original text.
 
-    候选的每一行必须与原文逐字符对齐,唯一允许的差异是换行处被删掉的
-    原文空白(含换行符);对不齐即视为内容被篡改,返回 1000000。断在空白处
-    时,取空白两端边界代价中较小的一个。
+    Every line of a candidate must align with the original text character by character; the only difference allowed is original
+    whitespace (line breaks included) removed at a line break. A candidate that does not align counts as tampered content and returns 1000000. For a break on whitespace,
+    the smaller of the boundary costs at the two ends of the whitespace is taken.
     """
     source = source_text or ""
     lines = _split_br_text(text_with_br)

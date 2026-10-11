@@ -1,12 +1,12 @@
 """
-文本替换引擎 - 从 YAML 配置加载替换规则并应用到译文字段
+Text replacement engine - loads replacement rules from the YAML configuration and applies them to the translation field
 
-支持三个分组：
-  - common: 通用替换，始终执行
-  - horizontal: 横排时执行（direction == 0）
-  - vertical: 竖排时执行（direction == 1）
+Three groups are supported:
+  - common: general replacements, always run
+  - horizontal: run for horizontal text (direction == 0)
+  - vertical: run for vertical text (direction == 1)
 
-每条规则支持字面替换和正则替换（regex: true）
+Each rule can be a literal replacement or a regular expression replacement (regex: true)
 """
 import logging
 import os
@@ -268,14 +268,14 @@ vertical:
 """
 
 def invalidate_replacements_cache(file_path: Optional[str] = None) -> None:
-    """清理替换规则缓存，让后续渲染重新读取文件。"""
+    """Clear the replacement rule cache, so later rendering reads the file again."""
     if file_path is None:
         file_path = _DEFAULT_REPLACEMENTS_PATH
     _replacements_cache.pop(file_path, None)
 
 
 def reset_text_replacements_to_default(file_path: Optional[str] = None) -> str:
-    """将文本替换规则配置写回内置默认模板。"""
+    """Write the text replacement rule configuration back to the built-in default template."""
     if file_path is None:
         file_path = _DEFAULT_REPLACEMENTS_PATH
 
@@ -287,7 +287,7 @@ def reset_text_replacements_to_default(file_path: Optional[str] = None) -> str:
 
 
 def ensure_text_replacements_exists() -> str:
-    """确保文本替换规则存在；历史默认文件升级由启动初始化统一处理。"""
+    """Make sure the text replacement rules exist; upgrading old default files is handled in one place by the start-up initialisation."""
     if os.path.exists(_DEFAULT_REPLACEMENTS_PATH):
         return _DEFAULT_REPLACEMENTS_PATH
     
@@ -302,7 +302,7 @@ def ensure_text_replacements_exists() -> str:
 
 
 def _compile_rule(rule: dict) -> Optional[Tuple[re.Pattern, str]]:
-    """编译单条替换规则为 (compiled_pattern, replace_string)"""
+    """Compile a single replacement rule into (compiled_pattern, replace_string)"""
     pattern_str = rule.get('pattern')
     replace_str = rule.get('replace', '')
     is_regex = rule.get('regex', False)
@@ -326,9 +326,9 @@ def _compile_rule(rule: dict) -> Optional[Tuple[re.Pattern, str]]:
 
 def _load_and_parse(file_path: str) -> dict:
     """
-    加载并解析 YAML 替换配置文件。
-    返回 {'common': [...], 'horizontal': [...], 'vertical': [...]}
-    每个列表元素为 (compiled_pattern, replace_string)
+    Load and parse the YAML replacement configuration file.
+    Returns {'common': [...], 'horizontal': [...], 'vertical': [...]}
+    Each list element is (compiled_pattern, replace_string)
     """
     result = {'common': [], 'horizontal': [], 'vertical': []}
 
@@ -362,12 +362,12 @@ def _load_and_parse(file_path: str) -> dict:
 
 def load_replacements(file_path: Optional[str] = None) -> dict:
     """
-    加载替换规则（带文件修改时间缓存）。
+    Load the replacement rules (cached by the modification time of the file).
 
-    参数:
-        file_path: YAML 配置文件路径，None 时使用默认路径
+    Args:
+        file_path: path of the YAML configuration file; the default path is used when None
 
-    返回:
+    Returns:
         {'common': [...], 'horizontal': [...], 'vertical': [...]}
     """
     if file_path is None:
@@ -393,17 +393,17 @@ def load_replacements(file_path: Optional[str] = None) -> dict:
 def apply_replacements(text: str, direction: int, replacements: Optional[dict] = None,
                        file_path: Optional[str] = None) -> str:
     """
-    对译文应用替换规则。
-    自动跳过 [BR]、<br>、【BR】 等换行标记，避免标记内容被误替换。
+    Apply the replacement rules to a translation.
+    Line-break markers such as [BR], <br> and 【BR】 are skipped automatically, so their content is not replaced by mistake.
 
-    参数:
-        text: 原始译文
-        direction: 0=横排, 1=竖排
-        replacements: 预加载的规则字典（可选，避免重复加载）
-        file_path: YAML 配置文件路径（当 replacements 为 None 时使用）
+    Args:
+        text: the original translation
+        direction: 0 = horizontal, 1 = vertical
+        replacements: a preloaded rule dictionary (optional, avoids loading again)
+        file_path: path of the YAML configuration file (used when replacements is None)
 
-    返回:
-        替换后的文本
+    Returns:
+        The text after replacement
     """
     if not text:
         return text
@@ -444,8 +444,8 @@ def apply_replacements(text: str, direction: int, replacements: Optional[dict] =
 
 def build_h2v_dict(file_path: Optional[str] = None) -> dict:
     """
-    从 YAML vertical 分组构建 CJK_H2V 兼容字典。
-    仅包含非正则的单字符→单字符映射，供 CJK_Compatibility_Forms_translate 使用。
+    Build the CJK_H2V compatibility dictionary from the vertical group of the YAML.
+    Only single character → single character mappings that are not regular expressions are included, for CJK_Compatibility_Forms_translate.
     """
     replacements = load_replacements(file_path)
     h2v = {}
@@ -467,8 +467,8 @@ def build_h2v_dict(file_path: Optional[str] = None) -> dict:
 
 def build_v2h_dict(file_path: Optional[str] = None) -> dict:
     """
-    从 YAML horizontal 分组构建 CJK_V2H 兼容字典。
-    仅包含非正则的单字符→单字符映射。
+    Build the CJK_V2H compatibility dictionary from the horizontal group of the YAML.
+    Only single character → single character mappings that are not regular expressions are included.
     """
     replacements = load_replacements(file_path)
     v2h = {}

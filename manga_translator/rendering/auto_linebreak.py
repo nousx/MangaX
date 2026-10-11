@@ -330,12 +330,12 @@ _BR_RE = re.compile(r'\s*(\[BR\]|<br>|【BR】)\s*', re.IGNORECASE)
 
 
 def _vert_char_advance(font_size: int, cdpt: str, letter_spacing: float = 1.0) -> int:
-    """单个字符的竖排进量（像素），与 text_render.get_char_offset_y 逻辑一致。"""
+    """Vertical advance of a single character (pixels), the same logic as text_render.get_char_offset_y."""
     return get_char_offset_y(font_size, cdpt, letter_spacing=letter_spacing)
 
 
 def _vert_char_bitmap_width(font_size: int, cdpt: str) -> int:
-    """单个字符的竖排字形实际宽度。"""
+    """Actual glyph width of a single character in vertical text."""
     cdpt_trans, _ = CJK_Compatibility_Forms_translate(cdpt, 1)
     try:
         return get_vertical_char_bitmap_width(font_size, cdpt_trans)
@@ -345,7 +345,7 @@ def _vert_char_bitmap_width(font_size: int, cdpt: str) -> int:
 
 
 def _vert_char_metrics(font_size: int, cdpt: str, letter_spacing: float = 1.0) -> Tuple[int, int]:
-    """一次取竖排进量和字形宽度，避免 layout 尺寸计算重复查同一字形。"""
+    """Get the vertical advance and the glyph width in one go, so the layout size calculation does not look up the same glyph twice."""
     try:
         base = text_render._vertical_base(font_size, '　' if cdpt == '＿' else cdpt, letter_spacing)
         width = int(base.frame_width or font_size)
@@ -360,14 +360,14 @@ def _vert_char_metrics(font_size: int, cdpt: str, letter_spacing: float = 1.0) -
 
 def _layout_vertical(font_size: int, text: str, max_height: int, config: Any = None, letter_spacing: float = 1.0) -> Tuple[List[str], List[int]]:
     """
-    竖排换行引擎，完全自包含。
+    Vertical line-breaking engine, fully self-contained.
 
-    特性：
-    1. 普通 CJK 字符用 vertAdvance 逐字累积
-    2. CJK_H2V 字形替换（通过 CJK_Compatibility_Forms_translate）
-    3. [BR]/<br> 等统一预处理为 \n
+    Features:
+    1. Ordinary CJK characters accumulate one by one with vertAdvance
+    2. CJK_H2V glyph replacement (through CJK_Compatibility_Forms_translate)
+    3. [BR]/<br> and the like are preprocessed into \\n
 
-    返回 (line_text_list, line_height_list)
+    Returns (line_text_list, line_height_list)
     """
     text = text or ''
     text = _BR_RE.sub('\n', text)
@@ -409,7 +409,7 @@ def _layout_vertical(font_size: int, text: str, max_height: int, config: Any = N
 
 
 def _layout_vertical_metrics(font_size: int, text: str, max_height: int, config: Any = None, letter_spacing: float = 1.0) -> Tuple[List[str], List[int], List[int]]:
-    """竖排换行 + 每列宽度，一次扫描完成尺寸测量。"""
+    """Vertical line breaking + the width of each column; the size is measured in one scan."""
     text = text or ''
     text = _BR_RE.sub('\n', text)
 
@@ -455,7 +455,7 @@ def _layout_vertical_metrics(font_size: int, text: str, max_height: int, config:
 
 
 def _vert_line_width(line_text: str, font_size: int) -> int:
-    """竖排单列的实际最大字形宽度，与 put_text_vertical 的 line_widths 逻辑一致。"""
+    """Actual maximum glyph width of a single vertical column, the same logic as line_widths in put_text_vertical."""
     max_width = font_size
     for c in line_text:
         w = _vert_char_bitmap_width(font_size, c)
@@ -465,7 +465,7 @@ def _vert_line_width(line_text: str, font_size: int) -> int:
 
 
 def _vert_total_height(text: str, font_size: int, config: Any = None, letter_spacing: float = 1.0) -> int:
-    """不换行时竖排文本的总高度。"""
+    """Total height of vertical text without line breaks."""
     text = text or ''
     text = _BR_RE.sub('', text)
     total = 0
@@ -484,11 +484,11 @@ _NO_END_CHARS = "《「『【（"
 
 def _layout_horizontal_cjk(font_size: int, text: str, max_width: int, letter_spacing: float = 1.0) -> Tuple[List[str], List[int]]:
     """
-    横排 CJK 换行，完全自包含。
+    Horizontal CJK line breaking, fully self-contained.
 
-    特性：
-    1. [BR] 等统一为 \\n
-    2. 标点禁则：行首禁则字符追到上一行；行尾禁则字符推到下一行
+    Features:
+    1. [BR] and the like become \\n
+    2. Punctuation rules: a character that may not start a line moves up to the previous line; a character that may not end a line is pushed to the next line
     """
     text = _BR_RE.sub('\n', text)
     lines: List[Tuple[str, int]] = []
@@ -555,14 +555,14 @@ def _layout_horizontal_eng(
     letter_spacing: float = 1.0,
 ) -> Tuple[List[str], List[int]]:
     """
-    横排英文换行，完全自包含。
+    Horizontal English line breaking, fully self-contained.
 
-    特性：
-    1. [BR] 等统一为 \\n，保留强制换行
-    2. 超宽时自动扩大 max_width（防止死循环）
-    3. Hyphenator 音节断字（语言敏感）
-    4. 连字符优化 pass：把下一行音节塞到当前行
-    5. 行合并 pass：相邻行合并节省行数
+    Features:
+    1. [BR] and the like become \\n; forced line breaks are kept
+    2. max_width is enlarged automatically when a word is too wide (prevents an endless loop)
+    3. Syllable hyphenation with Hyphenator (language-sensitive)
+    4. Hyphenation optimisation pass: syllables of the next line are pulled into the current line
+    5. Line merging pass: adjacent lines are merged to save lines
     """
     text = _BR_RE.sub('\n', text)
     max_width = max(max_width, 2 * font_size)

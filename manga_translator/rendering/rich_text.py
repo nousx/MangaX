@@ -333,11 +333,11 @@ class Paragraph:
 
     @property
     def spans(self) -> list[RenderSpan]:
-        """渲染 span 视图（惰性缓存，F24）。
+        """View of the render spans (cached lazily, F24).
 
-        解析后的文档视为不可变（全仓无人在解析后原地修改 blocks/inlines），
-        首次访问计算并缓存到 self._spans。缓存的 span.style 在构建时已与
-        inline.style 脱钩（copy），消费方需要改样式时自行 copy。
+        A parsed document is treated as immutable (nothing in the repository modifies blocks/inlines in place after parsing);
+        the spans are computed on first access and cached in self._spans. The cached span.style is decoupled from
+        inline.style at build time (copy), so a consumer that needs to change a style makes its own copy.
         """
         cached = getattr(self, "_spans", None)
         if cached is not None:
@@ -413,10 +413,10 @@ def is_rich_text_document(value: Any) -> bool:
 
 
 def plain_text_of(value: Any) -> str:
-    """任意译文值 → 纯文本：richtext.v1 文档取正文，字符串原样，None 归空串。
+    """Any translation value → plain text: the body of a richtext.v1 document, a string as it is, None as an empty string.
 
-    这是"富文本值转纯文本"的唯一入口，所有出口（渲染预览、导出、日志、
-    过滤）都应调用它，而不是各自手写 isinstance 分支。
+    This is the only entry point for "rich-text value to plain text"; every outlet (render preview, export, log,
+    filter) should call it instead of writing its own isinstance branches.
     """
     if is_rich_text_document(value):
         return ensure_rich_text_document(value).plain_text()
@@ -424,15 +424,15 @@ def plain_text_of(value: Any) -> str:
 
 
 def has_content(value: Any) -> bool:
-    """译文值是否含可渲染文本（纯文本去空白非空 / 文档正文非空）。"""
+    """Whether a translation value has renderable text (non-empty plain text after stripping whitespace / a non-empty document body)."""
     return bool(plain_text_of(value).strip())
 
 
 def plain_equivalent_text(value: Any) -> str | None:
-    """若文档只是"纯文本 + 换行"（无任何样式/注音/纵中横），返回等价的
-    多行字符串（段落以 \\n 连接）；否则返回 None。
+    """When the document is only "plain text + line breaks" (no style, ruby or tate-chu-yoko at all), return the equivalent
+    multi-line string (paragraphs joined with \\n); otherwise return None.
 
-    用于让无样式文档回退到纯字符串渲染路径（如 HQ 超采样）。
+    Used to let a document without styling fall back to the plain-string render path (such as HQ supersampling).
     """
     if not is_rich_text_document(value):
         return None
@@ -449,7 +449,7 @@ def plain_equivalent_text(value: Any) -> str | None:
 
 
 def is_redundant_plain_document(value: Any, fallback_text: Any) -> bool:
-    """文档是否只是 ``fallback_text`` 的无样式 paragraph 表示。"""
+    """Whether the document is only the unstyled paragraph form of ``fallback_text``."""
     equivalent = plain_equivalent_text(value)
     if equivalent is None:
         return False
@@ -521,7 +521,7 @@ def _safe_float(value, default):
 
 
 def _parse_italic(value) -> bool | float:
-    """italic 协议值：bool 原样；数字为切变角度（度），0 归一成 False。"""
+    """italic protocol value: a bool as it is; a number is the shear angle (degrees), and 0 is normalised to False."""
     if isinstance(value, bool) or value is None:
         return bool(value)
     number = _safe_float(value, None)

@@ -95,7 +95,7 @@ def _estimate_effect_padding(
     config: Config = None,
     stroke_width: float = None,
 ) -> float:
-    """估算文本效果（当前主要是描边）带来的额外边缘像素。"""
+    """Estimate the extra edge pixels that text effects (mainly the stroke, for now) add."""
     if font_size <= 0:
         return 0.0
 
@@ -216,20 +216,20 @@ def calc_text_block_dimensions(text: str, is_horizontal: bool, line_spacing: flo
                                 font_size: int = BASE_FONT_SIZE, letter_spacing: float = 1.0,
                                 stroke_width: float = None) -> tuple:
     """
-    按指定字号模拟渲染文本块，返回精确的像素尺寸
+    Simulate rendering a text block at the given font size and return its exact pixel size
 
-    测量与渲染共用同一套包络几何（put_text_* 的归一口径）：纯字符串在
-    measure 入口转成单样式 richtext 段落，测量框 == 渲染输出面尺寸。
+    Measuring and rendering share one envelope geometry (the normalised convention of put_text_*): a plain string
+    is turned into a single-style richtext paragraph at the measure entry, and measured box == size of the rendered surface.
 
     Args:
-        text: 文本内容。纯字符串的 [BR]/<br>/【BR】/换行会归一成段落。
-        is_horizontal: True=横排，False=竖排
-        line_spacing: 行间距倍率
-        config: 配置对象
-        target_lang: 目标语言
+        text: the text. In a plain string, [BR]/<br>/【BR】/line breaks are normalised into paragraphs.
+        is_horizontal: True = horizontal, False = vertical
+        line_spacing: line spacing multiplier
+        config: the configuration object
+        target_lang: the target language
 
     Returns:
-        (base_width, base_height, n_lines) - 基准尺寸和行/列数
+        (base_width, base_height, n_lines) - the base size and the number of lines or columns
     """
     _ = target_lang
     base_font = max(1, int(font_size))
@@ -257,19 +257,19 @@ def calc_font_from_box(width: float, height: float, text: str, is_horizontal: bo
                        target_lang: str = None, letter_spacing: float = 1.0,
                        stroke_width: float = None) -> int:
     """
-    框 → 字体：基于真实测量结果二分搜索可容纳的最大字号
+    Box -> font: binary search, on real measurements, for the largest font size that fits
 
     Args:
-        width: 框宽度（像素）
-        height: 框高度（像素）
-        text: 文本内容
-        is_horizontal: True=横排，False=竖排
-        line_spacing: 行间距倍率
-        config: 配置对象
-        target_lang: 目标语言
+        width: box width (pixels)
+        height: box height (pixels)
+        text: the text
+        is_horizontal: True = horizontal, False = vertical
+        line_spacing: line spacing multiplier
+        config: the configuration object
+        target_lang: the target language
 
     Returns:
-        能放入框内的最大字体大小（像素）
+        The largest font size that fits in the box (pixels)
     """
     if width <= 0 or height <= 0:
         return 1
@@ -362,12 +362,12 @@ def calc_text_block_metrics(text, is_horizontal: bool, line_spacing: float,
                             config: Config = None, target_lang: str = None,
                             font_size: int = None, letter_spacing: float = 1.0,
                             stroke_width: float = None) -> tuple:
-    """尺寸 + 正文中心：在 calc_text_block_dimensions 基础上追加正文框中心点。
+    """Size + body centre: calc_text_block_dimensions plus the centre point of the body box.
 
     Returns:
         (base_width, base_height, n_lines, body_center)
-        body_center 为正文框中心在渲染框内的坐标（相对渲染框左上角）。
-        纯文本没有框外装饰，恒为渲染框正中心。
+        body_center is the centre of the body box inside the render box (relative to its top-left corner).
+        Plain text has no decoration outside the box, so it is always the exact centre of the render box.
     """
     _ = target_lang
     base_font = max(1, int(font_size))
@@ -384,27 +384,28 @@ def calc_box_from_font(font_size: int, text: str, is_horizontal: bool,
                        angle: float = 0, letter_spacing: float = 1.0,
                        stroke_width: float = None) -> tuple:
     """
-    字体 → 框：直接按目标字号测量文本像素尺寸，并给出正文中心点
+    Font -> box: measure the pixel size of the text directly at the target font size and give the body centre
 
     Args:
-        font_size: 字体大小（像素）
-        text: 文本内容
-        is_horizontal: True=横排，False=竖排
-        line_spacing: 行间距倍率
-        config: 配置对象
-        target_lang: 目标语言
-        center: 中心点坐标 (cx, cy)，如果提供则返回 dst_points
-        angle: 旋转角度（度），仅当 center 不为 None 时使用
+        font_size: font size (pixels)
+        text: the text
+        is_horizontal: True = horizontal, False = vertical
+        line_spacing: line spacing multiplier
+        config: the configuration object
+        target_lang: the target language
+        center: centre point (cx, cy); when given, dst_points is returned
+        angle: rotation angle (degrees), only used when center is not None
 
     Returns:
-        center 为 None: (required_width, required_height, n_lines, body_center)
-            body_center = 正文框中心在渲染框内的坐标（相对渲染框左上角）。
-            横排按实际主文字墨迹计算，ruby/emphasis 等装饰可使其偏离渲染框
-            正中心；竖排会因首列注音等装饰偏移。
-        center 不为 None: (dst_points, body_center_world)
-            dst_points shape (1, 4, 2)，渲染框以 center 为正中心；
-            body_center_world = 正文中心的世界坐标（已随 angle 旋转）。
-            文本为空时返回 (None, None)。
+        center is None: (required_width, required_height, n_lines, body_center)
+            body_center = the centre of the body box inside the render box (relative to its top-left corner).
+            For horizontal text it is computed from the actual ink of the main text, and decorations such as
+            ruby/emphasis can move it off the exact centre of the render box; for vertical text it shifts
+            because of decorations such as the ruby of the first column.
+        center is not None: (dst_points, body_center_world)
+            dst_points has shape (1, 4, 2), and the render box has center as its exact centre;
+            body_center_world = the body centre in world coordinates (already rotated by angle).
+            (None, None) is returned when the text is empty.
     """
     font_size = max(1, int(font_size))
     base_w, base_h, n_lines, (body_x, body_y) = calc_text_block_metrics(
@@ -1069,12 +1070,12 @@ def _resolve_strict_layout_font_size(
     layout_candidate_font_size: int,
     box_fit_font_size: int,
 ) -> int:
-    """strict 布局字号：最终文本按 OCR 框适配的字号作为布局上限。
+    """Font size of the strict layout: the font size fitted to the OCR box is the layout limit for the final text.
 
-    box_fit_font_size <= 0（未取得按框计算结果）时直接用候选字号，
-    最终仍由外层统一应用字号配置。替换翻译模式下强制单行
-    （OCR 单行且方向未改写）的区域豁免按框上限：清除断行标记后按候选字号
-    渲染，允许超出 OCR 框。
+    When box_fit_font_size <= 0 (no box-fitted result was obtained) the candidate font size is used directly,
+    and the font size setting is still applied in one place by the outer code. In replace-translation mode, regions forced to a single line
+    (a single OCR line whose direction was not rewritten) are exempt from the box limit: the line-break markers are removed and the text is rendered
+    at the candidate font size, and may extend beyond the OCR box.
     """
     min_shrink_font_size = 8
     is_replace_mode = config.cli.replace_translation if (config and hasattr(config, 'cli')) else False
@@ -1132,13 +1133,13 @@ def _compute_top_aligned_center(region: 'TextBlock', text_height: float) -> tupl
 
 
 def _resolve_layout_anchor_mode(*, apply_bubble_centering: bool, skip_font_scaling: bool = False) -> str:
-    """统一中心锚点策略。
+    """One strategy for the centre anchor.
 
-    - skip_font_scaling: 编辑器授权布局——region.center 是编辑器白框（渲染框）
-      中心，按"渲染框中心"语义摆放（center_box，不做正文平移），与编辑器
-      预览逐像素一致
-    - 正常渲染: 锚点由管线自己计算，语义是"正文中心该在哪"——气泡内居中
-      命中时 center，否则 top
+    - skip_font_scaling: a layout authorised by the editor - region.center is the centre of the editor's white box (the render box)
+      and is placed with the meaning "render box centre" (center_box, no body shift), pixel for pixel the same
+      as the editor preview
+    - normal rendering: the pipeline computes the anchor itself, with the meaning "where the body centre should be" - center when
+      centring in the bubble applies, otherwise top
     """
     if skip_font_scaling:
         return 'center_box'
@@ -2808,7 +2809,7 @@ async def dispatch(
     return img
 
 def _native_render_rect_points(center, width: int, height: int, angle: float) -> np.ndarray:
-    """按原生 RGBA 尺寸生成实际渲染四角；angle 为图像坐标系顺时针角度。"""
+    """Build the actual rendered corners from the native RGBA size; angle is clockwise in image coordinates."""
     cx, cy = float(center[0]), float(center[1])
     hw, hh = float(width) / 2.0, float(height) / 2.0
     local = np.array(
@@ -2838,7 +2839,7 @@ def _premultiply_rgba(rgba: np.ndarray) -> np.ndarray:
 
 
 def _rotate_native_rgba(premultiplied: np.ndarray, angle: float) -> np.ndarray:
-    """保持 scale=1 旋转预乘 RGBA，并扩展画布避免裁切。"""
+    """Rotate premultiplied RGBA at scale=1 and enlarge the canvas so nothing is cropped."""
     angle = float(angle or 0.0)
     if abs(angle) < 1e-6:
         return premultiplied

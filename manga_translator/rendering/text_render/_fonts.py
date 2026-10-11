@@ -1,7 +1,7 @@
-"""Qt 字体运行时。
+"""Qt font runtime.
 
-离屏 QGuiApplication 引导、字体文件注册与 foundry 方括号净化、线程局部
-FontState（字体选择与各级缓存）、QFont/QTextLayout 构造、连字器选择。
+Bootstraps the off-screen QGuiApplication, registers font files and cleans foundry square brackets, and holds the thread-local
+FontState (font selection and the caches at each level), the construction of QFont/QTextLayout and the choice of hyphenator.
 """
 import logging
 import os
@@ -190,10 +190,10 @@ def unregister_font_file(path: str) -> bool:
 
 
 def _sanitized_font_bytes(path: str):
-    """返回 ``(名字表去掉方括号后的字体数据, 原始家族名列表)``。
+    """Return ``(font data with the square brackets removed from the name table, list of original family names)``.
 
-    无需处理或改写失败时数据为 None。原始家族名（nameID 1/4/16 各语言记录）
-    用于建立「旧名字 -> 文件」的别名映射。
+    The data is None when nothing needs doing or the rewrite fails. The original family names (the nameID 1/4/16 records of every language)
+    are used to build the "old name -> file" alias mapping.
     """
     if not path.lower().endswith(('.ttf', '.otf')):
         return None, []
@@ -241,10 +241,10 @@ def _sanitized_font_bytes(path: str):
 
 
 def register_font_file(path: str) -> list:
-    """注册字体文件并返回可安全用于 QFont 匹配的 family 列表。
+    """Register a font file and return the list of families that are safe to use for QFont matching.
 
-    家族名以 "[" 开头的字体（如 "[工具箱]xxx-简繁"）改为注册去掉方括号的
-    内存副本，绕开 Qt 的 foundry 语法；返回列表已过滤空名和带方括号的名字。
+    A font whose family name starts with "[" (a bracketed tag in front of the name) is registered as an in-memory copy
+    without the square brackets, to get around Qt's foundry syntax; empty names and names with square brackets are filtered out of the returned list.
     """
     key = _font_registration_key(path)
     if QGuiApplication.instance() is None:
@@ -335,9 +335,10 @@ _system_fonts_registered = False
 
 
 def _register_system_fonts() -> bool:
-    """offscreen/minimal 平台的字体库不枚举系统字体（只扫 QT_QPA_FONTDIR），
-    桌面模式选的系统字体在 CLI/服务端会查不到；首次未命中家族名时把系统
-    字体目录整体注册进 Qt，进程内只扫一次。返回是否值得重查家族名。"""
+    """The font database of the offscreen/minimal platforms does not enumerate system fonts (it only scans QT_QPA_FONTDIR),
+    so a system font chosen in desktop mode would not be found in the CLI or on the server; on the first family name that misses, the whole system
+    font folder is registered with Qt, scanned only once per process. Returns whether looking the family name up again is worthwhile.
+    """
     global _system_fonts_registered
     if _system_fonts_registered:
         return False
@@ -449,7 +450,7 @@ def _set_family(state: FontState, family: str, style: str = ''):
 
 
 def _match_family(requested: str):
-    """在 Qt 字体库中解析家族名；返回可用家族名或 None。"""
+    """Resolve a family name in the Qt font database; returns a usable family name or None."""
     if not requested:
         return None
     available = {name.casefold(): name for name in QFontDatabase.families()}

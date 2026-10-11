@@ -1,8 +1,8 @@
-"""布局层：横排行/竖排列的富文本布局 builder 与包络几何。
+"""Layout layer: rich-text layout builders for horizontal lines and vertical columns, and the envelope geometry.
 
-测量与绘制共用同一套几何计划，像素光栅化只发生在渲染层——这是
-"测量框 == 绘制输出面"契约的实现处。竖排字符槽位规则（旋转/贴边/
-半宽/紧凑）也在本模块。
+Measuring and drawing share one geometry plan, and pixels are only rasterised in the render layer - this is
+where the "measured box == drawn output surface" contract is implemented. The slot rules for vertical characters (rotation, edge alignment,
+half width, compact) are in this module too.
 """
 
 import itertools
@@ -140,7 +140,7 @@ _VERTICAL_FORCE_COMPACT_RE = re.compile(
 
 
 def CJK_Compatibility_Forms_translate(cdpt: str, direction: int):
-    """渲染层不替换字符，只返回方向相关的旋转信息。"""
+    """The render layer does not replace characters; it only returns the rotation information that depends on direction."""
     if direction == 1 and cdpt in _VERTICAL_ROTATE_CHARS:
         return cdpt, 90
     return cdpt, 0
@@ -162,7 +162,7 @@ def _rich_vertical_ruby_space(font_size: int) -> int:
 
 
 def _adjacent_line_adjustment(previous, current, font_size: int) -> float:
-    """当前行 LK 优先，否则使用上一行 NK；值为字号比例。"""
+    """LK of the current line comes first, otherwise NK of the previous line; the value is a ratio of the font size."""
     if current.line_kerning is not None:
         return float(current.line_kerning) * font_size
     if previous.next_kerning is not None:
@@ -183,11 +183,11 @@ def _rich_vertical_line_gap(
 
 
 def _vertical_column_walk(widths: list, gaps: list, origin_right: float) -> list:
-    """竖排列位游走（F13 共享 helper）：从右向左排列各列。
+    """Walk the vertical column positions (F13 shared helper): columns are laid out from right to left.
 
-    widths[i] 为第 i 列宽度，gaps[i] 为第 i 列与第 i+1 列之间的间距
-    （len(gaps) == len(widths) - 1）。返回每列 (left, right) 边缘坐标。
-    传统纯文本路径与富文本路径共用；数值以旧纯文本路径为准。
+    widths[i] is the width of column i, and gaps[i] is the gap between column i and column i+1
+    (len(gaps) == len(widths) - 1). Returns the (left, right) edge coordinates of each column.
+    Shared by the traditional plain-text path and the rich-text path; the numbers follow the old plain-text path.
     """
     columns = []
     edge = float(origin_right)
@@ -202,10 +202,10 @@ def _vertical_column_walk(widths: list, gaps: list, origin_right: float) -> list
 def _vertical_line_origin_y(
     origin_y, alignment: str, max_height: int, line_height: int
 ):
-    """竖排列的纵向对齐偏移（F13 共享 helper）。
+    """Vertical alignment offset of a vertical column (F13 shared helper).
 
-    left=顶对齐（不偏移）、center=居中、right=底对齐；
-    公式与旧纯文本路径逐字相同，origin_y 的 int/float 类型原样保留。
+    left = top aligned (no offset), center = centred, right = bottom aligned;
+    the formula is identical to the old plain-text path, and the int/float type of origin_y is kept as it is.
     """
     if alignment == "center":
         return origin_y + round((max_height - line_height) / 2.0)
@@ -330,10 +330,10 @@ def calc_horizontal_line_spacing_px(font_size: int, line_spacing: float) -> int:
 
 
 def calc_vertical_line_spacing_px(font_size: int, line_spacing: float) -> int:
-    """竖排列间距像素（F13 共享 helper）：传统纯文本路径与富文本路径共用。
+    """Gap between vertical columns in pixels (F13 shared helper): shared by the traditional plain-text path and the rich-text path.
 
-    公式以旧纯文本路径（put_text_vertical）为准：
-    倍率 >= 1 时按 0.2*字号*倍率；< 1 时允许负间距（紧排）。
+    The formula follows the old plain-text path (put_text_vertical):
+    with a multiplier >= 1 it is 0.2 * font size * multiplier; below 1 a negative gap (tight setting) is allowed.
     """
     val_ls = _normalize_line_spacing(line_spacing)
     if val_ls >= 1.0:
@@ -1136,7 +1136,7 @@ def _build_tcy_geometry(
     font_size: int,
     base_font_size: int,
 ) -> TcyGeometry:
-    """纵中横的正文间距与绘制包络，均从同一次墨迹测量推导。"""
+    """Body spacing and paint envelope of tate-chu-yoko, both derived from the same ink measurement."""
     stroke_pad = int(ink_geometry["pad"])
     body_width = int(ink_geometry["width"]) - 2 * stroke_pad
     body_height = int(ink_geometry["height"]) - 2 * stroke_pad
@@ -1325,11 +1325,11 @@ def _rich_vertical_item_paint_extra(item, thickness: int) -> tuple[int, int]:
 
 
 def _rich_vertical_item_paint_extent_y(item) -> tuple[float, float] | None:
-    """item 图层的纵向包络区间 [y0, y1)，相对列顶（cursor 原点）。
+    """Vertical envelope interval [y0, y1) of an item's layer, relative to the top of the column (the cursor origin).
 
-    与绘制路径的 y 公式同源：块 = cursor_y + transform 偏移 + 特效偏移；
-    字符 = cursor_y + base.y + transform 偏移 + paint_offset_y。
-    无图层的占位/空白项返回 None。
+    Same source as the y formula of the drawing path: block = cursor_y + transform offset + effect offset;
+    character = cursor_y + base.y + transform offset + paint_offset_y.
+    None is returned for placeholder or blank items without a layer.
     """
     if isinstance(item, TcyPlan):
         y0 = (
@@ -1350,11 +1350,11 @@ def _rich_vertical_item_paint_extent_y(item) -> tuple[float, float] | None:
 
 
 def _vertical_item_main_interval(item) -> tuple[float, float] | None:
-    """item 在列（主轴）上占用的槽位区间 [start, end)，相对列顶。
+    """Slot interval [start, end) an item takes on the column (main axis), relative to the top of the column.
 
-    与 _rich_vertical_item_paint_extent_y 的区别：那个是图层墨迹的纵向包络
-    （含偏移/特效），这里是排版槽位——下划线沿槽位铺，才不会随单字墨迹高低
-    忽长忽短。
+    Difference from _rich_vertical_item_paint_extent_y: that one is the vertical envelope of the layer's ink
+    (with offsets and effects); this is the layout slot - the underline runs along the slots, so it does not get longer and shorter
+    with the ink height of each character.
     """
     if isinstance(item, TcyPlan):
         return float(item.main_start), float(item.main_start) + float(item.advance_main)
@@ -1697,7 +1697,7 @@ def _vertical_free_rotation_advance(
     base: VerticalGlyphBase,
     rotation: float,
 ) -> int:
-    """按旋转角度投影竖排槽位：0° 取竖排推进，±90° 取横排推进（对齐 BallonsTranslator）。"""
+    """Project a vertical slot by rotation angle: 0 degrees takes the vertical advance, +-90 degrees the horizontal advance (in line with BallonsTranslator)."""
     angle = math.radians(float(rotation or 0.0))
     projected_height = abs(max(float(base.advance_x), 1.0) * math.sin(angle)) + abs(
         max(float(base.advance_y), 1.0) * math.cos(angle)
@@ -1866,12 +1866,12 @@ def _vertical_char_bitmap_x(
     padding_size: float | None = None,
     ink_center: bool = False,
 ) -> float:
-    """返回竖排字符位图左边缘，普通直立字按 advance 居中。
+    """Return the left edge of the bitmap of a vertical character; ordinary upright characters are centred by advance.
 
-    对应 Canvas 的 textAlign='center'：先把字体 advance box 的中心放到列中心，
-    再加 glyph left bearing 得到位图原点。旋转字符已经在光栅层转过 90°，其
-    原始 advance 轴也随之转为纵轴，因此横向仍使用旋转后位图框居中。标点的
-    顶右/底左贴边规则最后覆盖默认居中；强制推进时只保留墨迹居中。
+    Corresponds to textAlign='center' of Canvas: the centre of the font's advance box is put on the column centre first,
+    then the glyph left bearing is added to get the bitmap origin. A rotated character was already turned 90 degrees in the raster layer, and its
+    original advance axis became the vertical axis with it, so horizontally the rotated bitmap box is still centred. The top-right/bottom-left
+    edge rules of punctuation override the default centring last; with a forced advance only the ink centring is kept.
     """
     frame_left = float(frame_left)
     frame_width = float(frame_width)

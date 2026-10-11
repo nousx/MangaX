@@ -167,7 +167,7 @@ def _merge_style(base: dict, overlay: dict) -> dict:
 
 
 def _common_affixes(old_text: str, new_text: str) -> Tuple[int, int]:
-    """两份文本的公共前缀/后缀长度（后缀不与前缀重叠）。"""
+    """Lengths of the common prefix and suffix of two texts (the suffix does not overlap the prefix)."""
     limit = min(len(old_text), len(new_text))
     prefix = 0
     while prefix < limit and old_text[prefix] == new_text[prefix]:
@@ -189,11 +189,11 @@ def _is_old_match(
     new_len: int,
     old_spans: set,
 ) -> bool:
-    """新文本命中是否在编辑前就已存在（编辑器增量语义）。
+    """Whether a match on the new text already existed before the edit (incremental semantics of the editor).
 
-    完全落在公共前缀/后缀里的命中可以平移回旧文本坐标，去旧命中集查表；
-    查不到（如锚点/环视让旧文本同位置不命中）仍算新命中。碰到变化窗的
-    命中在旧文本里不可能有对应 —— 一律算新命中。
+    A match that lies entirely in the common prefix or suffix can be shifted back to old-text coordinates and looked up in the set of old matches;
+    when it is not found there (for example an anchor or a lookaround keeps the old text from matching at that position) it still counts as new. A match that touches the changed
+    window cannot have a counterpart in the old text - it always counts as new.
     """
     prefix, suffix = affixes
     if end <= prefix:
@@ -205,7 +205,7 @@ def _is_old_match(
 
 
 def _style_is_subset(style: Any, product: Any) -> bool:
-    """style 的每个字段是否都能由 product（规则产物）原样给出。"""
+    """Whether every field of style can be given exactly by product (what the rule produces)."""
     if not style:
         return True
     if not isinstance(style, dict) or not isinstance(product, dict):
@@ -240,11 +240,11 @@ def _match_has_manual_trace(
     rule: dict,
     allow_tcy: bool,
 ) -> bool:
-    """命中区间是否带有"本规则给不出"的富文本（手工痕迹）。
+    """Whether the matched range carries rich text that "this rule cannot produce" (manual traces).
 
-    区间上只有与规则产物一致的残留样式/节点 → 视为上次自动应用的残余，
-    允许整体补齐；出现任何规则产不出的字段、注音文本不同、节点越出命中
-    区间等情况 → 视为手工痕迹，调用方应整段跳过该命中。
+    Only leftover styles or nodes consistent with what the rule produces -> treated as the remains of an earlier automatic application,
+    and completing the whole match is allowed; any field the rule cannot produce, a different ruby text, a node that extends beyond the matched
+    range and so on -> treated as manual traces, and the caller should skip the whole match.
     """
     rule_style = rule.get("style") or {}
     rule_ruby = rule.get("ruby") or ""
@@ -444,14 +444,14 @@ def apply_rich_text_rules(
 
     ``text`` may be a plain string or an existing ``richtext.v1`` document.
 
-    ``previous_text``（编辑器增量语义）：给出编辑前正文时，规则在新旧两份
-    文本上各匹配一遍，只应用"编辑前不存在"的新命中 —— 未改动文字上的老
-    命中永不重复应用（手动清掉的样式不会被顶回来）。``None`` 时全部命中
-    都算新命中（渲染管线语义）。
+    ``previous_text`` (incremental semantics of the editor): when the body from before the edit is given, the rule is matched on both the old and the new
+    text, and only new matches that "did not exist before the edit" are applied - an old match on text that did not change
+    is never applied again (a style cleared by hand does not come back). With ``None`` every match
+    counts as new (semantics of the render pipeline).
 
-    ``styled_match_policy``：``fill``（管线现行为）按字段补缺，已有字段
-    保留；``skip``（编辑器）命中区间带任何本规则给不出的富文本（手工
-    痕迹）时整段跳过，只有规则自己的残留样式允许整体补齐。
+    ``styled_match_policy``: ``fill`` (the current behaviour of the pipeline) fills in missing fields and keeps existing
+    ones; with ``skip`` (the editor) a matched range that carries any rich text this rule cannot produce (manual
+    traces) is skipped as a whole, and only the rule's own leftover styles may be completed.
     """
     existing_document = None
     if is_rich_text_document(text):

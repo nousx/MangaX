@@ -1,12 +1,12 @@
-"""text_render 包 facade。
+"""Facade of the text_render package.
 
-公共 API 与既有消费方依赖的符号在此收口；实现按职责分层：
-_shared（工具/缓存原语）→ _fonts（Qt 字体运行时）→ _glyphs（字形光栅）、
-_compose（图层合成与特效，独立）→ _layout（横竖排布局与包络几何）→
-_render（put_text_*/measure_*/calc_* 入口）。
+The public API and the symbols existing consumers depend on are gathered here; the implementation is layered by responsibility:
+_shared (tools / cache primitives) → _fonts (Qt font runtime) → _glyphs (glyph rasterisation),
+_compose (layer compositing and effects, independent) → _layout (horizontal and vertical layout and envelope geometry) →
+_render (the put_text_*/measure_*/calc_* entry points).
 
-外部消费方（rendering/__init__.py、auto_linebreak、编辑器
-backend、server 路由、测试）只应通过本命名空间访问。
+Outside consumers (rendering/__init__.py, auto_linebreak, the editor
+backend, the server routes, the tests) should only access it through this namespace.
 """
 from ..rich_text import (
     RenderSpan,

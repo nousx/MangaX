@@ -1,7 +1,7 @@
-"""渲染入口层：put_text_* / measure_* / calc_* 公共 API。
+"""Render entry layer: the public put_text_* / measure_* / calc_* API.
 
-纯字符串在入口归一为单 span 富文本文档（_coerce_render_document），
-此后横竖排各只有一条富文本编排。
+A plain string is normalised at the entry into a rich-text document with a single span (_coerce_render_document);
+after that there is only one rich-text layout path each for horizontal and vertical text.
 """
 
 import math
@@ -101,10 +101,10 @@ def _paint_vertical_ruby(
 
 
 def _finish_layer(base_layer, style, font_size: int, effect_part: str):
-    """特效 + 图层几何（旋转/镜像）后处理，effects/stroke/fill 三层共用。
+    """Post-processing of effects + layer geometry (rotation, mirroring), shared by the effects, stroke and fill layers.
 
-    斜体已在字形路径阶段完成（_glyph_raster/_horizontal_glyph_path 的 shear），
-    进入本函数的图层就是剪切后的形状。
+    Italics are already done at the glyph path stage (the shear of _glyph_raster/_horizontal_glyph_path),
+    so a layer that enters this function already has the sheared shape.
     """
     if base_layer is None:
         return None
@@ -116,10 +116,10 @@ def _finish_layer(base_layer, style, font_size: int, effect_part: str):
 
 
 def _scale_parts_x(parts, scale_x: float):
-    """纵中横整组水平压缩：对 (effects, stroke, fill) 三层各按同一系数 resize。
+    """Horizontal compression of a whole tate-chu-yoko group: the (effects, stroke, fill) layers are each resized by the same factor.
 
-    每层宽度不同（effects 含发光/外描边 pad），但压缩系数相同，与旧逐
-    paint_part 路径逐层 resize 的结果逐像素一致。
+    The layers differ in width (effects includes the pad of glow and outer stroke), but the compression factor is the same, and the result
+    is pixel for pixel identical to resizing layer by layer in the old per-paint_part path.
     """
     if parts is None or scale_x >= 1.0:
         return parts
@@ -147,11 +147,11 @@ def _text_layer_parts(
     profile_stats: dict | None,
     geometry: dict | None = None,
 ):
-    """一次光栅化，派生横排文字的 (effects, stroke, fill) 三层，位置对齐。
+    """Rasterise once and derive the aligned (effects, stroke, fill) layers of horizontal text.
 
-    昂贵的 shaping/描边距离变换只做一次（旧路径按 paint_part 重复三遍）；
-    三层随后各自走相同的特效 + 图层几何后处理，输出与旧路径逐像素一致。
-    无墨迹返回 None。
+    The expensive shaping and stroke distance transform are done only once (the old path repeated them three times, once per paint_part);
+    the three layers then each go through the same effects + layer geometry post-processing, and the output is pixel for pixel identical to the old path.
+    None is returned when there is no ink.
     """
     border_size = max(round(font_size * stroke_ratio), 1) if stroke_ratio > 0 else 0
     effective_bold = bool(style.bold) or _state().bold
@@ -198,7 +198,7 @@ def _text_layer_parts(
 
 
 def _vertical_char_parts(plan: VerticalCharPlan):
-    """一次描边距离变换，派生竖排字符的 (effects, stroke, fill) 三层。"""
+    """One stroke distance transform, from which the (effects, stroke, fill) layers of a vertical character are derived."""
     bitmap = plan.base.bitmap
     if bitmap is None or not bitmap.size:
         return None
@@ -629,13 +629,13 @@ def measure_rich_text_metrics(
     stroke_width: float | None = None,
     letter_spacing: float = 1.0,
 ) -> dict:
-    """测量 richtext.v1 文档，返回渲染框尺寸与正文中心点。
+    """Measure a richtext.v1 document and return the render box size and the body centre.
 
-    纯字符串输入在此归一为单样式文档（BR/换行 → 段落），与 put_text_* 的
-    归一口径一致：测量框 == 绘制输出面尺寸对所有文本成立。
-    横排正文框是实际主文字墨迹（含主文字 transform/描边，不含 ruby 与
-    emphasis）的联合包络；竖排沿用列正文定义。body_center 是正文框中心在
-    渲染框内的坐标。横排测量、全局描边和绘制输出面消费同一个墨迹计划。
+    A plain string is normalised here into a single-style document (BR / line breaks → paragraphs), the same
+    normalisation as put_text_*: measured box == size of the drawn output surface holds for all text.
+    The body box of horizontal text is the union envelope of the actual ink of the main text (with the transform and stroke of the main text, without ruby and
+    emphasis); vertical text keeps the column body definition. body_center is the centre of the body box inside
+    the render box. Horizontal measuring, the global stroke and the drawn output surface consume the same ink plan.
     """
     document = _coerce_render_document(text)
     base_font = max(1, int(font_size))
@@ -815,11 +815,11 @@ def _rich_paragraph_vertical_metrics(
 
 
 def _coerce_render_document(text) -> RichTextDocument:
-    """渲染/测量入口的统一归一：纯字符串转单样式 richtext 文档。
+    """Single normalisation for the render and measure entries: a plain string becomes a single-style richtext document.
 
-    纯文本 == "单 span、默认样式"的富文本特例：BR/换行拆成多段落，
-    每段一个默认样式 TextRun。归一后横竖排只剩富文本一套编排，
-    输出面尺寸恒等于测量框（测/渲同源契约对纯文本同样成立）。
+    Plain text == the special case of rich text with "a single span and the default style": BR / line breaks split it into paragraphs,
+    each with one TextRun in the default style. After normalisation only the rich-text layout remains for horizontal and vertical text,
+    and the output surface always equals the measured box (the measure/render same-source contract holds for plain text too).
     """
     if is_rich_text_document(text):
         # F24: parse once at entry and pass the instance down (the ensure inside short-circuits for an instance)

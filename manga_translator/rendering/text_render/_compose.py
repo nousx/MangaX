@@ -1,6 +1,6 @@
-"""合成层：alpha 位图上色/描边/贴图、仿射特效（斜体/旋转/镜像）与其纯几何对应。
+"""Compositing layer: colouring, stroking and pasting alpha bitmaps, affine effects (italics, rotation, mirroring) and their pure-geometry counterparts.
 
-不持有渲染状态，只做 numpy/cv2 图层运算与 TextStyle 样式解析。
+It holds no render state and only does numpy/cv2 layer operations and TextStyle parsing.
 """
 
 import math
@@ -13,14 +13,14 @@ from ..rich_text import TextStyle
 
 
 def add_color(bw_char_map, color, stroke_char_map, stroke_color):
-    """合成文字和描边为 RGBA 图层。
+    """Composite text and stroke into an RGBA layer.
 
-    关键做法（解决灰边/脏边，同时防止描边层缺失时整段透明）：
-    1. 强制 stroke_alpha = max(stroke_alpha, text_alpha)，保证描边在空间上完全
-       覆盖文字的所有抗锯齿像素，消除因两次独立光栅化造成的对齐偏差；
-       同时保证描边层为全零（stroke_ratio=0 等场景）时输出 alpha 仍含正文。
-    2. 将描边视作文字的"底色"，抗锯齿过渡像素直接在描边纯色上混合，而不是
-       两个半透明层的 over 叠加 —— 这是原来灰边的根源。
+    Key points (they fix grey and dirty edges, and keep the whole run from turning transparent when the stroke layer is missing):
+    1. Force stroke_alpha = max(stroke_alpha, text_alpha), so the stroke fully covers every anti-aliased pixel of the text
+       in space and the misalignment from two separate rasterisations disappears;
+       it also guarantees that the output alpha still contains the body when the stroke layer is all zero (stroke_ratio=0 and similar cases).
+    2. Treat the stroke as the "base colour" of the text: anti-aliased transition pixels are blended directly onto the solid stroke colour instead of
+       compositing two semi-transparent layers with over - which was the cause of the old grey edges.
     """
     H, W = bw_char_map.shape[:2]
     if bw_char_map.size == 0:
@@ -51,10 +51,10 @@ def add_color(bw_char_map, color, stroke_char_map, stroke_color):
 
 
 def _parse_rgb(value, fallback=(0, 0, 0)) -> tuple[int, int, int]:
-    """F16：薄委托 utils.generic.parse_color（#RGB/#RRGGBB/序列、钳制、回退）。
+    """F16: thin wrapper around utils.generic.parse_color (#RGB/#RRGGBB/sequence, clamping, fallback).
 
-    在公共 helper 之上保证恒返回 RGB 三元组：fallback 本身也允许是
-    hex 字符串/序列，两级都解析失败时回退黑色。
+    On top of the shared helper it guarantees that an RGB triple is always returned: the fallback itself may also be
+    a hex string or a sequence, and when both levels fail to parse, black is returned.
     """
     color = parse_color(value, None)
     if color is None:
@@ -128,11 +128,11 @@ def _stroke_alpha_from_text_alpha(text_alpha: np.ndarray, stroke_px: int):
 
 
 def _crop_rgba_fixed(canvas: np.ndarray, x0: int, x1: int, y0: int, y1: int):
-    """按预定包络矩形裁切（不按墨迹紧裁）。
+    """Crop to the given envelope rectangle (not tightly to the ink).
 
-    富文本路径的"测量 == 输出面尺寸"契约：包络由度量几何给定，测量与
-    绘制共用同一套数字，输出面必须严格等于测量框，偏移/切变等把墨迹
-    推到框内任意位置都不会被裁掉（全透明时仍返回 None 表示无可绘内容）。
+    The "measured == size of the output surface" contract of the rich-text path: the envelope is given by the metric geometry, measuring and
+    drawing share the same numbers, and the output surface must equal the measured box exactly; offsets, shear and the like may push the ink
+    anywhere inside the box without it being cropped (when everything is transparent, None is still returned, meaning there is nothing to draw).
     """
     if canvas is None or canvas.size == 0 or canvas.shape[2] != 4:
         return None
@@ -147,9 +147,9 @@ def _crop_rgba_fixed(canvas: np.ndarray, x0: int, x1: int, y0: int, y1: int):
 
 
 def _stroke_pad_px(font_size: int, stroke_ratio: float) -> int:
-    """描边给字形图层带来的四边外扩（像素）。
+    """How far the stroke extends a glyph layer on each of its four sides (pixels).
 
-    与 _stroke_alpha_from_text_alpha 的 pad 公式一致，度量与绘制共用。
+    The same pad formula as _stroke_alpha_from_text_alpha, shared by measuring and drawing.
     """
     if stroke_ratio <= 0:
         return 0
@@ -194,8 +194,9 @@ def _paste_rgba(dst: np.ndarray, src: np.ndarray, x: int, y: int):
 
 
 def _warp_geometry(height: int, width: int, matrix: np.ndarray):
-    """仿射变换的纯几何计算：输入框 (height, width) 经 matrix 变换后的
-    输出框尺寸与偏移。渲染（_warp_rgba_layer）与度量共用，保证几何一致。"""
+    """Pure geometry of an affine transform: the size and offset of the output box after an input box (height, width)
+    is transformed by matrix. Shared by rendering (_warp_rgba_layer) and measuring, so the geometry agrees.
+    """
     corners = np.float32([[0, 0], [width, 0], [width, height], [0, height]]).reshape(
         -1, 1, 2
     )
@@ -231,12 +232,12 @@ _MAX_ITALIC_ANGLE = 85.0
 
 
 def _style_italic_shear(style: TextStyle) -> float:
-    """italic 协议值 → 字形轮廓切变系数（Photoshop 仿斜体语义）。
+    """italic protocol value -> shear factor of the glyph outline (the meaning of faux italics in Photoshop).
 
-    True = PS 仿斜体实测默认 10°（见 test/ps_italic_angle.py）；数字 = 角度
-    （度）。切变在字形路径阶段施加（基线原点坐标系 x' = x + shear·y），
-    天然绕基线、advance 不变；竖排横躺字先剪切后旋转（R·S）。路径坐标
-    y 向下，向右倾斜的系数为 -tan(angle)。
+    True = the default of 10 degrees measured for Photoshop faux italics (see test/ps_italic_angle.py); a number = the angle
+    (degrees). The shear is applied at the glyph path stage (in the coordinate system with the baseline origin, x' = x + shear * y), so it is
+    naturally about the baseline and the advance is unchanged; characters lying on their side in vertical text are sheared first and then rotated (R * S). The path
+    y axis points down, so the factor for leaning right is -tan(angle).
     """
     italic = style.italic
     if italic is True:
@@ -252,7 +253,7 @@ def _style_italic_shear(style: TextStyle) -> float:
 
 
 def _apply_style_layer_effects(layer: np.ndarray, style: TextStyle, font_size: int):
-    """镜像和自由旋转的图层几何后处理。斜体与拉伸已在字形轮廓阶段完成。"""
+    """Geometric post-processing of a layer for mirroring and free rotation. Italics and stretching are already done at the glyph outline stage."""
     if layer is None or layer.size == 0:
         return layer, 0.0, 0.0
 
@@ -287,11 +288,11 @@ def _style_layer_effects_geometry(
     *,
     include_paint_effects: bool = True,
 ):
-    """_apply_style_layer_effects 的纯几何版本（度量用，F21）。
+    """Pure-geometry version of _apply_style_layer_effects (for measuring, F21).
 
-    mirror 不改变尺寸；rotation 用与渲染路径相同的矩阵经 _warp_geometry 按
-    角点计算输出框与偏移，不做实际 warp。斜体与拉伸已在字形轮廓阶段完成。
-    返回 (height, width, offset_x, offset_y)。
+    mirror does not change the size; rotation computes the output box and offset from the corner points through _warp_geometry with the same matrix
+    as the render path, without an actual warp. Italics and stretching are already done at the glyph outline stage.
+    Returns (height, width, offset_x, offset_y).
     """
     if height <= 0 or width <= 0:
         return height, width, 0.0, 0.0
@@ -317,7 +318,7 @@ def _style_layer_effects_geometry(
 
 
 def _style_paint_effect_pad(style: TextStyle, font_size: int) -> int:
-    """局部外描边/发光按字号比例换算后的像素包络。"""
+    """Pixel envelope of a local outer stroke or glow, converted from its ratio of the font size."""
     outer_px = 0.0
     if style.outer_stroke and style.outer_stroke.width is not None:
         outer_px = max(0.0, float(style.outer_stroke.width)) * max(
@@ -339,7 +340,7 @@ def _colored_alpha_layer(alpha: np.ndarray, color) -> np.ndarray:
 def _apply_style_paint_effects(
     layer: np.ndarray, style: TextStyle, font_size: int, paint_part: str = "all"
 ):
-    """构造同尺寸的特效/正文图层，供渲染器执行全局先特效后正文。"""
+    """Build effect and body layers of the same size, so the renderer can draw effects first and body second, globally."""
     if layer is None or layer.size == 0:
         return layer
     pad = _style_paint_effect_pad(style, font_size)
@@ -408,10 +409,10 @@ def _draw_rgba_disc(
 def _draw_rgba_bar(
     dst: np.ndarray, left: float, top: float, width: float, height: float, color
 ):
-    """实心矩形条（竖排下划线用，着重号圆点的矩形对应物）。
+    """Solid rectangular bar (for the underline of vertical text; the rectangular counterpart of the emphasis dot).
 
-    与 _draw_rgba_disc 同构：只产出 fill 层的纯色不透明块，不参与描边/发光
-    ——装饰与正文字形的图层职责在此保持一致。
+    Same structure as _draw_rgba_disc: it only produces an opaque block of solid colour on the fill layer and takes no part in stroke or glow
+    - so decorations and body glyphs keep the same layer responsibilities here.
     """
     width = max(1, round(width))
     height = max(1, round(height))

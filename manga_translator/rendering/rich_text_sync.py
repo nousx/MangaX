@@ -1,21 +1,21 @@
-"""编辑操作驱动的富文本同步。
+"""Rich-text sync driven by edit operations.
 
-纯文本译文框的每次编辑由 QTextDocument.contentsChange 产出精确的
-``(位置, 删除数, 插入文本)`` 操作记录;本模块把这些操作按同样位置回放到
-richtext.v1 文档的字符条目上,让样式跟随未改动的字符,不做任何 diff 推测。
+Every edit in the plain-text translation box is reported by QTextDocument.contentsChange as an exact
+``(position, removed count, inserted text)`` operation record; this module replays those operations at the same positions on the character
+entries of the richtext.v1 document, so styles follow the characters that did not change, without any diff guessing.
 
-坐标口径:所有文本均为 ``\n`` 换行的编辑框原文，与文档
-``plain_text()`` 一一对应；模型层的 ``[BR]`` 形式不在本模块出现。
+Coordinate convention: all text is the original text of the edit box with ``\\n`` line breaks, in one-to-one correspondence with
+``plain_text()`` of the document; the ``[BR]`` form of the model layer does not appear in this module.
 
-样式策略(用户拍板):
-- 编辑插入的字符只在"中间"继承样式——前后邻居都存在、都不是换行、
-  且样式相同才继承;插在文本或样式段的头尾一律不继承(空样式)。
-- 替换规则命中的区间整体换血,新字符取被替换段首字符的样式。
-- ruby/tcy 节点:插入点前后邻居属于同一节点时新字符并入该节点
-  (避免节点被从中切成两份);替换区间完整落在同一节点内时结果保留节点。
+Style policy (decided by the user):
+- Characters inserted by an edit only inherit a style "in the middle" - when both neighbours exist, neither is a line break
+  and both have the same style; inserted at the start or end of the text or of a style run they inherit nothing (empty style).
+- A range matched by a replacement rule is replaced as a whole, and the new characters take the style of the first character of the replaced span.
+- ruby/tcy nodes: when the neighbours before and after the insertion point belong to the same node, the new characters join that node
+  (so the node is not cut in two); when the replaced range lies entirely inside one node, the result keeps the node.
 
-任何校验不通过(文本对不上、操作越界)都返回 ``None``,由调用方回退
-"删除富文本、只留纯文本"的安全路径。
+When any validation fails (the text does not match, an operation is out of range) ``None`` is returned, and the caller falls back to
+the safe path of "delete the rich text, keep only the plain text".
 """
 
 from __future__ import annotations
@@ -55,7 +55,7 @@ def _copy_entries(entries: Sequence[_RuleEntry]) -> List[_RuleEntry]:
 
 
 def _collapse_linebreak_entries(entries: Sequence[_RuleEntry]) -> List[_RuleEntry]:
-    """连续换行压成一个,与模型层 ``\\n+ -> [BR]`` 的口径对齐。"""
+    """Collapse consecutive line breaks into one, in line with the model layer's ``\\n+ -> [BR]`` convention."""
     out: List[_RuleEntry] = []
     for entry in entries:
         if entry.char == "\n" and out and out[-1].char == "\n":
@@ -65,7 +65,7 @@ def _collapse_linebreak_entries(entries: Sequence[_RuleEntry]) -> List[_RuleEntr
 
 
 def _apply_edit_ops(entries: List[_RuleEntry], ops: Sequence[Any]) -> List[_RuleEntry]:
-    """按顺序回放编辑操作;位置越界抛 ValueError。"""
+    """Replay the edit operations in order; a position out of range raises ValueError."""
     for op in ops:
         position, removed, inserted = int(op[0]), int(op[1]), str(op[2])
         if position < 0 or removed < 0 or position > len(entries):
@@ -118,11 +118,11 @@ def apply_replacements_to_entries(
     direction: int,
     replacements: Optional[dict] = None,
 ) -> List[_RuleEntry]:
-    """在字符条目列表上跑替换规则(text_replacements 的条目版)。
+    """Run the replacement rules on a list of character entries (the entry version of text_replacements).
 
-    与纯文本版的差异:纯文本版用占位符保护 ``[BR]`` 等换行标记,这里文本
-    是 ``\\n`` 口径,等价地跳过跨换行的命中。替换出的新字符继承被替换段
-    首字符的样式;区间未完整落在同一 ruby/tcy 节点内时结果不带节点。
+    Difference from the plain-text version: that one protects line-break markers such as ``[BR]`` with placeholders; here the text
+    is in ``\\n`` convention, and matches that span a line break are skipped, which is equivalent. The new characters produced by a replacement
+    inherit the style of the first character of the replaced span; when the range does not lie entirely inside one ruby/tcy node, the result has no node.
     """
     if replacements is None:
         replacements = load_replacements()
@@ -163,12 +163,12 @@ def _map_styles_to_raw(
     direction: int,
     replacements: Optional[dict],
 ) -> Optional[List[_RuleEntry]]:
-    """把锚在替换后文本上的样式搬回 raw 坐标。
+    """Move the styles anchored on the text after replacement back to raw coordinates.
 
-    用"每个字符带自己下标"的哨兵样式重跑一遍条目版替换,得到
-    译文位置 -> raw 位置的对应关系:没被替换的字符一一对应(精确),
-    被替换区间的输出字符都对应区间首字符(与替换的段首样式策略一致)。
-    对应不上(规则版本变了等)返回 None。
+    The entry version of the replacement is run again with sentinel styles in which "each character carries its own index", which gives
+    the correspondence translation position -> raw position: characters that were not replaced correspond one to one (exactly),
+    and the output characters of a replaced range all correspond to its first character (consistent with the first-character style policy of replacement).
+    None is returned when no correspondence can be made (for example when the rule version changed).
     """
     doc_text = _text_of(doc_entries)
     if raw_text == doc_text:
@@ -206,7 +206,7 @@ def document_after_edit_ops(
     pre_text: str,
     post_text: str,
 ) -> Optional[RichTextDocument]:
-    """直接编辑"译文"模式:操作位置与文档正文同坐标,原地回放。"""
+    """Editing the "translation" directly: the operation positions are in the same coordinates as the document body and are replayed in place."""
     try:
         document = ensure_rich_text_document(document_value)
     except Exception as exc:
@@ -234,7 +234,7 @@ def sync_document_for_raw_edit(
     direction: int,
     replacements: Optional[dict] = None,
 ) -> Optional[RichTextDocument]:
-    """编辑"替换前译文"模式:样式搬回 raw 坐标 → 回放操作 → 重跑替换。"""
+    """Editing the "translation before replacement": move the styles back to raw coordinates -> replay the operations -> run the replacement again."""
     try:
         document = ensure_rich_text_document(document_value)
     except Exception as exc:
@@ -257,18 +257,18 @@ def sync_document_for_raw_edit(
 
 
 def document_has_styling(document: RichTextDocument) -> bool:
-    """文档是否还有任何样式或 ruby/tcy 节点;没有就不值得保留富文本字段。"""
+    """Whether the document still has any style or ruby/tcy node; if not, the rich-text field is not worth keeping."""
     entries = _rule_entries_from_document(document)
     return any(entry.style or entry.node is not None for entry in entries)
 
 
 def _direction_to_int(direction_value: Any) -> int:
-    """区域排版方向值 → 替换规则的 direction 参数(0=横排, 1=竖排)。"""
+    """Layout direction value of the region -> direction argument of the replacement rules (0 = horizontal, 1 = vertical)."""
     return 0 if direction_value in ("h", "horizontal", "hr") else 1
 
 
 def _model_text_matches(document: RichTextDocument, model_text: str) -> bool:
-    """文档正文折算回模型口径（\\n+ → [BR]）后与译文字段比对。"""
+    """Fold the document body back to the model convention (\\n+ → [BR]) and compare it with the translation field."""
     return re.sub(r"\n+", "[BR]", document.plain_text()) == model_text
 
 
@@ -280,13 +280,13 @@ def _apply_editor_rules_stage(
     direction_value: Any,
     rules: Optional[dict],
 ) -> Optional[RichTextDocument]:
-    """编辑器管道第三级：在同步产物（或纯文本）上应用自动富文本规则。
+    """Third stage of the editor pipeline: apply the automatic rich-text rules to the result of the sync (or to plain text).
 
-    ``incremental``（有精确操作记录）时与旧译文做新旧匹配对比，只应用
-    编辑新产生的命中——即使旧富文本不存在或同步失败，也不给未改动的老
-    命中重新上样式（清掉的样式不顶回）。整段替换按全量语义（等同渲染
-    管线，全部命中视为新）。规则只加样式不改字，产物正文与译文对不上
-    时丢弃规则结果保底。
+    With ``incremental`` (an exact operation record exists) the matches on the old and the new translation are compared and only the matches
+    newly produced by the edit are applied - even when the old rich text does not exist or the sync failed, old matches that did not change
+    are not styled again (a style that was cleared does not come back). A whole-text replacement has full semantics (the same as the render
+    pipeline: every match counts as new). Rules only add styles and never change characters; when the body of the result does not match the translation,
+    the result of the rules is dropped as a safeguard.
     """
     previous_text = None
     if incremental and old_translation is not None:
@@ -327,17 +327,17 @@ def sync_region_rich_translation(
     old_translation: Optional[str] = None,
     rules: Optional[dict] = None,
 ) -> Optional[dict]:
-    """区域译文编辑的富文本对齐统一入口。
+    """Single entry point for aligning rich text with an edit of a region's translation.
 
-    校验操作记录 → 同步文档 → 正文折算回模型口径([BR])与新译文比对 →
-    （可选）应用自动富文本规则 → 无样式则退化。返回可直接写回
-    ``translation_rich`` 的 dict。
+    Validate the operation record -> sync the document -> fold the body back to the model convention ([BR]) and compare it with the new translation ->
+    (optionally) apply the automatic rich-text rules -> degrade when there is no style. Returns a dict that can be written straight back to
+    ``translation_rich``.
 
-    ``apply_rules=False`` 时行为与旧版完全一致：没有旧富文本、没有操作
-    记录或任何校验失败返回 ``None``（调用方删除富文本退回纯文本）。
-    ``apply_rules=True`` 时同步失败/整段替换仍会在纯文本上跑规则，可能
-    从无到有长出富文本；``old_translation`` 传编辑前的译文字段（[BR]
-    口径）用于新旧匹配对比，整段替换路径传 ``None`` 即全量语义。
+    With ``apply_rules=False`` the behaviour is exactly that of the old version: without old rich text, without an operation
+    record or when any validation fails, ``None`` is returned (the caller deletes the rich text and goes back to plain text).
+    With ``apply_rules=True`` the rules still run on the plain text after a failed sync or a whole-text replacement, so rich text may
+    appear where there was none; ``old_translation`` takes the translation field from before the edit ([BR]
+    convention) for comparing old and new matches, and the whole-text replacement path passes ``None``, which means full semantics.
     """
     info = edit_info if isinstance(edit_info, dict) else None
     ops = info.get("ops") if info else None
