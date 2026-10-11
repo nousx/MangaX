@@ -1,7 +1,7 @@
 """
-审计日志服务（AuditService）
+Audit log service (AuditService)
 
-记录和查询审计日志，支持日志筛选、导出和轮转功能。
+Records and queries the audit log, with filtering, export and rotation.
 """
 
 import json
@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 
 class AuditService:
-    """审计日志服务"""
+    """Audit log service"""
     
     def __init__(
         self,
@@ -27,12 +27,12 @@ class AuditService:
         max_backup_files: int = 5
     ):
         """
-        初始化审计日志服务
-        
+        Initialise the audit log service
+
         Args:
-            audit_log_file: 审计日志文件路径
-            max_log_size_mb: 日志文件最大大小（MB），超过后自动轮转
-            max_backup_files: 保留的备份文件数量
+            audit_log_file: path of the audit log file
+            max_log_size_mb: maximum size of the log file (MB); it is rotated automatically beyond that
+            max_backup_files: number of backup files kept
         """
         self.audit_log_file = audit_log_file
         self.max_log_size_bytes = max_log_size_mb * 1024 * 1024
@@ -56,17 +56,17 @@ class AuditService:
         result: str
     ) -> AuditEvent:
         """
-        记录审计事件
-        
+        Record an audit event
+
         Args:
-            event_type: 事件类型（如 'login', 'logout', 'create_task', 'permission_change'）
-            username: 用户名
-            ip_address: IP地址
-            details: 事件详细信息
-            result: 结果（'success' 或 'failure'）
-        
+            event_type: the event type (such as 'login', 'logout', 'create_task', 'permission_change')
+            username: the user name
+            ip_address: the IP address
+            details: details of the event
+            result: the result ('success' or 'failure')
+
         Returns:
-            AuditEvent: 创建的审计事件对象
+            AuditEvent: the audit event object that was created
         """
         # Create the audit event
         event = AuditEvent(
@@ -102,20 +102,20 @@ class AuditService:
         offset: int = 0
     ) -> List[AuditEvent]:
         """
-        查询审计事件
-        
+        Query audit events
+
         Args:
-            filters: 筛选条件字典，支持的键:
-                - username: 用户名
-                - event_type: 事件类型
-                - result: 结果（'success' 或 'failure'）
-                - start_time: 开始时间（datetime）
-                - end_time: 结束时间（datetime）
-            limit: 返回的最大事件数
-            offset: 跳过的事件数（用于分页）
-        
+            filters: dictionary of filter conditions; supported keys:
+                - username: the user name
+                - event_type: the event type
+                - result: the result ('success' or 'failure')
+                - start_time: the start time (datetime)
+                - end_time: the end time (datetime)
+            limit: maximum number of events returned
+            offset: number of events skipped (for paging)
+
         Returns:
-            List[AuditEvent]: 符合条件的审计事件列表
+            List[AuditEvent]: list of the audit events that match
         """
         if filters is None:
             filters = {}
@@ -162,14 +162,14 @@ class AuditService:
         format: str = 'json'
     ) -> str:
         """
-        导出审计事件
-        
+        Export audit events
+
         Args:
-            filters: 筛选条件（同 query_events）
-            format: 导出格式（'json' 或 'csv'）
-        
+            filters: the filter conditions (as for query_events)
+            format: the export format ('json' or 'csv')
+
         Returns:
-            str: 导出的数据字符串
+            str: the exported data as a string
         """
         events = self.query_events(filters=filters, limit=10000)
         
@@ -182,10 +182,10 @@ class AuditService:
     
     def rotate_log_file(self) -> bool:
         """
-        手动轮转日志文件
-        
+        Rotate the log file by hand
+
         Returns:
-            bool: 轮转是否成功
+            bool: whether the rotation succeeded
         """
         try:
             if not Path(self.audit_log_file).exists():
@@ -218,14 +218,14 @@ class AuditService:
         filters: Dict[str, Any]
     ) -> bool:
         """
-        检查事件是否匹配筛选条件
-        
+        Check whether an event matches the filter conditions
+
         Args:
-            event: 审计事件
-            filters: 筛选条件
-        
+            event: the audit event
+            filters: the filter conditions
+
         Returns:
-            bool: 是否匹配
+            bool: whether it matches
         """
         # Filter by user name
         if 'username' in filters:
@@ -254,7 +254,7 @@ class AuditService:
         return True
     
     def _check_and_rotate(self) -> None:
-        """检查日志文件大小，如果超过限制则轮转"""
+        """Check the size of the log file and rotate it when it is over the limit"""
         try:
             file_size = Path(self.audit_log_file).stat().st_size
             
@@ -268,7 +268,7 @@ class AuditService:
             logger.error(f"Failed to check log file size: {e}")
     
     def _cleanup_old_backups(self) -> None:
-        """清理旧的备份文件，只保留最新的 N 个"""
+        """Remove old backup files, keeping only the newest N"""
         try:
             log_dir = Path(self.audit_log_file).parent
             log_name = Path(self.audit_log_file).name
@@ -291,12 +291,12 @@ class AuditService:
             logger.error(f"Failed to cleanup old backups: {e}")
     
     def _export_json(self, events: List[AuditEvent]) -> str:
-        """导出为 JSON 格式"""
+        """Export in JSON format"""
         data = [event.to_dict() for event in events]
         return json.dumps(data, ensure_ascii=False, indent=2)
     
     def _export_csv(self, events: List[AuditEvent]) -> str:
-        """导出为 CSV 格式"""
+        """Export in CSV format"""
         if not events:
             return ""
         

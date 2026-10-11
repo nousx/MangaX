@@ -27,12 +27,12 @@ class ExecutorInstance(BaseModel):
         await fetch_data_stream("http://"+self.ip+":"+str(self.port)+"/execute/translate", image, config, sender)
 
     async def sent_batch(self, images: List[Image.Image], config: Config, batch_size: int):
-        """发送批量翻译请求"""
+        """Send a batch translation request"""
         return await fetch_data("http://"+self.ip+":"+str(self.port)+"/simple_execute/translate_batch", 
                                {"images": images, "config": config, "batch_size": batch_size})
 
     async def sent_batch_stream(self, images: List[Image.Image], config: Config, batch_size: int, sender: NotifyType):
-        """发送批量翻译流式请求"""
+        """Send a streaming batch translation request"""
         await fetch_data_stream("http://"+self.ip+":"+str(self.port)+"/execute/translate_batch",
                                {"images": images, "config": config, "batch_size": batch_size}, config, sender)
 

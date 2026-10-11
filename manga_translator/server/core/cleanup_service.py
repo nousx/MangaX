@@ -1,7 +1,7 @@
 """
-自动清理服务
+Automatic clean-up service
 
-根据配置定期清理过期文件和超出存储限制的文件。
+Removes expired files and files beyond the storage limit periodically, as configured.
 """
 
 import asyncio
@@ -16,7 +16,7 @@ logger = logging.getLogger('manga_translator.server')
 
 
 class CleanupService:
-    """自动清理服务"""
+    """Automatic clean-up service"""
     
     def __init__(self):
         self.running = False
@@ -28,7 +28,7 @@ class CleanupService:
         }
     
     def get_settings(self) -> dict:
-        """获取清理设置"""
+        """Get the clean-up settings"""
         from manga_translator.server.core.config_manager import admin_settings
         return admin_settings.get('cleanup', {
             'auto_cleanup': False,
@@ -38,7 +38,7 @@ class CleanupService:
         })
     
     def start(self):
-        """启动自动清理任务"""
+        """Start the automatic clean-up task"""
         if self.running:
             return
         
@@ -52,7 +52,7 @@ class CleanupService:
         logger.info("Automatic cleanup service started")
     
     def stop(self):
-        """停止自动清理任务"""
+        """Stop the automatic clean-up task"""
         self.running = False
         if self.task:
             self.task.cancel()
@@ -60,7 +60,7 @@ class CleanupService:
         logger.info("Automatic cleanup service stopped")
     
     async def _cleanup_loop(self):
-        """清理循环"""
+        """Clean-up loop"""
         while self.running:
             try:
                 settings = self.get_settings()
@@ -83,7 +83,7 @@ class CleanupService:
                 await asyncio.sleep(3600)  # After an error, wait 1 hour and retry
     
     async def run_cleanup(self) -> dict:
-        """执行清理"""
+        """Run the clean-up"""
         settings = self.get_settings()
         max_age_days = settings.get('max_age_days', 7)
         max_size_gb = settings.get('max_size_gb', 10)
@@ -120,7 +120,7 @@ class CleanupService:
         }
     
     def _cleanup_old_files(self, directory: str, cutoff_time: datetime) -> tuple:
-        """清理过期文件"""
+        """Remove expired files"""
         freed = 0
         deleted = 0
         
@@ -143,7 +143,7 @@ class CleanupService:
         return freed, deleted
     
     def _cleanup_by_size(self, max_size_bytes: int) -> tuple:
-        """按大小清理，删除最旧的文件直到低于限制"""
+        """Clean up by size: the oldest files are deleted until the total is under the limit"""
         freed = 0
         deleted = 0
         
@@ -183,7 +183,7 @@ class CleanupService:
         return freed, deleted
     
     def _get_total_size(self) -> int:
-        """获取所有目录的总大小"""
+        """Get the total size of all folders"""
         total = 0
         for dir_path in self.directories.values():
             if os.path.exists(dir_path):
@@ -196,7 +196,7 @@ class CleanupService:
         return total
     
     def _remove_empty_dirs(self, directory: str):
-        """递归删除空目录"""
+        """Delete empty folders recursively"""
         for root, dirs, files in os.walk(directory, topdown=False):
             for dir_name in dirs:
                 dir_path = os.path.join(root, dir_name)
@@ -212,7 +212,7 @@ _cleanup_service: Optional[CleanupService] = None
 
 
 def get_cleanup_service() -> CleanupService:
-    """获取清理服务实例"""
+    """Get the clean-up service instance"""
     global _cleanup_service
     if _cleanup_service is None:
         _cleanup_service = CleanupService()
@@ -224,7 +224,7 @@ def get_cleanup_service() -> CleanupService:
 # ============================================================================
 
 class CleanupRule:
-    """清理规则"""
+    """Clean-up rule"""
     def __init__(self, id: str, level: str, retention_days: int, target_id: str = None,
                  enabled: bool = True, created_at: str = None, created_by: str = None):
         self.id = id
@@ -248,7 +248,7 @@ class CleanupRule:
 
 
 class CleanupReport:
-    """清理报告"""
+    """Clean-up report"""
     def __init__(self):
         self.timestamp = datetime.now(timezone.utc).isoformat()
         self.deleted_sessions = []
@@ -271,7 +271,7 @@ class CleanupReport:
 
 
 class CleanupSchedulerService:
-    """清理调度服务 - 兼容现有路由"""
+    """Clean-up scheduling service - for the existing routes"""
     
     def __init__(self):
         self.rules: list = []
@@ -280,7 +280,7 @@ class CleanupSchedulerService:
     
     def configure_auto_cleanup(self, level: str, retention_days: int, 
                                target_id: str = None, admin_id: str = None) -> CleanupRule:
-        """配置自动清理规则"""
+        """Configure an automatic clean-up rule"""
         import uuid
         rule = CleanupRule(
             id=str(uuid.uuid4()),
@@ -293,11 +293,11 @@ class CleanupSchedulerService:
         return rule
     
     def get_cleanup_rules(self) -> list:
-        """获取所有清理规则"""
+        """Get all clean-up rules"""
         return self.rules
     
     def delete_cleanup_rule(self, rule_id: str) -> bool:
-        """删除清理规则"""
+        """Delete a clean-up rule"""
         for i, rule in enumerate(self.rules):
             if rule.id == rule_id:
                 self.rules.pop(i)
@@ -306,7 +306,7 @@ class CleanupSchedulerService:
     
     def manual_cleanup(self, filters: dict = None, admin_id: str = None,
                        user_group_mapping: dict = None) -> CleanupReport:
-        """手动清理"""
+        """Manual clean-up"""
         report = CleanupReport()
         
         try:
@@ -330,7 +330,7 @@ class CleanupSchedulerService:
         return report
     
     def get_status(self) -> dict:
-        """获取调度器状态"""
+        """Get the scheduler status"""
         return {
             'running': self.cleanup_service.running,
             'rules_count': len(self.rules),
@@ -338,12 +338,12 @@ class CleanupSchedulerService:
         }
     
     def run_now(self) -> dict:
-        """立即执行清理"""
+        """Run the clean-up now"""
         report = self.manual_cleanup()
         return report.to_dict()
     
     def get_cleanup_history(self, limit: int = 10) -> list:
-        """获取清理历史"""
+        """Get the clean-up history"""
         return self.history[-limit:]
 
 
@@ -352,7 +352,7 @@ _scheduler_service: Optional[CleanupSchedulerService] = None
 
 
 def get_cleanup_scheduler_service() -> CleanupSchedulerService:
-    """获取清理调度服务实例"""
+    """Get the clean-up scheduling service instance"""
     global _scheduler_service
     if _scheduler_service is None:
         _scheduler_service = CleanupSchedulerService()

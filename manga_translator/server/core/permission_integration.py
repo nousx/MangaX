@@ -1,7 +1,7 @@
 """
-权限系统集成模块
+Permission system integration module
 
-将新的权限系统与现有的账户系统集成。
+Integrates the new permission system with the existing account system.
 """
 
 import logging
@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 
 class IntegratedPermissionService:
-    """集成的权限服务"""
+    """Integrated permission service"""
     
     def __init__(
         self,
@@ -25,11 +25,11 @@ class IntegratedPermissionService:
         permission_service: Optional[EnhancedPermissionService] = None
     ):
         """
-        初始化集成权限服务
-        
+        Initialise the integrated permission service
+
         Args:
-            account_service: 账户服务实例
-            permission_service: 增强权限服务实例（可选）
+            account_service: the account service instance
+            permission_service: the enhanced permission service instance (optional)
         """
         self.account_service = account_service
         
@@ -40,13 +40,13 @@ class IntegratedPermissionService:
     
     def _get_user_group(self, username: str) -> Optional[str]:
         """
-        获取用户所属的用户组
-        
+        Get the user group a user belongs to
+
         Args:
-            username: 用户名
-        
+            username: the user name
+
         Returns:
-            用户组ID，如果用户不存在返回 None
+            The user group ID, or None when the user does not exist
         """
         account = self.account_service.get_user(username)
         if account:
@@ -55,26 +55,26 @@ class IntegratedPermissionService:
     
     def check_upload_prompt_permission(self, username: str) -> bool:
         """
-        检查用户是否有上传提示词的权限
-        
+        Check whether a user may upload prompts
+
         Args:
-            username: 用户名
-        
+            username: the user name
+
         Returns:
-            bool: 是否有权限
+            bool: whether the user has the permission
         """
         group_id = self._get_user_group(username)
         return self.permission_service.check_upload_prompt_permission(username, group_id)
     
     def check_upload_font_permission(self, username: str) -> bool:
         """
-        检查用户是否有上传字体的权限
-        
+        Check whether a user may upload fonts
+
         Args:
-            username: 用户名
-        
+            username: the user name
+
         Returns:
-            bool: 是否有权限
+            bool: whether the user has the permission
         """
         group_id = self._get_user_group(username)
         result = self.permission_service.check_upload_font_permission(username, group_id)
@@ -83,40 +83,40 @@ class IntegratedPermissionService:
     
     def check_delete_own_files_permission(self, username: str) -> bool:
         """
-        检查用户是否有删除自己文件的权限
-        
+        Check whether a user may delete their own files
+
         Args:
-            username: 用户名
-        
+            username: the user name
+
         Returns:
-            bool: 是否有权限
+            bool: whether the user has the permission
         """
         group_id = self._get_user_group(username)
         return self.permission_service.check_delete_own_files_permission(username, group_id)
     
     def check_delete_all_files_permission(self, username: str) -> bool:
         """
-        检查用户是否有删除所有文件的权限
-        
+        Check whether a user may delete all files
+
         Args:
-            username: 用户名
-        
+            username: the user name
+
         Returns:
-            bool: 是否有权限
+            bool: whether the user has the permission
         """
         group_id = self._get_user_group(username)
         return self.permission_service.check_delete_all_files_permission(username, group_id)
     
     def check_delete_file_permission(self, username: str, file_owner: str) -> bool:
         """
-        检查用户是否有删除指定文件的权限
-        
+        Check whether a user may delete the given file
+
         Args:
-            username: 用户名
-            file_owner: 文件所有者用户名
-        
+            username: the user name
+            file_owner: user name of the file owner
+
         Returns:
-            bool: 是否有权限
+            bool: whether the user has the permission
         """
         # For one's own file, check can_delete_own_files
         if username == file_owner:
@@ -127,118 +127,118 @@ class IntegratedPermissionService:
     
     def check_view_permission(self, username: str) -> str:
         """
-        获取用户的查看权限级别
-        
+        Get the view permission level of a user
+
         Args:
-            username: 用户名
-        
+            username: the user name
+
         Returns:
-            str: 权限级别 ("own", "none", "all")
+            str: the permission level ("own", "none", "all")
         """
         group_id = self._get_user_group(username)
         return self.permission_service.check_view_permission(username, group_id)
     
     def get_view_history_permission(self, username: str) -> str:
         """
-        获取用户的历史查看权限级别
-        
+        Get the history view permission level of a user
+
         Args:
-            username: 用户名
-        
+            username: the user name
+
         Returns:
-            str: 权限级别 ("own", "none", "all")
+            str: the permission level ("own", "none", "all")
         """
         group_id = self._get_user_group(username)
         return self.permission_service.get_view_history_permission(username, group_id)
     
     def check_save_enabled(self, username: str) -> bool:
         """
-        检查用户是否启用保存翻译结果
-        
+        Check whether saving translation results is enabled for a user
+
         Args:
-            username: 用户名
-        
+            username: the user name
+
         Returns:
-            bool: 是否启用保存
+            bool: whether saving is enabled
         """
         group_id = self._get_user_group(username)
         return self.permission_service.check_save_enabled(username, group_id)
     
     def check_edit_own_env_permission(self, username: str) -> bool:
         """
-        检查用户是否有编辑自己.env配置的权限
-        
+        Check whether a user may edit their own .env configuration
+
         Args:
-            username: 用户名
-        
+            username: the user name
+
         Returns:
-            bool: 是否有权限
+            bool: whether the user has the permission
         """
         group_id = self._get_user_group(username)
         return self.permission_service.check_edit_own_env_permission(username, group_id)
     
     def check_edit_server_env_permission(self, username: str) -> bool:
         """
-        检查用户是否有编辑服务器.env配置的权限
-        
+        Check whether a user may edit the server .env configuration
+
         Args:
-            username: 用户名
-        
+            username: the user name
+
         Returns:
-            bool: 是否有权限
+            bool: whether the user has the permission
         """
         group_id = self._get_user_group(username)
         return self.permission_service.check_edit_server_env_permission(username, group_id)
     
     def check_view_own_logs_permission(self, username: str) -> bool:
         """
-        检查用户是否有查看自己日志的权限
-        
+        Check whether a user may view their own logs
+
         Args:
-            username: 用户名
-        
+            username: the user name
+
         Returns:
-            bool: 是否有权限
+            bool: whether the user has the permission
         """
         group_id = self._get_user_group(username)
         return self.permission_service.check_view_own_logs_permission(username, group_id)
     
     def check_view_all_logs_permission(self, username: str) -> bool:
         """
-        检查用户是否有查看所有用户日志的权限
-        
+        Check whether a user may view the logs of all users
+
         Args:
-            username: 用户名
-        
+            username: the user name
+
         Returns:
-            bool: 是否有权限
+            bool: whether the user has the permission
         """
         group_id = self._get_user_group(username)
         return self.permission_service.check_view_all_logs_permission(username, group_id)
     
     def check_view_system_logs_permission(self, username: str) -> bool:
         """
-        检查用户是否有查看系统日志的权限
-        
+        Check whether a user may view the system logs
+
         Args:
-            username: 用户名
-        
+            username: the user name
+
         Returns:
-            bool: 是否有权限
+            bool: whether the user has the permission
         """
         group_id = self._get_user_group(username)
         return self.permission_service.check_view_system_logs_permission(username, group_id)
     
     def check_view_logs_permission(self, username: str, log_owner: Optional[str] = None) -> bool:
         """
-        检查用户是否有查看指定日志的权限
-        
+        Check whether a user may view the given logs
+
         Args:
-            username: 用户名
-            log_owner: 日志所有者用户名（None 表示系统日志）
-        
+            username: the user name
+            log_owner: user name of the log owner (None means the system logs)
+
         Returns:
-            bool: 是否有权限
+            bool: whether the user has the permission
         """
         # System logs
         if log_owner is None:
@@ -253,26 +253,26 @@ class IntegratedPermissionService:
     
     def get_effective_permissions(self, username: str) -> Dict[str, Any]:
         """
-        获取用户的有效权限（应用继承规则）
-        
+        Get the effective permissions of a user (with the inheritance rules applied)
+
         Args:
-            username: 用户名
-        
+            username: the user name
+
         Returns:
-            Dict[str, Any]: 有效权限字典
+            Dict[str, Any]: dictionary of the effective permissions
         """
         group_id = self._get_user_group(username)
         return self.permission_service.get_effective_permissions(username, group_id)
     
     def get_permission_summary(self, username: str) -> Dict[str, Any]:
         """
-        获取用户权限摘要（用于显示）
-        
+        Get a summary of the permissions of a user (for display)
+
         Args:
-            username: 用户名
-        
+            username: the user name
+
         Returns:
-            Dict[str, Any]: 权限摘要
+            Dict[str, Any]: the permission summary
         """
         group_id = self._get_user_group(username)
         return self.permission_service.get_permission_summary(username, group_id)
@@ -284,15 +284,15 @@ class IntegratedPermissionService:
         updated_by: str
     ) -> bool:
         """
-        设置用户权限
-        
+        Set the permissions of a user
+
         Args:
-            username: 用户名
-            permissions: 权限字典
-            updated_by: 更新者用户名
-        
+            username: the user name
+            permissions: the permission dictionary
+            updated_by: user name of whoever makes the update
+
         Returns:
-            bool: 是否成功
+            bool: whether it succeeded
         """
         return self.permission_service.set_user_permissions(username, permissions, updated_by)
     
@@ -302,50 +302,50 @@ class IntegratedPermissionService:
         permissions: Dict[str, Any]
     ) -> bool:
         """
-        设置用户组权限
-        
+        Set the permissions of a user group
+
         Args:
-            group_id: 用户组ID
-            permissions: 权限字典
-        
+            group_id: the user group ID
+            permissions: the permission dictionary
+
         Returns:
-            bool: 是否成功
+            bool: whether it succeeded
         """
         return self.permission_service.set_group_permissions(group_id, permissions)
     
     def set_global_permissions(self, permissions: Dict[str, Any]) -> bool:
         """
-        设置全局默认权限
-        
+        Set the global default permissions
+
         Args:
-            permissions: 权限字典
-        
+            permissions: the permission dictionary
+
         Returns:
-            bool: 是否成功
+            bool: whether it succeeded
         """
         return self.permission_service.set_global_permissions(permissions)
     
     def delete_user_permissions(self, username: str) -> bool:
         """
-        删除用户权限（回退到用户组/全局权限）
-        
+        Delete the permissions of a user (falling back to the user group / global permissions)
+
         Args:
-            username: 用户名
-        
+            username: the user name
+
         Returns:
-            bool: 是否成功
+            bool: whether it succeeded
         """
         return self.permission_service.delete_user_permissions(username)
     
     def delete_group_permissions(self, group_id: str) -> bool:
         """
-        删除用户组权限（回退到全局权限）
-        
+        Delete the permissions of a user group (falling back to the global permissions)
+
         Args:
-            group_id: 用户组ID
-        
+            group_id: the user group ID
+
         Returns:
-            bool: 是否成功
+            bool: whether it succeeded
         """
         return self.permission_service.delete_group_permissions(group_id)
 
@@ -358,13 +358,13 @@ def get_integrated_permission_service(
     account_service: Optional[AccountService] = None
 ) -> IntegratedPermissionService:
     """
-    获取集成权限服务实例
-    
+    Get the integrated permission service instance
+
     Args:
-        account_service: 账户服务实例（可选）
-    
+        account_service: the account service instance (optional)
+
     Returns:
-        IntegratedPermissionService: 服务实例
+        IntegratedPermissionService: the service instance
     """
     global _integrated_permission_service
     

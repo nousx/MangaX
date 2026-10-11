@@ -26,7 +26,7 @@ router = APIRouter(prefix="/api/admin/groups", tags=["groups"])
 # ============================================================================
 
 class GroupResponse(BaseModel):
-    """用户组响应"""
+    """User group response"""
     name: str
     display_name: str
     description: str
@@ -34,7 +34,7 @@ class GroupResponse(BaseModel):
 
 
 class CreateGroupRequest(BaseModel):
-    """创建用户组请求"""
+    """Request for creating a user group"""
     group_id: str = Field(..., description="用户组ID")
     name: str = Field(..., description="用户组名称")
     description: str = Field(..., description="描述")
@@ -46,20 +46,20 @@ class CreateGroupRequest(BaseModel):
 
 
 class RenameGroupRequest(BaseModel):
-    """重命名用户组请求"""
+    """Request for renaming a user group"""
     new_group_id: str = Field(..., description="新用户组ID")
     new_name: str = Field(..., description="新用户组名称")
 
 
 class UpdateGroupRequest(BaseModel):
-    """更新用户组请求"""
+    """Request for updating a user group"""
     display_name: str = Field(..., description="显示名称")
     description: str = Field(..., description="描述")
     parameter_config: Dict[str, Any] = Field(..., description="参数配置")
 
 
 class UpdateGroupConfigRequest(BaseModel):
-    """更新用户组配置请求"""
+    """Request for updating the configuration of a user group"""
     parameter_config: Dict[str, Any] = Field(default={}, description="参数配置")
     allowed_translators: Optional[List[str]] = Field(default=None, description="翻译器白名单")
     denied_translators: Optional[List[str]] = Field(default=None, description="翻译器黑名单")
@@ -90,9 +90,9 @@ async def create_group(
     session: Session = Depends(require_admin)
 ):
     """
-    创建新用户组（管理员）
-    
-    需要管理员权限。创建一个新的用户组。
+    Create a new user group (administrator)
+
+    Requires administrator permission. Creates a new user group.
     """
     group_mgmt_service = get_group_management_service()
     
@@ -155,9 +155,9 @@ async def rename_group(
     session: Session = Depends(require_admin)
 ):
     """
-    重命名用户组（管理员）
-    
-    需要管理员权限。重命名一个用户组，并自动更新所有用户的组关联。
+    Rename a user group (administrator)
+
+    Requires administrator permission. Renames a user group and updates the group link of all users automatically.
     """
     group_mgmt_service = get_group_management_service()
     
@@ -212,10 +212,10 @@ async def delete_group(
     session: Session = Depends(require_admin)
 ):
     """
-    删除用户组（管理员）
-    
-    需要管理员权限。删除一个用户组，并将该组的所有用户移动到default组。
-    系统预定义的用户组（admin, default, guest）不能被删除。
+    Delete a user group (administrator)
+
+    Requires administrator permission. Deletes a user group and moves all its users to the default group.
+    The user groups predefined by the system (admin, default, guest) cannot be deleted.
     """
     group_mgmt_service = get_group_management_service()
     
@@ -265,9 +265,9 @@ async def get_all_groups(
     session: Session = Depends(require_admin)
 ):
     """
-    获取所有用户组（管理员）
-    
-    需要管理员权限。返回所有用户组的列表。
+    Get all user groups (administrator)
+
+    Requires administrator permission. Returns the list of all user groups.
     """
     group_mgmt_service = get_group_management_service()
     
@@ -300,9 +300,9 @@ async def get_group(
     session: Session = Depends(require_admin)
 ):
     """
-    获取指定用户组（管理员）
-    
-    需要管理员权限。返回指定用户组的信息。
+    Get the given user group (administrator)
+
+    Requires administrator permission. Returns the information of the given user group.
     """
     group_mgmt_service = get_group_management_service()
     
@@ -349,9 +349,9 @@ async def update_group_config(
     session: Session = Depends(require_admin)
 ):
     """
-    更新用户组配置（管理员）
-    
-    需要管理员权限。更新指定用户组的参数配置、翻译器白名单/黑名单等。
+    Update the configuration of a user group (administrator)
+
+    Requires administrator permission. Updates the parameter configuration, the translator allow/deny lists and so on of the given user group.
     """
     group_mgmt_service = get_group_management_service()
     

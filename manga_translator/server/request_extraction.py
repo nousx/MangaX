@@ -27,7 +27,7 @@ logger = logging.getLogger('manga_translator.server')
 
 
 class TaskLogHandler(logging.Handler):
-    """任务专属的日志处理器，将日志发送到任务队列"""
+    """Log handler of a single task, which sends the logs to the task queue"""
     
     def __init__(self, task_id: str, session_id: str = None):
         super().__init__()
@@ -51,7 +51,7 @@ class TaskLogHandler(logging.Handler):
 
 
 def _create_task_log_handler(task_id: str, session_id: str = None) -> TaskLogHandler:
-    """创建任务专属的日志处理器并添加到相关logger"""
+    """Create the log handler of a task and add it to the relevant loggers"""
     handler = TaskLogHandler(task_id, session_id)
     formatter = logging.Formatter('%(name)s - %(levelname)s - %(message)s')
     handler.setFormatter(formatter)
@@ -69,7 +69,7 @@ def _create_task_log_handler(task_id: str, session_id: str = None) -> TaskLogHan
 
 
 def _remove_task_log_handler(handler: TaskLogHandler):
-    """移除任务专属的日志处理器"""
+    """Remove the log handler of a task"""
     if handler is None:
         return
     
@@ -138,15 +138,15 @@ async def to_pil_image(image: Union[str, bytes, Image.Image]) -> Image.Image:
 
 def _run_translate_sync(pil_image, config: Config, task_id: str = None, cancel_check_callback=None):
     """
-    同步执行翻译操作的辅助函数。
-    用于在线程池中运行，避免阻塞 FastAPI 事件循环。
-    使用全局翻译器实例，复用已加载的模型。
-    
+    Helper function that runs a translation synchronously.
+    It runs in the thread pool, so the FastAPI event loop is not blocked.
+    The global translator instance is used, reusing the loaded models.
+
     Args:
-        pil_image: PIL 图片
-        config: 翻译配置
-        task_id: 任务ID（用于更新线程信息）
-        cancel_check_callback: 取消检查回调函数
+        pil_image: the PIL image
+        config: the translation configuration
+        task_id: the task ID (used to update the thread information)
+        cancel_check_callback: callback that checks for cancellation
     """
     import threading
 
@@ -204,15 +204,15 @@ def _run_translate_sync(pil_image, config: Config, task_id: str = None, cancel_c
 
 def _run_translate_batch_sync(images_with_configs: list, batch_size: int, task_id: str = None, cancel_check_callback=None):
     """
-    同步执行批量翻译操作的辅助函数。
-    用于在线程池中运行，避免阻塞 FastAPI 事件循环。
-    使用全局翻译器实例，复用已加载的模型。
-    
+    Helper function that runs a batch translation synchronously.
+    It runs in the thread pool, so the FastAPI event loop is not blocked.
+    The global translator instance is used, reusing the loaded models.
+
     Args:
-        images_with_configs: 图片和配置列表
-        batch_size: 批量大小
-        task_id: 任务ID（用于更新线程信息）
-        cancel_check_callback: 取消检查回调函数
+        images_with_configs: list of images with their configurations
+        batch_size: the batch size
+        task_id: the task ID (used to update the thread information)
+        cancel_check_callback: callback that checks for cancellation
     """
     import threading
 
@@ -326,7 +326,7 @@ def prepare_translator_params(config: Config, workflow: str = "normal") -> dict:
 
 
 async def get_ctx(req: Request, config: Config, image: str|bytes, workflow: str = "normal"):
-    """Translate single image. 使用全局翻译器实例，复用已加载的模型。"""
+    """Translate single image. The global translator instance is used, reusing the loaded models."""
     from manga_translator.server.core.logging_manager import add_log
     from manga_translator.server.core.task_manager import get_semaphore
     
@@ -673,10 +673,10 @@ def pack_message(status: int, data: bytes) -> bytes:
 
 
 async def get_batch_ctx(req: Request, config: Config, images: list[str|bytes], batch_size: int = 4, workflow: str = "normal", task_id: str = None):
-    """批量翻译（使用 UI 层逻辑）
-    
+    """Batch translation (with the logic of the UI layer)
+
     Args:
-        task_id: 任务ID，用于检查取消状态
+        task_id: the task ID, used to check the cancellation state
     """
     from manga_translator.server.core.logging_manager import add_log
     from manga_translator.server.core.task_manager import (
@@ -803,15 +803,15 @@ async def get_batch_ctx(req: Request, config: Config, images: list[str|bytes], b
 
 async def save_translation_to_history(ctx, username: str, task_id: str, workflow: str, original_filename: str = None, config = None) -> None:
     """
-    保存翻译结果到历史记录
-    
+    Save a translation result to the history
+
     Args:
-        ctx: 翻译上下文，包含结果图片
-        username: 用户名
-        task_id: 任务ID
-        workflow: 工作流程类型
-        original_filename: 原始文件名（可选）
-        config: 配置对象（可选，用于获取输出格式）
+        ctx: the translation context, with the result image
+        username: the user name
+        task_id: the task ID
+        workflow: the workflow type
+        original_filename: the original file name (optional)
+        config: the configuration object (optional, used to get the output format)
     """
     import shutil
     import tempfile

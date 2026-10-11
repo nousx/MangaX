@@ -1,7 +1,7 @@
 """
-账号管理服务（AccountService）
+Account management service (AccountService)
 
-管理用户账号的创建、查询、更新和删除。
+Manages creating, looking up, updating and deleting user accounts.
 """
 
 import logging
@@ -18,14 +18,14 @@ logger = logging.getLogger(__name__)
 
 
 class AccountService:
-    """账号管理服务"""
+    """Account management service"""
     
     def __init__(self, accounts_file: str = "manga_translator/server/data/accounts.json"):
         """
-        初始化账号管理服务
-        
+        Initialise the account management service
+
         Args:
-            accounts_file: 账号存储文件路径
+            accounts_file: path of the account storage file
         """
         self.accounts_file = accounts_file
         self.accounts: Dict[str, UserAccount] = {}
@@ -40,20 +40,20 @@ class AccountService:
         permissions: Optional[UserPermissions] = None
     ) -> UserAccount:
         """
-        创建新用户
-        
+        Create a new user
+
         Args:
-            username: 用户名
-            password: 密码（明文）
-            role: 角色（'admin' 或 'user'）
-            group: 用户组名称（默认为 'default'）
-            permissions: 用户权限（如果为 None，使用默认权限）
-        
+            username: the user name
+            password: the password (plain text)
+            role: the role ('admin' or 'user')
+            group: name of the user group ('default' by default)
+            permissions: the user permissions (the default permissions are used when None)
+
         Returns:
-            UserAccount: 创建的用户账号
-        
+            UserAccount: the user account that was created
+
         Raises:
-            ValueError: 如果用户名不合法、用户名已存在、密码强度不足或角色无效
+            ValueError: when the user name is not valid, the user name already exists, the password is too weak or the role is invalid
         """
         # Allowlist check for new accounts only; existing accounts are loaded
         # as-is by _load_accounts() so legacy usernames can still log in.
@@ -136,38 +136,38 @@ class AccountService:
     
     def get_user(self, username: str) -> Optional[UserAccount]:
         """
-        获取用户信息
-        
+        Get the information of a user
+
         Args:
-            username: 用户名
-        
+            username: the user name
+
         Returns:
-            Optional[UserAccount]: 用户账号，如果不存在返回 None
+            Optional[UserAccount]: the user account, or None when it does not exist
         """
         return self.accounts.get(username)
     
     def list_users(self) -> List[UserAccount]:
         """
-        列出所有用户
-        
+        List all users
+
         Returns:
-            List[UserAccount]: 所有用户账号列表
+            List[UserAccount]: list of all user accounts
         """
         return list(self.accounts.values())
     
     def update_user(self, username: str, updates: Dict[str, Any]) -> bool:
         """
-        更新用户信息
-        
+        Update the information of a user
+
         Args:
-            username: 用户名
-            updates: 要更新的字段字典
-        
+            username: the user name
+            updates: dictionary of the fields to update
+
         Returns:
-            bool: 更新是否成功
-        
+            bool: whether the update succeeded
+
         Raises:
-            ValueError: 如果用户不存在或更新字段无效
+            ValueError: when the user does not exist or an update field is invalid
         """
         account = self.accounts.get(username)
         if not account:
@@ -221,16 +221,16 @@ class AccountService:
     
     def delete_user(self, username: str) -> bool:
         """
-        删除用户
-        
+        Delete a user
+
         Args:
-            username: 用户名
-        
+            username: the user name
+
         Returns:
-            bool: 删除是否成功
-        
+            bool: whether the deletion succeeded
+
         Raises:
-            ValueError: 如果用户不存在
+            ValueError: when the user does not exist
         """
         if username not in self.accounts:
             raise ValueError(f"用户 '{username}' 不存在")
@@ -246,14 +246,14 @@ class AccountService:
     
     def verify_password(self, username: str, password: str) -> bool:
         """
-        验证密码
-        
+        Verify a password
+
         Args:
-            username: 用户名
-            password: 密码（明文）
-        
+            username: the user name
+            password: the password (plain text)
+
         Returns:
-            bool: 密码是否正确
+            bool: whether the password is correct
         """
         account = self.accounts.get(username)
         if not account:
@@ -263,17 +263,17 @@ class AccountService:
     
     def change_password(self, username: str, new_password: str) -> bool:
         """
-        修改密码
-        
+        Change a password
+
         Args:
-            username: 用户名
-            new_password: 新密码（明文）
-        
+            username: the user name
+            new_password: the new password (plain text)
+
         Returns:
-            bool: 修改是否成功
-        
+            bool: whether the change succeeded
+
         Raises:
-            ValueError: 如果用户不存在或密码强度不足
+            ValueError: when the user does not exist or the password is too weak
         """
         account = self.accounts.get(username)
         if not account:
@@ -299,14 +299,14 @@ class AccountService:
         password: str = "admin123"
     ) -> Optional[UserAccount]:
         """
-        创建默认管理员账号
-        
+        Create the default administrator account
+
         Args:
-            username: 管理员用户名
-            password: 管理员密码
-        
+            username: the administrator user name
+            password: the administrator password
+
         Returns:
-            Optional[UserAccount]: 创建的管理员账号，如果已存在返回 None
+            Optional[UserAccount]: the administrator account that was created, or None when it already exists
         """
         # When a user already exists, nothing is created
         if self.accounts:
@@ -347,13 +347,13 @@ class AccountService:
     
     def update_last_login(self, username: str) -> bool:
         """
-        更新最后登录时间
-        
+        Update the time of the last login
+
         Args:
-            username: 用户名
-        
+            username: the user name
+
         Returns:
-            bool: 更新是否成功
+            bool: whether the update succeeded
         """
         account = self.accounts.get(username)
         if not account:
@@ -365,13 +365,13 @@ class AccountService:
     
     def _hash_password(self, password: str) -> str:
         """
-        哈希密码
-        
+        Hash a password
+
         Args:
-            password: 明文密码
-        
+            password: the plain-text password
+
         Returns:
-            str: 哈希后的密码
+            str: the hashed password
         """
         salt = bcrypt.gensalt()
         # bcrypt has a 72 byte limit, truncate if necessary
@@ -381,14 +381,14 @@ class AccountService:
     
     def _verify_password(self, password: str, password_hash: str) -> bool:
         """
-        验证密码
-        
+        Verify a password
+
         Args:
-            password: 明文密码
-            password_hash: 哈希密码
-        
+            password: the plain-text password
+            password_hash: the hashed password
+
         Returns:
-            bool: 密码是否匹配
+            bool: whether the password matches
         """
         try:
             # bcrypt has a 72 byte limit, truncate if necessary
@@ -402,7 +402,7 @@ class AccountService:
             return False
     
     def _load_accounts(self) -> None:
-        """从持久化存储加载账号"""
+        """Load the accounts from persistent storage"""
         try:
             data = load_json(self.accounts_file, default={'version': '1.0', 'accounts': []})
             
@@ -422,7 +422,7 @@ class AccountService:
             self.accounts = {}
     
     def _save_accounts(self) -> None:
-        """保存账号到持久化存储"""
+        """Save the accounts to persistent storage"""
         try:
             data = {
                 'version': '1.0',

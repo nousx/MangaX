@@ -1,7 +1,7 @@
 """
-认证和授权中间件
+Authentication and authorisation middleware
 
-提供 FastAPI 依赖函数用于验证用户身份和权限。
+Provides FastAPI dependency functions that verify the identity and the permissions of a user.
 """
 
 import logging
@@ -30,12 +30,12 @@ def init_middleware_services(
     permission_service: PermissionService
 ) -> None:
     """
-    初始化中间件使用的服务实例
-    
+    Initialise the service instances the middleware uses
+
     Args:
-        account_service: 账号管理服务
-        session_service: 会话管理服务
-        permission_service: 权限管理服务
+        account_service: the account management service
+        session_service: the session management service
+        permission_service: the permission management service
     """
     global _account_service, _session_service, _permission_service
     _account_service = account_service
@@ -45,8 +45,8 @@ def init_middleware_services(
 
 
 def get_services() -> tuple[AccountService, SessionService, PermissionService]:
-    """获取服务实例（用于依赖注入）
-    
+    """Get the service instances (for dependency injection)
+
     Returns:
         tuple: (account_service, session_service, permission_service)
     """
@@ -63,16 +63,16 @@ def create_error_response(
     status_code: int = 400
 ) -> JSONResponse:
     """
-    创建统一的错误响应
-    
+    Create a uniform error response
+
     Args:
-        code: 错误代码
-        message: 错误消息
-        details: 错误详情（可选）
-        status_code: HTTP 状态码
-    
+        code: the error code
+        message: the error message
+        details: details of the error (optional)
+        status_code: the HTTP status code
+
     Returns:
-        JSONResponse: 格式化的错误响应
+        JSONResponse: the formatted error response
     """
     error_data = {
         "error": {
@@ -95,18 +95,18 @@ async def require_auth(
     x_session_token: Optional[str] = Header(None, alias="X-Session-Token"),
 ) -> Session:
     """
-    FastAPI 依赖函数：要求用户认证（管理员或普通用户）
-    
-    验证会话令牌并返回会话对象。如果令牌无效或缺失，抛出 401 错误。
-    
+    FastAPI dependency function: requires an authenticated user (administrator or ordinary user)
+
+    Verifies the session token and returns the session object. When the token is invalid or missing, a 401 error is raised.
+
     Args:
-        x_session_token: 从请求头获取的会话令牌
-    
+        x_session_token: the session token taken from the request header
+
     Returns:
-        Session: 验证通过的会话对象
-    
+        Session: the verified session object
+
     Raises:
-        HTTPException: 如果令牌无效或缺失（401）
+        HTTPException: when the token is invalid or missing (401)
     """
     _, session_service, _ = get_services()
     
@@ -176,18 +176,18 @@ async def require_admin(
     session: Session = Depends(require_auth)
 ) -> Session:
     """
-    FastAPI 依赖函数：要求管理员认证
-    
-    验证用户是否为管理员。如果不是管理员，抛出 403 错误。
-    
+    FastAPI dependency function: requires an authenticated administrator
+
+    Verifies that the user is an administrator. When the user is not, a 403 error is raised.
+
     Args:
-        session: 从 require_auth 获取的会话对象
-    
+        session: the session object from require_auth
+
     Returns:
-        Session: 验证通过的管理员会话对象
-    
+        Session: the verified administrator session object
+
     Raises:
-        HTTPException: 如果用户不是管理员（403）
+        HTTPException: when the user is not an administrator (403)
     """
     if session.role != 'admin':
         logger.warning(
@@ -213,16 +213,16 @@ async def check_translator_permission(
     session: Session = Depends(require_auth)
 ) -> None:
     """
-    FastAPI 依赖函数：检查翻译器权限
-    
-    验证用户是否有权限使用指定的翻译器。如果没有权限，抛出 403 错误。
-    
+    FastAPI dependency function: checks the translator permission
+
+    Verifies that the user may use the given translator. Without the permission, a 403 error is raised.
+
     Args:
-        translator: 翻译器名称
-        session: 从 require_auth 获取的会话对象
-    
+        translator: name of the translator
+        session: the session object from require_auth
+
     Raises:
-        HTTPException: 如果用户没有权限使用该翻译器（403）
+        HTTPException: when the user may not use that translator (403)
     """
     _, _, permission_service = get_services()
     
@@ -267,17 +267,17 @@ async def check_parameter_permission(
     session: Session = Depends(require_auth)
 ) -> Dict[str, Any]:
     """
-    FastAPI 依赖函数：检查并过滤参数权限
-    
-    过滤用户提交的参数，只保留用户有权限调整的参数。
-    不会抛出错误，而是静默过滤掉未授权的参数。
-    
+    FastAPI dependency function: checks and filters parameter permissions
+
+    Filters the parameters the user submitted, keeping only those the user may adjust.
+    No error is raised; parameters that are not authorised are dropped silently.
+
     Args:
-        parameters: 用户提交的参数字典
-        session: 从 require_auth 获取的会话对象
-    
+        parameters: dictionary of the parameters the user submitted
+        session: the session object from require_auth
+
     Returns:
-        Dict[str, Any]: 过滤后的参数字典
+        Dict[str, Any]: the filtered parameter dictionary
     """
     _, _, permission_service = get_services()
     
@@ -301,13 +301,13 @@ async def check_parameter_permission(
 # Concurrency and quota check functions (not dependency functions; called from the business logic)
 def check_concurrent_limit(username: str) -> None:
     """
-    检查用户的并发任务限制
-    
+    Check the concurrent task limit of a user
+
     Args:
-        username: 用户名
-    
+        username: the user name
+
     Raises:
-        HTTPException: 如果用户超过并发限制（429）
+        HTTPException: when the user is over the concurrency limit (429)
     """
     _, _, permission_service = get_services()
     
@@ -340,13 +340,13 @@ def check_concurrent_limit(username: str) -> None:
 
 def check_daily_quota(username: str) -> None:
     """
-    检查用户的每日配额
-    
+    Check the daily quota of a user
+
     Args:
-        username: 用户名
-    
+        username: the user name
+
     Raises:
-        HTTPException: 如果用户超过每日配额（429）
+        HTTPException: when the user is over the daily quota (429)
     """
     _, _, permission_service = get_services()
     
@@ -380,10 +380,10 @@ def check_daily_quota(username: str) -> None:
 # Task count management functions (called when a task starts and ends)
 def increment_task_count(username: str) -> None:
     """
-    增加用户的活动任务计数
-    
+    Increase the active task count of a user
+
     Args:
-        username: 用户名
+        username: the user name
     """
     _, _, permission_service = get_services()
     permission_service.increment_task_count(username)
@@ -391,10 +391,10 @@ def increment_task_count(username: str) -> None:
 
 def decrement_task_count(username: str) -> None:
     """
-    减少用户的活动任务计数
-    
+    Decrease the active task count of a user
+
     Args:
-        username: 用户名
+        username: the user name
     """
     _, _, permission_service = get_services()
     permission_service.decrement_task_count(username)
@@ -402,10 +402,10 @@ def decrement_task_count(username: str) -> None:
 
 def increment_daily_usage(username: str) -> None:
     """
-    增加用户的每日使用量
-    
+    Increase the daily usage of a user
+
     Args:
-        username: 用户名
+        username: the user name
     """
     _, _, permission_service = get_services()
     permission_service.increment_daily_usage(username)

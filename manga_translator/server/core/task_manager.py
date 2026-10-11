@@ -1,9 +1,9 @@
 """
-任务管理模块
+Task management module
 
-负责并发控制、活动任务跟踪和任务取消管理。
-使用 ThreadPoolExecutor 管理翻译线程，最大并发数 = 最大线程数。
-全局复用 MangaTranslator 实例以避免重复加载模型。
+Responsible for concurrency control, tracking active tasks and task cancellation.
+A ThreadPoolExecutor manages the translation threads; maximum concurrency = maximum number of threads.
+One MangaTranslator instance is reused globally, to avoid loading the models repeatedly.
 """
 
 import asyncio
@@ -45,7 +45,7 @@ active_tasks_lock = threading.Lock()
 
 
 def init_semaphore():
-    """初始化并发控制信号量和线程池"""
+    """Initialise the concurrency control semaphore and the thread pool"""
     global translation_semaphore, translation_executor
     
     max_concurrent = server_config.get('max_concurrent_tasks', 3)
@@ -68,18 +68,18 @@ def init_semaphore():
 
 
 def get_semaphore() -> Optional[asyncio.Semaphore]:
-    """获取并发控制信号量"""
+    """Get the concurrency control semaphore"""
     return translation_semaphore
 
 
 def get_executor() -> Optional[ThreadPoolExecutor]:
-    """获取翻译线程池"""
+    """Get the translation thread pool"""
     return translation_executor
 
 
 async def run_in_translator_thread(func: Callable, *args, **kwargs) -> Any:
     """
-    在翻译线程池中执行函数，不阻塞事件循环。
+    Run a function in the translation thread pool, without blocking the event loop.
     """
     if translation_executor is None:
         init_semaphore()
@@ -99,7 +99,7 @@ def register_active_task(
     future: Optional[Future] = None,
     status: str = "queued"
 ):
-    """注册活动任务，默认状态为 queued"""
+    """Register an active task; the default state is queued"""
     with active_tasks_lock:
         active_tasks[task_id] = {
             "start_time": datetime.now(timezone.utc).isoformat(),
@@ -114,28 +114,28 @@ def register_active_task(
 
 
 def update_task_status(task_id: str, status: str):
-    """更新任务状态（queued -> running -> completed）"""
+    """Update the state of a task (queued -> running -> completed)"""
     with active_tasks_lock:
         if task_id in active_tasks:
             active_tasks[task_id]["status"] = status
 
 
 def update_task_thread_id(task_id: str, thread_id: int):
-    """更新任务的线程ID"""
+    """Update the thread ID of a task"""
     with active_tasks_lock:
         if task_id in active_tasks:
             active_tasks[task_id]["thread_id"] = thread_id
 
 
 def unregister_active_task(task_id: str):
-    """注销活动任务"""
+    """Unregister an active task"""
     with active_tasks_lock:
         if task_id in active_tasks:
             del active_tasks[task_id]
 
 
 def get_active_tasks() -> list:
-    """获取所有活动任务"""
+    """Get all active tasks"""
     with active_tasks_lock:
         tasks = []
         for task_id, info in active_tasks.items():
@@ -163,7 +163,7 @@ def get_active_tasks() -> list:
 
 
 def is_task_cancelled(task_id: str) -> bool:
-    """检查任务是否被取消"""
+    """Check whether a task was cancelled"""
     with active_tasks_lock:
         if task_id in active_tasks:
             return active_tasks[task_id].get("cancel_requested", False)
@@ -171,7 +171,7 @@ def is_task_cancelled(task_id: str) -> bool:
 
 
 def cancel_task(task_id: str, force: bool = False) -> dict:
-    """取消指定的翻译任务"""
+    """Cancel the given translation task"""
     with active_tasks_lock:
         if task_id in active_tasks:
             active_tasks[task_id]["cancel_requested"] = True
@@ -203,7 +203,7 @@ def cancel_task(task_id: str, force: bool = False) -> dict:
 
 
 def update_server_config(config: dict):
-    """更新服务器配置"""
+    """Update the server configuration"""
     global _global_translator, _translator_params_hash
     
     # Check whether the translator has to be rebuilt
@@ -236,12 +236,12 @@ def update_server_config(config: dict):
 
 
 def get_server_config() -> dict:
-    """获取服务器配置"""
+    """Get the server configuration"""
     return server_config.copy()
 
 
 def get_thread_pool_status() -> dict:
-    """获取线程池状态"""
+    """Get the status of the thread pool"""
     if translation_executor is None:
         return {"initialized": False, "max_workers": 0, "active_threads": 0}
     
@@ -257,7 +257,7 @@ def get_thread_pool_status() -> dict:
 
 
 def shutdown_executor():
-    """关闭线程池和翻译器（服务器关闭时调用）"""
+    """Shut down the thread pool and the translator (called when the server shuts down)"""
     global translation_executor, _global_translator
     
     if translation_executor is not None:
@@ -279,7 +279,7 @@ def shutdown_executor():
 # ============================================================================
 
 def _get_params_hash(params: dict) -> str:
-    """计算参数哈希，用于判断是否需要重建翻译器"""
+    """Compute the hash of the parameters, used to decide whether the translator has to be rebuilt"""
     key_params = ['use_gpu', 'verbose', 'models_ttl']
     values = tuple(params.get(k) for k in key_params)
     return str(values)
@@ -287,19 +287,19 @@ def _get_params_hash(params: dict) -> str:
 
 def get_global_translator(params: dict = None):
     """
-    获取全局翻译器实例，复用模型避免重复加载。
-    
-    模型复用原理：
-    1. MangaTranslator 内部会缓存已加载的模型（OCR、检测器、修复器等）
-    2. 通过复用同一个 MangaTranslator 实例，模型只需加载一次
-    3. 每次翻译时传入不同的 Config，翻译器会根据配置选择对应的模型
-    4. models_ttl 参数控制模型在内存中保留的时间
-    
+    Get the global translator instance, reusing the models to avoid loading them repeatedly.
+
+    How the models are reused:
+    1. MangaTranslator caches the loaded models internally (OCR, detector, inpainter and so on)
+    2. by reusing the same MangaTranslator instance, the models only have to be loaded once
+    3. a different Config is passed in for each translation, and the translator chooses the matching models from the configuration
+    4. the models_ttl parameter controls how long the models stay in memory
+
     Args:
-        params: 翻译器参数（use_gpu, verbose, models_ttl 等）
-    
+        params: the translator parameters (use_gpu, verbose, models_ttl and so on)
+
     Returns:
-        MangaTranslator 实例
+        The MangaTranslator instance
     """
     global _global_translator, _translator_params_hash
     
@@ -335,7 +335,7 @@ def get_global_translator(params: dict = None):
 
 def reset_global_translator():
     """
-    重置全局翻译器（用于管理员手动释放内存）
+    Reset the global translator (for an administrator to free memory by hand)
     """
     global _global_translator, _translator_params_hash
     
@@ -371,7 +371,7 @@ def reset_global_translator():
 
 def get_translator_status() -> dict:
     """
-    获取翻译器状态
+    Get the status of the translator
     """
     with _translator_lock:
         if _global_translator is None:
@@ -400,16 +400,16 @@ def get_translator_status() -> dict:
 
 def cleanup_after_request():
     """
-    请求级内存清理（每次翻译请求结束后调用）
-    
-    清理翻译器内部的中间状态，但保留已加载的模型。
-    这是解决Web UI内存不释放问题的核心函数。
-    
-    清理内容：
-    - 翻译器的批处理上下文缓存
-    - 图片上下文（MD5缓存等）
-    - 页面翻译历史
-    - 其他中间状态
+    Request-level memory clean-up (called after each translation request ends)
+
+    Clears the intermediate state inside the translator but keeps the loaded models.
+    This is the core function for the problem of the Web UI not releasing memory.
+
+    What is cleared:
+    - the batch context cache of the translator
+    - the image contexts (MD5 cache and so on)
+    - the page translation history
+    - other intermediate state
     """
     import gc
     
@@ -469,11 +469,11 @@ def cleanup_after_request():
 
 def cleanup_context(ctx):
     """
-    彻底清理Context对象中的所有资源
-    
+    Clear all resources in a Context object thoroughly
+
     Args:
-        ctx: 翻译上下文对象
-        keep_result: 是否保留result（用于返回给前端）
+        ctx: the translation context object
+        keep_result: whether result is kept (to be returned to the front end)
     """
     if ctx is None:
         return

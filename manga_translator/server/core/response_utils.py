@@ -1,7 +1,7 @@
 """
-响应工具模块
+Response utilities module
 
-负责图像转换、JSON转换和临时环境变量管理。
+Responsible for image conversion, JSON conversion and temporary environment variable handling.
 """
 
 import io
@@ -24,13 +24,13 @@ from manga_translator.server.to_json import to_translation
 
 def transform_to_image(ctx):
     """
-    将翻译上下文转换为图像字节
-    
+    Convert a translation context to image bytes
+
     Args:
-        ctx: 翻译上下文对象
-    
+        ctx: the translation context object
+
     Returns:
-        图像字节数据
+        The image byte data
     """
     # Check whether ctx.result exists
     if ctx.result is None:
@@ -51,49 +51,49 @@ def transform_to_image(ctx):
 
 def transform_to_json(ctx):
     """
-    将翻译上下文转换为JSON字节
-    
+    Convert a translation context to JSON bytes
+
     Args:
-        ctx: 翻译上下文对象
-    
+        ctx: the translation context object
+
     Returns:
-        JSON字节数据
+        The JSON byte data
     """
     return to_translation(ctx).model_dump_json().encode("utf-8")
 
 
 def transform_to_bytes(ctx):
     """
-    将翻译上下文转换为自定义字节格式
-    
+    Convert a translation context to the custom byte format
+
     Args:
-        ctx: 翻译上下文对象
-    
+        ctx: the translation context object
+
     Returns:
-        自定义字节数据
+        The custom byte data
     """
     return to_translation(ctx).to_bytes()
 
 
 async def apply_user_env_vars(user_env_vars_str: str, config: Config, admin_settings: dict, username: str = None):
     """
-    解析用户提供的环境变量，并检查策略
-    如果用户没有提供 API Keys，尝试从用户选择的预设中获取
-    
-    **重要**: 此函数会将用户 API Key 设置到 config.translator 中，
-    翻译器会在 parse_args 时读取这些值，实现用户级 API Key 隔离。
-    
+    Parse the environment variables the user provided, and check the policy.
+    When the user provided no API keys, they are looked up in the preset the user selected
+
+    **Important**: this function sets the user's API key on config.translator;
+    the translator reads these values in parse_args, which gives per-user isolation of API keys.
+
     Args:
-        user_env_vars_str: JSON 字符串，包含用户的 API Keys
-        config: 配置对象
-        admin_settings: 管理员设置
-        username: 用户名（用于获取预设配置）
-    
+        user_env_vars_str: JSON string with the user's API keys
+        config: the configuration object
+        admin_settings: the administrator settings
+        username: the user name (used to get the preset configuration)
+
     Returns:
-        dict: 用户提供的环境变量字典，如果没有则返回 None
-    
+        dict: dictionary of the environment variables the user provided, or None when there are none
+
     Raises:
-        HTTPException: 如果策略不允许
+        HTTPException: when the policy does not allow it
     """
     import logging
     logger = logging.getLogger('manga_translator.server')
@@ -172,20 +172,20 @@ def _apply_env_vars_to_config(
     allow_server_api_keys: bool,
 ):
     """
-    将环境变量映射到 config.translator 的用户级字段
-    
-    支持的环境变量:
+    Map environment variables to the user-level fields of config.translator
+
+    Supported environment variables:
     - OPENAI_API_KEY, GEMINI_API_KEY -> user_api_key
     - OPENAI_API_BASE, GEMINI_API_BASE -> user_api_base
     - OPENAI_MODEL, GEMINI_MODEL -> user_api_model
-    
-    注意：预设可能使用 OPENAI_* 变量来配置第三方 API（如 Gemini 通过 OpenAI 兼容接口）
-    所以我们统一将这些变量映射到 user_api_* 字段，翻译器会根据自己的类型使用这些值
-    
+
+    Note: a preset may use the OPENAI_* variables to configure a third-party API (such as Gemini through an OpenAI-compatible interface),
+    so these variables are all mapped to the user_api_* fields, and the translator uses the values according to its own type
+
     Args:
-        env_vars: 环境变量字典
-        config: 配置对象
-        logger: 日志记录器
+        env_vars: dictionary of environment variables
+        config: the configuration object
+        logger: the logger
     """
     logger.info(f"[EnvVars->Config] Processing env vars: {list(env_vars.keys())}")
 
@@ -266,11 +266,11 @@ async def get_user_preset_env_vars(username: str) -> dict:
 
 async def get_user_preset_env_state(username: str) -> dict:
     """
-    获取用户当前生效预设中的 API Keys 和来源信息。
-    
+    Get the API keys in the preset currently in effect for a user, and where they come from.
+
     Args:
-        username: 用户名
-    
+        username: the user name
+
     Returns:
         dict: {
             "preset_id": str,

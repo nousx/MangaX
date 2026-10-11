@@ -1,7 +1,7 @@
 """
-环境变量服务（EnvService）
+Environment variable service (EnvService)
 
-管理 .env 文件的加载、解析、更新和热重载。
+Manages loading, parsing, updating and hot reloading of the .env file.
 """
 
 import logging
@@ -20,14 +20,14 @@ logger = logging.getLogger(__name__)
 
 
 class EnvService:
-    """环境变量服务"""
+    """Environment variable service"""
     
     def __init__(self, env_file: str = ".env"):
         """
-        初始化环境变量服务
-        
+        Initialise the environment variable service
+
         Args:
-            env_file: .env 文件路径（相对于工作区根目录）
+            env_file: path of the .env file (relative to the workspace root)
         """
         self.env_file = env_file
         self.env_vars: Dict[str, str] = {}
@@ -35,13 +35,13 @@ class EnvService:
     
     def load_env_file(self, path: Optional[str] = None) -> Dict[str, str]:
         """
-        加载 .env 文件
-        
+        Load the .env file
+
         Args:
-            path: .env 文件路径（如果为 None，使用初始化时的路径）
-        
+            path: path of the .env file (the path given at initialisation is used when None)
+
         Returns:
-            Dict[str, str]: 加载的环境变量字典
+            Dict[str, str]: dictionary of the loaded environment variables
         """
         if path:
             self.env_file = path
@@ -50,14 +50,14 @@ class EnvService:
     
     def save_env_file(self, path: Optional[str] = None, env_vars: Optional[Dict[str, str]] = None) -> bool:
         """
-        保存 .env 文件
-        
+        Save the .env file
+
         Args:
-            path: .env 文件路径（如果为 None，使用当前路径）
-            env_vars: 要保存的环境变量（如果为 None，使用当前环境变量）
-        
+            path: path of the .env file (the current path is used when None)
+            env_vars: the environment variables to save (the current environment variables are used when None)
+
         Returns:
-            bool: 保存是否成功
+            bool: whether the save succeeded
         """
         if path:
             self.env_file = path
@@ -76,10 +76,10 @@ class EnvService:
     
     def reload_env(self) -> bool:
         """
-        重新加载环境变量
-        
+        Reload the environment variables
+
         Returns:
-            bool: 重新加载是否成功
+            bool: whether the reload succeeded
         """
         try:
             self._load_env_file()
@@ -91,13 +91,13 @@ class EnvService:
     
     def get_env_vars(self, show_values: bool = False) -> Dict[str, str]:
         """
-        获取环境变量
-        
+        Get the environment variables
+
         Args:
-            show_values: 是否显示实际值（False 时隐藏敏感信息）
-        
+            show_values: whether the real values are shown (sensitive information is hidden when False)
+
         Returns:
-            Dict[str, str]: 环境变量字典
+            Dict[str, str]: dictionary of the environment variables
         """
         if show_values:
             return self.env_vars.copy()
@@ -110,27 +110,27 @@ class EnvService:
     
     def get_env_var(self, key: str, default: Optional[str] = None) -> Optional[str]:
         """
-        获取单个环境变量
-        
+        Get a single environment variable
+
         Args:
-            key: 环境变量名
-            default: 默认值
-        
+            key: name of the environment variable
+            default: the default value
+
         Returns:
-            Optional[str]: 环境变量值
+            Optional[str]: value of the environment variable
         """
         return self.env_vars.get(key, default)
     
     def update_env_var(self, key: str, value: str) -> bool:
         """
-        更新单个环境变量
-        
+        Update a single environment variable
+
         Args:
-            key: 环境变量名
-            value: 环境变量值
-        
+            key: name of the environment variable
+            value: value of the environment variable
+
         Returns:
-            bool: 更新是否成功
+            bool: whether the update succeeded
         """
         try:
             key = validate_env_key(key)
@@ -155,13 +155,13 @@ class EnvService:
     
     def delete_env_var(self, key: str) -> bool:
         """
-        删除环境变量
-        
+        Delete an environment variable
+
         Args:
-            key: 环境变量名
-        
+            key: name of the environment variable
+
         Returns:
-            bool: 删除是否成功
+            bool: whether the deletion succeeded
         """
         try:
             if key in self.env_vars:
@@ -187,10 +187,10 @@ class EnvService:
     
     def _load_env_file(self) -> Dict[str, str]:
         """
-        从 .env 文件加载环境变量
-        
+        Load the environment variables from the .env file
+
         Returns:
-            Dict[str, str]: 加载的环境变量字典
+            Dict[str, str]: dictionary of the loaded environment variables
         """
         self.env_vars = {}
         
@@ -215,13 +215,13 @@ class EnvService:
     
     def _mask_value(self, value: str) -> str:
         """
-        隐藏敏感值
-        
+        Hide a sensitive value
+
         Args:
-            value: 原始值
-        
+            value: the original value
+
         Returns:
-            str: 隐藏后的值
+            str: the hidden value
         """
         if len(value) <= 4:
             return '*' * len(value)

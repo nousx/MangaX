@@ -1,8 +1,8 @@
 """
-资源管理服务 (ResourceManagementService)
+Resource management service (ResourceManagementService)
 
-管理用户资源的上传、存储、检索和删除。
-支持提示词和字体文件的管理。
+Manages uploading, storing, retrieving and deleting user resources.
+Supports prompt files and font files.
 """
 
 import logging
@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 
 class ResourceManagementService:
-    """资源管理服务"""
+    """Resource management service"""
     
     # Supported file formats
     PROMPT_FORMATS = {'.txt', '.json'}
@@ -31,12 +31,12 @@ class ResourceManagementService:
         base_path: str = USER_RESOURCES_RELATIVE_DIR
     ):
         """
-        初始化资源管理服务
-        
+        Initialise the resource management service
+
         Args:
-            prompts_repo: 提示词资源仓库
-            fonts_repo: 字体资源仓库
-            base_path: 资源存储基础路径
+            prompts_repo: the prompt resource repository
+            fonts_repo: the font resource repository
+            base_path: base path of the resource storage
         """
         self.prompts_repo = prompts_repo
         self.fonts_repo = fonts_repo
@@ -52,17 +52,17 @@ class ResourceManagementService:
     
     async def upload_prompt(self, user_id: str, file) -> PromptResource:
         """
-        上传提示词文件
-        
+        Upload a prompt file
+
         Args:
-            user_id: 用户ID
-            file: 上传的文件对象 (FastAPI UploadFile)
-        
+            user_id: the user ID
+            file: the uploaded file object (FastAPI UploadFile)
+
         Returns:
-            PromptResource: 创建的提示词资源
-        
+            PromptResource: the prompt resource that was created
+
         Raises:
-            ValueError: 如果文件格式不支持或文件无效
+            ValueError: when the file format is not supported or the file is invalid
         """
         # Validate the file
         if not file or not file.filename:
@@ -119,17 +119,17 @@ class ResourceManagementService:
     
     async def upload_font(self, user_id: str, file) -> FontResource:
         """
-        上传字体文件
-        
+        Upload a font file
+
         Args:
-            user_id: 用户ID
-            file: 上传的文件对象 (FastAPI UploadFile)
-        
+            user_id: the user ID
+            file: the uploaded file object (FastAPI UploadFile)
+
         Returns:
-            FontResource: 创建的字体资源
-        
+            FontResource: the font resource that was created
+
         Raises:
-            ValueError: 如果文件格式不支持或文件无效
+            ValueError: when the file format is not supported or the file is invalid
         """
         # Validate the file
         if not file or not file.filename:
@@ -190,43 +190,43 @@ class ResourceManagementService:
     
     def get_user_prompts(self, user_id: str) -> List[PromptResource]:
         """
-        获取用户的所有提示词
-        
+        Get all prompts of a user
+
         Args:
-            user_id: 用户ID
-        
+            user_id: the user ID
+
         Returns:
-            List[PromptResource]: 提示词资源列表
+            List[PromptResource]: list of prompt resources
         """
         resources_data = self.prompts_repo.get_user_resources(user_id)
         return [PromptResource.from_dict(data) for data in resources_data]
     
     def get_user_fonts(self, user_id: str) -> List[FontResource]:
         """
-        获取用户的所有字体
-        
+        Get all fonts of a user
+
         Args:
-            user_id: 用户ID
-        
+            user_id: the user ID
+
         Returns:
-            List[FontResource]: 字体资源列表
+            List[FontResource]: list of font resources
         """
         resources_data = self.fonts_repo.get_user_resources(user_id)
         return [FontResource.from_dict(data) for data in resources_data]
     
     def delete_prompt(self, resource_id: str, user_id: str) -> bool:
         """
-        删除提示词资源
-        
+        Delete a prompt resource
+
         Args:
-            resource_id: 资源ID
-            user_id: 用户ID（用于验证所有权）
-        
+            resource_id: the resource ID
+            user_id: the user ID (to verify ownership)
+
         Returns:
-            bool: 删除是否成功
-        
+            bool: whether the deletion succeeded
+
         Raises:
-            ValueError: 如果资源不存在或用户无权删除
+            ValueError: when the resource does not exist or the user may not delete it
         """
         return self._delete_resource(
             resource_id, user_id, self.prompts_repo, "prompt"
@@ -234,17 +234,17 @@ class ResourceManagementService:
     
     def delete_font(self, resource_id: str, user_id: str) -> bool:
         """
-        删除字体资源
-        
+        Delete a font resource
+
         Args:
-            resource_id: 资源ID
-            user_id: 用户ID（用于验证所有权）
-        
+            resource_id: the resource ID
+            user_id: the user ID (to verify ownership)
+
         Returns:
-            bool: 删除是否成功
-        
+            bool: whether the deletion succeeded
+
         Raises:
-            ValueError: 如果资源不存在或用户无权删除
+            ValueError: when the resource does not exist or the user may not delete it
         """
         return self._delete_resource(
             resource_id, user_id, self.fonts_repo, "font"
@@ -258,19 +258,19 @@ class ResourceManagementService:
         resource_type: str
     ) -> bool:
         """
-        删除资源的通用方法
-        
+        Common method for deleting a resource
+
         Args:
-            resource_id: 资源ID
-            user_id: 用户ID
-            repo: 资源仓库
-            resource_type: 资源类型（用于日志）
-        
+            resource_id: the resource ID
+            user_id: the user ID
+            repo: the resource repository
+            resource_type: the resource type (for logging)
+
         Returns:
-            bool: 删除是否成功
-        
+            bool: whether the deletion succeeded
+
         Raises:
-            ValueError: 如果资源不存在或用户无权删除
+            ValueError: when the resource does not exist or the user may not delete it
         """
         # Get the resource
         resource_data = repo.get_resource_by_id(resource_id)
@@ -300,14 +300,14 @@ class ResourceManagementService:
     
     def validate_file_format(self, filename: str, resource_type: str) -> bool:
         """
-        验证文件格式
-        
+        Validate the file format
+
         Args:
-            filename: 文件名
-            resource_type: 资源类型 ('prompt' 或 'font')
-        
+            filename: the file name
+            resource_type: the resource type ('prompt' or 'font')
+
         Returns:
-            bool: 文件格式是否有效
+            bool: whether the file format is valid
         """
         ext = self._get_file_extension(filename)
         
@@ -320,25 +320,25 @@ class ResourceManagementService:
     
     def _get_file_extension(self, filename: str) -> str:
         """
-        获取文件扩展名（小写，包含点）
-        
+        Get the file extension (lower case, with the dot)
+
         Args:
-            filename: 文件名
-        
+            filename: the file name
+
         Returns:
-            str: 文件扩展名
+            str: the file extension
         """
         return Path(filename).suffix.lower()
     
     def _sanitize_filename(self, filename: str) -> str:
         """
-        清理文件名，防止路径遍历攻击
-        
+        Clean a file name, to prevent path traversal attacks
+
         Args:
-            filename: 原始文件名
-        
+            filename: the original file name
+
         Returns:
-            str: 安全的文件名
+            str: the safe file name
         """
         # Keep only the file name part, dropping the path
         filename = os.path.basename(filename)
@@ -352,13 +352,13 @@ class ResourceManagementService:
     
     def _get_unique_filepath(self, file_path: Path) -> Path:
         """
-        获取唯一的文件路径（如果文件已存在，添加数字后缀）
-        
+        Get a unique file path (a numeric suffix is added when the file already exists)
+
         Args:
-            file_path: 原始文件路径
-        
+            file_path: the original file path
+
         Returns:
-            Path: 唯一的文件路径
+            Path: the unique file path
         """
         if not file_path.exists():
             return file_path
@@ -378,13 +378,13 @@ class ResourceManagementService:
     
     def _extract_font_family(self, file_path: Path) -> Optional[str]:
         """
-        尝试从字体文件中提取字体族名称
-        
+        Try to extract the font family name from a font file
+
         Args:
-            file_path: 字体文件路径
-        
+            file_path: path of the font file
+
         Returns:
-            Optional[str]: 字体族名称，如果提取失败返回 None
+            Optional[str]: the font family name, or None when extraction fails
         """
         try:
             # The fontTools library could be used here to extract the font information
@@ -397,13 +397,13 @@ class ResourceManagementService:
     
     def get_resource_stats(self, user_id: str) -> dict:
         """
-        获取用户的资源统计信息
-        
+        Get the resource statistics of a user
+
         Args:
-            user_id: 用户ID
-        
+            user_id: the user ID
+
         Returns:
-            dict: 统计信息
+            dict: the statistics
         """
         prompts = self.get_user_prompts(user_id)
         fonts = self.get_user_fonts(user_id)

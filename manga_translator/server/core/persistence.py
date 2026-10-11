@@ -1,7 +1,7 @@
 """
-持久化存储工具
+Persistent storage utilities
 
-提供原子性写入、备份和数据加载功能。
+Provides atomic writes, backups and data loading.
 """
 
 import json
@@ -18,17 +18,17 @@ logger = logging.getLogger(__name__)
 
 def atomic_write_json(file_path: str, data: Dict[str, Any], create_backup: bool = True) -> bool:
     """
-    原子性地写入 JSON 文件
-    
-    使用临时文件和重命名操作确保写入的原子性，避免因中断导致数据损坏。
-    
+    Write a JSON file atomically
+
+    A temporary file and a rename make the write atomic, so an interruption cannot corrupt the data.
+
     Args:
-        file_path: 目标文件路径
-        data: 要写入的数据
-        create_backup: 是否在写入前创建备份
-    
+        file_path: path of the target file
+        data: the data to write
+        create_backup: whether a backup is made before writing
+
     Returns:
-        bool: 写入是否成功
+        bool: whether the write succeeded
     """
     try:
         file_path = Path(file_path)
@@ -82,16 +82,16 @@ def atomic_write_json(file_path: str, data: Dict[str, Any], create_backup: bool 
 
 def load_json(file_path: str, default: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     """
-    加载 JSON 文件
-    
-    如果文件不存在或损坏，尝试从备份恢复。
-    
+    Load a JSON file
+
+    When the file does not exist or is damaged, a restore from the backup is tried.
+
     Args:
-        file_path: 文件路径
-        default: 如果文件不存在时返回的默认值
-    
+        file_path: the file path
+        default: the default value returned when the file does not exist
+
     Returns:
-        Dict[str, Any]: 加载的数据
+        Dict[str, Any]: the loaded data
     """
     file_path = Path(file_path)
     
@@ -132,14 +132,14 @@ def load_json(file_path: str, default: Optional[Dict[str, Any]] = None) -> Dict[
 
 def create_backup(file_path: str, backup_dir: Optional[str] = None) -> Optional[str]:
     """
-    创建文件的时间戳备份
-    
+    Create a timestamped backup of a file
+
     Args:
-        file_path: 要备份的文件路径
-        backup_dir: 备份目录（如果为 None，使用文件所在目录）
-    
+        file_path: path of the file to back up
+        backup_dir: the backup folder (the folder of the file is used when None)
+
     Returns:
-        Optional[str]: 备份文件路径，如果失败返回 None
+        Optional[str]: path of the backup file, or None on failure
     """
     try:
         file_path = Path(file_path)
@@ -172,15 +172,15 @@ def create_backup(file_path: str, backup_dir: Optional[str] = None) -> Optional[
 
 def cleanup_old_backups(backup_dir: str, pattern: str, keep_count: int = 5) -> int:
     """
-    清理旧的备份文件，只保留最新的几个
-    
+    Remove old backup files, keeping only the newest few
+
     Args:
-        backup_dir: 备份目录
-        pattern: 文件名模式（glob 格式）
-        keep_count: 保留的备份数量
-    
+        backup_dir: the backup folder
+        pattern: the file name pattern (glob format)
+        keep_count: number of backups kept
+
     Returns:
-        int: 删除的文件数量
+        int: number of files deleted
     """
     try:
         backup_dir_path = Path(backup_dir)
@@ -217,13 +217,13 @@ def cleanup_old_backups(backup_dir: str, pattern: str, keep_count: int = 5) -> i
 
 def ensure_directory(dir_path: str) -> bool:
     """
-    确保目录存在
-    
+    Make sure a folder exists
+
     Args:
-        dir_path: 目录路径
-    
+        dir_path: the folder path
+
     Returns:
-        bool: 是否成功
+        bool: whether it succeeded
     """
     try:
         Path(dir_path).mkdir(parents=True, exist_ok=True)

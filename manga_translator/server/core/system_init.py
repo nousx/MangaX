@@ -1,11 +1,11 @@
 """
-系统初始化模块
+System initialisation module
 
-负责系统启动时的初始化逻辑，包括：
-- 检查和创建默认管理员账号
-- 加载用户账号到内存
-- 启动会话清理定时任务
-- 启动审计日志轮转定时任务
+Responsible for the initialisation logic at system start, including:
+- checking for and creating the default administrator account
+- loading the user accounts into memory
+- starting the scheduled session clean-up task
+- starting the scheduled audit log rotation task
 """
 
 import asyncio
@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 
 
 class SystemInitializer:
-    """系统初始化器"""
+    """System initialiser"""
     
     def __init__(
         self,
@@ -30,12 +30,12 @@ class SystemInitializer:
         audit_service: AuditService
     ):
         """
-        初始化系统初始化器
-        
+        Initialise the system initialiser
+
         Args:
-            account_service: 账号管理服务
-            session_service: 会话管理服务
-            audit_service: 审计日志服务
+            account_service: the account management service
+            session_service: the session management service
+            audit_service: the audit log service
         """
         self.account_service = account_service
         self.session_service = session_service
@@ -47,15 +47,15 @@ class SystemInitializer:
     
     async def initialize(self) -> None:
         """
-        执行系统初始化
-        
-        包括：
-        1. 检查是否存在用户账号
-        2. 如果不存在，创建默认管理员账号
-        3. 在日志中显示默认管理员登录信息
-        4. 加载所有用户账号到内存
-        5. 启动会话清理定时任务
-        6. 启动审计日志轮转定时任务
+        Run the system initialisation
+
+        It includes:
+        1. checking whether any user account exists
+        2. creating the default administrator account when none exists
+        3. showing the login information of the default administrator in the log
+        4. loading all user accounts into memory
+        5. starting the scheduled session clean-up task
+        6. starting the scheduled audit log rotation task
         """
         logger.info("=" * 60)
         logger.info("Starting system initialization...")
@@ -93,11 +93,11 @@ class SystemInitializer:
     
     async def shutdown(self) -> None:
         """
-        系统关闭时的清理工作
-        
-        包括：
-        1. 停止后台任务
-        2. 清理会话（可选）
+        Clean-up when the system shuts down
+
+        It includes:
+        1. stopping the background tasks
+        2. clearing the sessions (optional)
         """
         logger.info("Starting system shutdown...")
         
@@ -122,9 +122,9 @@ class SystemInitializer:
     
     async def _create_default_admin(self) -> None:
         """
-        创建默认管理员账号
-        
-        需求: 10.1, 10.2, 10.3
+        Create the default administrator account
+
+        Requirements: 10.1, 10.2, 10.3
         """
         default_username = "admin"
         default_password = "admin123"
@@ -173,14 +173,14 @@ class SystemInitializer:
     
     async def _start_session_cleanup_task(self) -> None:
         """
-        启动会话清理定时任务
-        
-        每5分钟清理一次过期会话
-        
-        需求: 3.6, 6.5
+        Start the scheduled session clean-up task
+
+        Expired sessions are removed every 5 minutes
+
+        Requirements: 3.6, 6.5
         """
         async def cleanup_loop():
-            """会话清理循环"""
+            """Session clean-up loop"""
             while True:
                 try:
                     # Wait 5 minutes
@@ -216,14 +216,14 @@ class SystemInitializer:
     
     async def _start_log_rotation_task(self) -> None:
         """
-        启动审计日志轮转定时任务
-        
-        每24小时检查一次日志文件大小，如果超过限制则轮转
-        
-        需求: 12.7
+        Start the scheduled audit log rotation task
+
+        The size of the log file is checked every 24 hours, and it is rotated when it is over the limit
+
+        Requirements: 12.7
         """
         async def rotation_loop():
-            """日志轮转循环"""
+            """Log rotation loop"""
             while True:
                 try:
                     # Wait 24 hours
@@ -266,15 +266,15 @@ def init_system(
     audit_service: AuditService
 ) -> SystemInitializer:
     """
-    初始化系统初始化器
-    
+    Initialise the system initialiser
+
     Args:
-        account_service: 账号管理服务
-        session_service: 会话管理服务
-        audit_service: 审计日志服务
-    
+        account_service: the account management service
+        session_service: the session management service
+        audit_service: the audit log service
+
     Returns:
-        SystemInitializer: 系统初始化器实例
+        SystemInitializer: the system initialiser instance
     """
     global _system_initializer
     _system_initializer = SystemInitializer(
@@ -287,9 +287,9 @@ def init_system(
 
 def get_system_initializer() -> Optional[SystemInitializer]:
     """
-    获取系统初始化器实例
-    
+    Get the system initialiser instance
+
     Returns:
-        Optional[SystemInitializer]: 系统初始化器实例，如果未初始化返回 None
+        Optional[SystemInitializer]: the system initialiser instance, or None when it is not initialised
     """
     return _system_initializer

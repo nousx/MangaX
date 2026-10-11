@@ -1,7 +1,7 @@
 """
-会话管理服务（SessionService）
+Session management service (SessionService)
 
-管理用户登录会话、令牌生成和验证。
+Manages user login sessions and the generation and verification of tokens.
 """
 
 import logging
@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 
 class SessionService:
-    """会话管理服务"""
+    """Session management service"""
     
     def __init__(
         self,
@@ -26,12 +26,12 @@ class SessionService:
         enable_persistence: bool = False
     ):
         """
-        初始化会话管理服务
-        
+        Initialise the session management service
+
         Args:
-            sessions_file: 会话存储文件路径（可选，用于持久化）
-            session_timeout_minutes: 会话超时时间（分钟）
-            enable_persistence: 是否启用会话持久化
+            sessions_file: path of the session storage file (optional, for persistence)
+            session_timeout_minutes: the session timeout (minutes)
+            enable_persistence: whether session persistence is enabled
         """
         self.sessions_file = sessions_file
         self.session_timeout_minutes = session_timeout_minutes
@@ -56,16 +56,16 @@ class SessionService:
         user_agent: str
     ) -> Session:
         """
-        创建新会话
-        
+        Create a new session
+
         Args:
-            username: 用户名
-            role: 用户角色
-            ip_address: IP地址
-            user_agent: 用户代理字符串
-        
+            username: the user name
+            role: the user role
+            ip_address: the IP address
+            user_agent: the user agent string
+
         Returns:
-            Session: 创建的会话对象
+            Session: the session object that was created
         """
         # Generate a unique session ID and token
         session_id = str(uuid4())
@@ -103,13 +103,13 @@ class SessionService:
     
     def get_session(self, token: str) -> Optional[Session]:
         """
-        根据令牌获取会话
-        
+        Get a session by token
+
         Args:
-            token: 会话令牌
-        
+            token: the session token
+
         Returns:
-            Optional[Session]: 会话对象，如果不存在或已过期返回 None
+            Optional[Session]: the session object, or None when it does not exist or has expired
         """
         session = self.sessions_by_token.get(token)
         
@@ -126,25 +126,25 @@ class SessionService:
     
     def get_session_by_id(self, session_id: str) -> Optional[Session]:
         """
-        根据会话ID获取会话
-        
+        Get a session by session ID
+
         Args:
-            session_id: 会话ID
-        
+            session_id: the session ID
+
         Returns:
-            Optional[Session]: 会话对象，如果不存在返回 None
+            Optional[Session]: the session object, or None when it does not exist
         """
         return self.sessions_by_id.get(session_id)
     
     def list_sessions(self, username: Optional[str] = None) -> List[Session]:
         """
-        列出活动会话
-        
+        List the active sessions
+
         Args:
-            username: 可选，只列出指定用户的会话
-        
+            username: optional; only the sessions of the given user are listed
+
         Returns:
-            List[Session]: 活动会话列表
+            List[Session]: list of active sessions
         """
         if username:
             # Return the active sessions of the given user
@@ -159,13 +159,13 @@ class SessionService:
     
     def update_activity(self, token: str) -> bool:
         """
-        更新会话活动时间
-        
+        Update the activity time of a session
+
         Args:
-            token: 会话令牌
-        
+            token: the session token
+
         Returns:
-            bool: 更新是否成功
+            bool: whether the update succeeded
         """
         session = self.sessions_by_token.get(token)
         
@@ -189,13 +189,13 @@ class SessionService:
     
     def terminate_session(self, session_id: str) -> bool:
         """
-        终止指定会话
-        
+        Terminate the given session
+
         Args:
-            session_id: 会话ID
-        
+            session_id: the session ID
+
         Returns:
-            bool: 终止是否成功
+            bool: whether the termination succeeded
         """
         session = self.sessions_by_id.get(session_id)
         
@@ -211,13 +211,13 @@ class SessionService:
     
     def terminate_user_sessions(self, username: str) -> int:
         """
-        终止用户的所有会话
-        
+        Terminate all sessions of a user
+
         Args:
-            username: 用户名
-        
+            username: the user name
+
         Returns:
-            int: 终止的会话数量
+            int: number of sessions terminated
         """
         user_sessions = self.sessions_by_username.get(username, [])
         terminated_count = 0
@@ -232,10 +232,10 @@ class SessionService:
     
     def cleanup_expired_sessions(self) -> int:
         """
-        清理过期会话
-        
+        Remove expired sessions
+
         Returns:
-            int: 清理的会话数量
+            int: number of sessions removed
         """
         expired_sessions = []
         
@@ -253,13 +253,13 @@ class SessionService:
     
     def verify_token(self, token: str) -> Optional[Session]:
         """
-        验证令牌并返回会话
-        
+        Verify a token and return the session
+
         Args:
-            token: 会话令牌
-        
+            token: the session token
+
         Returns:
-            Optional[Session]: 有效的会话对象，如果令牌无效返回 None
+            Optional[Session]: the valid session object, or None when the token is invalid
         """
         session = self.get_session(token)
         
@@ -271,10 +271,10 @@ class SessionService:
     
     def clear_all_sessions(self) -> int:
         """
-        清除所有会话（用于系统重启）
-        
+        Clear all sessions (for a system restart)
+
         Returns:
-            int: 清除的会话数量
+            int: number of sessions cleared
         """
         count = len([s for s in self.sessions_by_token.values() if s.is_active])
         
@@ -291,13 +291,13 @@ class SessionService:
     
     def _is_session_expired(self, session: Session) -> bool:
         """
-        检查会话是否过期
-        
+        Check whether a session has expired
+
         Args:
-            session: 会话对象
-        
+            session: the session object
+
         Returns:
-            bool: 会话是否过期
+            bool: whether the session has expired
         """
         if not session.is_active:
             return True
@@ -308,10 +308,10 @@ class SessionService:
     
     def _deactivate_session(self, session: Session) -> None:
         """
-        停用会话
-        
+        Deactivate a session
+
         Args:
-            session: 会话对象
+            session: the session object
         """
         session.is_active = False
         
@@ -324,7 +324,7 @@ class SessionService:
             self._save_sessions()
     
     def _load_sessions(self) -> None:
-        """从持久化存储加载会话"""
+        """Load the sessions from persistent storage"""
         if not self.sessions_file:
             return
         
@@ -354,7 +354,7 @@ class SessionService:
             logger.error(f"Failed to load sessions: {e}")
     
     def _save_sessions(self) -> None:
-        """保存会话到持久化存储"""
+        """Save the sessions to persistent storage"""
         if not self.sessions_file:
             return
         

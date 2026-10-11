@@ -1,9 +1,9 @@
 """
-日志管理API路由
+Log management API routes
 
-提供日志查询、导出和管理功能。
+Provides querying, exporting and managing logs.
 
-需求: 31.1-31.6, 32.1-32.8, 33.1-33.8
+Requirements: 31.1-31.6, 32.1-32.8, 33.1-33.8
 """
 
 import io
@@ -30,13 +30,13 @@ session_security_service = SessionSecurityService()
 
 # Pydantic models
 class ExportRequest(BaseModel):
-    """批量导出请求模型"""
+    """Request model of a batch export"""
     session_tokens: List[str]
     format: str = 'json'
 
 
 class CleanupRequest(BaseModel):
-    """清理请求模型"""
+    """Request model of a clean-up"""
     days: int = 30
 
 
@@ -47,9 +47,9 @@ async def get_session_logs(
     session: Session = Depends(require_auth)
 ):
     """
-    获取对话框日志
-    
-    需求: 31.1, 33.1-33.8, 35.3-35.8
+    Get the logs of a session
+
+    Requirements: 31.1, 33.1-33.8, 35.3-35.8
     """
     try:
         user_id = session.username
@@ -108,9 +108,9 @@ async def export_session_logs(
     session: Session = Depends(require_auth)
 ):
     """
-    导出单个对话框日志
-    
-    需求: 31.5, 33.8, 35.7
+    Export the logs of a single session
+
+    Requirements: 31.5, 33.8, 35.7
     """
     try:
         user_id = session.username
@@ -172,9 +172,9 @@ async def clear_session_logs(
     session: Session = Depends(require_auth)
 ):
     """
-    清空对话框日志
-    
-    需求: 33.6, 35.7
+    Clear the logs of a session
+
+    Requirements: 33.6, 35.7
     """
     try:
         user_id = session.username
@@ -230,9 +230,9 @@ async def get_logs(
     session: Session = Depends(require_auth)
 ):
     """
-    获取日志（支持按任务ID过滤）
-    
-    用于用户端实时查看翻译任务日志
+    Get the logs (with a filter by task ID)
+
+    Used on the user side to watch the logs of a translation task live
     """
     try:
         from manga_translator.server.core.logging_manager import get_task_logs
@@ -257,9 +257,9 @@ async def get_user_logs(
     session: Session = Depends(require_auth)
 ):
     """
-    获取用户的所有日志
-    
-    需求: 31.3, 34.1
+    Get all logs of the user
+
+    Requirements: 31.3, 34.1
     """
     try:
         user_id = session.username
@@ -292,9 +292,9 @@ async def search_logs(
     session: Session = Depends(require_auth)
 ):
     """
-    搜索日志
-    
-    需求: 31.3, 32.3
+    Search the logs
+
+    Requirements: 31.3, 32.3
     """
     try:
         user_id = session.username
@@ -344,9 +344,9 @@ async def get_system_logs(
     session: Session = Depends(require_admin)
 ):
     """
-    获取系统日志（管理员）
-    
-    需求: 31.1-31.6, 32.1
+    Get the system logs (administrator)
+
+    Requirements: 31.1-31.6, 32.1
     """
     try:
         # Get the system logs
@@ -373,9 +373,9 @@ async def get_all_sessions_logs(
     session: Session = Depends(require_admin)
 ):
     """
-    获取所有对话框日志（管理员）
-    
-    需求: 32.1-32.8
+    Get the logs of all sessions (administrator)
+
+    Requirements: 32.1-32.8
     """
     try:
         # Get the logs of all sessions
@@ -400,9 +400,9 @@ async def export_multiple_sessions(
     session: Session = Depends(require_admin)
 ):
     """
-    批量导出多个对话框日志（管理员）
-    
-    需求: 32.8
+    Export the logs of several sessions as a batch (administrator)
+
+    Requirements: 32.8
     """
     try:
         if not request.session_tokens:
@@ -442,9 +442,9 @@ async def get_log_statistics(
     session: Session = Depends(require_admin)
 ):
     """
-    获取日志统计信息（管理员）
-    
-    需求: 31.6, 32.2
+    Get log statistics (administrator)
+
+    Requirements: 31.6, 32.2
     """
     try:
         # Get the statistics
@@ -466,7 +466,7 @@ async def cleanup_old_logs(
     session: Session = Depends(require_admin)
 ):
     """
-    清理旧日志（管理员）
+    Remove old logs (administrator)
     """
     try:
         if request.days < 1:

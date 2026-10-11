@@ -1,6 +1,6 @@
 """
 Repository for translation history management.
-优化：按用户分片存储，提高多用户场景下的性能。
+Optimisation: storage is split per user, for better performance with many users.
 """
 
 import json
@@ -17,16 +17,16 @@ from manga_translator.server.models import TranslationResult
 class TranslationRepository:
     """
     Repository for managing translation history.
-    使用按用户分片的存储策略，每个用户一个独立的 JSON 文件。
-    同时维护一个索引文件用于快速查找 session_token。
+    Storage is split per user, with a separate JSON file for each user.
+    An index file is kept as well, for looking up a session_token quickly.
     """
     
     def __init__(self, base_path: str):
         """
-        初始化仓库。
-        
+        Initialise the repository.
+
         Args:
-            base_path: 原始的单文件路径，会转换为目录路径
+            base_path: the original single-file path, which is converted to a folder path
         """
         # Turn the former file path into a folder
         self.base_dir = Path(base_path).parent / 'history'
@@ -36,11 +36,11 @@ class TranslationRepository:
         self._migrate_old_data(base_path)
     
     def _ensure_dirs(self) -> None:
-        """确保目录存在"""
+        """Make sure the folders exist"""
         self.base_dir.mkdir(parents=True, exist_ok=True)
     
     def _migrate_old_data(self, old_file: str) -> None:
-        """迁移旧的单文件数据到新的分片结构"""
+        """Migrate the old single-file data to the new split structure"""
         old_path = Path(old_file)
         if not old_path.exists():
             return
@@ -66,13 +66,13 @@ class TranslationRepository:
             print(f"Migration warning: {e}")
     
     def _get_user_file(self, user_id: str) -> Path:
-        """获取用户的历史文件路径"""
+        """Get the path of the history file of a user"""
         # Use a safe file name
         safe_name = "".join(c if c.isalnum() or c in '-_' else '_' for c in user_id)
         return resolve_path_within(self.base_dir, self.base_dir / f'{safe_name}.json')
     
     def _read_user_data(self, user_id: str) -> Dict[str, Any]:
-        """读取用户数据"""
+        """Read the data of a user"""
         user_file = self._get_user_file(user_id)
         with self._lock:
             if not user_file.exists():
@@ -84,7 +84,7 @@ class TranslationRepository:
                 return {'sessions': [], 'last_updated': None}
     
     def _write_user_data(self, user_id: str, data: Dict[str, Any]) -> None:
-        """写入用户数据"""
+        """Write the data of a user"""
         user_file = self._get_user_file(user_id)
         data['last_updated'] = datetime.now(timezone.utc).isoformat()
         
@@ -100,14 +100,14 @@ class TranslationRepository:
                 raise
     
     def _add_to_user_file(self, user_id: str, session: dict) -> None:
-        """添加会话到用户文件"""
+        """Add a session to the file of a user"""
         data = self._read_user_data(user_id)
         data['sessions'].append(session)
         self._write_user_data(user_id, data)
         self._update_index(session['session_token'], user_id)
     
     def _read_index(self) -> Dict[str, str]:
-        """读取索引文件 (session_token -> user_id)"""
+        """Read the index file (session_token -> user_id)"""
         with self._lock:
             if not self.index_file.exists():
                 return {}
@@ -118,7 +118,7 @@ class TranslationRepository:
                 return {}
     
     def _write_index(self, index: Dict[str, str]) -> None:
-        """写入索引文件"""
+        """Write the index file"""
         with self._lock:
             temp_path = self.index_file.with_suffix('.tmp')
             try:
@@ -131,29 +131,29 @@ class TranslationRepository:
                 raise
     
     def _update_index(self, session_token: str, user_id: str) -> None:
-        """更新索引"""
+        """Update the index"""
         index = self._read_index()
         index[session_token] = user_id
         self._write_index(index)
     
     def _remove_from_index(self, session_token: str) -> None:
-        """从索引中移除"""
+        """Remove from the index"""
         index = self._read_index()
         if session_token in index:
             del index[session_token]
             self._write_index(index)
     
     def add_session(self, result: TranslationResult) -> None:
-        """添加翻译会话到历史"""
+        """Add a translation session to the history"""
         self._add_to_user_file(result.user_id, result.to_dict())
     
     def get_user_sessions(self, user_id: str) -> List[dict]:
-        """获取指定用户的所有会话"""
+        """Get all sessions of the given user"""
         data = self._read_user_data(user_id)
         return data.get('sessions', [])
     
     def get_session_by_token(self, session_token: str) -> Optional[dict]:
-        """通过 token 获取会话"""
+        """Get a session by token"""
         # Look in the index first
         index = self._read_index()
         user_id = index.get(session_token)
@@ -182,7 +182,7 @@ class TranslationRepository:
         return None
     
     def get_all_sessions(self) -> List[dict]:
-        """获取所有会话（管理员用）"""
+        """Get all sessions (for administrators)"""
         all_sessions = []
         for user_file in self.base_dir.glob('*.json'):
             if user_file.name.startswith('_'):
@@ -196,7 +196,7 @@ class TranslationRepository:
         return all_sessions
     
     def delete_session(self, session_id: str) -> bool:
-        """删除会话"""
+        """Delete a session"""
         # Go through all user files to find and delete it
         for user_file in self.base_dir.glob('*.json'):
             if user_file.name.startswith('_'):
@@ -226,7 +226,7 @@ class TranslationRepository:
         return False
     
     def update_session(self, session_id: str, updates: dict) -> bool:
-        """更新会话"""
+        """Update a session"""
         for user_file in self.base_dir.glob('*.json'):
             if user_file.name.startswith('_'):
                 continue
@@ -247,7 +247,7 @@ class TranslationRepository:
     def search_sessions(self, user_id: Optional[str] = None, 
                        start_date: Optional[str] = None,
                        end_date: Optional[str] = None) -> List[dict]:
-        """搜索会话"""
+        """Search the sessions"""
         def filter_func(session):
             if start_date and session.get('timestamp', '') < start_date:
                 return False

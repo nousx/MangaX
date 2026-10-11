@@ -1,7 +1,7 @@
 """
-用户组配置管理服务
+User group configuration management service
 
-负责管理用户组的参数配置，包括参数的可见性、只读状态和默认值。
+Responsible for the parameter configuration of user groups, including the visibility, the read-only state and the default value of parameters.
 """
 
 import json
@@ -13,21 +13,21 @@ logger = logging.getLogger(__name__)
 
 
 class GroupService:
-    """用户组配置管理服务"""
+    """User group configuration management service"""
     
     def __init__(self, config_file: str = "manga_translator/server/data/group_config.json"):
         """
-        初始化用户组服务
-        
+        Initialise the user group service
+
         Args:
-            config_file: 用户组配置文件路径
+            config_file: path of the user group configuration file
         """
         self.config_file = config_file
         self.groups: Dict[str, Dict[str, Any]] = {}
         self._load_groups()
     
     def _load_groups(self) -> None:
-        """从文件加载用户组配置"""
+        """Load the user group configuration from the file"""
         try:
             if os.path.exists(self.config_file):
                 with open(self.config_file, 'r', encoding='utf-8') as f:
@@ -42,7 +42,7 @@ class GroupService:
             self._create_default_groups()
     
     def _create_default_groups(self) -> None:
-        """创建默认用户组配置"""
+        """Create the default user group configuration"""
         self.groups = {
             "admin": {
                 "name": "管理员组",
@@ -64,7 +64,7 @@ class GroupService:
         self._save_groups()
     
     def _save_groups(self) -> None:
-        """保存用户组配置到文件"""
+        """Save the user group configuration to the file"""
         try:
             data = {
                 "version": "1.0",
@@ -78,26 +78,26 @@ class GroupService:
     
     def get_group(self, group_name: str) -> Optional[Dict[str, Any]]:
         """
-        获取用户组配置
-        
+        Get the configuration of a user group
+
         Args:
-            group_name: 用户组名称
-        
+            group_name: name of the user group
+
         Returns:
-            用户组配置字典，如果不存在返回 None
+            The configuration dictionary of the user group, or None when it does not exist
         """
         return self.groups.get(group_name)
     
     def get_parameter_config(self, group_name: str, parameter: str) -> Optional[Dict[str, Any]]:
         """
-        获取用户组中特定参数的配置
-        
+        Get the configuration of a specific parameter in a user group
+
         Args:
-            group_name: 用户组名称
-            parameter: 参数名称
-        
+            group_name: name of the user group
+            parameter: name of the parameter
+
         Returns:
-            参数配置字典，如果不存在返回 None
+            The configuration dictionary of the parameter, or None when it does not exist
         """
         group = self.get_group(group_name)
         if not group:
@@ -107,19 +107,19 @@ class GroupService:
         return param_config.get(parameter)
     
     def get_all_groups(self) -> Dict[str, Dict[str, Any]]:
-        """获取所有用户组配置"""
+        """Get the configuration of all user groups"""
         return self.groups
     
     def update_group(self, group_name: str, group_data: Dict[str, Any]) -> bool:
         """
-        更新用户组配置
-        
+        Update the configuration of a user group
+
         Args:
-            group_name: 用户组名称
-            group_data: 用户组数据
-        
+            group_name: name of the user group
+            group_data: the user group data
+
         Returns:
-            是否成功
+            Whether it succeeded
         """
         try:
             self.groups[group_name] = group_data
@@ -131,13 +131,13 @@ class GroupService:
     
     def delete_group(self, group_name: str) -> bool:
         """
-        删除用户组
-        
+        Delete a user group
+
         Args:
-            group_name: 用户组名称
-        
+            group_name: name of the user group
+
         Returns:
-            是否成功
+            Whether it succeeded
         """
         if group_name in ['admin', 'default']:
             logger.warning(f"Cannot delete system group: {group_name}")
@@ -159,7 +159,7 @@ _group_service: Optional[GroupService] = None
 
 
 def get_group_service() -> GroupService:
-    """获取用户组服务实例"""
+    """Get the user group service instance"""
     global _group_service
     if _group_service is None:
         _group_service = GroupService()

@@ -252,7 +252,7 @@ async def export_logs(
 # ============================================================================
 
 def get_directory_stats(directory: str) -> dict:
-    """获取目录的文件统计信息"""
+    """Get the file statistics of a folder"""
     total_size = 0
     file_count = 0
     
@@ -271,7 +271,7 @@ def get_directory_stats(directory: str) -> dict:
 
 @router.get("/storage/info")
 async def get_storage_info(session: Session = Depends(require_admin)):
-    """获取存储使用情况。"""
+    """Get the storage usage."""
     results_dir = str(SERVER_DATA_DIR / "results")
     user_fonts_dir = str(USER_RESOURCES_DIR / "fonts")
     user_prompts_dir = str(USER_RESOURCES_DIR / "prompts")
@@ -308,7 +308,7 @@ async def cleanup_storage(
     target: str,
     session: Session = Depends(require_admin)
 ):
-    """清理指定目录。"""
+    """Clean the given folder."""
     import shutil
 
     targets = {

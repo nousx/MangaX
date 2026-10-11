@@ -1,7 +1,7 @@
 """
-数据模型
+Data models
 
-定义用户账号、权限、会话和审计事件的数据模型类。
+Defines the data model classes of user accounts, permissions, sessions and audit events.
 """
 
 import json
@@ -12,7 +12,7 @@ from typing import Any, Dict, List, Optional
 
 @dataclass
 class UserPermissions:
-    """用户权限数据模型"""
+    """Data model of user permissions"""
     # Translator permissions (whitelist + blacklist)
     allowed_translators: List[str] = field(default_factory=lambda: ["*"])
     denied_translators: List[str] = field(default_factory=list)
@@ -49,12 +49,12 @@ class UserPermissions:
     allow_offline_translation: bool = False  # Whether offline translation is allowed (tasks keep running after the user goes offline)
     
     def to_dict(self) -> Dict[str, Any]:
-        """转换为字典"""
+        """Convert to a dictionary"""
         return asdict(self)
     
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> 'UserPermissions':
-        """从字典创建"""
+        """Create from a dictionary"""
         return cls(
             allowed_translators=data.get('allowed_translators', ["*"]),
             denied_translators=data.get('denied_translators', []),
@@ -78,7 +78,7 @@ class UserPermissions:
 
 @dataclass
 class UserAccount:
-    """用户账号数据模型"""
+    """Data model of a user account"""
     username: str
     password_hash: str
     role: str  # 'admin' or 'user'
@@ -90,7 +90,7 @@ class UserAccount:
     must_change_password: bool = False
     
     def to_dict(self) -> Dict[str, Any]:
-        """转换为字典（用于序列化）"""
+        """Convert to a dictionary (for serialisation)"""
         return {
             'username': self.username,
             'password_hash': self.password_hash,
@@ -105,7 +105,7 @@ class UserAccount:
     
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> 'UserAccount':
-        """从字典创建（用于反序列化）"""
+        """Create from a dictionary (for deserialisation)"""
         return cls(
             username=data['username'],
             password_hash=data['password_hash'],
@@ -121,7 +121,7 @@ class UserAccount:
 
 @dataclass
 class Session:
-    """会话数据模型"""
+    """Data model of a session"""
     session_id: str
     username: str
     role: str
@@ -133,7 +133,7 @@ class Session:
     is_active: bool = True
     
     def to_dict(self) -> Dict[str, Any]:
-        """转换为字典（用于序列化）"""
+        """Convert to a dictionary (for serialisation)"""
         return {
             'session_id': self.session_id,
             'username': self.username,
@@ -148,7 +148,7 @@ class Session:
     
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> 'Session':
-        """从字典创建（用于反序列化）"""
+        """Create from a dictionary (for deserialisation)"""
         return cls(
             session_id=data['session_id'],
             username=data['username'],
@@ -164,7 +164,7 @@ class Session:
 
 @dataclass
 class AuditEvent:
-    """审计事件数据模型"""
+    """Data model of an audit event"""
     event_id: str
     timestamp: datetime
     event_type: str  # 'login', 'logout', 'create_task', 'permission_change', etc.
@@ -174,7 +174,7 @@ class AuditEvent:
     result: str  # 'success' or 'failure'
     
     def to_dict(self) -> Dict[str, Any]:
-        """转换为字典（用于序列化）"""
+        """Convert to a dictionary (for serialisation)"""
         return {
             'event_id': self.event_id,
             'timestamp': self.timestamp.isoformat(),
@@ -187,7 +187,7 @@ class AuditEvent:
     
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> 'AuditEvent':
-        """从字典创建（用于反序列化）"""
+        """Create from a dictionary (for deserialisation)"""
         return cls(
             event_id=data['event_id'],
             timestamp=datetime.fromisoformat(data['timestamp']),
@@ -199,7 +199,7 @@ class AuditEvent:
         )
     
     def to_json_line(self) -> str:
-        """转换为 JSON 行（用于日志文件）"""
+        """Convert to a JSON line (for the log file)"""
         return json.dumps(self.to_dict(), ensure_ascii=False)
 
 

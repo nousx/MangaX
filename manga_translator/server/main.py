@@ -283,7 +283,7 @@ configure_cors(parse_cors_origins(os.environ.get(CORS_ORIGINS_ENV)))
 # Add validation error handler
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
-    """处理请求验证错误，返回详细的错误信息"""
+    """Handle a request validation error and return detailed error information"""
     error_details = []
     for error in exc.errors():
         error_details.append({
@@ -408,13 +408,13 @@ def prepare(args):
     os.makedirs(folder_name)
 
 def init_translator(use_gpu=False, verbose=False):
-    """初始化翻译器（预留函数）"""
+    """Initialise the translator (reserved function)"""
     # This function is for initialisation such as preloading models
     # For now the translator is only initialised on the first request
     pass
 
 def run_server(args):
-    """启动 Web API 服务器（纯API模式，不带界面）"""
+    """Start the Web API server (pure API mode, without an interface)"""
     import uvicorn
 
     global _bind_address
@@ -463,7 +463,7 @@ def run_server(args):
             proc.terminate()
 
 def main(args):
-    """启动 Web UI 服务器（带界面模式）"""
+    """Start the Web UI server (mode with an interface)"""
     # ui mode and web mode use the same implementation
     run_server(args)
 

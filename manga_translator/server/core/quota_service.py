@@ -1,8 +1,8 @@
 """
-配额管理服务 (QuotaManagementService)
+Quota management service (QuotaManagementService)
 
-管理用户的上传限制、对话框数量限制和每日翻译配额。
-支持配额检查、计数和重置功能。
+Manages the upload limits, the limit on the number of sessions and the daily translation quota of users.
+Supports checking, counting and resetting quotas.
 """
 
 import logging
@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 
 
 class QuotaManagementService:
-    """配额管理服务"""
+    """Quota management service"""
     
     # Default quota limits
     DEFAULT_MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
@@ -37,13 +37,13 @@ class QuotaManagementService:
         data_path: str = "manga_translator/server/data"
     ):
         """
-        初始化配额管理服务
-        
+        Initialise the quota management service
+
         Args:
-            quota_repo: 配额数据仓库
-            permission_repo: 权限数据仓库
-            group_service: 用户组服务
-            data_path: 数据存储路径
+            quota_repo: the quota data repository
+            permission_repo: the permission data repository
+            group_service: the user group service
+            data_path: the data storage path
         """
         self.quota_repo = quota_repo
         self.permission_repo = permission_repo
@@ -57,15 +57,15 @@ class QuotaManagementService:
     
     def _get_user_quota_limit(self, user_id: str) -> QuotaLimit:
         """
-        获取用户的配额限制（考虑继承）
-        
-        优先级：用户级 > 用户组级 > 全局默认
-        
+        Get the quota limits of a user (with inheritance)
+
+        Priority: user level > user group level > global default
+
         Args:
-            user_id: 用户ID
-            
+            user_id: the user ID
+
         Returns:
-            QuotaLimit: 用户配额限制
+            QuotaLimit: the quota limits of the user
         """
         # 1. Try the user-level quota
         user_quota_data = self.quota_repo.get_user_quota(user_id)
@@ -109,15 +109,15 @@ class QuotaManagementService:
     
     def check_upload_limit(self, user_id: str, file_size: int, file_count: int) -> tuple[bool, Optional[str]]:
         """
-        检查上传限制
-        
+        Check the upload limits
+
         Args:
-            user_id: 用户ID
-            file_size: 单个文件大小（字节）
-            file_count: 文件数量
-            
+            user_id: the user ID
+            file_size: size of a single file (bytes)
+            file_count: number of files
+
         Returns:
-            tuple[bool, Optional[str]]: (是否允许, 错误消息)
+            tuple[bool, Optional[str]]: (whether it is allowed, error message)
         """
         try:
             quota = self._get_user_quota_limit(user_id)
@@ -141,13 +141,13 @@ class QuotaManagementService:
     
     def check_session_limit(self, user_id: str) -> tuple[bool, Optional[str]]:
         """
-        检查对话框数量限制
-        
+        Check the limit on the number of sessions
+
         Args:
-            user_id: 用户ID
-            
+            user_id: the user ID
+
         Returns:
-            tuple[bool, Optional[str]]: (是否允许, 错误消息)
+            tuple[bool, Optional[str]]: (whether it is allowed, error message)
         """
         try:
             quota = self._get_user_quota_limit(user_id)
@@ -168,14 +168,14 @@ class QuotaManagementService:
     
     def check_daily_quota(self, user_id: str, image_count: int = 1) -> tuple[bool, Optional[str]]:
         """
-        检查每日翻译配额
-        
+        Check the daily translation quota
+
         Args:
-            user_id: 用户ID
-            image_count: 要翻译的图片数量
-            
+            user_id: the user ID
+            image_count: number of images to translate
+
         Returns:
-            tuple[bool, Optional[str]]: (是否允许, 错误消息)
+            tuple[bool, Optional[str]]: (whether it is allowed, error message)
         """
         try:
             quota = self._get_user_quota_limit(user_id)
@@ -206,11 +206,11 @@ class QuotaManagementService:
     
     def _check_and_reset_daily_quota(self, user_id: str, quota: QuotaLimit) -> None:
         """
-        检查并重置每日配额（如果需要）
-        
+        Check the daily quota and reset it if needed
+
         Args:
-            user_id: 用户ID
-            quota: 当前配额
+            user_id: the user ID
+            quota: the current quota
         """
         if not quota.last_reset:
             # When it was never reset, reset it now
@@ -232,14 +232,14 @@ class QuotaManagementService:
     
     def increment_quota_usage(self, user_id: str, image_count: int) -> bool:
         """
-        增加配额使用量（仅在翻译成功后调用）
-        
+        Increase the quota usage (called only after a successful translation)
+
         Args:
-            user_id: 用户ID
-            image_count: 成功翻译的图片数量
-            
+            user_id: the user ID
+            image_count: number of images translated successfully
+
         Returns:
-            bool: 是否成功
+            bool: whether it succeeded
         """
         try:
             success = self.quota_repo.increment_usage(user_id, image_count)
@@ -254,13 +254,13 @@ class QuotaManagementService:
     
     def reset_daily_quota(self, user_id: Optional[str] = None) -> bool:
         """
-        重置每日配额
-        
+        Reset the daily quota
+
         Args:
-            user_id: 用户ID，如果为None则重置所有用户
-            
+            user_id: the user ID; all users are reset when None
+
         Returns:
-            bool: 是否成功
+            bool: whether it succeeded
         """
         try:
             if user_id:
@@ -282,13 +282,13 @@ class QuotaManagementService:
     
     def get_quota_stats(self, user_id: str) -> Optional[QuotaStats]:
         """
-        获取用户配额统计
-        
+        Get the quota statistics of a user
+
         Args:
-            user_id: 用户ID
-            
+            user_id: the user ID
+
         Returns:
-            QuotaStats: 配额统计信息
+            QuotaStats: the quota statistics
         """
         try:
             quota = self._get_user_quota_limit(user_id)
@@ -317,10 +317,10 @@ class QuotaManagementService:
     
     def get_all_quota_stats(self) -> Dict[str, QuotaStats]:
         """
-        获取所有用户的配额统计（管理员功能）
-        
+        Get the quota statistics of all users (administrator function)
+
         Returns:
-            Dict[str, QuotaStats]: 用户ID到配额统计的映射
+            Dict[str, QuotaStats]: mapping from user ID to quota statistics
         """
         try:
             all_quotas = self.quota_repo.get_all_quotas()
@@ -340,14 +340,14 @@ class QuotaManagementService:
     
     def register_session(self, user_id: str, session_token: str) -> bool:
         """
-        注册活跃会话
-        
+        Register an active session
+
         Args:
-            user_id: 用户ID
-            session_token: 会话令牌
-            
+            user_id: the user ID
+            session_token: the session token
+
         Returns:
-            bool: 是否成功
+            bool: whether it succeeded
         """
         try:
             if user_id not in self._active_sessions:
@@ -365,14 +365,14 @@ class QuotaManagementService:
     
     def unregister_session(self, user_id: str, session_token: str) -> bool:
         """
-        注销活跃会话
-        
+        Unregister an active session
+
         Args:
-            user_id: 用户ID
-            session_token: 会话令牌
-            
+            user_id: the user ID
+            session_token: the session token
+
         Returns:
-            bool: 是否成功
+            bool: whether it succeeded
         """
         try:
             if user_id in self._active_sessions:
@@ -388,13 +388,13 @@ class QuotaManagementService:
     
     def get_active_sessions(self, user_id: str) -> List[str]:
         """
-        获取用户的活跃会话列表
-        
+        Get the list of active sessions of a user
+
         Args:
-            user_id: 用户ID
-            
+            user_id: the user ID
+
         Returns:
-            List[str]: 会话令牌列表
+            List[str]: list of session tokens
         """
         return self._active_sessions.get(user_id, []).copy()
     
@@ -407,17 +407,17 @@ class QuotaManagementService:
         daily_quota: Optional[int] = None
     ) -> bool:
         """
-        设置用户的配额限制（管理员功能）
-        
+        Set the quota limits of a user (administrator function)
+
         Args:
-            user_id: 用户ID
-            max_file_size: 最大文件大小
-            max_files_per_upload: 单次上传最大文件数
-            max_sessions: 最大会话数
-            daily_quota: 每日配额
-            
+            user_id: the user ID
+            max_file_size: maximum file size
+            max_files_per_upload: maximum number of files per upload
+            max_sessions: maximum number of sessions
+            daily_quota: the daily quota
+
         Returns:
-            bool: 是否成功
+            bool: whether it succeeded
         """
         try:
             # Get the existing quota or create a new one

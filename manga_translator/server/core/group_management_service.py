@@ -1,7 +1,7 @@
 """
 User Group Management Service
 
-实现用户组的创建、重命名、删除和配置管理功能。
+Implements creating, renaming and deleting user groups and managing their configuration.
 """
 
 import json
@@ -16,15 +16,15 @@ logger = logging.getLogger(__name__)
 
 
 class GroupManagementService:
-    """用户组管理服务"""
+    """User group management service"""
     
     def __init__(self, group_repo: GroupRepository, accounts_file: str):
         """
-        初始化用户组管理服务
-        
+        Initialise the user group management service
+
         Args:
-            group_repo: 用户组仓库实例
-            accounts_file: 账户文件路径
+            group_repo: the user group repository instance
+            accounts_file: path of the accounts file
         """
         self.group_repo = group_repo
         self.accounts_file = accounts_file
@@ -41,20 +41,20 @@ class GroupManagementService:
         parameter_config: Optional[Dict[str, Any]] = None
     ) -> Optional[UserGroup]:
         """
-        创建新的用户组
-        
+        Create a new user group
+
         Args:
-            group_id: 用户组ID
-            name: 用户组名称
-            description: 描述
-            admin_id: 创建者管理员ID
-            permissions: 权限配置
-            quota_limits: 配额限制
-            visible_presets: 可见预设列表
-            parameter_config: 参数配置
-        
+            group_id: the user group ID
+            name: name of the user group
+            description: the description
+            admin_id: ID of the administrator who creates it
+            permissions: the permission configuration
+            quota_limits: the quota limits
+            visible_presets: list of visible presets
+            parameter_config: the parameter configuration
+
         Returns:
-            UserGroup: 创建的用户组对象，如果失败则返回None
+            UserGroup: the user group object that was created, or None on failure
         """
         try:
             # Check whether the user group already exists
@@ -109,16 +109,16 @@ class GroupManagementService:
         admin_id: str
     ) -> bool:
         """
-        重命名用户组
-        
+        Rename a user group
+
         Args:
-            old_group_id: 当前用户组ID
-            new_group_id: 新用户组ID
-            new_name: 新用户组名称
-            admin_id: 管理员ID
-        
+            old_group_id: the current user group ID
+            new_group_id: the new user group ID
+            new_name: the new user group name
+            admin_id: the administrator ID
+
         Returns:
-            bool: 是否成功
+            bool: whether it succeeded
         """
         try:
             # Check whether it is a system group
@@ -162,14 +162,14 @@ class GroupManagementService:
     
     def delete_group(self, group_id: str, admin_id: str) -> bool:
         """
-        删除用户组
-        
+        Delete a user group
+
         Args:
-            group_id: 用户组ID
-            admin_id: 管理员ID
-        
+            group_id: the user group ID
+            admin_id: the administrator ID
+
         Returns:
-            bool: 是否成功
+            bool: whether it succeeded
         """
         try:
             # Check whether it is a system group
@@ -207,10 +207,10 @@ class GroupManagementService:
     
     def get_all_groups(self) -> List[Dict[str, Any]]:
         """
-        获取所有用户组
-        
+        Get all user groups
+
         Returns:
-            List[Dict]: 用户组列表
+            List[Dict]: list of the user groups
         """
         try:
             groups = self.group_repo.get_all_groups()
@@ -246,13 +246,13 @@ class GroupManagementService:
     
     def get_group(self, group_id: str) -> Optional[Dict[str, Any]]:
         """
-        获取单个用户组
-        
+        Get a single user group
+
         Args:
-            group_id: 用户组ID
-        
+            group_id: the user group ID
+
         Returns:
-            Dict: 用户组信息，如果不存在则返回None
+            Dict: the user group information, or None when it does not exist
         """
         try:
             group_data = self.group_repo.get_group(group_id)
@@ -294,15 +294,15 @@ class GroupManagementService:
         admin_id: str
     ) -> bool:
         """
-        更新用户组配置
-        
+        Update the configuration of a user group
+
         Args:
-            group_id: 用户组ID
-            config: 新配置
-            admin_id: 管理员ID
-        
+            group_id: the user group ID
+            config: the new configuration
+            admin_id: the administrator ID
+
         Returns:
-            bool: 是否成功
+            bool: whether it succeeded
         """
         try:
             # Check whether the group exists
@@ -331,14 +331,14 @@ class GroupManagementService:
     
     def _update_user_group_associations(self, old_group_id: str, new_group_id: str) -> int:
         """
-        更新所有用户的组关联
-        
+        Update the group link of all users
+
         Args:
-            old_group_id: 旧用户组ID
-            new_group_id: 新用户组ID
-        
+            old_group_id: the old user group ID
+            new_group_id: the new user group ID
+
         Returns:
-            int: 更新的用户数量
+            int: number of users updated
         """
         try:
             # Read the accounts file
@@ -366,24 +366,24 @@ class GroupManagementService:
     
     def _move_users_to_default_group(self, group_id: str) -> int:
         """
-        将用户组的所有用户移动到default组
-        
+        Move all users of a user group to the default group
+
         Args:
-            group_id: 要删除的用户组ID
-        
+            group_id: ID of the user group being deleted
+
         Returns:
-            int: 移动的用户数量
+            int: number of users moved
         """
         return self._update_user_group_associations(group_id, "default")
     
     def _log_audit(self, admin_id: str, action: str, details: Dict[str, Any]) -> None:
         """
-        记录审计日志
-        
+        Write an audit log record
+
         Args:
-            admin_id: 管理员ID
-            action: 操作类型
-            details: 操作详情
+            admin_id: the administrator ID
+            action: the kind of operation
+            details: details of the operation
         """
         try:
             audit_file = "manga_translator/server/data/audit.log"
@@ -411,14 +411,14 @@ def get_group_management_service(
     accounts_file: Optional[str] = None
 ) -> GroupManagementService:
     """
-    获取用户组管理服务实例
-    
+    Get the user group management service instance
+
     Args:
-        group_repo: 用户组仓库实例（可选）
-        accounts_file: 账户文件路径（可选）
-    
+        group_repo: the user group repository instance (optional)
+        accounts_file: path of the accounts file (optional)
+
     Returns:
-        GroupManagementService: 服务实例
+        GroupManagementService: the service instance
     """
     global _group_management_service
     

@@ -1,7 +1,7 @@
 """
-核心模块
+Core module
 
-提供配置管理、身份验证、日志管理、任务管理、响应工具、数据模型和持久化功能。
+Provides configuration management, authentication, log management, task management, response utilities, data models and persistence.
 """
 
 # Data models

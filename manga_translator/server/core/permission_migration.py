@@ -1,7 +1,7 @@
 """
-权限系统迁移工具
+Migration tool of the permission system
 
-分析现有权限配置并迁移到新的权限模型。
+Analyses the existing permission configuration and migrates it to the new permission model.
 """
 
 import json
@@ -15,14 +15,14 @@ logger = logging.getLogger(__name__)
 
 
 class PermissionMigrationAnalyzer:
-    """权限迁移分析器"""
+    """Permission migration analyser"""
     
     def __init__(self, data_dir: str = "manga_translator/server/data"):
         """
-        初始化迁移分析器
-        
+        Initialise the migration analyser
+
         Args:
-            data_dir: 数据目录路径
+            data_dir: path of the data folder
         """
         self.data_dir = data_dir
         self.accounts_file = os.path.join(data_dir, "accounts.json")
@@ -40,10 +40,10 @@ class PermissionMigrationAnalyzer:
     
     def analyze_accounts(self) -> Dict[str, Any]:
         """
-        分析 accounts.json 中的权限配置
-        
+        Analyse the permission configuration in accounts.json
+
         Returns:
-            分析结果字典
+            Dictionary with the analysis result
         """
         logger.info("Analyzing accounts.json...")
         
@@ -109,10 +109,10 @@ class PermissionMigrationAnalyzer:
     
     def analyze_group_config(self) -> Dict[str, Any]:
         """
-        分析 group_config.json 中的权限配置
-        
+        Analyse the permission configuration in group_config.json
+
         Returns:
-            分析结果字典
+            Dictionary with the analysis result
         """
         logger.info("Analyzing group_config.json...")
         
@@ -165,10 +165,10 @@ class PermissionMigrationAnalyzer:
     
     def analyze_permissions_file(self) -> Dict[str, Any]:
         """
-        分析现有的 permissions.json 文件
-        
+        Analyse the existing permissions.json file
+
         Returns:
-            分析结果字典
+            Dictionary with the analysis result
         """
         logger.info("Analyzing permissions.json...")
         
@@ -208,10 +208,10 @@ class PermissionMigrationAnalyzer:
     
     def generate_migration_mapping(self) -> Dict[str, Any]:
         """
-        生成权限迁移映射
-        
+        Build the permission migration mapping
+
         Returns:
-            迁移映射字典
+            Dictionary with the migration mapping
         """
         logger.info("Generating migration mapping...")
         
@@ -252,10 +252,10 @@ class PermissionMigrationAnalyzer:
     
     def run_full_analysis(self) -> Dict[str, Any]:
         """
-        运行完整的迁移分析
-        
+        Run the full migration analysis
+
         Returns:
-            完整的分析报告
+            The full analysis report
         """
         logger.info("Starting full permission migration analysis...")
         
@@ -294,14 +294,14 @@ class PermissionMigrationAnalyzer:
     
     def save_analysis_report(self, report: Dict[str, Any], output_file: Optional[str] = None) -> str:
         """
-        保存分析报告到文件
-        
+        Save the analysis report to a file
+
         Args:
-            report: 分析报告字典
-            output_file: 输出文件路径（可选）
-        
+            report: the analysis report dictionary
+            output_file: path of the output file (optional)
+
         Returns:
-            保存的文件路径
+            The path of the saved file
         """
         if output_file is None:
             timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
@@ -320,14 +320,14 @@ class PermissionMigrationAnalyzer:
 
 
 class PermissionMigrator:
-    """权限迁移执行器"""
+    """Permission migration executor"""
     
     def __init__(self, data_dir: str = "manga_translator/server/data"):
         """
-        初始化迁移执行器
-        
+        Initialise the migration executor
+
         Args:
-            data_dir: 数据目录路径
+            data_dir: path of the data folder
         """
         self.data_dir = data_dir
         self.accounts_file = os.path.join(data_dir, "accounts.json")
@@ -343,13 +343,13 @@ class PermissionMigrator:
     
     def create_backup(self, file_path: str) -> str:
         """
-        创建文件备份
-        
+        Create a backup of a file
+
         Args:
-            file_path: 要备份的文件路径
-        
+            file_path: path of the file to back up
+
         Returns:
-            备份文件路径
+            The path of the backup file
         """
         if not os.path.exists(file_path):
             logger.warning(f"File not found for backup: {file_path}")
@@ -371,13 +371,13 @@ class PermissionMigrator:
     
     def migrate_account_permissions(self, account: Dict[str, Any]) -> Dict[str, Any]:
         """
-        迁移单个账户的权限
-        
+        Migrate the permissions of a single account
+
         Args:
-            account: 账户数据字典
-        
+            account: the account data dictionary
+
         Returns:
-            迁移后的权限字典
+            The permission dictionary after migration
         """
         old_perms = account.get("permissions", {})
         new_perms = {}
@@ -405,10 +405,10 @@ class PermissionMigrator:
     
     def migrate_accounts_file(self) -> bool:
         """
-        迁移 accounts.json 文件
-        
+        Migrate the accounts.json file
+
         Returns:
-            是否成功
+            Whether it succeeded
         """
         logger.info("Migrating accounts.json...")
         
@@ -470,10 +470,10 @@ class PermissionMigrator:
     
     def initialize_group_permissions(self) -> bool:
         """
-        为用户组初始化默认权限配置
-        
+        Initialise the default permission configuration of the user groups
+
         Returns:
-            是否成功
+            Whether it succeeded
         """
         logger.info("Initializing group permissions...")
         
@@ -566,10 +566,10 @@ class PermissionMigrator:
     
     def run_migration(self) -> Dict[str, Any]:
         """
-        运行完整的权限迁移
-        
+        Run the full permission migration
+
         Returns:
-            迁移日志
+            The migration log
         """
         logger.info("Starting permission migration...")
         
@@ -592,14 +592,14 @@ class PermissionMigrator:
     
     def save_migration_log(self, log: Dict[str, Any], output_file: Optional[str] = None) -> str:
         """
-        保存迁移日志到文件
-        
+        Save the migration log to a file
+
         Args:
-            log: 迁移日志字典
-            output_file: 输出文件路径（可选）
-        
+            log: the migration log dictionary
+            output_file: path of the output file (optional)
+
         Returns:
-            保存的文件路径
+            The path of the saved file
         """
         if output_file is None:
             timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
@@ -619,13 +619,13 @@ class PermissionMigrator:
 
 def analyze_permissions(data_dir: str = "manga_translator/server/data") -> Dict[str, Any]:
     """
-    便捷函数：分析权限配置
-    
+    Convenience function: analyse the permission configuration
+
     Args:
-        data_dir: 数据目录路径
-    
+        data_dir: path of the data folder
+
     Returns:
-        分析报告
+        The analysis report
     """
     analyzer = PermissionMigrationAnalyzer(data_dir)
     report = analyzer.run_full_analysis()
@@ -639,13 +639,13 @@ def analyze_permissions(data_dir: str = "manga_translator/server/data") -> Dict[
 
 def migrate_permissions(data_dir: str = "manga_translator/server/data") -> Dict[str, Any]:
     """
-    便捷函数：执行权限迁移
-    
+    Convenience function: run the permission migration
+
     Args:
-        data_dir: 数据目录路径
-    
+        data_dir: path of the data folder
+
     Returns:
-        迁移日志
+        The migration log
     """
     migrator = PermissionMigrator(data_dir)
     log = migrator.run_migration()

@@ -1,6 +1,6 @@
 """
 Manga Translator Web API Server
-提供 HTTP REST API 端点，支持多种翻译工作流程
+Provides HTTP REST API endpoints and supports several translation workflows
 """
 
 # Export the main classes and functions, for easy import from outside

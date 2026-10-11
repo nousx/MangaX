@@ -1,8 +1,8 @@
 """
-增强的权限管理服务 (Enhanced Permission Service)
+Enhanced Permission Service
 
-实现基于继承的权限系统：全局 → 用户组 → 用户
-支持细分权限（can_upload_prompt, can_upload_font等）
+Implements a permission system based on inheritance: global → user group → user.
+Supports fine-grained permissions (can_upload_prompt, can_upload_font and so on)
 """
 
 import logging
@@ -17,41 +17,41 @@ logger = logging.getLogger(__name__)
 
 
 class EnhancedPermissionService:
-    """增强的权限管理服务"""
+    """Enhanced permission management service"""
     
     def __init__(self, permission_repo: PermissionRepository):
         """
-        初始化权限服务
-        
+        Initialise the permission service
+
         Args:
-            permission_repo: 权限仓库实例
+            permission_repo: the permission repository instance
         """
         self.permission_repo = permission_repo
     
     def check_upload_prompt_permission(self, user_id: str, group_id: Optional[str] = None) -> bool:
         """
-        检查用户是否有上传提示词的权限
-        
+        Check whether a user may upload prompts
+
         Args:
-            user_id: 用户ID
-            group_id: 用户组ID（可选）
-        
+            user_id: the user ID
+            group_id: the user group ID (optional)
+
         Returns:
-            bool: 是否有权限
+            bool: whether the user has the permission
         """
         perms = self.permission_repo.get_effective_permissions(user_id, group_id)
         return perms.get("can_upload_prompt", False)
     
     def check_upload_font_permission(self, user_id: str, group_id: Optional[str] = None) -> bool:
         """
-        检查用户是否有上传字体的权限
-        
+        Check whether a user may upload fonts
+
         Args:
-            user_id: 用户ID
-            group_id: 用户组ID（可选）
-        
+            user_id: the user ID
+            group_id: the user group ID (optional)
+
         Returns:
-            bool: 是否有权限
+            bool: whether the user has the permission
         """
         perms = self.permission_repo.get_effective_permissions(user_id, group_id)
         result = perms.get("can_upload_font", False)
@@ -60,153 +60,153 @@ class EnhancedPermissionService:
     
     def check_delete_own_files_permission(self, user_id: str, group_id: Optional[str] = None) -> bool:
         """
-        检查用户是否有删除自己文件的权限
-        
+        Check whether a user may delete their own files
+
         Args:
-            user_id: 用户ID
-            group_id: 用户组ID（可选）
-        
+            user_id: the user ID
+            group_id: the user group ID (optional)
+
         Returns:
-            bool: 是否有权限
+            bool: whether the user has the permission
         """
         perms = self.permission_repo.get_effective_permissions(user_id, group_id)
         return perms.get("can_delete_own_files", True)  # Allowed by default
     
     def check_delete_all_files_permission(self, user_id: str, group_id: Optional[str] = None) -> bool:
         """
-        检查用户是否有删除所有文件的权限
-        
+        Check whether a user may delete all files
+
         Args:
-            user_id: 用户ID
-            group_id: 用户组ID（可选）
-        
+            user_id: the user ID
+            group_id: the user group ID (optional)
+
         Returns:
-            bool: 是否有权限
+            bool: whether the user has the permission
         """
         perms = self.permission_repo.get_effective_permissions(user_id, group_id)
         return perms.get("can_delete_all_files", False)
     
     def check_view_permission(self, user_id: str, group_id: Optional[str] = None) -> str:
         """
-        获取用户的查看权限级别
-        
+        Get the view permission level of a user
+
         Args:
-            user_id: 用户ID
-            group_id: 用户组ID（可选）
-        
+            user_id: the user ID
+            group_id: the user group ID (optional)
+
         Returns:
-            str: 权限级别 ("own", "none", "all")
+            str: the permission level ("own", "none", "all")
         """
         perms = self.permission_repo.get_effective_permissions(user_id, group_id)
         return perms.get("view_permission", "own")
     
     def check_save_enabled(self, user_id: str, group_id: Optional[str] = None) -> bool:
         """
-        检查用户是否启用保存翻译结果
-        
+        Check whether saving translation results is enabled for a user
+
         Args:
-            user_id: 用户ID
-            group_id: 用户组ID（可选）
-        
+            user_id: the user ID
+            group_id: the user group ID (optional)
+
         Returns:
-            bool: 是否启用保存
+            bool: whether saving is enabled
         """
         perms = self.permission_repo.get_effective_permissions(user_id, group_id)
         return perms.get("save_enabled", True)
     
     def check_edit_own_env_permission(self, user_id: str, group_id: Optional[str] = None) -> bool:
         """
-        检查用户是否有编辑自己.env配置的权限
-        
+        Check whether a user may edit their own .env configuration
+
         Args:
-            user_id: 用户ID
-            group_id: 用户组ID（可选）
-        
+            user_id: the user ID
+            group_id: the user group ID (optional)
+
         Returns:
-            bool: 是否有权限
+            bool: whether the user has the permission
         """
         perms = self.permission_repo.get_effective_permissions(user_id, group_id)
         return perms.get("can_edit_own_env", False)
     
     def check_edit_server_env_permission(self, user_id: str, group_id: Optional[str] = None) -> bool:
         """
-        检查用户是否有编辑服务器.env配置的权限
-        
+        Check whether a user may edit the server .env configuration
+
         Args:
-            user_id: 用户ID
-            group_id: 用户组ID（可选）
-        
+            user_id: the user ID
+            group_id: the user group ID (optional)
+
         Returns:
-            bool: 是否有权限
+            bool: whether the user has the permission
         """
         perms = self.permission_repo.get_effective_permissions(user_id, group_id)
         return perms.get("can_edit_server_env", False)
     
     def check_view_own_logs_permission(self, user_id: str, group_id: Optional[str] = None) -> bool:
         """
-        检查用户是否有查看自己日志的权限
-        
+        Check whether a user may view their own logs
+
         Args:
-            user_id: 用户ID
-            group_id: 用户组ID（可选）
-        
+            user_id: the user ID
+            group_id: the user group ID (optional)
+
         Returns:
-            bool: 是否有权限
+            bool: whether the user has the permission
         """
         perms = self.permission_repo.get_effective_permissions(user_id, group_id)
         return perms.get("can_view_own_logs", True)
     
     def check_view_all_logs_permission(self, user_id: str, group_id: Optional[str] = None) -> bool:
         """
-        检查用户是否有查看所有用户日志的权限
-        
+        Check whether a user may view the logs of all users
+
         Args:
-            user_id: 用户ID
-            group_id: 用户组ID（可选）
-        
+            user_id: the user ID
+            group_id: the user group ID (optional)
+
         Returns:
-            bool: 是否有权限
+            bool: whether the user has the permission
         """
         perms = self.permission_repo.get_effective_permissions(user_id, group_id)
         return perms.get("can_view_all_logs", False)
     
     def check_view_system_logs_permission(self, user_id: str, group_id: Optional[str] = None) -> bool:
         """
-        检查用户是否有查看系统日志的权限
-        
+        Check whether a user may view the system logs
+
         Args:
-            user_id: 用户ID
-            group_id: 用户组ID（可选）
-        
+            user_id: the user ID
+            group_id: the user group ID (optional)
+
         Returns:
-            bool: 是否有权限
+            bool: whether the user has the permission
         """
         perms = self.permission_repo.get_effective_permissions(user_id, group_id)
         return perms.get("can_view_system_logs", False)
     
     def get_view_history_permission(self, user_id: str, group_id: Optional[str] = None) -> str:
         """
-        获取用户的历史查看权限级别
-        
+        Get the history view permission level of a user
+
         Args:
-            user_id: 用户ID
-            group_id: 用户组ID（可选）
-        
+            user_id: the user ID
+            group_id: the user group ID (optional)
+
         Returns:
-            str: 权限级别 ("own", "none", "all")
+            str: the permission level ("own", "none", "all")
         """
         # Use the view_permission field
         return self.check_view_permission(user_id, group_id)
     
     def is_admin(self, user_id: str) -> bool:
         """
-        检查用户是否是管理员
-        
+        Check whether a user is an administrator
+
         Args:
-            user_id: 用户ID
-        
+            user_id: the user ID
+
         Returns:
-            bool: 是否是管理员
+            bool: whether the user is an administrator
         """
         perms = self.permission_repo.get_effective_permissions(user_id, None)
         # An administrator usually has the can_delete_all_files and can_view_all_logs permissions
@@ -215,14 +215,14 @@ class EnhancedPermissionService:
     
     def get_effective_permissions(self, user_id: str, group_id: Optional[str] = None) -> Dict[str, Any]:
         """
-        获取用户的有效权限（应用继承规则）
-        
+        Get the effective permissions of a user (with the inheritance rules applied)
+
         Args:
-            user_id: 用户ID
-            group_id: 用户组ID（可选）
-        
+            user_id: the user ID
+            group_id: the user group ID (optional)
+
         Returns:
-            Dict[str, Any]: 有效权限字典
+            Dict[str, Any]: dictionary of the effective permissions
         """
         return self.permission_repo.get_effective_permissions(user_id, group_id)
     
@@ -233,15 +233,15 @@ class EnhancedPermissionService:
         updated_by: str
     ) -> bool:
         """
-        设置用户权限
-        
+        Set the permissions of a user
+
         Args:
-            user_id: 用户ID
-            permissions: 权限字典
-            updated_by: 更新者ID
-        
+            user_id: the user ID
+            permissions: the permission dictionary
+            updated_by: ID of whoever makes the update
+
         Returns:
-            bool: 是否成功
+            bool: whether it succeeded
         """
         try:
             # Create the UserPermission object
@@ -268,14 +268,14 @@ class EnhancedPermissionService:
         permissions: Dict[str, Any]
     ) -> bool:
         """
-        设置用户组权限
-        
+        Set the permissions of a user group
+
         Args:
-            group_id: 用户组ID
-            permissions: 权限字典
-        
+            group_id: the user group ID
+            permissions: the permission dictionary
+
         Returns:
-            bool: 是否成功
+            bool: whether it succeeded
         """
         try:
             self.permission_repo.set_group_permissions(group_id, permissions)
@@ -290,13 +290,13 @@ class EnhancedPermissionService:
     
     def set_global_permissions(self, permissions: Dict[str, Any]) -> bool:
         """
-        设置全局默认权限
-        
+        Set the global default permissions
+
         Args:
-            permissions: 权限字典
-        
+            permissions: the permission dictionary
+
         Returns:
-            bool: 是否成功
+            bool: whether it succeeded
         """
         try:
             self.permission_repo.set_global_permissions(permissions)
@@ -311,13 +311,13 @@ class EnhancedPermissionService:
     
     def delete_user_permissions(self, user_id: str) -> bool:
         """
-        删除用户权限（回退到用户组/全局权限）
-        
+        Delete the permissions of a user (falling back to the user group / global permissions)
+
         Args:
-            user_id: 用户ID
-        
+            user_id: the user ID
+
         Returns:
-            bool: 是否成功
+            bool: whether it succeeded
         """
         try:
             success = self.permission_repo.delete_user_permissions(user_id)
@@ -332,13 +332,13 @@ class EnhancedPermissionService:
     
     def delete_group_permissions(self, group_id: str) -> bool:
         """
-        删除用户组权限（回退到全局权限）
-        
+        Delete the permissions of a user group (falling back to the global permissions)
+
         Args:
-            group_id: 用户组ID
-        
+            group_id: the user group ID
+
         Returns:
-            bool: 是否成功
+            bool: whether it succeeded
         """
         try:
             success = self.permission_repo.delete_group_permissions(group_id)
@@ -353,14 +353,14 @@ class EnhancedPermissionService:
     
     def get_permission_summary(self, user_id: str, group_id: Optional[str] = None) -> Dict[str, Any]:
         """
-        获取用户权限摘要（用于显示）
-        
+        Get a summary of the permissions of a user (for display)
+
         Args:
-            user_id: 用户ID
-            group_id: 用户组ID（可选）
-        
+            user_id: the user ID
+            group_id: the user group ID (optional)
+
         Returns:
-            Dict[str, Any]: 权限摘要
+            Dict[str, Any]: the permission summary
         """
         effective_perms = self.get_effective_permissions(user_id, group_id)
         
@@ -397,13 +397,13 @@ def get_enhanced_permission_service(
     permission_repo: Optional[PermissionRepository] = None
 ) -> EnhancedPermissionService:
     """
-    获取增强权限服务实例
-    
+    Get the enhanced permission service instance
+
     Args:
-        permission_repo: 权限仓库实例（可选）
-    
+        permission_repo: the permission repository instance (optional)
+
     Returns:
-        EnhancedPermissionService: 服务实例
+        EnhancedPermissionService: the service instance
     """
     global _enhanced_permission_service
     

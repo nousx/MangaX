@@ -1,7 +1,7 @@
 """
-历史记录管理路由模块
+History management routes
 
-提供翻译历史的查询、搜索和下载API。
+Provides the API for querying, searching and downloading the translation history.
 """
 
 import logging
@@ -38,7 +38,7 @@ router = APIRouter(prefix="/api/history", tags=["history"])
 # ============================================================================
 
 class BatchDownloadRequest(BaseModel):
-    """批量下载请求模型"""
+    """Request model of a batch download"""
     session_tokens: List[str]
     filename: Optional[str] = None
 
@@ -56,12 +56,12 @@ def init_history_routes(
     **kwargs  # Kept for the old way of calling
 ) -> None:
     """
-    初始化历史记录路由使用的服务实例
-    
+    Initialise the service instances the history routes use
+
     Args:
-        history_service: 历史管理服务
-        permission_service: 权限管理服务
-        search_service: 搜索服务（可选）
+        history_service: the history management service
+        permission_service: the permission management service
+        search_service: the search service (optional)
     """
     global _history_service, _search_service, _permission_service
     _history_service = history_service
@@ -71,21 +71,21 @@ def init_history_routes(
 
 
 def get_history_service() -> HistoryManagementService:
-    """获取历史管理服务实例"""
+    """Get the history management service instance"""
     if not _history_service:
         raise RuntimeError("History service not initialized")
     return _history_service
 
 
 def get_permission_service() -> IntegratedPermissionService:
-    """获取权限管理服务实例"""
+    """Get the permission management service instance"""
     if not _permission_service:
         raise RuntimeError("Permission service not initialized")
     return _permission_service
 
 
 def get_search_service() -> SearchService:
-    """获取搜索服务实例"""
+    """Get the search service instance"""
     if not _search_service:
         raise RuntimeError("Search service not initialized")
     return _search_service
@@ -166,7 +166,7 @@ def _issue_download_ticket(
 
 @router.api_route("/downloads/t/{ticket}", methods=["GET", "HEAD"])
 async def download_by_ticket(ticket: str):
-    """使用短时下载票据提供文件下载。"""
+    """Serve a file download with a short-lived download ticket."""
     download_ticket = _download_ticket_service.get_ticket(ticket)
     if download_ticket is None:
         raise HTTPException(status_code=404, detail="下载链接无效或已过期")
@@ -193,23 +193,23 @@ async def get_user_history(
     permission_service: IntegratedPermissionService = Depends(get_permission_service)
 ):
     """
-    获取用户的翻译历史（支持筛选）
-    
-    需求: 3.2, 12.2
-    
+    Get the translation history of the user (with filters)
+
+    Requirements: 3.2, 12.2
+
     Args:
-        start_date: 开始日期
-        end_date: 结束日期
-        status: 状态筛选
-        session: 用户会话
-        history_service: 历史管理服务
-        permission_service: 权限管理服务
-    
+        start_date: the start date
+        end_date: the end date
+        status: filter by status
+        session: the user session
+        history_service: the history management service
+        permission_service: the permission management service
+
     Returns:
-        dict: 包含历史记录列表
-    
+        dict: contains the list of history records
+
     Raises:
-        HTTPException: 如果权限不足或查询失败
+        HTTPException: when the permission is insufficient or the query fails
     """
     # Check the view permission
     view_permission = permission_service.get_view_history_permission(session.username)
@@ -252,16 +252,16 @@ async def get_session_details(
     permission_service: IntegratedPermissionService = Depends(get_permission_service)
 ):
     """
-    获取单个会话的详细信息
-    
+    Get the details of a single session
+
     Args:
-        session_token: 会话令牌
-        session: 用户会话
-        history_service: 历史管理服务
-        permission_service: 权限管理服务
-    
+        session_token: the session token
+        session: the user session
+        history_service: the history management service
+        permission_service: the permission management service
+
     Returns:
-        dict: 会话详细信息
+        dict: the details of the session
     """
     # Check the view permission
     view_permission = permission_service.get_view_history_permission(session.username)
@@ -314,7 +314,7 @@ async def create_session_download_ticket(
     history_service: HistoryManagementService = Depends(get_history_service),
     permission_service: IntegratedPermissionService = Depends(get_permission_service)
 ):
-    """为单个会话的 ZIP 下载创建短时票据。"""
+    """Create a short-lived ticket for the ZIP download of a single session."""
     view_permission = permission_service.get_view_history_permission(session.username)
     if view_permission == 'none':
         raise HTTPException(status_code=403, detail="您没有下载历史记录的权限")
@@ -353,22 +353,22 @@ async def get_all_history(
     history_service: HistoryManagementService = Depends(get_history_service)
 ):
     """
-    管理员查看所有用户的翻译历史
-    
-    需求: 5.1-5.5, 12.4
-    
+    An administrator views the translation history of all users
+
+    Requirements: 5.1-5.5, 12.4
+
     Args:
-        user_id: 用户ID筛选
-        start_date: 开始日期
-        end_date: 结束日期
-        status: 状态筛选
-        limit: 每页数量
-        offset: 偏移量
-        session: 管理员会话
-        history_service: 历史管理服务
-    
+        user_id: filter by user ID
+        start_date: the start date
+        end_date: the end date
+        status: filter by status
+        limit: number per page
+        offset: the offset
+        session: the administrator session
+        history_service: the history management service
+
     Returns:
-        dict: 包含所有历史记录列表
+        dict: contains the list of all history records
     """
     try:
         # Build the filter conditions
@@ -434,24 +434,24 @@ async def search_history(
     permission_service: IntegratedPermissionService = Depends(get_permission_service)
 ):
     """
-    搜索翻译历史
-    
-    需求: 13.1-13.5
-    
+    Search the translation history
+
+    Requirements: 13.1-13.5
+
     Args:
-        q: 搜索查询
-        start_date: 开始日期
-        end_date: 结束日期
-        status: 状态筛选
-        session: 用户会话
-        search_service: 搜索服务
-        permission_service: 权限管理服务
-    
+        q: the search query
+        start_date: the start date
+        end_date: the end date
+        status: filter by status
+        session: the user session
+        search_service: the search service
+        permission_service: the permission management service
+
     Returns:
-        dict: 搜索结果
-    
+        dict: the search results
+
     Raises:
-        HTTPException: 如果权限不足或搜索失败
+        HTTPException: when the permission is insufficient or the search fails
     """
     # Check the view permission
     view_permission = permission_service.get_view_history_permission(session.username)
@@ -508,17 +508,17 @@ async def download_session(
     permission_service: IntegratedPermissionService = Depends(get_permission_service)
 ):
     """
-    下载单个会话的翻译结果
-    
+    Download the translation results of a single session
+
     Args:
-        session_token: 会话令牌
-        filename: 自定义文件名（可选）
-        session: 用户会话
-        history_service: 历史管理服务
-        permission_service: 权限管理服务
-    
+        session_token: the session token
+        filename: a custom file name (optional)
+        session: the user session
+        history_service: the history management service
+        permission_service: the permission management service
+
     Returns:
-        FileResponse: ZIP文件
+        FileResponse: the ZIP file
     """
     # Check the view permission
     view_permission = permission_service.get_view_history_permission(session.username)
@@ -573,7 +573,7 @@ async def create_batch_download_ticket(
     history_service: HistoryManagementService = Depends(get_history_service),
     permission_service: IntegratedPermissionService = Depends(get_permission_service)
 ):
-    """为批量历史 ZIP 下载创建短时票据。"""
+    """Create a short-lived ticket for a batch ZIP download of history."""
     view_permission = permission_service.get_view_history_permission(session.username)
     if view_permission == 'none':
         raise HTTPException(status_code=403, detail="您没有下载历史记录的权限")
@@ -605,16 +605,16 @@ async def batch_download_sessions(
     permission_service: IntegratedPermissionService = Depends(get_permission_service)
 ):
     """
-    批量下载多个会话的翻译结果
-    
+    Download the translation results of several sessions as a batch
+
     Args:
-        request: 批量下载请求
-        session: 用户会话
-        history_service: 历史管理服务
-        permission_service: 权限管理服务
-    
+        request: the batch download request
+        session: the user session
+        history_service: the history management service
+        permission_service: the permission management service
+
     Returns:
-        FileResponse: ZIP文件
+        FileResponse: the ZIP file
     """
     # Check the view permission
     view_permission = permission_service.get_view_history_permission(session.username)
@@ -678,15 +678,15 @@ async def get_history_file(
     permission_service: IntegratedPermissionService = Depends(get_permission_service)
 ):
     """
-    获取历史记录中的单个文件
-    
+    Get a single file of the history
+
     Args:
-        session_token: 会话令牌
-        filename: 文件名
-        session: 用户会话
-    
+        session_token: the session token
+        filename: the file name
+        session: the user session
+
     Returns:
-        FileResponse: 文件内容
+        FileResponse: the file content
     """
     # Check the view permission
     view_permission = permission_service.get_view_history_permission(session.username)
@@ -738,7 +738,7 @@ async def create_history_file_download_ticket(
     history_service: HistoryManagementService = Depends(get_history_service),
     permission_service: IntegratedPermissionService = Depends(get_permission_service)
 ):
-    """为历史单文件下载创建短时票据。"""
+    """Create a short-lived ticket for the download of a single history file."""
     view_permission = permission_service.get_view_history_permission(session.username)
     if view_permission == 'none':
         raise HTTPException(status_code=403, detail="您没有查看历史记录的权限")
@@ -771,16 +771,16 @@ async def delete_session(
     permission_service: IntegratedPermissionService = Depends(get_permission_service)
 ):
     """
-    删除翻译会话
-    
+    Delete a translation session
+
     Args:
-        session_token: 会话令牌
-        session: 用户会话
-        history_service: 历史管理服务
-        permission_service: 权限管理服务
-    
+        session_token: the session token
+        session: the user session
+        history_service: the history management service
+        permission_service: the permission management service
+
     Returns:
-        dict: 删除结果
+        dict: the result of the deletion
     """
     # Check the delete permission
     is_admin = session.role == 'admin'

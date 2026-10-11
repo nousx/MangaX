@@ -479,7 +479,7 @@ async def batch_images(req: Request, data: BatchTranslateRequest):
         # When offline translation is allowed, create a Request wrapper that never disconnects
         if allow_offline:
             class OfflineRequest:
-                """支持离线翻译的 Request 包装器"""
+                """Request wrapper that supports offline translation"""
                 async def is_disconnected(self):
                     return False  # Never disconnects
             req = OfflineRequest()

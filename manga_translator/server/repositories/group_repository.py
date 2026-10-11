@@ -163,17 +163,17 @@ class GroupRepository(BaseJSONRepository):
     def update_group_config(self, group_id: str, config: dict) -> bool:
         """
         Update the configuration for a group.
-        
-        支持的配置字段：
-        - parameter_config: 参数配置
-        - allowed_translators: 翻译器白名单
-        - denied_translators: 翻译器黑名单
-        - default_preset_id: 默认API密钥预设ID
-        
+
+        Supported configuration fields:
+        - parameter_config: the parameter configuration
+        - allowed_translators: the translator allow list
+        - denied_translators: the translator deny list
+        - default_preset_id: ID of the default API key preset
+
         Args:
             group_id: Group identifier
-            config: New configuration (可以包含多个字段)
-        
+            config: New configuration (may contain several fields)
+
         Returns:
             True if updated successfully, False if group doesn't exist
         """

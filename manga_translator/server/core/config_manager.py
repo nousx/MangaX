@@ -1,7 +1,7 @@
 """
-配置管理模块
+Configuration management module
 
-负责加载、保存和管理服务器配置和管理员配置。
+Responsible for loading, saving and managing the server configuration and the administrator configuration.
 """
 
 import json
@@ -134,7 +134,7 @@ AVAILABLE_WORKFLOWS = [
 
 
 def load_admin_settings() -> dict:
-    """从文件加载管理员配置"""
+    """Load the administrator configuration from the file"""
     if os.path.exists(ADMIN_CONFIG_PATH):
         try:
             with open(ADMIN_CONFIG_PATH, 'r', encoding='utf-8') as f:
@@ -193,7 +193,7 @@ def load_admin_settings() -> dict:
 
 
 def save_admin_settings(settings: dict) -> bool:
-    """保存管理员配置到文件"""
+    """Save the administrator configuration to the file"""
     try:
         os.makedirs(os.path.dirname(ADMIN_CONFIG_PATH), exist_ok=True)
         with open(ADMIN_CONFIG_PATH, 'w', encoding='utf-8') as f:
@@ -206,7 +206,7 @@ def save_admin_settings(settings: dict) -> bool:
 
 
 def load_default_config_dict() -> dict:
-    """加载默认配置文件，返回字典格式（包含Qt UI的完整配置）"""
+    """Load the default configuration file; returns a dictionary (with the full configuration of the Qt UI)"""
     if os.path.exists(SERVER_CONFIG_PATH):
         try:
             with open(SERVER_CONFIG_PATH, 'r', encoding='utf-8') as f:
@@ -221,7 +221,7 @@ def load_default_config_dict() -> dict:
 
 
 def load_default_config() -> Config:
-    """加载默认配置文件，返回Config对象"""
+    """Load the default configuration file; returns a Config object"""
     config_dict = load_default_config_dict()
     if config_dict:
         try:
@@ -234,7 +234,7 @@ def load_default_config() -> Config:
 
 
 def parse_config(config_str: str) -> Config:
-    """解析配置，如果为空则使用默认配置"""
+    """Parse a configuration; the default configuration is used when it is empty"""
     if not config_str or config_str.strip() in ('{}', ''):
         print("[INFO] No config provided, using default config from config/config.json")
         return load_default_config()
@@ -246,14 +246,14 @@ def parse_config(config_str: str) -> Config:
 
 def get_available_workflows(mode: str = 'user', admin_settings: Optional[dict] = None) -> list:
     """
-    获取可用的工作流列表
-    
+    Get the list of available workflows
+
     Args:
-        mode: 'user' 或 'admin'
-        admin_settings: 管理员设置字典（可选）
-    
+        mode: 'user' or 'admin'
+        admin_settings: dictionary of the administrator settings (optional)
+
     Returns:
-        可用的工作流列表
+        The list of available workflows
     """
     # In user mode, when the administrator has set a list of allowed workflows
     if mode == 'user' and admin_settings and admin_settings.get('allowed_workflows'):
@@ -266,15 +266,15 @@ def get_available_workflows(mode: str = 'user', admin_settings: Optional[dict] =
 @contextmanager
 def temp_env_vars(env_vars: dict):
     """
-    临时设置环境变量的上下文管理器
-    
-    注意：此函数不再使用全局锁，因为：
-    1. 并发控制由 translation_semaphore 处理
-    2. 全局锁会导致所有翻译任务串行化，严重影响性能
-    3. 如果需要用户级别的 API Key 隔离，应该在翻译器层面处理
-    
+    Context manager that sets environment variables temporarily
+
+    Note: this function no longer uses a global lock, because:
+    1. concurrency is controlled by translation_semaphore
+    2. a global lock would serialise all translation tasks and hurt performance badly
+    3. if per-user isolation of API keys is needed, it should be handled at the translator level
+
     Args:
-        env_vars: 要临时设置的环境变量字典
+        env_vars: dictionary of the environment variables to set temporarily
     """
     import logging
     logger = logging.getLogger('manga_translator.server')
@@ -326,7 +326,7 @@ def temp_env_vars(env_vars: dict):
 
 
 def init_server_config_file():
-    """初始化服务器配置文件（如果不存在，从模板复制）"""
+    """Initialise the server configuration file (copied from the template when it does not exist)"""
     if not os.path.exists(SERVER_CONFIG_PATH):
         EXAMPLE_CONFIG_PATH = get_config_path('config-example.json')
         if os.path.exists(EXAMPLE_CONFIG_PATH):
@@ -342,7 +342,7 @@ def init_server_config_file():
 # ============================================================================
 
 def load_translation(locale: str) -> dict:
-    """加载指定语言的翻译文件"""
+    """Load the translation file of the given language"""
     if locale in translations_cache:
         return translations_cache[locale]
     
@@ -370,7 +370,7 @@ def load_translation(locale: str) -> dict:
 
 
 def get_available_locales() -> dict:
-    """获取可用的语言列表"""
+    """Get the list of available languages"""
     locales = {}
     if os.path.exists(desktop_locales_dir):
         for filename in os.listdir(desktop_locales_dir):
@@ -390,10 +390,10 @@ _admin_config_mtime = 0
 
 def reload_admin_settings_if_changed() -> bool:
     """
-    检查配置文件是否变化，如果变化则重新加载。
-    
+    Check whether the configuration file changed, and reload it when it did.
+
     Returns:
-        bool: 配置是否被重新加载
+        bool: whether the configuration was reloaded
     """
     global admin_settings, _admin_config_mtime
     
@@ -428,7 +428,7 @@ def reload_admin_settings_if_changed() -> bool:
 
 def get_admin_settings() -> dict:
     """
-    获取管理员配置（会自动检查热加载）
+    Get the administrator configuration (the hot reload is checked automatically)
     """
     reload_admin_settings_if_changed()
     return admin_settings

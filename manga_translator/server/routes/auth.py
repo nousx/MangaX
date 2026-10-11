@@ -394,12 +394,12 @@ async def check_session(req: Request):
 @router.get("/status")
 async def get_auth_status(req: Request):
     """
-    获取认证系统状态
-    
-    返回：
-    - need_setup: 是否需要初始设置（没有任何用户）
-    - registration_enabled: 是否开启了用户注册
-    - setup_token_required: 当前客户端完成初始设置是否需要设置令牌（非本机访问时为 true）
+    Get the status of the authentication system
+
+    Returns:
+    - need_setup: whether the initial setup is needed (there are no users at all)
+    - registration_enabled: whether user registration is enabled
+    - setup_token_required: whether the current client needs the setup token to complete the initial setup (true for access from another machine)
     """
     if not _account_service:
         raise HTTPException(500, detail="Services not initialized")
@@ -422,9 +422,9 @@ async def get_auth_status(req: Request):
 @router.post("/setup")
 async def initial_setup(request: InitialSetupRequest, req: Request):
     """
-    初始设置端点 - 创建第一个管理员账户
-    
-    只有在系统没有任何用户时才能调用此端点。
+    Initial setup endpoint - creates the first administrator account
+
+    This endpoint can only be called while the system has no users at all.
     """
     if not _account_service or not _session_service or not _audit_service:
         raise HTTPException(500, detail="Services not initialized")
@@ -521,9 +521,9 @@ async def initial_setup(request: InitialSetupRequest, req: Request):
 @router.post("/register")
 async def register_user(request: RegisterRequest, req: Request):
     """
-    用户注册端点
-    
-    只有在管理员开启注册功能时才能使用。
+    User registration endpoint
+
+    It can only be used when the administrator has enabled registration.
     """
     if not _account_service or not _session_service or not _audit_service:
         raise HTTPException(500, detail="Services not initialized")

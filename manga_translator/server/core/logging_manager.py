@@ -1,7 +1,7 @@
 """
-日志管理模块
+Log management module
 
-负责日志队列管理、任务日志隔离和日志导出功能。
+Responsible for the log queue, per-task log isolation and log export.
 """
 
 import contextvars
@@ -28,40 +28,40 @@ current_session_id = contextvars.ContextVar('current_session_id', default=None)
 
 
 def generate_task_id() -> str:
-    """生成唯一的任务ID"""
+    """Generate a unique task ID"""
     return str(uuid.uuid4())
 
 
 def set_task_id(task_id: str):
-    """设置当前任务ID"""
+    """Set the current task ID"""
     current_task_id.set(task_id)
 
 
 def get_task_id() -> Optional[str]:
-    """获取当前任务ID"""
+    """Get the current task ID"""
     return current_task_id.get()
 
 
 def set_session_id(session_id: str):
-    """设置当前会话ID"""
+    """Set the current session ID"""
     current_session_id.set(session_id)
 
 
 def get_session_id() -> Optional[str]:
-    """获取当前会话ID"""
+    """Get the current session ID"""
     return current_session_id.get()
 
 
 def add_log(message: str, level: str = "INFO", task_id: Optional[str] = None, session_id: Optional[str] = None, skip_print: bool = False):
     """
-    添加日志到队列（支持任务隔离和会话隔离）
-    
+    Add a log to the queue (with task isolation and session isolation)
+
     Args:
-        message: 日志消息
-        level: 日志级别
-        task_id: 任务ID（可选，如果不提供则从上下文获取）
-        session_id: 会话ID（可选，如果不提供则从上下文获取）
-        skip_print: 是否跳过控制台输出（避免与 logging handler 重复输出）
+        message: the log message
+        level: the log level
+        task_id: the task ID (optional; taken from the context when not given)
+        session_id: the session ID (optional; taken from the context when not given)
+        skip_print: whether console output is skipped (to avoid output duplicated by the logging handler)
     """
     log_entry = {
         "timestamp": datetime.now(timezone.utc).isoformat(),
@@ -100,16 +100,16 @@ def add_log(message: str, level: str = "INFO", task_id: Optional[str] = None, se
 
 def get_logs(level: Optional[str] = None, limit: int = 100, task_id: Optional[str] = None, session_id: Optional[str] = None) -> list:
     """
-    获取日志
-    
+    Get the logs
+
     Args:
-        level: 日志级别过滤（INFO, WARNING, ERROR等）
-        limit: 返回的日志数量限制
-        task_id: 任务ID（如果指定，只返回该任务的日志）
-        session_id: 会话ID（如果指定，只返回该会话的日志）
-    
+        level: filter by log level (INFO, WARNING, ERROR and so on)
+        limit: limit on the number of logs returned
+        task_id: the task ID (when given, only the logs of that task are returned)
+        session_id: the session ID (when given, only the logs of that session are returned)
+
     Returns:
-        日志列表
+        The list of logs
     """
     with task_logs_lock:
         if task_id:
@@ -136,27 +136,27 @@ def get_logs(level: Optional[str] = None, limit: int = 100, task_id: Optional[st
 
 def get_task_logs(task_id: str, limit: int = 50) -> list:
     """
-    获取指定任务的日志（简化接口）
-    
+    Get the logs of the given task (simplified interface)
+
     Args:
-        task_id: 任务ID
-        limit: 返回的日志数量限制
-    
+        task_id: the task ID
+        limit: limit on the number of logs returned
+
     Returns:
-        日志列表
+        The list of logs
     """
     return get_logs(task_id=task_id, limit=limit)
 
 
 def export_logs(task_id: Optional[str] = None) -> tuple[str, str]:
     """
-    导出日志为文本文件
-    
+    Export the logs as a text file
+
     Args:
-        task_id: 任务ID（可选）
-    
+        task_id: the task ID (optional)
+
     Returns:
-        (filename, log_text) 元组
+        A (filename, log_text) tuple
     """
     with task_logs_lock:
         if task_id:
@@ -177,7 +177,7 @@ def export_logs(task_id: Optional[str] = None) -> tuple[str, str]:
 
 
 class WebLogHandler(logging.Handler):
-    """自定义日志处理器，捕获manga_translator的日志"""
+    """Custom log handler that captures the logs of manga_translator"""
     
     def __init__(self):
         super().__init__()
@@ -207,7 +207,7 @@ _log_handler_initialized = False
 
 
 def setup_log_handler():
-    """设置日志处理器"""
+    """Set up the log handler"""
     global _log_handler_initialized
     
     # Guard against initialising twice

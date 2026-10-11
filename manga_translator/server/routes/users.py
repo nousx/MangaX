@@ -24,7 +24,7 @@ router = APIRouter(prefix="/api/admin/users", tags=["users"])
 # ============================================================================
 
 class CreateUserRequest(BaseModel):
-    """创建用户请求"""
+    """Request for creating a user"""
     # Character rules are enforced by AccountService.create_user (returns 400).
     username: str = Field(..., min_length=1, max_length=50, description="用户名")
     password: str = Field(..., min_length=6, description="密码（至少6个字符）")
@@ -34,7 +34,7 @@ class CreateUserRequest(BaseModel):
 
 
 class UpdateUserRequest(BaseModel):
-    """更新用户请求"""
+    """Request for updating a user"""
     role: Optional[str] = Field(None, pattern="^(admin|user)$", description="角色")
     group: Optional[str] = Field(None, description="用户组名称")
     is_active: Optional[bool] = Field(None, description="是否激活")
@@ -42,7 +42,7 @@ class UpdateUserRequest(BaseModel):
 
 
 class UpdatePermissionsRequest(BaseModel):
-    """更新权限请求"""
+    """Request for updating permissions"""
     allowed_translators: Optional[List[str]] = Field(None, description="允许使用的翻译器列表（白名单）")
     denied_translators: Optional[List[str]] = Field(None, description="禁止使用的翻译器列表（黑名单）")
     allowed_ocr: Optional[List[str]] = Field(None, description="允许使用的 OCR 列表（白名单）")
@@ -62,7 +62,7 @@ class UpdatePermissionsRequest(BaseModel):
 
 
 class UserResponse(BaseModel):
-    """用户响应"""
+    """User response"""
     username: str
     role: str
     group: str
@@ -83,14 +83,14 @@ async def create_user(
     session: Session = Depends(require_admin)
 ):
     """
-    创建新用户（管理员）
-    
-    需要管理员权限。创建新用户账号并设置初始权限。
-    
-    - **username**: 用户名（唯一）
-    - **password**: 密码（至少6个字符）
-    - **role**: 角色（admin 或 user）
-    - **permissions**: 用户权限（可选，如果不提供则使用默认权限）
+    Create a new user (administrator)
+
+    Requires administrator permission. Creates a new user account and sets its initial permissions.
+
+    - **username**: the user name (unique)
+    - **password**: the password (at least 6 characters)
+    - **role**: the role (admin or user)
+    - **permissions**: the user permissions (optional; the default permissions are used when not given)
     """
     account_service, _, _ = get_services()
     
@@ -167,9 +167,9 @@ async def list_users(
     session: Session = Depends(require_admin)
 ):
     """
-    列出所有用户（管理员）
-    
-    需要管理员权限。返回所有用户账号的列表，包含配额使用情况。
+    List all users (administrator)
+
+    Requires administrator permission. Returns the list of all user accounts, with their quota usage.
     """
     account_service, _, permission_service = get_services()
     
@@ -221,11 +221,11 @@ async def get_user(
     session: Session = Depends(require_admin)
 ):
     """
-    获取用户信息（管理员）
-    
-    需要管理员权限。返回指定用户的详细信息。
-    
-    - **username**: 用户名
+    Get the information of a user (administrator)
+
+    Requires administrator permission. Returns the details of the given user.
+
+    - **username**: the user name
     """
     account_service, _, _ = get_services()
     
@@ -276,14 +276,14 @@ async def update_user(
     session: Session = Depends(require_admin)
 ):
     """
-    更新用户信息（管理员）
-    
-    需要管理员权限。更新用户的角色、激活状态等信息。
-    
-    - **username**: 用户名
-    - **role**: 角色（可选）
-    - **is_active**: 是否激活（可选）
-    - **must_change_password**: 是否必须修改密码（可选）
+    Update the information of a user (administrator)
+
+    Requires administrator permission. Updates the role, the active state and other information of a user.
+
+    - **username**: the user name
+    - **role**: the role (optional)
+    - **is_active**: whether the account is active (optional)
+    - **must_change_password**: whether the password must be changed (optional)
     """
     account_service, session_service, _ = get_services()
     
@@ -382,11 +382,11 @@ async def delete_user(
     session: Session = Depends(require_admin)
 ):
     """
-    删除用户（管理员）
-    
-    需要管理员权限。删除指定用户账号并终止其所有会话。
-    
-    - **username**: 用户名
+    Delete a user (administrator)
+
+    Requires administrator permission. Deletes the given user account and terminates all its sessions.
+
+    - **username**: the user name
     """
     account_service, session_service, _ = get_services()
     
@@ -462,17 +462,17 @@ async def update_user_permissions(
     session: Session = Depends(require_admin)
 ):
     """
-    更新用户权限（管理员）
-    
-    需要管理员权限。更新用户的权限配置。
-    
-    - **username**: 用户名
-    - **allowed_translators**: 允许使用的翻译器列表（可选）
-    - **allowed_parameters**: 允许调整的参数列表（可选）
-    - **max_concurrent_tasks**: 最大并发任务数（可选）
-    - **daily_quota**: 每日翻译配额（可选，-1表示无限制）
-    - **can_upload_files**: 是否可以上传文件（可选）
-    - **can_delete_files**: 是否可以删除文件（可选）
+    Update the permissions of a user (administrator)
+
+    Requires administrator permission. Updates the permission configuration of a user.
+
+    - **username**: the user name
+    - **allowed_translators**: list of translators the user may use (optional)
+    - **allowed_parameters**: list of parameters the user may adjust (optional)
+    - **max_concurrent_tasks**: maximum number of concurrent tasks (optional)
+    - **daily_quota**: daily translation quota (optional; -1 means unlimited)
+    - **can_upload_files**: whether the user may upload files (optional)
+    - **can_delete_files**: whether the user may delete files (optional)
     """
     account_service, _, permission_service = get_services()
     

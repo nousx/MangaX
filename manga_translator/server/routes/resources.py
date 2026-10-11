@@ -1,7 +1,7 @@
 """
-资源管理路由模块
+Resource management routes
 
-提供用户资源（提示词和字体）的上传、查询和删除API。
+Provides the API for uploading, listing and deleting user resources (prompts and fonts).
 """
 
 import logging
@@ -29,11 +29,11 @@ def init_resource_routes(
     permission_service: IntegratedPermissionService
 ) -> None:
     """
-    初始化资源路由使用的服务实例
-    
+    Initialise the service instances the resource routes use
+
     Args:
-        resource_service: 资源管理服务
-        permission_service: 权限管理服务
+        resource_service: the resource management service
+        permission_service: the permission management service
     """
     global _resource_service, _permission_service
     _resource_service = resource_service
@@ -42,14 +42,14 @@ def init_resource_routes(
 
 
 def get_resource_service() -> ResourceManagementService:
-    """获取资源管理服务实例"""
+    """Get the resource management service instance"""
     if not _resource_service:
         raise RuntimeError("Resource service not initialized")
     return _resource_service
 
 
 def get_permission_service() -> IntegratedPermissionService:
-    """获取权限管理服务实例"""
+    """Get the permission management service instance"""
     if not _permission_service:
         raise RuntimeError("Permission service not initialized")
     return _permission_service
@@ -67,21 +67,21 @@ async def upload_prompt(
     permission_service: IntegratedPermissionService = Depends(get_permission_service)
 ):
     """
-    上传提示词文件
-    
-    需求: 1.1, 1.5
-    
+    Upload a prompt file
+
+    Requirements: 1.1, 1.5
+
     Args:
-        file: 上传的文件
-        session: 用户会话
-        resource_service: 资源管理服务
-        permission_service: 权限管理服务
-    
+        file: the uploaded file
+        session: the user session
+        resource_service: the resource management service
+        permission_service: the permission management service
+
     Returns:
-        dict: 包含上传的资源信息
-    
+        dict: contains the information of the uploaded resource
+
     Raises:
-        HTTPException: 如果权限不足或上传失败
+        HTTPException: when the permission is insufficient or the upload fails
     """
     # Check the upload permission
     if not permission_service.check_upload_prompt_permission(session.username):
@@ -117,16 +117,16 @@ async def get_prompts(
     resource_service: ResourceManagementService = Depends(get_resource_service)
 ):
     """
-    获取用户的提示词列表
-    
-    需求: 1.3
-    
+    Get the list of prompts of the user
+
+    Requirements: 1.3
+
     Args:
-        session: 用户会话
-        resource_service: 资源管理服务
-    
+        session: the user session
+        resource_service: the resource management service
+
     Returns:
-        dict: 包含提示词列表
+        dict: contains the list of prompts
     """
     try:
         prompts = resource_service.get_user_prompts(session.username)
@@ -150,21 +150,21 @@ async def delete_prompt(
     permission_service: IntegratedPermissionService = Depends(get_permission_service)
 ):
     """
-    删除提示词
-    
-    需求: 1.4
-    
+    Delete a prompt
+
+    Requirements: 1.4
+
     Args:
-        resource_id: 资源ID
-        session: 用户会话
-        resource_service: 资源管理服务
-        permission_service: 权限管理服务
-    
+        resource_id: the resource ID
+        session: the user session
+        resource_service: the resource management service
+        permission_service: the permission management service
+
     Returns:
-        dict: 删除结果
-    
+        dict: the result of the deletion
+
     Raises:
-        HTTPException: 如果权限不足或删除失败
+        HTTPException: when the permission is insufficient or the deletion fails
     """
     # Check the delete permission
     if not permission_service.check_delete_own_files_permission(session.username):
@@ -214,21 +214,21 @@ async def upload_font(
     permission_service: IntegratedPermissionService = Depends(get_permission_service)
 ):
     """
-    上传字体文件
-    
-    需求: 2.1, 2.5
-    
+    Upload a font file
+
+    Requirements: 2.1, 2.5
+
     Args:
-        file: 上传的文件
-        session: 用户会话
-        resource_service: 资源管理服务
-        permission_service: 权限管理服务
-    
+        file: the uploaded file
+        session: the user session
+        resource_service: the resource management service
+        permission_service: the permission management service
+
     Returns:
-        dict: 包含上传的资源信息
-    
+        dict: contains the information of the uploaded resource
+
     Raises:
-        HTTPException: 如果权限不足或上传失败
+        HTTPException: when the permission is insufficient or the upload fails
     """
     # Check the upload permission
     has_permission = permission_service.check_upload_font_permission(session.username)
@@ -274,16 +274,16 @@ async def get_fonts(
     resource_service: ResourceManagementService = Depends(get_resource_service)
 ):
     """
-    获取用户的字体列表
-    
-    需求: 2.3
-    
+    Get the list of fonts of the user
+
+    Requirements: 2.3
+
     Args:
-        session: 用户会话
-        resource_service: 资源管理服务
-    
+        session: the user session
+        resource_service: the resource management service
+
     Returns:
-        dict: 包含字体列表
+        dict: contains the list of fonts
     """
     try:
         fonts = resource_service.get_user_fonts(session.username)
@@ -307,21 +307,21 @@ async def delete_font(
     permission_service: IntegratedPermissionService = Depends(get_permission_service)
 ):
     """
-    删除字体
-    
-    需求: 2.4
-    
+    Delete a font
+
+    Requirements: 2.4
+
     Args:
-        resource_id: 资源ID
-        session: 用户会话
-        resource_service: 资源管理服务
-        permission_service: 权限管理服务
-    
+        resource_id: the resource ID
+        session: the user session
+        resource_service: the resource management service
+        permission_service: the permission management service
+
     Returns:
-        dict: 删除结果
-    
+        dict: the result of the deletion
+
     Raises:
-        HTTPException: 如果权限不足或删除失败
+        HTTPException: when the permission is insufficient or the deletion fails
     """
     # Check the delete permission
     if not permission_service.check_delete_own_files_permission(session.username):
@@ -360,14 +360,14 @@ async def delete_font_by_name(
     permission_service: IntegratedPermissionService = Depends(get_permission_service)
 ):
     """
-    按文件名删除字体
-    
+    Delete a font by file name
+
     Args:
-        filename: 文件名
-        session: 用户会话
-    
+        filename: the file name
+        session: the user session
+
     Returns:
-        dict: 删除结果
+        dict: the result of the deletion
     """
     if not permission_service.check_delete_own_files_permission(session.username):
         raise HTTPException(status_code=403, detail="您没有删除文件的权限")
@@ -405,14 +405,14 @@ async def delete_prompt_by_name(
     permission_service: IntegratedPermissionService = Depends(get_permission_service)
 ):
     """
-    按文件名删除提示词
-    
+    Delete a prompt by file name
+
     Args:
-        filename: 文件名
-        session: 用户会话
-    
+        filename: the file name
+        session: the user session
+
     Returns:
-        dict: 删除结果
+        dict: the result of the deletion
     """
     if not permission_service.check_delete_own_files_permission(session.username):
         raise HTTPException(status_code=403, detail="您没有删除文件的权限")
@@ -452,14 +452,14 @@ async def get_resource_stats(
     resource_service: ResourceManagementService = Depends(get_resource_service)
 ):
     """
-    获取用户的资源统计信息
-    
+    Get the resource statistics of the user
+
     Args:
-        session: 用户会话
-        resource_service: 资源管理服务
-    
+        session: the user session
+        resource_service: the resource management service
+
     Returns:
-        dict: 资源统计信息
+        dict: the resource statistics
     """
     try:
         stats = resource_service.get_resource_stats(session.username)

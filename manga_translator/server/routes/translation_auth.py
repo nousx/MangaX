@@ -30,24 +30,24 @@ logger = logging.getLogger(__name__)
 
 def filter_disabled_parameters(config: Config, username: str, permission_service) -> None:
     """
-    过滤掉用户无权修改的参数，使用管理员设置的默认值
-    
-    执行层面合并用户组和用户的配置:
-    - 用户组白名单/黑名单
-    - 用户白名单/黑名单
-    
-    优先级（从高到低）:
-    1. 用户黑名单（最高优先级，即使用户组白名单允许也禁用）
-    2. 用户白名单（可以解锁用户组黑名单）
-    3. 用户组黑名单
-    4. 用户组白名单
-    
-    最终禁用 = 用户黑名单 + (用户组黑名单 - 用户白名单)
-    
+    Filter out the parameters the user may not change, using the defaults set by the administrator
+
+    The configurations of the user group and of the user are merged at execution time:
+    - the allow/deny lists of the user group
+    - the allow/deny lists of the user
+
+    Priority (high to low):
+    1. the user's deny list (highest priority; it disables even what the allow list of the user group permits)
+    2. the user's allow list (it can unlock the deny list of the user group)
+    3. the deny list of the user group
+    4. the allow list of the user group
+
+    Finally disabled = the user's deny list + (the deny list of the user group - the user's allow list)
+
     Args:
-        config: 翻译配置对象
-        username: 用户名
-        permission_service: 权限服务
+        config: the translation configuration object
+        username: the user name
+        permission_service: the permission service
     """
     try:
         # Get the services

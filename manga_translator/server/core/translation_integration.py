@@ -1,9 +1,9 @@
 """
-翻译流程集成模块
+Translation flow integration module
 
-将权限检查、配额管理、历史记录和日志记录集成到翻译流程中。
+Integrates permission checks, quota management, history and logging into the translation flow.
 
-需求: 1.2, 3.1, 27.2, 31.2
+Requirements: 1.2, 3.1, 27.2, 31.2
 """
 
 import logging
@@ -15,15 +15,15 @@ logger = logging.getLogger(__name__)
 
 class TranslationIntegrationService:
     """
-    翻译流程集成服务
-    
-    负责在翻译开始、进行和完成时协调各个服务：
-    - 权限检查
-    - 配额检查和更新
-    - 历史记录保存
-    - 日志记录
-    
-    需求: 1.2, 3.1, 27.2, 31.2
+    Translation flow integration service
+
+    Coordinates the services when a translation starts, progresses and completes:
+    - permission checks
+    - quota checks and updates
+    - saving the history
+    - logging
+
+    Requirements: 1.2, 3.1, 27.2, 31.2
     """
     
     def __init__(
@@ -34,13 +34,13 @@ class TranslationIntegrationService:
         log_service=None
     ):
         """
-        初始化翻译集成服务
-        
+        Initialise the translation integration service
+
         Args:
-            permission_service: 权限服务
-            quota_service: 配额服务
-            history_service: 历史服务
-            log_service: 日志服务
+            permission_service: the permission service
+            quota_service: the quota service
+            history_service: the history service
+            log_service: the log service
         """
         self.permission_service = permission_service
         self.quota_service = quota_service
@@ -55,16 +55,16 @@ class TranslationIntegrationService:
         translator: str
     ) -> Tuple[bool, Optional[str]]:
         """
-        检查翻译权限
-        
+        Check the translation permission
+
         Args:
-            username: 用户名
-            translator: 翻译器名称
-        
+            username: the user name
+            translator: name of the translator
+
         Returns:
-            Tuple[bool, Optional[str]]: (是否允许, 错误消息)
-        
-        需求: 1.2
+            Tuple[bool, Optional[str]]: (whether it is allowed, error message)
+
+        Requirements: 1.2
         """
         if not self.permission_service:
             logger.warning("Permission service not available, allowing by default")
@@ -95,16 +95,16 @@ class TranslationIntegrationService:
         image_count: int = 1
     ) -> Tuple[bool, Optional[str]]:
         """
-        翻译前检查配额
-        
+        Check the quota before translating
+
         Args:
-            username: 用户名
-            image_count: 要翻译的图片数量
-        
+            username: the user name
+            image_count: number of images to translate
+
         Returns:
-            Tuple[bool, Optional[str]]: (是否允许, 错误消息)
-        
-        需求: 27.2
+            Tuple[bool, Optional[str]]: (whether it is allowed, error message)
+
+        Requirements: 27.2
         """
         if not self.quota_service:
             logger.warning("Quota service not available, allowing by default")
@@ -132,18 +132,18 @@ class TranslationIntegrationService:
         config: Optional[Dict[str, Any]] = None
     ) -> bool:
         """
-        翻译开始时的处理
-        
+        Handling when a translation starts
+
         Args:
-            session_token: 会话令牌
-            username: 用户名
-            translator: 翻译器名称
-            config: 翻译配置
-        
+            session_token: the session token
+            username: the user name
+            translator: name of the translator
+            config: the translation configuration
+
         Returns:
-            bool: 是否成功
-        
-        需求: 31.2
+            bool: whether it succeeded
+
+        Requirements: 31.2
         """
         try:
             # Log the start of the translation
@@ -176,18 +176,18 @@ class TranslationIntegrationService:
         message: str = ""
     ) -> bool:
         """
-        翻译进行中的处理
-        
+        Handling while a translation is in progress
+
         Args:
-            session_token: 会话令牌
-            username: 用户名
-            progress: 进度 (0-100)
-            message: 进度消息
-        
+            session_token: the session token
+            username: the user name
+            progress: the progress (0-100)
+            message: the progress message
+
         Returns:
-            bool: 是否成功
-        
-        需求: 31.2
+            bool: whether it succeeded
+
+        Requirements: 31.2
         """
         try:
             # Log the progress of the translation
@@ -220,19 +220,19 @@ class TranslationIntegrationService:
         metadata: Optional[Dict[str, Any]] = None
     ) -> bool:
         """
-        翻译完成时的处理
-        
+        Handling when a translation completes
+
         Args:
-            session_token: 会话令牌
-            username: 用户名
-            result_files: 结果文件列表
-            image_count: 成功翻译的图片数量
-            metadata: 元数据
-        
+            session_token: the session token
+            username: the user name
+            result_files: list of result files
+            image_count: number of images translated successfully
+            metadata: the metadata
+
         Returns:
-            bool: 是否成功
-        
-        需求: 3.1, 27.2, 31.2
+            bool: whether it succeeded
+
+        Requirements: 3.1, 27.2, 31.2
         """
         try:
             # 1. Update the quota (on success only)
@@ -283,18 +283,18 @@ class TranslationIntegrationService:
         error_details: Optional[Dict[str, Any]] = None
     ) -> bool:
         """
-        翻译错误时的处理
-        
+        Handling when a translation fails
+
         Args:
-            session_token: 会话令牌
-            username: 用户名
-            error_message: 错误消息
-            error_details: 错误详情
-        
+            session_token: the session token
+            username: the user name
+            error_message: the error message
+            error_details: details of the error
+
         Returns:
-            bool: 是否成功
-        
-        需求: 31.2
+            bool: whether it succeeded
+
+        Requirements: 31.2
         """
         try:
             # Log the translation error
@@ -321,13 +321,13 @@ class TranslationIntegrationService:
     
     def _sanitize_config(self, config: Dict[str, Any]) -> Dict[str, Any]:
         """
-        清理配置，移除敏感信息
-        
+        Clean a configuration by removing sensitive information
+
         Args:
-            config: 原始配置
-        
+            config: the original configuration
+
         Returns:
-            Dict[str, Any]: 清理后的配置
+            Dict[str, Any]: the cleaned configuration
         """
         if not config:
             return {}
@@ -362,16 +362,16 @@ def init_translation_integration(
     log_service=None
 ) -> TranslationIntegrationService:
     """
-    初始化翻译集成服务
-    
+    Initialise the translation integration service
+
     Args:
-        permission_service: 权限服务
-        quota_service: 配额服务
-        history_service: 历史服务
-        log_service: 日志服务
-    
+        permission_service: the permission service
+        quota_service: the quota service
+        history_service: the history service
+        log_service: the log service
+
     Returns:
-        TranslationIntegrationService: 集成服务实例
+        TranslationIntegrationService: the integration service instance
     """
     global _integration_service
     _integration_service = TranslationIntegrationService(
@@ -386,9 +386,9 @@ def init_translation_integration(
 
 def get_translation_integration() -> Optional[TranslationIntegrationService]:
     """
-    获取翻译集成服务实例
-    
+    Get the translation integration service instance
+
     Returns:
-        Optional[TranslationIntegrationService]: 集成服务实例
+        Optional[TranslationIntegrationService]: the integration service instance
     """
     return _integration_service

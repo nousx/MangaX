@@ -1,7 +1,7 @@
 """
-配额管理路由模块
+Quota management routes
 
-提供配额查询、统计和管理API。
+Provides the API for querying quotas, statistics and management.
 """
 
 import logging
@@ -24,10 +24,10 @@ _quota_service: QuotaManagementService = None
 
 def init_quota_routes(quota_service: QuotaManagementService) -> None:
     """
-    初始化配额路由使用的服务实例
-    
+    Initialise the service instance the quota routes use
+
     Args:
-        quota_service: 配额管理服务
+        quota_service: the quota management service
     """
     global _quota_service
     _quota_service = quota_service
@@ -35,7 +35,7 @@ def init_quota_routes(quota_service: QuotaManagementService) -> None:
 
 
 def get_quota_service() -> QuotaManagementService:
-    """获取配额管理服务实例"""
+    """Get the quota management service instance"""
     if not _quota_service:
         raise RuntimeError("Quota service not initialized")
     return _quota_service
@@ -46,7 +46,7 @@ def get_quota_service() -> QuotaManagementService:
 # ============================================================================
 
 class QuotaStatsResponse(BaseModel):
-    """配额统计响应"""
+    """Quota statistics response"""
     user_id: str
     daily_limit: int
     used_today: int
@@ -56,25 +56,25 @@ class QuotaStatsResponse(BaseModel):
 
 
 class AllQuotaStatsResponse(BaseModel):
-    """所有用户配额统计响应"""
+    """Response with the quota statistics of all users"""
     quotas: Dict[str, QuotaStatsResponse]
     total_users: int
 
 
 class QuotaResetRequest(BaseModel):
-    """配额重置请求"""
+    """Quota reset request"""
     user_id: Optional[str] = None  # None means reset all users
 
 
 class QuotaResetResponse(BaseModel):
-    """配额重置响应"""
+    """Quota reset response"""
     success: bool
     message: str
     users_reset: Optional[int] = None
 
 
 class SetQuotaLimitsRequest(BaseModel):
-    """设置配额限制请求"""
+    """Request for setting quota limits"""
     user_id: str
     max_file_size: Optional[int] = None
     max_files_per_upload: Optional[int] = None
@@ -92,10 +92,10 @@ async def get_user_quota_stats(
     quota_service: QuotaManagementService = Depends(get_quota_service)
 ):
     """
-    获取当前用户的配额统计
-    
+    Get the quota statistics of the current user
+
     Returns:
-        QuotaStatsResponse: 配额统计信息
+        QuotaStatsResponse: the quota statistics
     """
     try:
         stats = quota_service.get_quota_stats(session.username)
@@ -129,10 +129,10 @@ async def get_all_quota_stats(
     quota_service: QuotaManagementService = Depends(get_quota_service)
 ):
     """
-    获取所有用户的配额统计（管理员）
-    
+    Get the quota statistics of all users (administrator)
+
     Returns:
-        AllQuotaStatsResponse: 所有用户的配额统计
+        AllQuotaStatsResponse: the quota statistics of all users
     """
     try:
         all_stats = quota_service.get_all_quota_stats()
@@ -166,13 +166,13 @@ async def reset_quota(
     quota_service: QuotaManagementService = Depends(get_quota_service)
 ):
     """
-    手动重置配额（管理员）
-    
+    Reset quotas by hand (administrator)
+
     Args:
-        request: 重置请求，包含可选的user_id
-        
+        request: the reset request, with an optional user_id
+
     Returns:
-        QuotaResetResponse: 重置结果
+        QuotaResetResponse: the result of the reset
     """
     try:
         if request.user_id:
@@ -222,13 +222,13 @@ async def set_quota_limits(
     quota_service: QuotaManagementService = Depends(get_quota_service)
 ):
     """
-    设置用户的配额限制（管理员）
-    
+    Set the quota limits of a user (administrator)
+
     Args:
-        request: 配额限制设置请求
-        
+        request: the request for setting quota limits
+
     Returns:
-        dict: 操作结果
+        dict: the result of the operation
     """
     try:
         success = quota_service.set_user_quota_limits(
@@ -263,13 +263,13 @@ async def get_user_quota_stats_admin(
     quota_service: QuotaManagementService = Depends(get_quota_service)
 ):
     """
-    获取指定用户的配额统计（管理员）
-    
+    Get the quota statistics of the given user (administrator)
+
     Args:
-        user_id: 用户ID
-        
+        user_id: the user ID
+
     Returns:
-        QuotaStatsResponse: 配额统计信息
+        QuotaStatsResponse: the quota statistics
     """
     try:
         stats = quota_service.get_quota_stats(user_id)

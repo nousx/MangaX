@@ -1,7 +1,7 @@
 """
-权限管理服务（PermissionService）
+Permission management service (PermissionService)
 
-检查用户权限、过滤配置数据、管理并发限制和配额。
+Checks user permissions, filters configuration data, and manages concurrency limits and quotas.
 """
 
 import logging
@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 
 class PermissionService:
-    """权限管理服务"""
+    """Permission management service"""
 
     FEATURE_PERMISSION_FIELDS = {
         'translator': ('allowed_translators', 'denied_translators'),
@@ -28,10 +28,10 @@ class PermissionService:
     
     def __init__(self, account_service: AccountService):
         """
-        初始化权限管理服务
-        
+        Initialise the permission management service
+
         Args:
-            account_service: 账号管理服务实例
+            account_service: the account management service instance
         """
         self.account_service = account_service
         
@@ -68,13 +68,13 @@ class PermissionService:
 
     def check_feature_permission(self, username: str, feature_type: str, feature_name: str) -> bool:
         """
-        检查指定能力的权限。
+        Check the permission for the given capability.
 
-        优先级（从高到低）：
-        1. 用户黑名单
-        2. 用户白名单（可解锁用户组黑名单）
-        3. 用户组黑名单
-        4. 用户组白名单
+        Priority (high to low):
+        1. the user's deny list
+        2. the user's allow list (it can unlock the deny list of the user group)
+        3. the deny list of the user group
+        4. the allow list of the user group
         """
         account = self.account_service.get_user(username)
         if not account:
@@ -108,42 +108,42 @@ class PermissionService:
         return False
 
     def filter_allowed_options(self, username: str, feature_type: str, options: list[str]) -> list[str]:
-        """根据用户权限过滤选项列表。"""
+        """Filter a list of options by the permissions of a user."""
         return [
             option for option in options
             if self.check_feature_permission(username, feature_type, option)
         ]
 
     def check_translator_permission(self, username: str, translator: str) -> bool:
-        """检查翻译器权限。"""
+        """Check the translator permission."""
         return self.check_feature_permission(username, 'translator', translator)
 
     def check_ocr_permission(self, username: str, ocr: str) -> bool:
-        """检查 OCR 权限。"""
+        """Check the OCR permission."""
         return self.check_feature_permission(username, 'ocr', ocr)
 
     def check_colorizer_permission(self, username: str, colorizer: str) -> bool:
-        """检查上色器权限。"""
+        """Check the colorizer permission."""
         return self.check_feature_permission(username, 'colorizer', colorizer)
 
     def check_renderer_permission(self, username: str, renderer: str) -> bool:
-        """检查渲染器权限。"""
+        """Check the renderer permission."""
         return self.check_feature_permission(username, 'renderer', renderer)
 
     def check_workflow_permission(self, username: str, workflow: str) -> bool:
-        """检查工作流权限。"""
+        """Check the workflow permission."""
         return self.check_feature_permission(username, 'workflow', workflow)
     
     def check_parameter_permission(self, username: str, parameter: str) -> bool:
         """
-        检查参数权限
-        
+        Check a parameter permission
+
         Args:
-            username: 用户名
-            parameter: 参数名称（如 "translator.target_lang"）
-        
+            username: the user name
+            parameter: name of the parameter (such as "translator.target_lang")
+
         Returns:
-            bool: 用户是否有权限调整该参数
+            bool: whether the user may adjust that parameter
         """
         account = self.account_service.get_user(username)
         if not account:
@@ -161,14 +161,14 @@ class PermissionService:
     
     def filter_parameters(self, username: str, parameters: Dict[str, Any]) -> Dict[str, Any]:
         """
-        过滤参数，只保留用户有权限的参数
-        
+        Filter parameters, keeping only those the user has permission for
+
         Args:
-            username: 用户名
-            parameters: 原始参数字典
-        
+            username: the user name
+            parameters: the original parameter dictionary
+
         Returns:
-            Dict[str, Any]: 过滤后的参数字典
+            Dict[str, Any]: the filtered parameter dictionary
         """
         account = self.account_service.get_user(username)
         if not account:
@@ -193,13 +193,13 @@ class PermissionService:
     
     def check_offline_translation_permission(self, username: str) -> bool:
         """
-        检查用户是否有离线翻译权限（用户离线后任务继续执行）
-        
+        Check whether a user has the offline translation permission (tasks keep running after the user goes offline)
+
         Args:
-            username: 用户名
-        
+            username: the user name
+
         Returns:
-            bool: 是否允许离线翻译
+            bool: whether offline translation is allowed
         """
         account = self.account_service.get_user(username)
         if not account:
@@ -227,18 +227,18 @@ class PermissionService:
     
     def check_concurrent_limit(self, username: str) -> bool:
         """
-        检查并发限制
-        
-        注意：此函数应在 increment_task_count 之后调用，
-        所以检查条件是 current_tasks <= max（而不是 <）
-        
-        优先级：用户组配置 > 用户配置
-        
+        Check the concurrency limit
+
+        Note: this function should be called after increment_task_count,
+        so the condition checked is current_tasks <= max (not <)
+
+        Priority: the user group configuration > the user configuration
+
         Args:
-            username: 用户名
-        
+            username: the user name
+
         Returns:
-            bool: 用户是否可以创建新任务（未超过并发限制）
+            bool: whether the user may create a new task (the concurrency limit is not exceeded)
         """
         account = self.account_service.get_user(username)
         if not account:
@@ -262,13 +262,13 @@ class PermissionService:
     
     def get_effective_max_concurrent(self, username: str) -> int:
         """
-        获取用户的有效最大并发数（优先从用户组获取）
-        
+        Get the effective maximum concurrency of a user (taken from the user group first)
+
         Args:
-            username: 用户名
-        
+            username: the user name
+
         Returns:
-            int: 最大并发任务数
+            int: the maximum number of concurrent tasks
         """
         account = self.account_service.get_user(username)
         if not account:
@@ -295,13 +295,13 @@ class PermissionService:
     
     def check_daily_quota(self, username: str) -> bool:
         """
-        检查每日配额
-        
+        Check the daily quota
+
         Args:
-            username: 用户名
-        
+            username: the user name
+
         Returns:
-            bool: 用户是否还有剩余配额
+            bool: whether the user has quota left
         """
         account = self.account_service.get_user(username)
         if not account:
@@ -352,20 +352,20 @@ class PermissionService:
     
     def increment_task_count(self, username: str) -> None:
         """
-        增加用户的活动任务计数
-        
+        Increase the active task count of a user
+
         Args:
-            username: 用户名
+            username: the user name
         """
         self.active_tasks[username] = self.active_tasks.get(username, 0) + 1
         logger.debug(f"User '{username}' active tasks: {self.active_tasks[username]}")
     
     def decrement_task_count(self, username: str) -> None:
         """
-        减少用户的活动任务计数
-        
+        Decrease the active task count of a user
+
         Args:
-            username: 用户名
+            username: the user name
         """
         if username in self.active_tasks:
             self.active_tasks[username] = max(0, self.active_tasks[username] - 1)
@@ -373,10 +373,10 @@ class PermissionService:
     
     def increment_daily_usage(self, username: str) -> None:
         """
-        增加用户的每日使用量
-        
+        Increase the daily usage of a user
+
         Args:
-            username: 用户名
+            username: the user name
         """
         today = date.today()
         usage_key = (username, today)
@@ -385,13 +385,13 @@ class PermissionService:
     
     def get_user_permissions(self, username: str) -> Optional[UserPermissions]:
         """
-        获取用户权限
-        
+        Get the permissions of a user
+
         Args:
-            username: 用户名
-        
+            username: the user name
+
         Returns:
-            Optional[UserPermissions]: 用户权限对象，如果用户不存在返回 None
+            Optional[UserPermissions]: the user permissions object, or None when the user does not exist
         """
         account = self.account_service.get_user(username)
         if not account:
@@ -405,14 +405,14 @@ class PermissionService:
         permissions: UserPermissions
     ) -> bool:
         """
-        更新用户权限（立即生效）
-        
+        Update the permissions of a user (takes effect at once)
+
         Args:
-            username: 用户名
-            permissions: 新的权限对象
-        
+            username: the user name
+            permissions: the new permissions object
+
         Returns:
-            bool: 更新是否成功
+            bool: whether the update succeeded
         """
         try:
             success = self.account_service.update_user(
@@ -434,14 +434,14 @@ class PermissionService:
         config: Dict[str, Any]
     ) -> Dict[str, Any]:
         """
-        为用户过滤配置数据
-        
+        Filter configuration data for a user
+
         Args:
-            username: 用户名
-            config: 原始配置字典
-        
+            username: the user name
+            config: the original configuration dictionary
+
         Returns:
-            Dict[str, Any]: 过滤后的配置字典
+            Dict[str, Any]: the filtered configuration dictionary
         """
         account = self.account_service.get_user(username)
         if not account:
@@ -484,25 +484,25 @@ class PermissionService:
     
     def get_active_task_count(self, username: str) -> int:
         """
-        获取用户的活动任务数
-        
+        Get the number of active tasks of a user
+
         Args:
-            username: 用户名
-        
+            username: the user name
+
         Returns:
-            int: 活动任务数
+            int: the number of active tasks
         """
         return self.active_tasks.get(username, 0)
     
     def get_daily_usage(self, username: str) -> int:
         """
-        获取用户今天的使用量
-        
+        Get today's usage of a user
+
         Args:
-            username: 用户名
-        
+            username: the user name
+
         Returns:
-            int: 今天的使用量
+            int: today's usage
         """
         today = date.today()
         usage_key = (username, today)
@@ -510,13 +510,13 @@ class PermissionService:
     
     def get_effective_daily_quota(self, username: str) -> int:
         """
-        获取用户的有效每日配额（优先从用户组获取）
-        
+        Get the effective daily quota of a user (taken from the user group first)
+
         Args:
-            username: 用户名
-        
+            username: the user name
+
         Returns:
-            int: 每日配额，-1 表示无限制
+            int: the daily quota; -1 means unlimited
         """
         account = self.account_service.get_user(username)
         if not account:
@@ -543,7 +543,7 @@ class PermissionService:
     
     def cleanup_old_usage_data(self) -> None:
         """
-        清理旧的使用数据（保留最近7天）
+        Remove old usage data (the last 7 days are kept)
         """
         today = date.today()
         keys_to_remove = []
@@ -561,13 +561,13 @@ class PermissionService:
     
     def get_effective_file_permissions(self, username: str) -> dict:
         """
-        获取用户的有效文件操作权限（优先从用户组获取）
-        
+        Get the effective file operation permissions of a user (taken from the user group first)
+
         Args:
-            username: 用户名
-        
+            username: the user name
+
         Returns:
-            dict: 文件操作权限字典
+            dict: dictionary of the file operation permissions
         """
         account = self.account_service.get_user(username)
         if not account:
@@ -612,17 +612,17 @@ class PermissionService:
         return result
     
     def can_upload_fonts(self, username: str) -> bool:
-        """检查用户是否可以上传字体"""
+        """Check whether a user may upload fonts"""
         return self.get_effective_file_permissions(username).get('can_upload_fonts', False)
     
     def can_delete_fonts(self, username: str) -> bool:
-        """检查用户是否可以删除字体"""
+        """Check whether a user may delete fonts"""
         return self.get_effective_file_permissions(username).get('can_delete_fonts', False)
     
     def can_upload_prompts(self, username: str) -> bool:
-        """检查用户是否可以上传提示词"""
+        """Check whether a user may upload prompts"""
         return self.get_effective_file_permissions(username).get('can_upload_prompts', False)
     
     def can_delete_prompts(self, username: str) -> bool:
-        """检查用户是否可以删除提示词"""
+        """Check whether a user may delete prompts"""
         return self.get_effective_file_permissions(username).get('can_delete_prompts', False)

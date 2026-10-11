@@ -1,13 +1,13 @@
 """
-日志管理服务 (Log Management Service)
+Log Management Service
 
-负责管理系统日志和对话框日志，包括：
-- 记录翻译事件
-- 查询和检索日志
-- 导出日志
-- 实时日志推送
+Responsible for the system logs and the session (dialog) logs, including:
+- recording translation events
+- querying and retrieving logs
+- exporting logs
+- pushing logs live
 
-需求: 31.1-31.6, 32.1-32.8, 33.1-33.8
+Requirements: 31.1-31.6, 32.1-32.8, 33.1-33.8
 """
 
 import json
@@ -19,14 +19,14 @@ from manga_translator.server.repositories.log_repository import LogRepository
 
 
 class LogManagementService:
-    """日志管理服务类"""
+    """Log management service class"""
     
     def __init__(self, log_repository: LogRepository):
         """
-        初始化日志管理服务
-        
+        Initialise the log management service
+
         Args:
-            log_repository: 日志数据仓库
+            log_repository: the log data repository
         """
         self.log_repo = log_repository
     
@@ -34,21 +34,21 @@ class LogManagementService:
                              event_type: str, message: str, level: str = 'info',
                              details: Optional[Dict[str, Any]] = None) -> LogEntry:
         """
-        记录翻译事件
-        
+        Record a translation event
+
         Args:
-            session_token: 会话令牌
-            user_id: 用户ID
-            event_type: 事件类型 (translation_start, translation_progress, 
+            session_token: the session token
+            user_id: the user ID
+            event_type: the event type (translation_start, translation_progress,
                        translation_complete, translation_error, etc.)
-            message: 日志消息
-            level: 日志级别 (info, warning, error)
-            details: 详细信息字典
-        
+            message: the log message
+            level: the log level (info, warning, error)
+            details: dictionary of details
+
         Returns:
-            创建的日志条目
-        
-        需求: 31.2, 33.2
+            The log entry that was created
+
+        Requirements: 31.2, 33.2
         """
         # Validate the log level
         valid_levels = ['info', 'warning', 'error']
@@ -73,17 +73,17 @@ class LogManagementService:
     def get_session_logs(self, session_token: str, user_id: str,
                         is_admin: bool = False) -> List[Dict[str, Any]]:
         """
-        获取对话框日志
-        
+        Get the logs of a session
+
         Args:
-            session_token: 会话令牌
-            user_id: 请求用户ID
-            is_admin: 是否为管理员
-        
+            session_token: the session token
+            user_id: ID of the requesting user
+            is_admin: whether the user is an administrator
+
         Returns:
-            日志列表
-        
-        需求: 31.1, 32.4, 33.1, 35.3-35.8
+            The list of logs
+
+        Requirements: 31.1, 32.4, 33.1, 35.3-35.8
         """
         # Get the session logs
         logs = self.log_repo.get_session_logs(session_token)
@@ -103,18 +103,18 @@ class LogManagementService:
                      start_time: Optional[str] = None,
                      end_time: Optional[str] = None) -> List[Dict[str, Any]]:
         """
-        获取用户的所有日志
-        
+        Get all logs of a user
+
         Args:
-            user_id: 用户ID
-            level: 可选的日志级别过滤
-            start_time: 可选的开始时间
-            end_time: 可选的结束时间
-        
+            user_id: the user ID
+            level: optional filter by log level
+            start_time: optional start time
+            end_time: optional end time
+
         Returns:
-            日志列表
-        
-        需求: 31.3, 34.1
+            The list of logs
+
+        Requirements: 31.3, 34.1
         """
         logs = self.log_repo.search_logs(
             user_id=user_id,
@@ -133,18 +133,18 @@ class LogManagementService:
                        end_time: Optional[str] = None,
                        limit: Optional[int] = None) -> List[Dict[str, Any]]:
         """
-        获取系统日志（管理员）
-        
+        Get the system logs (administrator)
+
         Args:
-            level: 可选的日志级别过滤
-            start_time: 可选的开始时间
-            end_time: 可选的结束时间
-            limit: 可选的结果数量限制
-        
+            level: optional filter by log level
+            start_time: optional start time
+            end_time: optional end time
+            limit: optional limit on the number of results
+
         Returns:
-            日志列表
-        
-        需求: 31.1-31.6, 32.1
+            The list of logs
+
+        Requirements: 31.1-31.6, 32.1
         """
         logs = self.log_repo.search_logs(
             level=level,
@@ -165,17 +165,17 @@ class LogManagementService:
                              start_time: Optional[str] = None,
                              end_time: Optional[str] = None) -> Dict[str, List[Dict[str, Any]]]:
         """
-        获取所有对话框日志（管理员）
-        
+        Get the logs of all sessions (administrator)
+
         Args:
-            user_id: 可选的用户ID过滤
-            start_time: 可选的开始时间
-            end_time: 可选的结束时间
-        
+            user_id: optional filter by user ID
+            start_time: optional start time
+            end_time: optional end time
+
         Returns:
-            按会话令牌分组的日志字典
-        
-        需求: 32.1-32.8
+            Dictionary of logs grouped by session token
+
+        Requirements: 32.1-32.8
         """
         logs = self.log_repo.search_logs(
             user_id=user_id,
@@ -205,21 +205,21 @@ class LogManagementService:
                    end_time: Optional[str] = None,
                    keyword: Optional[str] = None) -> List[Dict[str, Any]]:
         """
-        搜索日志
-        
+        Search the logs
+
         Args:
-            user_id: 用户ID过滤
-            session_token: 会话令牌过滤
-            level: 日志级别过滤
-            event_type: 事件类型过滤
-            start_time: 开始时间
-            end_time: 结束时间
-            keyword: 关键词搜索（在消息中）
-        
+            user_id: filter by user ID
+            session_token: filter by session token
+            level: filter by log level
+            event_type: filter by event type
+            start_time: the start time
+            end_time: the end time
+            keyword: keyword search (in the message)
+
         Returns:
-            匹配的日志列表
-        
-        需求: 31.3, 32.3
+            The list of matching logs
+
+        Requirements: 31.3, 32.3
         """
         # Basic search
         logs = self.log_repo.search_logs(
@@ -247,18 +247,18 @@ class LogManagementService:
     def export_session_logs(self, session_token: str, user_id: str,
                            is_admin: bool = False, format: str = 'json') -> bytes:
         """
-        导出单个对话框日志
-        
+        Export the logs of a single session
+
         Args:
-            session_token: 会话令牌
-            user_id: 请求用户ID
-            is_admin: 是否为管理员
-            format: 导出格式 (json 或 txt)
-        
+            session_token: the session token
+            user_id: ID of the requesting user
+            is_admin: whether the user is an administrator
+            format: the export format (json or txt)
+
         Returns:
-            日志文件内容（字节）
-        
-        需求: 31.5, 33.8
+            The content of the log file (bytes)
+
+        Requirements: 31.5, 33.8
         """
         # Get the logs (with the permission check)
         logs = self.get_session_logs(session_token, user_id, is_admin)
@@ -291,18 +291,18 @@ class LogManagementService:
                                      user_id: str, is_admin: bool = False,
                                      format: str = 'json') -> bytes:
         """
-        批量导出多个对话框日志
-        
+        Export the logs of several sessions as a batch
+
         Args:
-            session_tokens: 会话令牌列表
-            user_id: 请求用户ID
-            is_admin: 是否为管理员
-            format: 导出格式 (json 或 txt)
-        
+            session_tokens: list of session tokens
+            user_id: ID of the requesting user
+            is_admin: whether the user is an administrator
+            format: the export format (json or txt)
+
         Returns:
-            日志文件内容（字节）
-        
-        需求: 32.8
+            The content of the log file (bytes)
+
+        Requirements: 32.8
         """
         all_logs = {}
         
@@ -346,17 +346,17 @@ class LogManagementService:
                           start_time: Optional[str] = None,
                           end_time: Optional[str] = None) -> Dict[str, Any]:
         """
-        获取日志统计信息
-        
+        Get log statistics
+
         Args:
-            user_id: 可选的用户ID过滤
-            start_time: 可选的开始时间
-            end_time: 可选的结束时间
-        
+            user_id: optional filter by user ID
+            start_time: optional start time
+            end_time: optional end time
+
         Returns:
-            统计信息字典
-        
-        需求: 31.6, 32.2
+            Dictionary of statistics
+
+        Requirements: 31.6, 32.2
         """
         logs = self.log_repo.search_logs(
             user_id=user_id,
@@ -395,17 +395,17 @@ class LogManagementService:
     def clear_session_logs(self, session_token: str, user_id: str,
                           is_admin: bool = False) -> int:
         """
-        清空对话框日志
-        
+        Clear the logs of a session
+
         Args:
-            session_token: 会话令牌
-            user_id: 请求用户ID
-            is_admin: 是否为管理员
-        
+            session_token: the session token
+            user_id: ID of the requesting user
+            is_admin: whether the user is an administrator
+
         Returns:
-            删除的日志数量
-        
-        需求: 33.6
+            The number of logs deleted
+
+        Requirements: 33.6
         """
         # Verify the permission first
         self.get_session_logs(session_token, user_id, is_admin)
@@ -417,13 +417,13 @@ class LogManagementService:
     
     def cleanup_old_logs(self, days: int = 30) -> int:
         """
-        清理旧日志
-        
+        Remove old logs
+
         Args:
-            days: 保留天数
-        
+            days: number of days kept
+
         Returns:
-            删除的日志数量
+            The number of logs deleted
         """
         cutoff_time = datetime.now(timezone.utc) - timedelta(days=days)
         cutoff_timestamp = cutoff_time.isoformat()

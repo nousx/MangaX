@@ -1,11 +1,11 @@
 """
-权限计算服务
+Permission calculation service
 
-实现基于用户组和用户个人设置的权限计算逻辑。
+Implements the permission calculation from the user group and the user's own settings.
 
-计算规则：
-最终权限 = (用户组可见参数 + 用户allowed列表) - 用户denied列表
-优先级：用户个人设置 > 用户组设置
+Rule:
+final permissions = (parameters visible to the user group + the user's allowed list) - the user's denied list
+Priority: the user's own settings > the user group settings
 """
 
 import logging
@@ -18,20 +18,20 @@ logger = logging.getLogger(__name__)
 
 
 class PermissionCalculator:
-    """权限计算器"""
+    """Permission calculator"""
     
     def __init__(self):
         self.group_service = get_group_service()
     
     def calculate_allowed_translators(self, user: UserAccount) -> List[str]:
         """
-        计算用户最终可以使用的翻译器列表
-        
+        Compute the final list of translators a user may use
+
         Args:
-            user: 用户账号对象
-        
+            user: the user account object
+
         Returns:
-            允许使用的翻译器列表
+            The list of translators the user may use
         """
         # An administrator is allowed everything
         if user.role == 'admin':
@@ -65,13 +65,13 @@ class PermissionCalculator:
     
     def calculate_allowed_parameters(self, user: UserAccount) -> List[str]:
         """
-        计算用户最终可以调整的参数列表
-        
+        Compute the final list of parameters a user may adjust
+
         Args:
-            user: 用户账号对象
-        
+            user: the user account object
+
         Returns:
-            允许调整的参数列表
+            The list of parameters the user may adjust
         """
         # An administrator is allowed everything
         if user.role == 'admin':
@@ -114,14 +114,14 @@ class PermissionCalculator:
     
     def get_parameter_config(self, user: UserAccount, parameter: str) -> Optional[Dict[str, Any]]:
         """
-        获取用户对特定参数的配置（可见性、只读、默认值）
-        
+        Get the configuration of a specific parameter for a user (visibility, read-only, default value)
+
         Args:
-            user: 用户账号对象
-            parameter: 参数名称
-        
+            user: the user account object
+            parameter: name of the parameter
+
         Returns:
-            参数配置字典，如果不可访问返回 None
+            The configuration dictionary of the parameter, or None when it is not accessible
         """
         # Check whether the user may access this parameter
         allowed_params = self.calculate_allowed_parameters(user)
@@ -144,28 +144,28 @@ class PermissionCalculator:
     
     def check_translator_permission(self, user: UserAccount, translator: str) -> bool:
         """
-        检查用户是否有权限使用指定的翻译器
-        
+        Check whether a user may use the given translator
+
         Args:
-            user: 用户账号对象
-            translator: 翻译器名称
-        
+            user: the user account object
+            translator: name of the translator
+
         Returns:
-            是否有权限
+            Whether the user has the permission
         """
         allowed = self.calculate_allowed_translators(user)
         return '*' in allowed or translator in allowed
     
     def check_parameter_permission(self, user: UserAccount, parameter: str) -> bool:
         """
-        检查用户是否有权限调整指定的参数
-        
+        Check whether a user may adjust the given parameter
+
         Args:
-            user: 用户账号对象
-            parameter: 参数名称
-        
+            user: the user account object
+            parameter: name of the parameter
+
         Returns:
-            是否有权限
+            Whether the user has the permission
         """
         allowed = self.calculate_allowed_parameters(user)
         return '*' in allowed or parameter in allowed
@@ -176,7 +176,7 @@ _permission_calculator: Optional[PermissionCalculator] = None
 
 
 def get_permission_calculator() -> PermissionCalculator:
-    """获取权限计算器实例"""
+    """Get the permission calculator instance"""
     global _permission_calculator
     if _permission_calculator is None:
         _permission_calculator = PermissionCalculator()

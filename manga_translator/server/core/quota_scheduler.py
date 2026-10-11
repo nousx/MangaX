@@ -1,7 +1,7 @@
 """
-配额调度器 (QuotaScheduler)
+Quota scheduler (QuotaScheduler)
 
-管理配额相关的定时任务，包括每日配额重置。
+Manages the scheduled tasks related to quotas, including the daily quota reset.
 """
 
 import logging
@@ -13,14 +13,14 @@ logger = logging.getLogger(__name__)
 
 
 class QuotaScheduler:
-    """配额调度器 - 管理配额相关的定时任务"""
+    """Quota scheduler - manages the scheduled tasks related to quotas"""
     
     def __init__(self, quota_service):
         """
-        初始化配额调度器
-        
+        Initialise the quota scheduler
+
         Args:
-            quota_service: QuotaManagementService实例
+            quota_service: the QuotaManagementService instance
         """
         self.quota_service = quota_service
         self._running = False
@@ -30,7 +30,7 @@ class QuotaScheduler:
         logger.info("QuotaScheduler initialized")
     
     def start(self):
-        """启动调度器"""
+        """Start the scheduler"""
         if self._running:
             logger.warning("QuotaScheduler is already running")
             return
@@ -42,7 +42,7 @@ class QuotaScheduler:
         logger.info("QuotaScheduler started")
     
     def stop(self):
-        """停止调度器"""
+        """Stop the scheduler"""
         if not self._running:
             return
         
@@ -53,7 +53,7 @@ class QuotaScheduler:
         logger.info("QuotaScheduler stopped")
     
     def _run_scheduler(self):
-        """运行调度器主循环"""
+        """Run the main loop of the scheduler"""
         logger.info("QuotaScheduler main loop started")
         
         # Record the date of the last reset
@@ -82,7 +82,7 @@ class QuotaScheduler:
         logger.info("QuotaScheduler main loop ended")
     
     def _reset_all_daily_quotas(self):
-        """重置所有用户的每日配额"""
+        """Reset the daily quota of all users"""
         try:
             success = self.quota_service.reset_daily_quota(user_id=None)
             if success:
@@ -93,6 +93,6 @@ class QuotaScheduler:
             logger.error(f"Error resetting daily quotas: {e}", exc_info=True)
     
     def force_reset_now(self):
-        """立即强制重置所有配额（手动触发）"""
+        """Force a reset of all quotas now (triggered by hand)"""
         logger.info("Forcing immediate quota reset")
         self._reset_all_daily_quotas()

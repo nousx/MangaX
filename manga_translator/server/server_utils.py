@@ -1,5 +1,5 @@
 """
-服务器工具函数
+Server utility functions
 """
 import io
 import secrets
@@ -10,12 +10,12 @@ from manga_translator.server.to_json import to_translation
 
 
 def generate_nonce():
-    """生成随机 nonce"""
+    """Generate a random nonce"""
     return secrets.token_hex(16)
 
 
 def transform_to_image(ctx):
-    """将翻译上下文转换为图片字节"""
+    """Convert a translation context to image bytes"""
     # Check whether ctx.result exists
     if ctx.result is None:
         raise HTTPException(500, detail="Translation failed: no result image generated")
@@ -34,10 +34,10 @@ def transform_to_image(ctx):
 
 
 def transform_to_json(ctx):
-    """将翻译上下文转换为 JSON 字节"""
+    """Convert a translation context to JSON bytes"""
     return to_translation(ctx).model_dump_json().encode("utf-8")
 
 
 def transform_to_bytes(ctx):
-    """将翻译上下文转换为字节"""
+    """Convert a translation context to bytes"""
     return to_translation(ctx).to_bytes()

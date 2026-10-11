@@ -26,7 +26,7 @@ router = APIRouter(prefix="/audit", tags=["audit"])
 # ============================================================================
 
 class AuditEventResponse(BaseModel):
-    """审计事件响应"""
+    """Audit event response"""
     event_id: str
     timestamp: str
     event_type: str
@@ -52,17 +52,17 @@ async def query_audit_events(
     session: Session = Depends(require_admin)
 ):
     """
-    查询审计事件（管理员）
-    
-    需要管理员权限。查询审计日志，支持多种筛选条件。
-    
-    - **username**: 按用户名筛选（可选）
-    - **event_type**: 按事件类型筛选（可选）
-    - **result**: 按结果筛选（success 或 failure，可选）
-    - **start_time**: 开始时间，ISO格式（可选）
-    - **end_time**: 结束时间，ISO格式（可选）
-    - **limit**: 返回的最大事件数（默认100，最大1000）
-    - **offset**: 跳过的事件数，用于分页（默认0）
+    Query audit events (administrator)
+
+    Requires administrator permission. Queries the audit log, with several filter conditions.
+
+    - **username**: filter by user name (optional)
+    - **event_type**: filter by event type (optional)
+    - **result**: filter by result (success or failure, optional)
+    - **start_time**: start time, ISO format (optional)
+    - **end_time**: end time, ISO format (optional)
+    - **limit**: maximum number of events returned (default 100, maximum 1000)
+    - **offset**: number of events skipped, for paging (default 0)
     """
     try:
         # Build the filter conditions
@@ -153,16 +153,16 @@ async def export_audit_events(
     session: Session = Depends(require_admin)
 ):
     """
-    导出审计日志（管理员）
-    
-    需要管理员权限。导出审计日志为 JSON 或 CSV 格式。
-    
-    - **username**: 按用户名筛选（可选）
-    - **event_type**: 按事件类型筛选（可选）
-    - **result**: 按结果筛选（success 或 failure，可选）
-    - **start_time**: 开始时间，ISO格式（可选）
-    - **end_time**: 结束时间，ISO格式（可选）
-    - **format**: 导出格式（json 或 csv，默认 json）
+    Export the audit log (administrator)
+
+    Requires administrator permission. Exports the audit log in JSON or CSV format.
+
+    - **username**: filter by user name (optional)
+    - **event_type**: filter by event type (optional)
+    - **result**: filter by result (success or failure, optional)
+    - **start_time**: start time, ISO format (optional)
+    - **end_time**: end time, ISO format (optional)
+    - **format**: export format (json or csv, default json)
     """
     try:
         # Build the filter conditions
