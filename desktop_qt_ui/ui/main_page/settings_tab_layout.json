@@ -98,10 +98,12 @@
         "translator.convert_to_simplified",
         "translator.codex_cli_path",
         "translator.codex_model",
+        "translator.codex_effort",
         "translator.codex_timeout",
         "translator.codex_batch_size",
         "translator.claude_cli_path",
         "translator.claude_model",
+        "translator.claude_effort",
         "translator.claude_timeout",
         "translator.claude_batch_size"
       ]

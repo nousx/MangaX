@@ -108,3 +108,15 @@ def test_codex_models_should_be_empty_when_the_cache_is_missing_or_unreadable(tm
         (tmp_path / "models_cache.json").write_text(content, encoding="utf-8")
 
     assert list_codex_models(tmp_path) == []
+
+
+def test_every_cli_translator_setting_should_have_a_row_on_the_settings_page():
+    layout = json.loads(
+        (_bootstrap.ROOT / "desktop_qt_ui" / "ui" / "main_page" / "settings_tab_layout.json").read_text(encoding="utf-8")
+    )
+    listed = {item for tab in layout["tabs"] for item in tab.get("items", []) if isinstance(item, str)}
+    cli_settings = {
+        f"translator.{name}" for name in TranslatorConfig.model_fields if name.startswith(("codex_", "claude_"))
+    }
+
+    assert cli_settings - listed == set()
