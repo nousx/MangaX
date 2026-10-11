@@ -246,7 +246,7 @@ class RealCUGANUpscaler(OfflineUpscaler):
         device = next(self.model.parameters()).device
         
         for img in image_batch:
-            # 确保输入是 PIL Image
+            # Make sure the input is a PIL Image
             if isinstance(img, np.ndarray):
                 img = Image.fromarray(img)
             img = normalize_rgb_image(img)
@@ -331,7 +331,7 @@ class RealCUGANUpscaler(OfflineUpscaler):
             output_np = output.squeeze(0).permute(1, 2, 0).cpu().numpy()
             output_np = np.clip(output_np, 0, 255).astype(np.uint8)
         
-        # ✅ 清理中间张量以释放显存
+        # ✅ Clear the intermediate tensors to free GPU memory
         del tensor
         del output
         if torch.cuda.is_available():

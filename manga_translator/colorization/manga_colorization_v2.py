@@ -51,7 +51,7 @@ class MangaColorizationV2(OfflineColorizer):
     async def _infer(self, image: Image.Image, colorization_size: int, denoise_sigma=25, **kwargs) -> Image.Image:
         # Size has to be multiple of 32
         img = np.array(normalize_rgb_image(image))
-        original_size = image.size  # 保存原始尺寸 (width, height)
+        original_size = image.size  # Keep the original size (width, height)
         max_size = min(*img.shape[:2])
         max_size -= max_size % 32
         if colorization_size > 0:
@@ -60,16 +60,16 @@ class MangaColorizationV2(OfflineColorizer):
             # size<=576 gives best results
             size = min(max_size, 576)
 
-        # Denoising前先保存原始img尺寸，因为denoiser可能会改变尺寸
+        # Keep the original size of img before denoising, because the denoiser may change it
         img_shape_before_denoise = img.shape[:2]
         
         if 0 <= denoise_sigma and denoise_sigma <= 255:
             img = self.denoiser.get_denoised_image(img, sigma=denoise_sigma)
         
-        # 如果denoiser改变了尺寸，恢复回去
+        # When the denoiser changed the size, restore it
         if img.shape[:2] != img_shape_before_denoise:
-            # denoiser可能缩小了图片，需要恢复
-            # 注意：cv2.resize的参数是 (width, height)，而shape是 (height, width, channels)
+            # The denoiser may have shrunk the image, so it has to be restored
+            # Note: cv2.resize takes (width, height), while shape is (height, width, channels)
             img = cv2.resize(img, (img_shape_before_denoise[1], img_shape_before_denoise[0]), interpolation=cv2.INTER_LINEAR)
 
         img, current_pad = resize_pad(img, size)
@@ -113,7 +113,7 @@ class MangaColorizationV2(OfflineColorizer):
         colored_image = result.numpy() * 255
         colored_img_pil = Image.fromarray(colored_image.astype(np.uint8))
         
-        # 恢复到原始尺寸
+        # Restore the original size
         if colored_img_pil.size != original_size:
             colored_img_pil = colored_img_pil.resize(original_size, Image.Resampling.LANCZOS)
         

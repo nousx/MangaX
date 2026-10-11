@@ -12,7 +12,7 @@ import torch
 from torch import nn as nn
 from torch.nn import functional as F
 
-# 使用模块所在目录的绝对路径，避免依赖当前工作目录
+# Use the absolute path of the module folder, so nothing depends on the current working directory
 root_path = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 if root_path not in sys.path:
     sys.path.append(root_path)
@@ -21,15 +21,15 @@ def q(inp,cache_mode):
     minn = inp.min()
     delta = maxx - minn
     if(cache_mode==2):
-        return ((inp-minn)/delta*255).round().byte().cpu(),delta,minn,inp.device#大概3倍延时#太慢了，屏蔽该模式
+        return ((inp-minn)/delta*255).round().byte().cpu(),delta,minn,inp.device# about 3 times the latency, too slow; this mode is disabled
     elif(cache_mode==1):
-        return ((inp-minn)/delta*255).round().byte(),delta,minn,inp.device#不用CPU转移
+        return ((inp-minn)/delta*255).round().byte(),delta,minn,inp.device# no transfer to the CPU
 def dq(inp,if_half,cache_mode,delta,minn,device):
     if(cache_mode==2):
         if(if_half is True):return inp.to(device).half()/255*delta+minn
         else:return inp.to(device).float()/255*delta+minn
     elif(cache_mode==1):
-        if(if_half is True):return inp.half()/255*delta+minn#不用CPU转移
+        if(if_half is True):return inp.half()/255*delta+minn# no transfer to the CPU
         else:return inp.float()/255*delta+minn
 class SEBlock(nn.Module):
     def __init__(self, in_channels, reduction=8, bias=False):
@@ -223,7 +223,7 @@ class UNet2(nn.Module):
         z = self.conv_bottom(x5)
         return z
 
-    def forward_a(self, x):#conv234结尾有se
+    def forward_a(self, x):# conv234 ends with se
         x1 = self.conv1(x)
         x2 = self.conv1_down(x1)
         x1 = F.pad(x1, (-16, -16, -16, -16))
@@ -231,20 +231,20 @@ class UNet2(nn.Module):
         x2 = self.conv2.conv(x2)
         return x1,x2
 
-    def forward_b(self, x2):  # conv234结尾有se
+    def forward_b(self, x2):  # conv234 ends with se
         x3 = self.conv2_down(x2)
         x2 = F.pad(x2, (-4, -4, -4, -4))
         x3 = F.leaky_relu(x3, 0.1, inplace=True)
         x3 = self.conv3.conv(x3)
         return x2,x3
 
-    def forward_c(self, x2,x3):  # conv234结尾有se
+    def forward_c(self, x2,x3):  # conv234 ends with se
         x3 = self.conv3_up(x3)
         x3 = F.leaky_relu(x3, 0.1, inplace=True)
         x4 = self.conv4.conv(x2 + x3)
         return x4
 
-    def forward_d(self, x1,x4):  # conv234结尾有se
+    def forward_d(self, x1,x4):  # conv234 ends with se
         x4 = self.conv4_up(x4)
         x4 = F.leaky_relu(x4, 0.1, inplace=True)
         x5 = self.conv5(x1 + x4)
@@ -261,10 +261,10 @@ class UpCunet2x(nn.Module):
         n, c, h0, w0 = x.shape
         if ("Half" in x.type()):if_half=True
         else:if_half=False
-        if(tile_mode==0):#不tile
+        if(tile_mode==0):# no tiling
             ph = ((h0 - 1) // 2 + 1) * 2
             pw = ((w0 - 1) // 2 + 1) * 2
-            x = F.pad(x, (18, 18 + pw - w0, 18, 18 + ph - h0), 'reflect')  # 需要保证被2整除
+            x = F.pad(x, (18, 18 + pw - w0, 18, 18 + ph - h0), 'reflect')  # must be divisible by 2
             x = self.unet1.forward(x)
             x0 = self.unet2.forward(x,alpha)
             x = F.pad(x, (-20, -20, -20, -20))
@@ -274,16 +274,16 @@ class UpCunet2x(nn.Module):
                 return ((x-0.15) * (255/0.7)).round().clamp_(0, 255).byte()
             else:
                 return (x * 255).round().clamp_(0, 255).byte()
-        elif(tile_mode==1):# 对长边减半
+        elif(tile_mode==1):# halve the long side
             if(w0>=h0):
-                crop_size_w=((w0-1)//4*4+4)//2#减半后能被2整除，所以要先被4整除
-                crop_size_h=(h0-1)//2*2+2#能被2整除
+                crop_size_w=((w0-1)//4*4+4)//2# divisible by 2 after halving, so it must be divisible by 4 first
+                crop_size_h=(h0-1)//2*2+2# divisible by 2
             else:
-                crop_size_h=((h0-1)//4*4+4)//2#减半后能被2整除，所以要先被4整除
-                crop_size_w=(w0-1)//2*2+2#能被2整除
+                crop_size_h=((h0-1)//4*4+4)//2# divisible by 2 after halving, so it must be divisible by 4 first
+                crop_size_w=(w0-1)//2*2+2# divisible by 2
             crop_size=(crop_size_h,crop_size_w)
         elif(tile_mode>=2):
-            tile_mode=min(min(h0,w0)//128,int(tile_mode))#最小短边为128*128
+            tile_mode=min(min(h0,w0)//128,int(tile_mode))# the minimum short side is 128*128
             t2=tile_mode*2
             crop_size=(((h0-1)//t2*t2+t2)//tile_mode,((w0-1)//t2*t2+t2)//tile_mode)
         else:
@@ -374,7 +374,7 @@ class UpCunet2x(nn.Module):
                 x0=self.unet2.forward_d(tmp_x1,tmp_x4)
                 if(cache_mode):x = dq(x[0], if_half, cache_mode,x[1], x[2], x[3])
                 del tmp_dict[i][j]
-                x = torch.add(x0, x)#x0是unet2的最终输出
+                x = torch.add(x0, x)# x0 is the final output of unet2
                 if(pro):
                     res[:, :, i * 2:i * 2 + h1 * 2 - 72, j * 2:j * 2 + w1 * 2 - 72] = ((x-0.15) * (255/0.7)).round().clamp_(0, 255).byte()
                 else:
@@ -387,10 +387,10 @@ class UpCunet2x(nn.Module):
         n, c, h0, w0 = x.shape
         if("Half" in x.type()):if_half=True
         else:if_half=False
-        if(tile_mode==0):#不tile
+        if(tile_mode==0):# no tiling
             ph = ((h0 - 1) // 2 + 1) * 2
             pw = ((w0 - 1) // 2 + 1) * 2
-            x = F.pad(x, (18, 18 + pw - w0, 18, 18 + ph - h0), 'reflect')  # 需要保证被2整除
+            x = F.pad(x, (18, 18 + pw - w0, 18, 18 + ph - h0), 'reflect')  # must be divisible by 2
             x = self.unet1.forward(x)
             x0 = self.unet2.forward(x,alpha)
             x = F.pad(x, (-20, -20, -20, -20))
@@ -400,16 +400,16 @@ class UpCunet2x(nn.Module):
                 return ((x-0.15) * (255/0.7)).round().clamp_(0, 255).byte()
             else:
                 return (x * 255).round().clamp_(0, 255).byte()
-        elif(tile_mode==1):# 对长边减半
+        elif(tile_mode==1):# halve the long side
             if(w0>=h0):
-                crop_size_w=((w0-1)//4*4+4)//2#减半后能被2整除，所以要先被4整除
-                crop_size_h=(h0-1)//2*2+2#能被2整除
+                crop_size_w=((w0-1)//4*4+4)//2# divisible by 2 after halving, so it must be divisible by 4 first
+                crop_size_h=(h0-1)//2*2+2# divisible by 2
             else:
-                crop_size_h=((h0-1)//4*4+4)//2#减半后能被2整除，所以要先被4整除
-                crop_size_w=(w0-1)//2*2+2#能被2整除
+                crop_size_h=((h0-1)//4*4+4)//2# divisible by 2 after halving, so it must be divisible by 4 first
+                crop_size_w=(w0-1)//2*2+2# divisible by 2
             crop_size=(crop_size_h,crop_size_w)#6.6G
-        elif(tile_mode>=2):#hw都减半
-            tile_mode=min(min(h0,w0)//128,int(tile_mode))#最小短边为128*128
+        elif(tile_mode>=2):# halve both h and w
+            tile_mode=min(min(h0,w0)//128,int(tile_mode))# the minimum short side is 128*128
             t2=tile_mode*2
             crop_size=(((h0-1)//t2*t2+t2)//tile_mode,((w0-1)//t2*t2+t2)//tile_mode)
         else:
@@ -514,9 +514,9 @@ class UpCunet2x(nn.Module):
         n, c, h0, w0 = x.shape
         if ("Half" in x.type()):if_half=True
         else:if_half=False
-        if(tile_mode<3):return self.forward(x,tile_mode,1,alpha,pro)#至少切成3x3
+        if(tile_mode<3):return self.forward(x,tile_mode,1,alpha,pro)# cut into at least 3x3
         elif(tile_mode>=3):
-            tile_mode=min(min(h0,w0)//128,int(tile_mode))#最小短边为128*128
+            tile_mode=min(min(h0,w0)//128,int(tile_mode))# the minimum short side is 128*128
             if (tile_mode < 3): return self.forward(x, tile_mode, 1, alpha,pro)
             t2=tile_mode*2
             crop_size=(((h0-1)//t2*t2+t2)//tile_mode,((w0-1)//t2*t2+t2)//tile_mode)
@@ -589,10 +589,10 @@ class UpCunet3x(nn.Module):
         n, c, h0, w0 = x.shape
         if("Half" in x.type()):if_half=True
         else:if_half=False
-        if(tile_mode==0):#不tile
+        if(tile_mode==0):# no tiling
             ph = ((h0 - 1) // 4 + 1) * 4
             pw = ((w0 - 1) // 4 + 1) * 4
-            x = F.pad(x, (14, 14 + pw - w0, 14, 14 + ph - h0), 'reflect')  # 需要保证被2整除
+            x = F.pad(x, (14, 14 + pw - w0, 14, 14 + ph - h0), 'reflect')  # must be divisible by 2
             x = self.unet1.forward(x)
             x0 = self.unet2.forward(x,alpha)
             x = F.pad(x, (-20, -20, -20, -20))
@@ -602,16 +602,16 @@ class UpCunet3x(nn.Module):
                 return ((x-0.15) * (255/0.7)).round().clamp_(0, 255).byte()
             else:
                 return (x * 255).round().clamp_(0, 255).byte()
-        elif(tile_mode==1):# 对长边减半
+        elif(tile_mode==1):# halve the long side
             if(w0>=h0):
-                crop_size_w=((w0-1)//8*8+8)//2#减半后能被2整除，所以要先被4整除
-                crop_size_h=(h0-1)//4*4+4#能被2整除
+                crop_size_w=((w0-1)//8*8+8)//2# divisible by 2 after halving, so it must be divisible by 4 first
+                crop_size_h=(h0-1)//4*4+4# divisible by 2
             else:
-                crop_size_h=((h0-1)//8*8+8)//2#减半后能被2整除，所以要先被4整除
-                crop_size_w=(w0-1)//4*4+4#能被2整除
+                crop_size_h=((h0-1)//8*8+8)//2# divisible by 2 after halving, so it must be divisible by 4 first
+                crop_size_w=(w0-1)//4*4+4# divisible by 2
             crop_size=(crop_size_h,crop_size_w)
         elif (tile_mode >= 2):
-            tile_mode=min(min(h0,w0)//128,int(tile_mode))#最小短边为128*128
+            tile_mode=min(min(h0,w0)//128,int(tile_mode))# the minimum short side is 128*128
             t4 = tile_mode * 4
             crop_size = (((h0 - 1) // t4 * t4 + t4) // tile_mode, ((w0 - 1) // t4 * t4 + t4) // tile_mode)
         else:
@@ -701,7 +701,7 @@ class UpCunet3x(nn.Module):
                 x0=self.unet2.forward_d(tmp_x1,tmp_x4)
                 if(cache_mode):x = dq(x[0], if_half, cache_mode,x[1], x[2], x[3])
                 del tmp_dict[i][j]
-                x = torch.add(x0, x)#x0是unet2的最终输出
+                x = torch.add(x0, x)# x0 is the final output of unet2
                 if(pro):
                     res[:, :, i * 3:i * 3 + h1 * 3 - 84, j * 3:j * 3 + w1 * 3 - 84] = ((x-0.15) * (255/0.7)).round().clamp_(0, 255).byte()
                 else:
@@ -714,10 +714,10 @@ class UpCunet3x(nn.Module):
         n, c, h0, w0 = x.shape
         if("Half" in x.type()):if_half=True
         else:if_half=False
-        if(tile_mode==0):#不tile
+        if(tile_mode==0):# no tiling
             ph = ((h0 - 1) // 4 + 1) * 4
             pw = ((w0 - 1) // 4 + 1) * 4
-            x = F.pad(x, (14, 14 + pw - w0, 14, 14 + ph - h0), 'reflect')  # 需要保证被2整除
+            x = F.pad(x, (14, 14 + pw - w0, 14, 14 + ph - h0), 'reflect')  # must be divisible by 2
             x = self.unet1.forward(x)
             x0 = self.unet2.forward(x,alpha)
             x = F.pad(x, (-20, -20, -20, -20))
@@ -727,16 +727,16 @@ class UpCunet3x(nn.Module):
                 return ((x-0.15) * (255/0.7)).round().clamp_(0, 255).byte()
             else:
                 return (x * 255).round().clamp_(0, 255).byte()
-        elif(tile_mode==1):# 对长边减半
+        elif(tile_mode==1):# halve the long side
             if(w0>=h0):
-                crop_size_w=((w0-1)//8*8+8)//2#减半后能被2整除，所以要先被4整除
-                crop_size_h=(h0-1)//4*4+4#能被2整除
+                crop_size_w=((w0-1)//8*8+8)//2# divisible by 2 after halving, so it must be divisible by 4 first
+                crop_size_h=(h0-1)//4*4+4# divisible by 2
             else:
-                crop_size_h=((h0-1)//8*8+8)//2#减半后能被2整除，所以要先被4整除
-                crop_size_w=(w0-1)//4*4+4#能被2整除
+                crop_size_h=((h0-1)//8*8+8)//2# divisible by 2 after halving, so it must be divisible by 4 first
+                crop_size_w=(w0-1)//4*4+4# divisible by 2
             crop_size=(crop_size_h,crop_size_w)
         elif (tile_mode >= 2):
-            tile_mode=min(min(h0,w0)//128,int(tile_mode))#最小短边为128*128
+            tile_mode=min(min(h0,w0)//128,int(tile_mode))# the minimum short side is 128*128
             t4 = tile_mode * 4
             crop_size = (((h0 - 1) // t4 * t4 + t4) // tile_mode, ((w0 - 1) // t4 * t4 + t4) // tile_mode)
         else:
@@ -839,9 +839,9 @@ class UpCunet3x(nn.Module):
         n, c, h0, w0 = x.shape
         if("Half" in x.type()):if_half=True
         else:if_half=False
-        if(tile_mode<3):return self.forward(x,tile_mode,1,alpha,pro)#至少切成3x3
+        if(tile_mode<3):return self.forward(x,tile_mode,1,alpha,pro)# cut into at least 3x3
         elif(tile_mode>=3):
-            tile_mode=min(min(h0,w0)//128,int(tile_mode))#最小短边为128*128
+            tile_mode=min(min(h0,w0)//128,int(tile_mode))# the minimum short side is 128*128
             if (tile_mode < 3): return self.forward(x, tile_mode, 1, alpha, pro)
             t4 = tile_mode * 4
             crop_size = (((h0 - 1) // t4 * t4 + t4) // tile_mode, ((w0 - 1) // t4 * t4 + t4) // tile_mode)  # 5.6G
@@ -917,10 +917,10 @@ class UpCunet4x(nn.Module):
         if("Half" in x.type()):if_half=True
         else:if_half=False
         x00 = x
-        if(tile_mode==0):#不tile
+        if(tile_mode==0):# no tiling
             ph = ((h0 - 1) // 2 + 1) * 2
             pw = ((w0 - 1) // 2 + 1) * 2
-            x = F.pad(x, (19, 19 + pw - w0, 19, 19 + ph - h0), 'reflect')  # 需要保证被2整除
+            x = F.pad(x, (19, 19 + pw - w0, 19, 19 + ph - h0), 'reflect')  # must be divisible by 2
             x = self.unet1.forward(x)
             x0 = self.unet2.forward(x,alpha)
             x1 = F.pad(x, (-20, -20, -20, -20))
@@ -934,16 +934,16 @@ class UpCunet4x(nn.Module):
                 return ((x-0.15) * (255/0.7)).round().clamp_(0, 255).byte()
             else:
                 return (x * 255).round().clamp_(0, 255).byte()
-        elif(tile_mode==1):# 对长边减半
+        elif(tile_mode==1):# halve the long side
             if(w0>=h0):
-                crop_size_w=((w0-1)//4*4+4)//2#减半后能被2整除，所以要先被4整除
-                crop_size_h=(h0-1)//2*2+2#能被2整除
+                crop_size_w=((w0-1)//4*4+4)//2# divisible by 2 after halving, so it must be divisible by 4 first
+                crop_size_h=(h0-1)//2*2+2# divisible by 2
             else:
-                crop_size_h=((h0-1)//4*4+4)//2#减半后能被2整除，所以要先被4整除
-                crop_size_w=(w0-1)//2*2+2#能被2整除
+                crop_size_h=((h0-1)//4*4+4)//2# divisible by 2 after halving, so it must be divisible by 4 first
+                crop_size_w=(w0-1)//2*2+2# divisible by 2
             crop_size=(crop_size_h,crop_size_w)
         elif (tile_mode >= 2):
-            tile_mode=min(min(h0,w0)//128,int(tile_mode))#最小短边为128*128
+            tile_mode=min(min(h0,w0)//128,int(tile_mode))# the minimum short side is 128*128
             t2 = tile_mode * 2
             crop_size = (((h0 - 1) // t2 * t2 + t2) // tile_mode, ((w0 - 1) // t2 * t2 + t2) // tile_mode)
         else:
@@ -1034,7 +1034,7 @@ class UpCunet4x(nn.Module):
                 del tmp_x1,tmp_x4
                 if(cache_mode):x = dq(x[0], if_half, cache_mode,x[1], x[2], x[3])
                 del tmp_dict[i][j]
-                x = torch.add(x0, x)#x0是unet2的最终输出
+                x = torch.add(x0, x)# x0 is the final output of unet2
                 x=self.conv_final(x)
                 x = F.pad(x, (-1, -1, -1, -1))
                 x=self.ps(x)
@@ -1054,10 +1054,10 @@ class UpCunet4x(nn.Module):
         if("Half" in x.type()):if_half=True
         else:if_half=False
         x00 = x
-        if(tile_mode==0):#不tile
+        if(tile_mode==0):# no tiling
             ph = ((h0 - 1) // 2 + 1) * 2
             pw = ((w0 - 1) // 2 + 1) * 2
-            x = F.pad(x, (19, 19 + pw - w0, 19, 19 + ph - h0), 'reflect')  # 需要保证被2整除
+            x = F.pad(x, (19, 19 + pw - w0, 19, 19 + ph - h0), 'reflect')  # must be divisible by 2
             x = self.unet1.forward(x)
             x0 = self.unet2.forward(x,alpha)
             x1 = F.pad(x, (-20, -20, -20, -20))
@@ -1071,16 +1071,16 @@ class UpCunet4x(nn.Module):
                 return ((x-0.15) * (255/0.7)).round().clamp_(0, 255).byte()
             else:
                 return (x * 255).round().clamp_(0, 255).byte()
-        elif(tile_mode==1):# 对长边减半
+        elif(tile_mode==1):# halve the long side
             if(w0>=h0):
-                crop_size_w=((w0-1)//4*4+4)//2#减半后能被2整除，所以要先被4整除
-                crop_size_h=(h0-1)//2*2+2#能被2整除
+                crop_size_w=((w0-1)//4*4+4)//2# divisible by 2 after halving, so it must be divisible by 4 first
+                crop_size_h=(h0-1)//2*2+2# divisible by 2
             else:
-                crop_size_h=((h0-1)//4*4+4)//2#减半后能被2整除，所以要先被4整除
-                crop_size_w=(w0-1)//2*2+2#能被2整除
+                crop_size_h=((h0-1)//4*4+4)//2# divisible by 2 after halving, so it must be divisible by 4 first
+                crop_size_w=(w0-1)//2*2+2# divisible by 2
             crop_size=(crop_size_h,crop_size_w)
-        elif(tile_mode>=2):#hw都减半
-            tile_mode=min(min(h0,w0)//128,int(tile_mode))#最小短边为128*128
+        elif(tile_mode>=2):# halve both h and w
+            tile_mode=min(min(h0,w0)//128,int(tile_mode))# the minimum short side is 128*128
             t2=tile_mode*2
             crop_size=(((h0-1)//t2*t2+t2)//tile_mode,((w0-1)//t2*t2+t2)//tile_mode)#5.6G
         else:
@@ -1190,9 +1190,9 @@ class UpCunet4x(nn.Module):
         if("Half" in x.type()):if_half=True
         else:if_half=False
         x00 = x
-        if(tile_mode<3):return self.forward(x,tile_mode,1,alpha,pro)#至少切成3x3
+        if(tile_mode<3):return self.forward(x,tile_mode,1,alpha,pro)# cut into at least 3x3
         elif(tile_mode>=3):
-            tile_mode=min(min(h0,w0)//128,int(tile_mode))#最小短边为128*128
+            tile_mode=min(min(h0,w0)//128,int(tile_mode))# the minimum short side is 128*128
             if (tile_mode < 3): return self.forward(x, tile_mode, 1, alpha, pro)
             t2=tile_mode*2
             crop_size=(((h0-1)//t2*t2+t2)//tile_mode,((w0-1)//t2*t2+t2)//tile_mode)#5.6G
@@ -1321,9 +1321,9 @@ if __name__ == "__main__":
                         prefix = ".".join(tmp[:-1])
                         tmp_path = os.path.join(root_path, "tmp", "%s.%s" % (int(time.time() * 1000000), suffix))
                         print(inp_path,tmp_path)
-                        #支持中文路径
-                        #os.link(inp_path, tmp_path)#win用硬链接
-                        os.symlink(inp_path, tmp_path)#linux用软链接
+                        # supports non-ASCII paths
+                        #os.link(inp_path, tmp_path)  # hard link on Windows
+                        os.symlink(inp_path, tmp_path)# symbolic link on Linux
                         frame = cv2.imread(tmp_path)[:, :, [2, 1, 0]]
                         t0 = ttime()
                         result = upscaler2x(frame, tile_mode=tile_mode,cache_mode=cache_mode,alpha=alpha)[:, :, ::-1]

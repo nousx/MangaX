@@ -14,10 +14,10 @@ from .text_mask_utils import complete_mask, complete_mask_fill
 
 logger = get_logger('mask_refinement')
 
-# “扩大气泡修复范围”保持原有整图短边比例；“膨胀不超过气泡蒙版”按气泡短边比例
+# "Enlarge the bubble inpainting area" keeps the original ratio of the short side of the whole image; "dilation does not exceed the bubble mask" uses the ratio of the short side of the bubble
 BUBBLE_MASK_ERODE_RATIO = 0.02
 BUBBLE_MASK_DILATION_LIMIT_ERODE_RATIO = 0.01
-# line 最小外接矩形保护区外扩像素；0 表示只保护原始外接矩形内
+# Pixels by which the protected area around the minimum bounding rectangle of a line grows; 0 means only the original rectangle is protected
 LINE_MIN_RECT_PROTECT_EXPAND_PX = 0
 
 
@@ -263,7 +263,7 @@ async def dispatch(
                     refined_mask=final_mask,
                     bubble_mask=bubble_mask,
                 )
-                # 仅保护，不扩张：只回填“裁剪前已有且落在保护区且被裁掉”的像素
+                # Protect only, do not grow: only pixels that existed before cropping, lie in the protected area and were cropped off are filled back
                 line_protect_mask = _build_line_protect_mask(
                     text_regions=text_regions,
                     image_shape=final_mask.shape[:2],

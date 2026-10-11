@@ -49,52 +49,52 @@ def is_color_image(image, threshold: float = 0.05) -> bool:
     Returns:
         True 如果是彩色图片，False 如果是黑白/灰度图片
     """
-    # 统一转换为 PIL Image
+    # Always convert to a PIL Image
     if isinstance(image, np.ndarray):
         image = Image.fromarray(image)
     
     if image.mode == 'L':
         return False
     
-    # 转换为 RGB
+    # Convert to RGB
     img_rgb = normalize_rgb_image(image)
     img_np = np.array(img_rgb, dtype=np.float32)
     
-    # 方法1: 检查RGB通道的相关性（最可靠的方法）
-    # 灰度图的RGB通道高度相关（相关系数接近1）
+    # Method 1: check the correlation of the RGB channels (the most reliable method)
+    # The RGB channels of a greyscale image are highly correlated (coefficient close to 1)
     r_flat = img_np[:, :, 0].flatten()
     g_flat = img_np[:, :, 1].flatten()
     b_flat = img_np[:, :, 2].flatten()
     
-    # 计算通道间的相关系数
+    # Correlation coefficients between the channels
     corr_rg = np.corrcoef(r_flat, g_flat)[0, 1]
     corr_gb = np.corrcoef(g_flat, b_flat)[0, 1]
     corr_rb = np.corrcoef(r_flat, b_flat)[0, 1]
     min_corr = min(corr_rg, corr_gb, corr_rb)
     
-    # 如果通道高度相关（>0.995），肯定是黑白图
+    # With highly correlated channels (>0.995) it is certainly a black-and-white image
     if min_corr > 0.995:
         logger.debug(f"Color detection - highly correlated channels ({min_corr:.4f}), result: grayscale")
         return False
     
-    # 方法2: 计算平均饱和度
+    # Method 2: mean saturation
     max_val = img_np.max(axis=2)
     min_val = img_np.min(axis=2)
     max_val = np.maximum(max_val, 1)
     saturation = (max_val - min_val) / max_val
     mean_saturation = np.mean(saturation)
     
-    # 方法3: 检查RGB通道的标准差差异
-    # 如果是灰度图，三个通道的标准差应该非常接近
+    # Method 3: check the difference between the standard deviations of the RGB channels
+    # In a greyscale image the three standard deviations should be very close
     r_std = np.std(img_np[:, :, 0])
     g_std = np.std(img_np[:, :, 1])
     b_std = np.std(img_np[:, :, 2])
     std_diff = max(abs(r_std - g_std), abs(g_std - b_std), abs(r_std - b_std))
     
-    # 综合判断（通道相关性已经排除了黑白图）
-    # 1. 饱和度超过阈值
-    # 2. 通道标准差差异明显（>1.0）
-    # 3. 通道相关性较低（<0.99）
+    # Combined decision (channel correlation has already ruled out black-and-white images)
+    # 1. The saturation is above the threshold
+    # 2. The channel standard deviations differ clearly (>1.0)
+    # 3. The channel correlation is low (<0.99)
     is_color = (mean_saturation > threshold) or (std_diff > 1.0) or (min_corr < 0.99)
     
     logger.debug(f"Color detection - saturation: {mean_saturation:.4f}, channel standard deviation difference: {std_diff:.2f}, minimum correlation: {min_corr:.4f}, result: {'color' if is_color else 'grayscale'}")
@@ -113,7 +113,7 @@ def enhance_contrast(image) -> Image.Image:
     Returns:
         PIL Image 对象
     """
-    # 统一转换为 PIL Image
+    # Always convert to a PIL Image
     if isinstance(image, np.ndarray):
         image = Image.fromarray(image)
     
@@ -277,7 +277,7 @@ class MangaJaNaiUpscaler(OfflineUpscaler):
                     mapping['hash'] = _KNOWN_MODELS[m]
                 self._MODEL_MAPPING[m] = mapping
             
-            # 同时添加 IllustrationJaNai 模型（用于彩色图片）
+            # Also add the IllustrationJaNai models (for colour images)
             illust_models = [
                 "2x_IllustrationJaNai_V1_ESRGAN_120k.pth",
                 "4x_IllustrationJaNai_V1_ESRGAN_135k.pth",
@@ -356,16 +356,16 @@ class MangaJaNaiUpscaler(OfflineUpscaler):
         if not self.is_auto_mode:
             return self.model_file
         
-        # 统一确保输入是 PIL Image
+        # Make sure the input is a PIL Image
         if isinstance(img, np.ndarray):
             img = Image.fromarray(img)
         
-        # 检测是否为彩色图片
+        # Detect whether it is a colour image
         is_color = is_color_image(img)
         
-        # 根据彩色/黑白和目标倍率选择模型
+        # Choose the model by colour or black-and-white and by the target ratio
         if is_color:
-            # 彩色图片使用 IllustrationJaNai 模型
+            # Colour images use the IllustrationJaNai models
             if self.target_auto_scale == 2:
                 model_file = "2x_IllustrationJaNai_V1_ESRGAN_120k.pth"
             else:
@@ -373,7 +373,7 @@ class MangaJaNaiUpscaler(OfflineUpscaler):
             logger.info(f"Detected a color image, using IllustrationJaNai model: {model_file}")
             return model_file
         
-        # 黑白图片使用 MangaJaNai 模型，根据分辨率选择
+        # Black-and-white images use the MangaJaNai models, chosen by resolution
         if not self.model_candidates:
             return self.model_file
             
@@ -403,8 +403,8 @@ class MangaJaNaiUpscaler(OfflineUpscaler):
         return best_model
 
     async def _load(self, device: str):
-        # 延迟加载：不在这里加载模型，等到 _infer 时根据图片类型再加载
-        # 只保存 device 信息
+        # Lazy loading: the model is not loaded here but in _infer, by image type
+        # Only the device information is kept
         self.device = device
         logger.info("MangaJaNai upscaler initialized, will load model based on image type")
 
@@ -431,7 +431,7 @@ class MangaJaNaiUpscaler(OfflineUpscaler):
         elif 'params' in sd:
             sd = sd['params']
 
-        # 尝试使用 spandrel 库加载（支持多种模型架构，自动识别）
+        # Try to load with the spandrel library (supports many model architectures and detects them automatically)
         try:
             from spandrel import ModelLoader
             loader = ModelLoader()
@@ -446,7 +446,7 @@ class MangaJaNaiUpscaler(OfflineUpscaler):
             self.scale = model_desc.scale
             logger.info(f"Loaded model via spandrel: {filename}, scale={self.scale}x")
         except ImportError:
-            # spandrel 未安装，回退到手动加载
+            # spandrel is not installed: fall back to loading by hand
             logger.warning("spandrel is not installed, attempting to load the model manually")
             try:
                 in_nc, out_nc, nf, nb, plus, mscale = infer_params(sd)
@@ -477,7 +477,7 @@ class MangaJaNaiUpscaler(OfflineUpscaler):
         
         results = []
         for img in image_batch:
-            # 统一确保输入是 PIL Image
+            # Make sure the input is a PIL Image
             if isinstance(img, np.ndarray):
                 img = Image.fromarray(img)
             img = normalize_rgb_image(img)
@@ -526,7 +526,7 @@ class MangaJaNaiUpscaler(OfflineUpscaler):
         Returns:
             处理后的 PIL Image
         """
-        # 统一确保输入是 PIL Image
+        # Make sure the input is a PIL Image
         if isinstance(img, np.ndarray):
             img = Image.fromarray(img)
         img = normalize_rgb_image(img)
@@ -535,17 +535,17 @@ class MangaJaNaiUpscaler(OfflineUpscaler):
         original_size = img.size
         padded = False
         
-        # 计算需要的 padding：尺寸必须是 2 的倍数（pixel_unshuffle 要求）
+        # Padding needed: the size must be a multiple of 2 (required by pixel_unshuffle)
         pad_w = (2 - img.size[0] % 2) % 2
         pad_h = (2 - img.size[1] % 2) % 2
         
-        # 同时检查最小尺寸要求
+        # Also check the minimum size
         if img.size[0] + pad_w < min_size:
             pad_w = min_size - img.size[0]
         if img.size[1] + pad_h < min_size:
             pad_h = min_size - img.size[1]
         
-        # 确保 padding 后仍是 2 的倍数
+        # Make sure it is still a multiple of 2 after padding
         if (img.size[0] + pad_w) % 2 != 0:
             pad_w += 1
         if (img.size[1] + pad_h) % 2 != 0:
@@ -590,7 +590,7 @@ class MangaJaNaiUpscaler(OfflineUpscaler):
         Returns:
             处理后的 PIL Image
         """
-        # 统一确保输入是 PIL Image
+        # Make sure the input is a PIL Image
         if isinstance(img, np.ndarray):
             img = Image.fromarray(img)
         img = normalize_rgb_image(img)

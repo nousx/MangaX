@@ -57,7 +57,7 @@ def hex2rgb(h):
     return tuple(int(h[i:i+2], 16) for i in (0, 2, 4))
 
 class Renderer(str, Enum):
-    default = "default"  # Qt 离屏渲染器
+    default = "default"  # Qt off-screen renderer
     openai_renderer = "openai_renderer"
     gemini_renderer = "gemini_renderer"
     none = "none"
@@ -92,7 +92,7 @@ class Detector(str, Enum):
     dbconvnext = "dbconvnext"
     ctd = "ctd"
     craft = "craft"
-    # paddle = "paddle"  # 已移除（需要 rusty_manga_image_translator）
+    # paddle = "paddle"  # removed (needs rusty_manga_image_translator)
     none = "none"
 
 class Inpainter(str, Enum):
@@ -324,8 +324,8 @@ class TranslatorConfig(TranslatorFields):
     selective_translation: Optional[str] = None
     """Select a translator based on detected language in image. Note the first translation service acts as default if the language isn\'t defined. Example: --translator-chain "openai:JPN;gemini:ENG".'"""
     
-    # 用户级 API Key（用于 Web 服务器多用户场景）
-    # 这些字段优先于环境变量，允许每个用户使用自己的 API Key
+    # Per-user API keys (for the multi-user web server)
+    # These fields take precedence over the environment variables, so each user can use their own API key
     user_api_key: Optional[str] = None
     """User-provided API key (overrides environment variable)"""
     user_api_base: Optional[str] = None
@@ -343,7 +343,7 @@ class TranslatorConfig(TranslatorFields):
     post_check_target_lang_threshold: float = 0.5  
     """Minimum ratio of target language in translation text for ratio check"""
     
-    # 使用 PrivateAttr 确保每个实例有独立的缓存
+    # PrivateAttr gives each instance its own cache
     _translator_gen: Any = PrivateAttr(default=None)
 
     @property

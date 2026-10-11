@@ -38,9 +38,9 @@ class MangaTranslatorWS(MangaTranslator):
 
         from ..server import ws_pb2
 
-        # 在Windows上的工作线程中，需要手动初始化Windows Socket
+        # In a worker thread on Windows, Windows Sockets has to be initialised by hand
         if sys.platform == 'win32':
-            # 使用ctypes直接调用WSAStartup
+            # Call WSAStartup directly through ctypes
             import ctypes
             try:
                 WSADATA_SIZE = 400
@@ -233,9 +233,9 @@ class MangaTranslatorWS(MangaTranslator):
 
         def server_thread(future, main_loop, server_loop):
             import sys
-            # 在Windows上的工作线程中，需要手动初始化Windows Socket
+            # In a worker thread on Windows, Windows Sockets has to be initialised by hand
             if sys.platform == 'win32':
-                # 使用ctypes直接调用WSAStartup
+                # Call WSAStartup directly through ctypes
                 import ctypes
                 try:
                     WSADATA_SIZE = 400

@@ -67,7 +67,7 @@ async def unload(upscaler_key: Upscaler, **kwargs):
         if isinstance(upscaler, OfflineUpscaler):
             await upscaler.unload()
         
-        # 统一的显存清理（适用于所有超分模型）
+        # Shared GPU memory clean-up (for every upscaling model)
         import gc
         gc.collect()
         try:

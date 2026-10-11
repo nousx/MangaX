@@ -79,7 +79,7 @@ def complete_mask_fill(text_lines: List[Tuple[int, int, int, int]], mask_shape):
 import pydensecrf.densecrf as dcrf
 from pydensecrf.utils import unary_from_softmax
 
-# 兼容不同版本的 pydensecrf
+# Works with different versions of pydensecrf
 DIAG_KERNEL = getattr(dcrf, 'DIAG_KERNEL', 0)
 NO_NORMALIZATION = getattr(dcrf, 'NO_NORMALIZATION', 0)
 
@@ -98,7 +98,7 @@ def refine_mask(rgbimg, rawmask):
     if len(rawmask.shape) == 2:
         rawmask = rawmask[:, :, None]
     
-    # 复用数组，减少内存分配
+    # Reuse the arrays to allocate less memory
     # Optimization: Assuming rawmask is 0 or 255. 
     # Pre-calculating probabilities without division if possible, but modern CPUs handle this fast enough.
     # We stick to standard float conversion but can optimize if needed.
@@ -128,7 +128,7 @@ def refine_mask(rgbimg, rawmask):
     Q = d.inference(5)
     res = np.argmax(Q, axis=0).reshape((rgbimg.shape[0], rgbimg.shape[1]))
     
-    # 直接转换，避免额外复制
+    # Convert directly, without an extra copy
     return (res * 255).astype(np.uint8)
 
 MASK_REARRANGE_TARGET_SIZE = 1280
@@ -212,7 +212,7 @@ def _collect_rearrange_patch_textlines(
         for txtln in stripe_textline_buckets[pidx]:
             new_pts = txtln.pts.copy()
             if transpose:
-                # transpose=True 时 patch 内是按高度拼条带: [x, y] <- [y - t, x + jj * short_side_w]
+                # With transpose=True the strips inside a patch are joined by height: [x, y] <- [y - t, x + jj * short_side_w]
                 local_x = new_pts[:, 1] - t
                 local_y = new_pts[:, 0] + jj * short_side_w
                 new_pts[:, 0] = local_x
@@ -478,7 +478,7 @@ def complete_mask(img: np.ndarray, mask: np.ndarray, textlines: List[Quadrilater
     import logging
     logger = logging.getLogger(__name__)
 
-    # 仅使用与检测器统一的重排切割/回拼逻辑；是否切割由 build_det_rearrange_plan 条件决定。
+    # Only the rearrange cut and re-join logic shared with the detector is used; whether to cut is decided by build_det_rearrange_plan.
     rearranged_mask = _complete_mask_with_det_rearrange(
         img,
         mask,
@@ -494,7 +494,7 @@ def complete_mask(img: np.ndarray, mask: np.ndarray, textlines: List[Quadrilater
         )
         return rearranged_mask
 
-    # 不满足重排条件时，走常规路径
+    # When the rearrange condition is not met, take the ordinary path
     return _complete_mask_core(img, mask, textlines, keep_threshold, dilation_offset, kernel_size)
 
 

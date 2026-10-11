@@ -26,7 +26,7 @@ def split_image_into_tiles(
         List of (tile_image, (x, y, w, h)) tuples
         where (x, y, w, h) is the position in original image
     """
-    # 如果是 numpy 数组，转换为 PIL Image
+    # Convert a numpy array to a PIL Image
     if isinstance(image, np.ndarray):
         image = Image.fromarray(image)
     
@@ -81,12 +81,12 @@ def merge_tiles_into_image(
         out_x = orig_x * scale
         out_y = orig_y * scale
         
-        # 计算裁剪区域 - 只裁剪重叠部分的一半，避免缝隙
-        # 对于非边缘的 tile，裁剪掉 overlap 的一半
+        # Crop area - only half of the overlap is cropped, to avoid gaps
+        # For a tile that is not at the edge, crop half of the overlap
         crop_left = half_overlap if orig_x > 0 else 0
         crop_top = half_overlap if orig_y > 0 else 0
         
-        # 右边和下边：如果不是最后一个 tile，裁剪掉 overlap 的一半
+        # Right and bottom: unless it is the last tile, crop half of the overlap
         is_right_edge = (orig_x + orig_w >= orig_width)
         is_bottom_edge = (orig_y + orig_h >= orig_height)
         

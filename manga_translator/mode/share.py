@@ -79,9 +79,9 @@ class MangaShare:
             else:
                 result = method(**attributes)
 
-            # 检查是否使用占位符，如果是则创建最小化的结果对象
+            # Check whether a placeholder is used; if so, create a minimal result object
             if hasattr(result, 'use_placeholder') and result.use_placeholder:
-                # 创建一个最小的Context对象，只包含占位符图片，避免传输大量数据
+                # Create a minimal Context object that only holds the placeholder image, to avoid sending a lot of data
                 from PIL import Image
 
                 from manga_translator import Context
@@ -171,7 +171,7 @@ class MangaShare:
             app, 
             host=self.host, 
             port=self.port,
-            timeout_keep_alive=1800  # 保持连接30分钟以支持批量翻译
+            timeout_keep_alive=1800  # Keep the connection for 30 minutes, to support batch translation
         )
         server = uvicorn.Server(config)
         await server.serve()

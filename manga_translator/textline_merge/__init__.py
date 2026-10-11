@@ -187,7 +187,7 @@ def _group_by_full_wrap(candidates: List[Quadrilateral], wrap_eps: float = 1.0) 
     edge_set = set()
     for i, j in itertools.combinations(range(len(candidates)), 2):
         if labels[i] in WRAP_ONLY_LABELS and labels[j] in WRAP_ONLY_LABELS:
-            # 包裹辅助框之间不互相连边，避免 helper 之间形成无意义连通桥。
+            # Enclosing helper boxes are not connected to each other, so helpers do not form meaningless bridges.
             continue
         if (
             _is_special_wrap_related(candidates[i], candidates[j], labels[j], wrap_eps)
@@ -195,7 +195,7 @@ def _group_by_full_wrap(candidates: List[Quadrilateral], wrap_eps: float = 1.0) 
         ):
             edge_set.add((i, j))
 
-    # 同一 inner 被多个 other 包裹时，裁剪为“单一 other 归属”
+    # When one inner box is enclosed by several "other" boxes, reduce it to belonging to a single "other"
     for inner_idx, inner_txtln in enumerate(candidates):
         if labels[inner_idx] in WRAP_ONLY_LABELS:
             continue
@@ -374,7 +374,7 @@ def merge_bboxes_text_region(bboxes: List[Quadrilateral], width, height, debug=F
     for i, box in enumerate(bboxes):
         G.add_node(i, box=box)
 
-    # 记录边缘距离
+    # Record the edge distance
     edge_distances = {}
     edge_count = 0
     for ((u, ubox), (v, vbox)) in itertools.combinations(enumerate(bboxes), 2):
@@ -382,31 +382,31 @@ def merge_bboxes_text_region(bboxes: List[Quadrilateral], width, height, debug=F
         can_merge = quadrilateral_can_merge_region(ubox, vbox, aspect_ratio_tol=1.3, font_size_ratio_tol=2,
                                           char_gap_tolerance=1, char_gap_tolerance2=3, debug=debug)
         if can_merge:
-            # 计算边缘距离
+            # Work out the edge distance
             poly_dist = ubox.poly_distance(vbox)
             G.add_edge(u, v, distance=poly_dist)
             edge_distances[(u, v)] = poly_dist
             edge_count += 1
 
-    # step 1.5: 边缘距离比例检测 - 断开距离差异过大的连接
+    # step 1.5: edge distance ratio check - cut connections whose distances differ too much
     if edge_ratio_threshold > 0 and len(bboxes) > 2:
         edges_to_remove = []
         for node in G.nodes():
             neighbors = list(G.neighbors(node))
             if len(neighbors) >= 2:
-                # 获取该节点到所有邻居的距离
+                # Distances from this node to all its neighbours
                 neighbor_distances = []
                 for neighbor in neighbors:
                     edge = (min(node, neighbor), max(node, neighbor))
                     dist = edge_distances.get(edge, 0)
                     neighbor_distances.append((neighbor, dist))
 
-                # 按距离排序
+                # Sort by distance
                 neighbor_distances.sort(key=lambda x: x[1])
 
-                # 检查最小距离和其他距离的比例
+                # Check the ratio between the smallest distance and the others
                 min_dist = neighbor_distances[0][1]
-                if min_dist > 0:  # 避免除以0
+                if min_dist > 0:  # Avoid division by 0
                     for neighbor, dist in neighbor_distances[1:]:
                         ratio = dist / min_dist
                         if ratio > edge_ratio_threshold:
@@ -414,7 +414,7 @@ def merge_bboxes_text_region(bboxes: List[Quadrilateral], width, height, debug=F
                             if edge_to_remove not in edges_to_remove:
                                 edges_to_remove.append(edge_to_remove)
 
-        # 移除边
+        # Remove the edge
         for edge in edges_to_remove:
             if G.has_edge(edge[0], edge[1]):
                 G.remove_edge(edge[0], edge[1])
@@ -476,16 +476,16 @@ async def dispatch(
     verbose: bool = False,
     model_assisted_other_textlines: Optional[List[Quadrilateral]] = None
 ) -> List[TextBlock]:
-    # 启用调试模式 (临时)
+    # Turn on debug mode (temporary)
     debug = verbose
-    # 获取边缘距离比例阈值
+    # Get the edge distance ratio threshold
     edge_ratio_threshold = getattr(config.ocr, 'merge_edge_ratio_threshold', 0.0)
     enable_model_assisted_merge = bool(getattr(config.ocr, 'merge_special_require_full_wrap', True))
     text_regions: List[TextBlock] = []
     main_textlines = list(textlines)
     auxiliary_other_textlines = list(model_assisted_other_textlines or [])
 
-    # 先做标签预合并（已合并的框不再参与后续原始合并）
+    # Merge by label first (boxes merged here take no part in the original merge that follows)
     id_to_idx = {id(txtln): i for i, txtln in enumerate(main_textlines)}
     consumed_indices = set()
 
@@ -501,22 +501,22 @@ async def dispatch(
                 has_target_label = True
                 candidate_indices.append(i)
             elif det_label == 'other':
-                # other 作为“完全包裹关系”的桥接框参与特殊分组
+                # "other" takes part in the special grouping as a bridging box for "fully encloses" relations
                 candidate_indices.append(i)
             elif det_label is None:
-                # 无标签与目标标签同级参与
+                # Boxes without a label take part on the same level as the target labels
                 candidate_indices.append(i)
 
         if not has_target_label or not candidate_indices:
             return
 
         candidates = [main_textlines[i] for i in candidate_indices]
-        # other 仅作为辅助包裹关系输入，不进入主输入序列
+        # "other" is only an input for the enclosing relation and does not enter the main input sequence
         if auxiliary_other_textlines:
             candidates.extend(auxiliary_other_textlines)
         candidate_groups = _group_by_full_wrap(candidates, wrap_eps=1.0)
         for node_set in candidate_groups:
-            # 特殊预合并严格要求完全包裹关系，单框不算“合并”
+            # The special pre-merge strictly requires a "fully encloses" relation; a single box is not a "merge"
             if len(node_set) < 2:
                 continue
 
@@ -528,11 +528,11 @@ async def dispatch(
                 if lbl is not None:
                     labels_in_region.add(lbl)
 
-            # 至少包含一个目标标签框才作为该组产物
+            # A group only counts when it contains at least one box with a target label
             if not (labels_in_region & target_labels):
                 continue
 
-            # other 仅用于包裹关系辅助，不参与实际文本块几何合并
+            # "other" only helps with the enclosing relation and takes no part in the geometric merge of text blocks
             payload_txtlns = []
             for txtln in group_txtlns:
                 lbl = _get_det_label(txtln)
@@ -542,7 +542,7 @@ async def dispatch(
             payload_txtlns = _sort_group_textlines(payload_txtlns)
             payload_txtlns = _filter_model_assisted_small_font_payload(payload_txtlns)
             if not payload_txtlns:
-                # 仅有包裹辅助框时，不产出文本块；但会在 consumed 中移除，避免后续误合并
+                # With only enclosing helper boxes no text block is produced; they are still removed through consumed, so they are not merged by mistake later
                 for txtln in group_txtlns:
                     idx = id_to_idx.get(id(txtln))
                     if idx is not None and _get_det_label(txtln) in WRAP_ONLY_LABELS:
@@ -573,12 +573,12 @@ async def dispatch(
                         consumed_indices.add(idx)
 
     if enable_model_assisted_merge:
-        # changfangtiao 独立组优先
+        # The changfangtiao group stands alone and comes first
         _run_special_stage(GROUP_STRIP_LABELS)
-        # balloon/qipao/other 组合并组
+        # The combined group for balloon/qipao/other
         _run_special_stage(GROUP_BUBBLE_LABELS)
 
-    # 剩余框（或禁用模型辅助时的全部框）走原始合并算法
+    # The remaining boxes (or all boxes when model assistance is off) go through the original merge algorithm
     remaining_textlines = []
     for i, txtln in enumerate(main_textlines):
         if i in consumed_indices:

@@ -454,11 +454,11 @@ def conv_block(in_nc, out_nc, kernel_size, stride=1, dilation=1, groups=1, bias=
     padding = padding if pad_type == 'zero' else 0
 
     if convtype=='PartialConv2D':
-        # PartialConv2d 不可用，回退到标准Conv2d
+        # PartialConv2d is not available: fall back to the standard Conv2d
         c = nn.Conv2d(in_nc, out_nc, kernel_size=kernel_size, stride=stride, padding=padding,
                dilation=dilation, bias=bias, groups=groups)
     elif convtype=='DeformConv2D':
-        # DeformConv2d 不可用，回退到标准Conv2d
+        # DeformConv2d is not available: fall back to the standard Conv2d
         c = nn.Conv2d(in_nc, out_nc, kernel_size=kernel_size, stride=stride, padding=padding,
                dilation=dilation, bias=bias, groups=groups)
     elif convtype=='Conv3D':
