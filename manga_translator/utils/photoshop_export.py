@@ -435,6 +435,55 @@ def escape_jsx_path(path: str) -> str:
     return path.replace("\\", "/").replace("'", "\\'")
 
 
+# Put in front of a saved script: the chapter folder is found from where the script is saved.
+RELOCATABLE_HEADER = """// Paths are worked out from where this script is saved, so the chapter folder can be moved.
+// Layout: <chapter>/manga_translator_work/psd/<this script>
+var SCRIPT_FILE = new File($.fileName);
+if (!$.fileName || !SCRIPT_FILE.exists) {
+    throw new Error('Save this script inside <chapter>/manga_translator_work/psd and run it from there.');
+}
+var CHAPTER_DIR = SCRIPT_FILE.parent.parent.parent.fsName.replace(/\\\\/g, '/');
+
+"""
+RELOCATABLE_ERROR_FILE = "Folder.temp.fsName.replace(/\\\\/g, '/') + '/.ps_error.txt'"
+
+
+def chapter_relative_expression(path: str, chapter_dir: str) -> Optional[str]:
+    """Return the JSX expression for a path inside the chapter folder, or None when it lies outside."""
+    if not path or not chapter_dir:
+        return None
+    try:
+        relative = os.path.relpath(os.path.abspath(path), os.path.abspath(chapter_dir))
+    except ValueError:
+        # Another drive.
+        return None
+    if relative == os.curdir or relative.startswith(os.pardir) or os.path.isabs(relative):
+        return None
+    return "CHAPTER_DIR + '/" + escape_jsx_path(relative) + "'"
+
+
+def make_script_relocatable(jsx_script: str, chapter_dir: str, paths, error_file: str) -> str:
+    """Rewrite a script saved in <chapter>/manga_translator_work/psd so it runs from any folder.
+
+    Each of `paths` that lies inside the chapter folder is addressed from the location of the
+    script; the error file goes to the temp folder of the machine that runs the script.
+    """
+    anchor = f"var ERROR_FILE_PATH = '{escape_jsx_path(error_file)}';"
+    if anchor not in jsx_script:
+        return jsx_script
+    for path in paths:
+        expression = chapter_relative_expression(path, chapter_dir)
+        escaped = escape_jsx_path(path) if path else ""
+        if not expression or not escaped:
+            continue
+        jsx_script = jsx_script.replace(f"'{escaped}'", expression)
+        # The same path at the end of a longer message string.
+        jsx_script = jsx_script.replace(f"{escaped}'", f"' + {expression}")
+    return jsx_script.replace(
+        anchor, f"{RELOCATABLE_HEADER}var ERROR_FILE_PATH = {RELOCATABLE_ERROR_FILE};", 1
+    )
+
+
 # Symbols that need tate-chu-yoko (shown horizontally) in vertical text
 # Replace multi-character symbols with a single full-width character, so they are not split apart in vertical text
 VERTICAL_HORIZONTAL_MAP = {
@@ -881,8 +930,24 @@ def photoshop_export(output_file: str, ctx: Context, default_font: str = None, i
                     debug_jsx_path = None
 
                 if debug_jsx_path:
+                    script_to_save = jsx_script
+                    if script_only and image_path:
+                        # The saved script may be run on another machine: no fixed drive or user folder.
+                        inpainted_dir = os.path.dirname(saved_inpainted_path) if saved_inpainted_path else psd_dir
+                        script_to_save = make_script_relocatable(
+                            jsx_script,
+                            image_dir,
+                            [
+                                input_file,
+                                output_file,
+                                saved_inpainted_path,
+                                os.path.join(psd_dir, f"{base_name}_inpainted.png"),
+                                os.path.join(inpainted_dir, f"{base_name}_inpainted.png"),
+                            ],
+                            error_file,
+                        )
                     with open(debug_jsx_path, 'w', encoding='utf-8') as f:
-                        f.write(jsx_script)
+                        f.write(script_to_save)
                     saved_script_path = debug_jsx_path
                     logger.info(f"📝 JSX script saved: {debug_jsx_path}")
             except Exception as e:

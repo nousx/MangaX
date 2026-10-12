@@ -94,7 +94,7 @@ def test_should_point_a_saved_script_at_the_inpainted_image_in_the_work_folder(p
 
     script = _script_only_export(page, tmp_path, ctx)
 
-    assert saved.replace("\\", "/") in script
+    assert "new File(CHAPTER_DIR + '/manga_translator_work/inpainted/001_inpainted" in script
     assert tempfile.gettempdir().replace("\\", "/") + "/.ps_inpainted.png" not in script
 
 
@@ -105,5 +105,49 @@ def test_should_keep_a_copy_of_the_inpainted_image_when_none_is_saved(page, tmp_
 
     kept = page.parent / "manga_translator_work" / "psd" / "001_inpainted.png"
     assert kept.is_file()
-    assert str(kept).replace("\\", "/") in script
+    assert "new File(CHAPTER_DIR + '/manga_translator_work/psd/001_inpainted.png')" in script
     assert ".ps_inpainted.png" not in script
+
+
+def test_should_save_a_script_that_names_no_folder_of_this_machine(page, tmp_path):
+    saved = get_inpainted_path(str(page), create_dir=True)
+    Image.new("RGB", (200, 200), "gray").save(saved)
+    ctx = SimpleNamespace(text_regions=[], img_inpainted=np.zeros((200, 200, 3), dtype=np.uint8))
+    psd_path = page.parent / "manga_translator_work" / "psd" / "001.psd"
+
+    export.photoshop_export(
+        str(psd_path), ctx, default_font="Anuphan::Regular", image_path=str(page), script_only=True
+    )
+    script = (psd_path.parent / "001_photoshop_script.jsx").read_text(encoding="utf-8")
+
+    assert str(tmp_path).replace("\\", "/") not in script
+    assert tempfile.gettempdir().replace("\\", "/") not in script
+    assert "var CHAPTER_DIR = SCRIPT_FILE.parent.parent.parent.fsName" in script
+    assert "new File(CHAPTER_DIR + '/001.png')" in script
+    assert "new File(CHAPTER_DIR + '/manga_translator_work/psd/001.psd')" in script
+    assert "var ERROR_FILE_PATH = Folder.temp.fsName" in script
+    assert "'Adding inpainted layer from: ' + CHAPTER_DIR + '/manga_translator_work/inpainted/" in script
+
+
+def test_should_keep_a_path_outside_the_chapter_folder_as_it_is(tmp_path):
+    chapter = tmp_path / "Chapter 1"
+    outside = tmp_path / "elsewhere" / "001.psd"
+
+    assert export.chapter_relative_expression(str(outside), str(chapter)) is None
+    assert export.chapter_relative_expression(str(chapter), str(chapter)) is None
+    assert export.chapter_relative_expression("", str(chapter)) is None
+
+
+def test_should_address_a_path_inside_the_chapter_folder_from_the_script(tmp_path):
+    chapter = tmp_path / "Chapter 1"
+    inside = chapter / "manga_translator_work" / "inpainted" / "it's 001.webp"
+
+    expression = export.chapter_relative_expression(str(inside), str(chapter))
+
+    assert expression == "CHAPTER_DIR + '/manga_translator_work/inpainted/it\\'s 001.webp'"
+
+
+def test_should_leave_a_script_alone_when_its_error_file_line_is_not_found():
+    script = "var x = 'C:/chapter/001.png';"
+
+    assert export.make_script_relocatable(script, "C:/chapter", ["C:/chapter/001.png"], "C:/temp/.ps_error.txt") == script
