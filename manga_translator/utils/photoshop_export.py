@@ -38,6 +38,26 @@ def resolve_photoshop_font(config) -> str | None:
     return None
 
 
+_FONT_FILE_SUFFIXES = ('.ttf', '.otf', '.ttc')
+
+
+def split_photoshop_font(value) -> tuple[str, str]:
+    """Split a stored font value into the family and style Photoshop is asked for.
+
+    The app stores a face as "Family::Style" ("Anuphan::SemiBold"). Photoshop
+    knows neither that spelling nor font file paths, so the two parts are
+    looked up separately and a file path is reduced to its file name.
+    """
+    text = str(value or '').strip()
+    if not text:
+        return '', ''
+    family, _, style = text.partition('::')
+    family, style = family.strip(), style.strip()
+    if os.path.sep in family or '/' in family or family.lower().endswith(_FONT_FILE_SUFFIXES):
+        family = os.path.splitext(os.path.basename(family))[0]
+    return family, style
+
+
 def _translation_plain_text(value) -> str:
     # Thin wrapper: the one rich-text to plain-text implementation is rendering.rich_text.plain_text_of
     return plain_text_of(value)
@@ -72,11 +92,34 @@ var ERROR_FILE_PATH = '{error_file}';
 
 // 字体查找函数：根据字体名称查找 PostScript 名称
 // Photoshop 的 textItem.font 需要使用 PostScript 名称
-function findFontPostScriptName(fontName) {{
+function normalizeFontToken(value) {{
+    return String(value || '').toLowerCase().replace(/[\\s_-]+/g, '');
+}}
+
+function findFontPostScriptName(fontName, fontStyle) {{
     if (!fontName) return null;
-    
+
     var lowerName = fontName.toLowerCase();
     var fonts = app.fonts;
+
+    // A style was asked for ("SemiBold"): the face must match family and style,
+    // otherwise every weight of a family would resolve to its first face.
+    if (fontStyle) {{
+        var wantedFamily = normalizeFontToken(fontName);
+        var wantedStyle = normalizeFontToken(fontStyle);
+        for (var s = 0; s < fonts.length; s++) {{
+            if (normalizeFontToken(fonts[s].family) === wantedFamily &&
+                normalizeFontToken(fonts[s].style) === wantedStyle) {{
+                return fonts[s].postScriptName;
+            }}
+        }}
+        for (var p = 0; p < fonts.length; p++) {{
+            if (normalizeFontToken(fonts[p].postScriptName) === wantedFamily + wantedStyle) {{
+                return fonts[p].postScriptName;
+            }}
+        }}
+        $.writeln('WARNING: style "' + fontStyle + '" of "' + fontName + '" not found, using another face of the family');
+    }}
     
     // 第一轮：精确匹配 PostScript 名称（不区分大小写）
     for (var i = 0; i < fonts.length; i++) {{
@@ -566,12 +609,14 @@ def generate_text_layer_jsx(index: int, text_region, default_font: str, line_spa
     }}
 """
     
-    # Font setting code
-    if default_font:
+    # Font setting code: the region's own font wins over the default of the settings
+    font_family, font_style = split_photoshop_font(getattr(text_region, 'font_family', '') or default_font)
+    if font_family:
         font_setup_code = f"""// 查找字体的 PostScript 名称
-    var requestedFont{index} = '{default_font}';
-    var fontPS{index} = findFontPostScriptName(requestedFont{index});
-    
+    var requestedFont{index} = '{escape_jsx_string(font_family)}';
+    var requestedStyle{index} = '{escape_jsx_string(font_style)}';
+    var fontPS{index} = findFontPostScriptName(requestedFont{index}, requestedStyle{index});
+
     if (!fontPS{index}) {{
         var msg = 'Font not found: "' + requestedFont{index} + '". Please install this font or use a different font.';
         $.writeln('ERROR: ' + msg);
@@ -749,7 +794,27 @@ def photoshop_export(output_file: str, ctx: Context, default_font: str = None, i
 
         # The inpainted image prefers the result of the current session, so an old image on disk is not picked up
         inpainted_layer_code = ""
-        if hasattr(ctx, 'img_inpainted') and ctx.img_inpainted is not None and _save_image_like_to_temp(ctx.img_inpainted, inpainted_file):
+        saved_inpainted_path = get_inpainted_path(image_path, create_dir=False) if image_path else ""
+        if script_only and saved_inpainted_path and os.path.exists(saved_inpainted_path):
+            # A saved script is run later, after the temporary files are gone:
+            # it has to point at the image kept in the work folder.
+            inpainted_layer_code = INPAINTED_LAYER_TEMPLATE.format(
+                inpainted_file=escape_jsx_path(saved_inpainted_path)
+            )
+            logger.info(f"Script only: using the saved inpainted image: {saved_inpainted_path}")
+        elif script_only and image_path and getattr(ctx, 'img_inpainted', None) is not None:
+            # Nothing saved in the work folder: keep a copy next to the script.
+            psd_dir = os.path.join(os.path.dirname(os.path.abspath(image_path)), 'manga_translator_work', 'psd')
+            os.makedirs(psd_dir, exist_ok=True)
+            kept_inpainted_file = os.path.join(
+                psd_dir, f"{os.path.splitext(os.path.basename(image_path))[0]}_inpainted.png"
+            )
+            if _save_image_like_to_temp(ctx.img_inpainted, kept_inpainted_file):
+                inpainted_layer_code = INPAINTED_LAYER_TEMPLATE.format(
+                    inpainted_file=escape_jsx_path(kept_inpainted_file)
+                )
+                logger.info(f"Script only: kept a copy of the inpainted image: {kept_inpainted_file}")
+        elif hasattr(ctx, 'img_inpainted') and ctx.img_inpainted is not None and _save_image_like_to_temp(ctx.img_inpainted, inpainted_file):
             inpainted_layer_code = INPAINTED_LAYER_TEMPLATE.format(
                 inpainted_file=escape_jsx_path(inpainted_file)
             )
