@@ -909,7 +909,7 @@ def _tokenize_thai_words(text: str) -> List[str]:
     return re.findall(r'[\u0E00-\u0E7F]+|\s+|[^\u0E00-\u0E7F\s]+', text)
 
 def _layout_horizontal_thai(font_size: int, text: str, max_width: int, letter_spacing: float = 1.0) -> Tuple[List[str], List[int]]:
-    """Thai word-level line breaking. Never split inside a token."""
+    """Thai word-level line breaking. Never split inside a break unit."""
     text = _BR_RE.sub('\n', text)
     width_limit = max(1, int(max_width))
     lines: List[str] = []
@@ -921,36 +921,33 @@ def _layout_horizontal_thai(font_size: int, text: str, max_width: int, letter_sp
             widths.append(0)
             continue
 
-        tokens = _tokenize_thai_words(paragraph)
-        if not tokens:
+        # Break units, not raw tokens: punctuation and repetition marks stay with
+        # the word before them, so a line never starts with "?" or "ๆ".
+        units = _thai_break_units(paragraph)
+        if not units:
             lines.append(paragraph)
             widths.append(_measure_horizontal_line_width(font_size, paragraph, letter_spacing=letter_spacing))
             continue
 
         current_parts: List[str] = []
-        current_width = 0
 
-        for token in tokens:
-            if not token:
+        for unit in units:
+            if not current_parts and unit.isspace():
                 continue
 
-            token_width = _measure_horizontal_line_width(font_size, token, letter_spacing=letter_spacing)
-            next_width = current_width + token_width
+            # Trailing spaces never count against the width: they are dropped at the line end.
+            candidate = (''.join(current_parts) + unit).rstrip()
+            candidate_width = _measure_horizontal_line_width(font_size, candidate, letter_spacing=letter_spacing)
 
-            if current_parts and next_width > width_limit and not token.isspace():
+            if current_parts and candidate_width > width_limit and unit.strip():
                 line_text = ''.join(current_parts).rstrip()
                 if line_text:
                     lines.append(line_text)
                     widths.append(_measure_horizontal_line_width(font_size, line_text, letter_spacing=letter_spacing))
-                current_parts = [token.lstrip()]
-                current_width = _measure_horizontal_line_width(font_size, current_parts[0], letter_spacing=letter_spacing) if current_parts[0] else 0
+                current_parts = [unit.lstrip()]
                 continue
 
-            if not current_parts and token.isspace():
-                continue
-
-            current_parts.append(token)
-            current_width = next_width
+            current_parts.append(unit)
 
         line_text = ''.join(current_parts).rstrip()
         if line_text or not lines:
@@ -1092,8 +1089,32 @@ def _insert_br_by_word_pixel_budget(
 
 # Marks that belong to the word before them and must never start a line.
 _THAI_TRAILING_MARKS = ('ๆ', 'ฯ')
+# Classifiers and units that stay on the line of the number before them ("5 ปี", "3คน").
+_THAI_CLASSIFIERS = frozenset((
+    'ปี', 'เดือน', 'วัน', 'สัปดาห์', 'อาทิตย์', 'ชั่วโมง', 'นาที', 'วินาที', 'โมง', 'ทุ่ม', 'นาฬิกา',
+    'คน', 'ครั้ง', 'ที', 'รอบ', 'หน', 'ข้อ', 'อย่าง', 'ชิ้น', 'อัน', 'ตัว', 'เล่ม', 'ใบ', 'คัน', 'หลัง', 'ห้อง',
+    'ชั้น', 'ขวบ', 'รุ่น', 'ศพ', 'ราย', 'คดี', 'นัด', 'ฉบับ', 'แผ่น', 'ขวด', 'แก้ว', 'จาน', 'ชาม', 'กล่อง',
+    'บาท', 'วอน', 'ดอลลาร์', 'เยน', 'สตางค์', 'เปอร์เซ็นต์', 'เท่า', 'ส่วน', 'คะแนน', 'แต้ม', 'ประตู',
+    'สิบ', 'ร้อย', 'พัน', 'หมื่น', 'แสน', 'ล้าน', 'เมตร', 'กิโล', 'กิโลเมตร', 'กิโลกรัม', 'เซนติเมตร', 'ลิตร',
+))
 _OPENING_PUNCTUATION = frozenset('([{“‘「『')
 _STRAIGHT_QUOTES = frozenset('"\'')
+
+
+_THAI_WORD_ONLY_RE = re.compile(r'[ก-๎]+')
+_thai_dictionary_words = None
+
+
+def _is_thai_fragment(token: str) -> bool:
+    """True for a run of Thai letters that is neither a dictionary word nor a protected one."""
+    global _thai_dictionary_words
+    if not HAS_PYTHAINLP or not _THAI_WORD_ONLY_RE.fullmatch(token):
+        return False
+    if _thai_dictionary_words is None:
+        from pythainlp.corpus.common import thai_words
+
+        _thai_dictionary_words = frozenset(thai_words())
+    return token not in _thai_dictionary_words and token not in _thai_protected_words
 
 
 def _thai_break_units(text: str) -> List[str]:
@@ -1119,6 +1140,13 @@ def _thai_break_units(text: str) -> List[str]:
             else:
                 units.append(opener + token)
                 opener = ''
+        elif _is_thai_fragment(token):
+            # Not a word: a piece the segmenter cut off an unlisted name or a misread word.
+            # It travels with what follows, so no line can end after it.
+            opener += token
+        elif token in _THAI_CLASSIFIERS and units and not opener and units[-1].rstrip()[-1:].isdigit():
+            # A number keeps its classifier or unit on the same line.
+            units[-1] += token
         else:
             units.append(opener + token)
             opener = ''

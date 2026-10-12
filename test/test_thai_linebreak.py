@@ -86,6 +86,69 @@ def test_should_wrap_thai_by_word_when_the_language_is_given_as_a_name():
     assert all(line.replace(" ", "") != "" for line in lines)
 
 
+class TestBreakUnitRules:
+    """Rules on top of the segmenter. The tokens are fixed, so no dictionary is needed."""
+
+    @pytest.fixture(autouse=True)
+    def fixed_measures(self, monkeypatch):
+        monkeypatch.setattr(auto_linebreak, "_is_thai_fragment", lambda token: False)
+        monkeypatch.setattr(
+            auto_linebreak,
+            "_measure_horizontal_line_width",
+            lambda size, text, letter_spacing=1.0: len(text) * size,
+        )
+
+    def _use_tokens(self, monkeypatch, tokens):
+        monkeypatch.setattr(auto_linebreak, "_tokenize_thai_words", lambda text: tokens)
+        return "".join(tokens)
+
+    def test_should_not_start_a_wrapped_line_with_punctuation(self, monkeypatch):
+        text = self._use_tokens(monkeypatch, ["มา", "หรือ", "เปล่า", "?", "อย่า", "ล้อ", "เล่น", "!"])
+
+        # Ten cells: "มาหรือเปล่า" fills the first line exactly, so "?" would be next.
+        lines, _ = auto_linebreak._layout_horizontal_thai(10, text, 110)
+
+        assert "".join(lines) == text
+        assert not any(line[0] in "?!" for line in lines)
+
+    def test_should_not_start_a_wrapped_line_with_a_repetition_mark(self, monkeypatch):
+        text = self._use_tokens(monkeypatch, ["ขู่", "กัน", "ชัด", "ๆ", " ", "ท่าน", "อัยการ"])
+
+        # Nine cells: "ขู่กันชัด" fills the first line exactly, so "ๆ" would be next.
+        lines, _ = auto_linebreak._layout_horizontal_thai(10, text, 90)
+
+        assert len(lines) > 1
+        assert not any(line.startswith("ๆ") for line in lines)
+        assert any("ชัดๆ" in line for line in lines)
+
+    def test_should_keep_a_number_with_its_classifier(self, monkeypatch):
+        text = self._use_tokens(monkeypatch, ["อีก", "5", "ปี", "ก็", "คง"])
+
+        assert _thai_break_units(text) == ["อีก", "5ปี", "ก็", "คง"]
+
+    def test_should_keep_a_number_with_its_classifier_across_a_space(self, monkeypatch):
+        text = self._use_tokens(monkeypatch, ["อีก", " ", "5", " ", "ปี", "ก็", "คง"])
+
+        assert _thai_break_units(text) == ["อีก ", "5 ปี", "ก็", "คง"]
+
+    def test_should_not_join_a_number_with_an_ordinary_word(self, monkeypatch):
+        text = self._use_tokens(monkeypatch, ["ปี", "2024", "เขา", "ไป"])
+
+        assert _thai_break_units(text) == ["ปี", "2024", "เขา", "ไป"]
+
+    def test_should_carry_a_fragment_to_the_word_after_it(self, monkeypatch):
+        monkeypatch.setattr(auto_linebreak, "_is_thai_fragment", lambda token: token == "ค")
+        text = self._use_tokens(monkeypatch, ["พวก", "เรา", " ", "ค", "วอน", "กับ", "พัค"])
+
+        assert _thai_break_units(text) == ["พวก", "เรา ", "ควอน", "กับ", "พัค"]
+
+    def test_should_attach_a_final_fragment_to_the_word_before_it(self, monkeypatch):
+        monkeypatch.setattr(auto_linebreak, "_is_thai_fragment", lambda token: token == "ค")
+        text = self._use_tokens(monkeypatch, ["คุณ", "ค"])
+
+        assert _thai_break_units(text) == ["คุณค"]
+
+
 class TestProtectedWords:
     """Glossary names must stay whole. These use the real segmenter."""
 
