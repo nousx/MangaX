@@ -445,7 +445,9 @@ if (!$.fileName || !SCRIPT_FILE.exists) {
 var CHAPTER_DIR = SCRIPT_FILE.parent.parent.parent.fsName.replace(/\\\\/g, '/');
 
 """
-RELOCATABLE_ERROR_FILE = "Folder.temp.fsName.replace(/\\\\/g, '/') + '/.ps_error.txt'"
+# Stands in for the text layers while the paths of a saved script are rewritten.
+TEXT_LAYERS_SLOT = "/*__TEXT_LAYERS_SLOT__*/"
+RELOCATABLE_ERROR_FILE ="Folder.temp.fsName.replace(/\\\\/g, '/') + '/.ps_error.txt'"
 
 
 def chapter_relative_expression(path: str, chapter_dir: str) -> Optional[str]:
@@ -933,9 +935,19 @@ def photoshop_export(output_file: str, ctx: Context, default_font: str = None, i
                     script_to_save = jsx_script
                     if script_only and image_path:
                         # The saved script may be run on another machine: no fixed drive or user folder.
+                        # Paths are rewritten in the script without its text layers, so translated
+                        # text is never touched by the rewrite.
                         inpainted_dir = os.path.dirname(saved_inpainted_path) if saved_inpainted_path else psd_dir
+                        skeleton = JSX_TEMPLATE.format(
+                            input_file=escape_jsx_path(input_file),
+                            output_file=escape_jsx_path(output_file),
+                            error_file=escape_jsx_path(error_file),
+                            inpainted_layer_code=inpainted_layer_code,
+                            mask_layer_code=mask_layer_code,
+                            text_layers_code=TEXT_LAYERS_SLOT,
+                        )
                         script_to_save = make_script_relocatable(
-                            jsx_script,
+                            skeleton,
                             image_dir,
                             [
                                 input_file,
@@ -945,7 +957,7 @@ def photoshop_export(output_file: str, ctx: Context, default_font: str = None, i
                                 os.path.join(inpainted_dir, f"{base_name}_inpainted.png"),
                             ],
                             error_file,
-                        )
+                        ).replace(TEXT_LAYERS_SLOT, text_layers_code, 1)
                     with open(debug_jsx_path, 'w', encoding='utf-8') as f:
                         f.write(script_to_save)
                     saved_script_path = debug_jsx_path

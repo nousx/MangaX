@@ -129,6 +129,21 @@ def test_should_save_a_script_that_names_no_folder_of_this_machine(page, tmp_pat
     assert "'Adding inpainted layer from: ' + CHAPTER_DIR + '/manga_translator_work/inpainted/" in script
 
 
+def test_should_not_rewrite_translated_text_that_ends_with_a_path_of_the_page(page, tmp_path):
+    page_path = str(page).replace("\\", "/")
+    ctx = SimpleNamespace(
+        text_regions=[_region("Anuphan::SemiBold", translation=f"see {page_path}")],
+        img_inpainted=np.zeros((200, 200, 3), dtype=np.uint8),
+    )
+
+    script = _script_only_export(page, tmp_path, ctx)
+
+    assert script.count(page_path) == 1
+    assert f"see {page_path}" in script
+    assert export.TEXT_LAYERS_SLOT not in script
+    assert "new File(CHAPTER_DIR + '/001.png')" in script
+
+
 def test_should_keep_a_path_outside_the_chapter_folder_as_it_is(tmp_path):
     chapter = tmp_path / "Chapter 1"
     outside = tmp_path / "elsewhere" / "001.psd"
