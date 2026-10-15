@@ -64,6 +64,11 @@ def _translation_plain_text(value) -> str:
 
 
 # Alignment mapped to the Justification enum of Photoshop
+# Size of every text layer in a saved Photoshop script, in pixels of the page
+PSD_TEXT_SIZE_PX = 32
+# Line distance Photoshop uses with Auto Leading, as a share of the text size
+PHOTOSHOP_AUTO_LEADING = 1.2
+
 ALIGNMENT_TO_PS_JUSTIFICATION = {
     "left": "Justification.LEFT",
     "right": "Justification.RIGHT",
@@ -578,14 +583,11 @@ def generate_text_layer_jsx(index: int, text_region, default_font: str, line_spa
     # Both the half-width [BR] and the full-width 【BR】 are handled
     num_lines = len(re.split(r'\s*(?:\[|【)BR(?:\]|】)\s*', raw_text, flags=re.IGNORECASE))
     
-    # Font size
-    font_size = text_region.font_size
-    
-    # Line spacing factor (leading factor)
-    # Base spacing 0.2 for vertical text, 0.01 for horizontal text
-    base_spacing = 0.2 if is_vertical else 0.01
-    multiplier = line_spacing if line_spacing is not None else 1.0
-    leading_factor = 1.0 + base_spacing * multiplier
+    # Every text layer gets the same size, whatever size the rendered page used
+    font_size = PSD_TEXT_SIZE_PX
+
+    # Photoshop's Auto Leading spaces lines at this share of the size; the layer is placed with the same spacing
+    leading_factor = PHOTOSHOP_AUTO_LEADING
     
     # position of the point text
     # With centre alignment, position should be the baseline centre of the first line (horizontal) or first column (vertical)
@@ -629,14 +631,9 @@ def generate_text_layer_jsx(index: int, text_region, default_font: str, line_spa
     # Letter spacing (tracking) - not set, the Photoshop default is used
     tracking_code = ""
     
-    # Line spacing (leading)
-    # Make sure the value is a float
-    leading_val_px = float(font_size) * float(leading_factor)
-    # toFixed(2) makes sure it is a number in JS
+    # Line spacing (leading): left to Photoshop
     leading_code = f"""
-    var leadingVal{index} = {leading_val_px} * dpiScale{index};
-    textItem{index}.useAutoLeading = false;
-    textItem{index}.leading = new UnitValue(leadingVal{index}, 'pt');
+    textItem{index}.useAutoLeading = true;
     """
     
     # Rotation

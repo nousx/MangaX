@@ -44,6 +44,24 @@ def test_should_split_a_stored_font_into_family_and_style(value, expected):
     assert export.split_photoshop_font(value) == expected
 
 
+@pytest.mark.parametrize("region_size", [12, 30, 70])
+def test_should_give_every_text_layer_the_same_size_whatever_the_region_size(region_size):
+    region = _region("Anuphan::SemiBold")
+    region.font_size = region_size
+
+    script = export.generate_text_layer_jsx(0, region, "Anuphan::Regular")
+
+    assert f"textItem0.size = new UnitValue({export.PSD_TEXT_SIZE_PX} * dpiScale0, 'pt');" in script
+
+
+def test_should_leave_line_spacing_to_photoshop_auto_leading():
+    script = export.generate_text_layer_jsx(0, _region("Anuphan::SemiBold"), "Anuphan::Regular", line_spacing=1.5)
+
+    assert "textItem0.useAutoLeading = true;" in script
+    assert "useAutoLeading = false" not in script
+    assert "textItem0.leading" not in script
+
+
 def test_should_ask_photoshop_for_the_font_of_the_region_not_the_default():
     script = export.generate_text_layer_jsx(0, _region("Anuphan::SemiBold"), "Anuphan::Regular")
 
